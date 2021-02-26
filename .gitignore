@@ -1,0 +1,7 @@
+.idea
+.vscode
+
+./venus-messager
+./*.log
+./*.db
+./cmds/cfg_example/cfg_example

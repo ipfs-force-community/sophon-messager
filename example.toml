@@ -1,0 +1,25 @@
+
+[api]
+  Address = "127.0.0.1:39812"
+
+[db]
+  type = "sqlite"
+
+  [db.mysql]
+    addr = ""
+    connMaxLifeTime = 0
+    maxIdleConn = 0
+    maxOpenConn = 0
+    name = ""
+    pass = ""
+    user = ""
+
+  [db.sqlite]
+    path = "./message.db"
+
+[jwt]
+  expireDuration = 0
+  secret = ""
+
+[log]
+  path = "messager.log"
