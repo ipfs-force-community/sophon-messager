@@ -2,21 +2,24 @@ module github.com/ipfs-force-community/venus-messager
 
 go 1.15
 
-replace github.com/ipfs-force-community/venus-messager => ./
-
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
-	github.com/filecoin-project/go-jsonrpc v0.1.3
+	github.com/filecoin-project/go-address v0.0.5
+	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
+	github.com/filecoin-project/go-state-types v0.1.0
+	github.com/filecoin-project/venus v0.9.1
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs/go-cid v0.0.7
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magefile/mage v1.11.0 // indirect
-	github.com/pelletier/go-toml v1.2.0
+	github.com/multiformats/go-multiaddr v0.3.1
+	github.com/pelletier/go-toml v1.6.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.8.0
 	github.com/spf13/viper v1.7.1
@@ -36,3 +39,7 @@ require (
 	gorm.io/gorm v1.20.12
 	honnef.co/go/tools v0.1.2 // indirect
 )
+
+replace github.com/ipfs-force-community/venus-messager => ./
+
+replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi

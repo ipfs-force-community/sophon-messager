@@ -8,7 +8,7 @@ import (
 
 func main() {
 	cfg := config.Config{
-		DbConfig: config.DbConfig{
+		DB: config.DbConfig{
 			Type:   "sqlite",
 			MySql:  config.MySqlConfig{},
 			Sqlite: config.SqliteConfig{Path: "./message.db"},
@@ -19,6 +19,10 @@ func main() {
 		},
 		API: config.APIConfig{
 			Address: "127.0.0.1:39812",
+		},
+		Node: config.NodeConfig{
+			Url:   "",
+			Token: "",
 		},
 	}
 	bytes, _ := toml.Marshal(cfg)

@@ -81,14 +81,15 @@ func (r *RewriteJsonRpcToRustful) ServeHTTP(w http.ResponseWriter, req *http.Req
 }
 
 func UseMiddleware(log *logrus.Logger, r *gin.Engine) error {
-	r.Use(ginlogrus.Logger(log), gin.Recovery())
+
 	//r.Use(middleware.RewriteJsonRpcMiddleware)
 	return nil
 }
 
-func InitRouter() *gin.Engine {
-	return gin.New()
-
+func InitRouter(log *logrus.Logger) *gin.Engine {
+	g := gin.New()
+	g.Use(ginlogrus.Logger(log), gin.Recovery())
+	return g
 	/*	// Simple group: v1
 		v1 := router.Group("rpc/v1")
 		{

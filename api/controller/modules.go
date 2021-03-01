@@ -60,9 +60,9 @@ func registerController(v1 *gin.RouterGroup, repo repo.Repo, log *logrus.Logger,
 			controller := reflect.New(controllerT).Elem()
 			//todo how to inject filed values?
 			baseController := BaseController{
-				Context: c,
-				Repo:    repo,
-				Logger:  log,
+				//Context: c,
+				Repo:   repo,
+				Logger: log,
 			}
 			controller.Field(0).Set(reflect.ValueOf(baseController))
 

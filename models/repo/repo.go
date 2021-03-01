@@ -7,6 +7,8 @@ import (
 type Repo interface {
 	GetDb() *gorm.DB
 	DbClose() error
-	MessageRepo() MessageRepo
 	AutoMigrate() error
+
+	WalletRepo() WalletRepo
+	MessageRepo() MessageRepo
 }

@@ -7,3 +7,6 @@ import (
 
 var TMysqlMessage = reflect.TypeOf(&mysqlMessage{})
 var TMessage = reflect.TypeOf(&types.Message{})
+
+var TWallet = reflect.TypeOf(&types.Wallet{})
+var TMysqlWallet = reflect.TypeOf(&mysqlWallet{})

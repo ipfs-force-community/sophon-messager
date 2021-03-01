@@ -7,3 +7,6 @@ import (
 
 var TMessage = reflect.TypeOf(&types.Message{})
 var TSqliteMessage = reflect.TypeOf(&sqliteMessage{})
+
+var TWallet = reflect.TypeOf(&types.Wallet{})
+var TSqliteWallet = reflect.TypeOf(&sqliteWallet{})

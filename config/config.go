@@ -3,10 +3,16 @@ package config
 import "time"
 
 type Config struct {
-	DbConfig DbConfig  `toml:"db"`
-	JWT      JWTConfig `toml:"jwt"`
-	Log      LogConfig `toml:"log"`
-	API      APIConfig `toml:"api"`
+	DB   DbConfig   `toml:"db"`
+	JWT  JWTConfig  `toml:"jwt"`
+	Log  LogConfig  `toml:"log"`
+	API  APIConfig  `toml:"api"`
+	Node NodeConfig `toml:"node"`
+}
+
+type NodeConfig struct {
+	Url   string `toml:"url"`
+	Token string `toml:"token"`
 }
 
 type LogConfig struct {

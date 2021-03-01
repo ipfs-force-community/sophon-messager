@@ -18,8 +18,17 @@ func (d MysqlRepo) MessageRepo() repo.MessageRepo {
 	return newMysqlMessageRepo(d)
 }
 
+func (d MysqlRepo) WalletRepo() repo.WalletRepo {
+	return newMysqlWalletRepo(d)
+}
+
 func (d MysqlRepo) AutoMigrate() error {
-	return d.GetDb().AutoMigrate(mysqlMessage{})
+	err := d.GetDb().AutoMigrate(mysqlMessage{})
+	if err != nil {
+		return err
+	}
+
+	return d.GetDb().AutoMigrate(mysqlWallet{})
 }
 
 func (d MysqlRepo) GetDb() *gorm.DB {

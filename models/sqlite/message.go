@@ -12,8 +12,8 @@ type sqliteMessage struct {
 	Id      string `gorm:"column:id;primary_key;"json:"id"` // 主键
 	Version uint64 `gorm:"column:version;"json:"version"`
 
-	To    string `gorm:"column:to;type:varchar(128);NOT NULL"json:"to"`
-	From  string `gorm:"column:from;type:varchar(128);NOT NULL"json:"from"`
+	To    string `gorm:"column:to;type:varchar(256);NOT NULL"json:"to"`
+	From  string `gorm:"column:from;type:varchar(256);NOT NULL"json:"from"`
 	Nonce uint64 `gorm:"column:nonce;"json:"nonce"`
 
 	Value *types.Int `gorm:"column:value;type:varchar(256);"json:"value"`
@@ -61,7 +61,7 @@ func (m sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 
 func (m sqliteMessageRepo) GetMessage(uuid string) (types.Message, error) {
 	var msg sqliteMessage
-	if err := m.GetDb().First(&msg, uuid).Error; err != nil {
+	if err := m.GetDb().First(&msg, "id = ?", uuid, "is_deleted = ?", -1).Error; err != nil {
 		return types.Message{}, err
 	}
 	return msg.Message(), nil
@@ -69,7 +69,7 @@ func (m sqliteMessageRepo) GetMessage(uuid string) (types.Message, error) {
 
 func (m sqliteMessageRepo) ListMessage() ([]types.Message, error) {
 	var internalMsg []sqliteMessage
-	if err := m.GetDb().Find(&internalMsg).Error; err != nil {
+	if err := m.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 

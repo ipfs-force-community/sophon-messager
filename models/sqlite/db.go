@@ -16,8 +16,17 @@ func (d SqlLiteRepo) MessageRepo() repo.MessageRepo {
 	return newSqliteMessageRepo(d)
 }
 
+func (d SqlLiteRepo) WalletRepo() repo.WalletRepo {
+	return newSqliteWalletRepo(d)
+}
+
 func (d SqlLiteRepo) AutoMigrate() error {
-	return d.GetDb().AutoMigrate(sqliteMessage{})
+	err := d.GetDb().AutoMigrate(sqliteMessage{})
+	if err != nil {
+		return err
+	}
+
+	return d.GetDb().AutoMigrate(sqliteWallet{})
 }
 
 func (d SqlLiteRepo) GetDb() *gorm.DB {
