@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ipfs-force-community/venus-messager/api"
 	"github.com/ipfs-force-community/venus-messager/api/controller"
+	msgCli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models"
 	"github.com/urfave/cli/v2"
@@ -24,10 +26,12 @@ func main() {
 				Usage:   "specify config file",
 			},
 		},
+		Commands: []*cli.Command{msgCli.MsgCmds},
 	}
 	app.Setup()
 	app.Action = runAction
 	if err := app.Run(os.Args); err != nil {
+		fmt.Println(err)
 		return
 	}
 

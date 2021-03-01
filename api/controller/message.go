@@ -2,29 +2,21 @@ package controller
 
 import (
 	"context"
-	"github.com/ipfs-force-community/venus-messager/models"
-	"time"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type Message struct {
 	BaseController
 }
 
-func (message Message) PushMessage(ctx context.Context, uuid string) (string, error) {
-	msgRepo := models.NewMessageRepo(message.Repo)
-	msg := &models.Message{
-		Id:        uuid,
-		Version:   0,
-		To:        "",
-		From:      "",
-		Nonce:     0,
-		GasLimit:  0,
-		Method:    0,
-		Params:    nil,
-		SignData:  nil,
-		IsDeleted: 0,
-		CreatedAt: time.Time{},
-		UpdatedAt: time.Time{},
-	}
-	return msgRepo.SaveMessage(msg)
+func (message Message) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
+	return message.Repo.MessageRepo().SaveMessage(msg)
+}
+
+func (message Message) GetMessage(ctx context.Context, uuid string) (types.Message, error) {
+	return message.Repo.MessageRepo().GetMessage(uuid)
+}
+
+func (message Message) ListMessage(ctx context.Context) ([]types.Message, error) {
+	return message.Repo.MessageRepo().ListMessage()
 }

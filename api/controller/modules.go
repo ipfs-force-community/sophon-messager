@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/ipfs-force-community/venus-messager/models"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func SetupController(router *gin.Engine, repo models.Repo, log *logrus.Logger) error {
+func SetupController(router *gin.Engine, repo repo.Repo, log *logrus.Logger) error {
 	v1 := router.Group("rpc/v0")
 	return registerController(v1, repo, log, reflect.TypeOf(Message{}))
 }
@@ -24,7 +24,7 @@ type JsonRpcResponse struct {
 	Result interface{} `json:"result,omitempty"`
 }
 
-func registerController(v1 *gin.RouterGroup, repo models.Repo, log *logrus.Logger, controllerT reflect.Type) error {
+func registerController(v1 *gin.RouterGroup, repo repo.Repo, log *logrus.Logger, controllerT reflect.Type) error {
 	methodNumber := controllerT.NumMethod()
 
 	for i := 0; i < methodNumber; i++ {
@@ -79,7 +79,6 @@ func registerController(v1 *gin.RouterGroup, repo models.Repo, log *logrus.Logge
 						Result: fmt.Sprintf("expect type %t, but failed %v", argT, err),
 					})
 				}
-				fmt.Println(arg.Elem().String())
 				inParams = append(inParams, arg.Elem())
 			}
 
@@ -89,7 +88,7 @@ func registerController(v1 *gin.RouterGroup, repo models.Repo, log *logrus.Logge
 			if out[1].IsNil() {
 				c.JSON(http.StatusOK, JsonRpcResponse{
 					ID:     id,
-					Result: out[1].Interface(),
+					Result: out[0].Interface(),
 				})
 			} else {
 				err := out[1].Interface()

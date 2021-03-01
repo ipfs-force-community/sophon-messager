@@ -96,7 +96,7 @@ func InitRouter() *gin.Engine {
 		}*/
 }
 
-func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener) error {
+func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener, log *logrus.Logger) error {
 	skipContextPathRouter := &RewriteJsonRpcToRustful{
 		Engine: r,
 	}
@@ -109,6 +109,7 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener) error {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
+				log.Info("Start rpcserver ", lst.Addr())
 				apiserv.Serve(lst)
 			}()
 			return nil
