@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/pelletier/go-toml"
 	"io/ioutil"
+
+	"github.com/pelletier/go-toml"
 )
 
 func ReadConfig(path string) (*Config, error) {

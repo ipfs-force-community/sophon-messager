@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/hunjixin/automapper"
+
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type sqliteWallet struct {
-	Id string `gorm:"column:id;primary_key;"json:"id"` // 主键
+	Id string `gorm:"column:id;primary_key;" json:"id"` // 主键
 
 	Name  string `gorm:"column:name;type:varchar(256);NOT NULL"`
 	Url   string `gorm:"column:url;type:varchar(256);NOT NULL"`

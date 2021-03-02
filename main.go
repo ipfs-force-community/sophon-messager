@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"os"
+
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"go.uber.org/fx"
+	"golang.org/x/xerrors"
+
 	"github.com/ipfs-force-community/venus-messager/api"
 	"github.com/ipfs-force-community/venus-messager/api/controller"
 	msgCli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models"
 	"github.com/ipfs-force-community/venus-messager/service"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"go.uber.org/fx"
-	"golang.org/x/xerrors"
-	"net"
-	"os"
 )
 
 func main() {
