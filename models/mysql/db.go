@@ -2,12 +2,13 @@ package mysql
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"golang.org/x/xerrors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"time"
 )
 
 type MysqlRepo struct {

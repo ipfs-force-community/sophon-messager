@@ -1,11 +1,12 @@
 package mysql
 
 import (
+	"reflect"
+	"time"
+
 	"github.com/hunjixin/automapper"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"reflect"
-	"time"
 )
 
 type mysqlMessage struct {
@@ -36,8 +37,8 @@ func FromMessage(msg types.Message) *mysqlMessage {
 	return automapper.MustMapper(&msg, TMysqlMessage).(*mysqlMessage)
 }
 
-func (sqliteMsg mysqlMessage) Message() types.Message {
-	return automapper.MustMapper(sqliteMsg, TMessage).(types.Message)
+func (sqliteMsg mysqlMessage) Message() *types.Message {
+	return automapper.MustMapper(&sqliteMsg, TMessage).(*types.Message)
 }
 
 func (m *mysqlMessage) TableName() string {
@@ -59,23 +60,23 @@ func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	return msg.Id, err
 }
 
-func (m mysqlMessageRepo) GetMessage(uuid string) (types.Message, error) {
-	var msg mysqlMessage
-	if err := m.GetDb().First(&msg, "id = ?", uuid, "is_deleted = ?", -1).Error; err != nil {
-		return types.Message{}, err
+func (m mysqlMessageRepo) GetMessage(uuid string) (*types.Message, error) {
+	var msg *mysqlMessage
+	if err := m.GetDb().Where(&mysqlMessage{Id: uuid, IsDeleted: -1}).First(&msg).Error; err != nil {
+		return nil, err
 	}
 	return msg.Message(), nil
 }
 
-func (m mysqlMessageRepo) ListMessage() ([]types.Message, error) {
-	var internalMsg []mysqlMessage
+func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
+	var internalMsg []*mysqlMessage
 	if err := m.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 
-	result, err := automapper.Mapper(internalMsg, reflect.TypeOf([]types.Message{}))
+	result, err := automapper.Mapper(internalMsg, reflect.TypeOf([]*types.Message{}))
 	if err != nil {
 		return nil, err
 	}
-	return result.([]types.Message), nil
+	return result.([]*types.Message), nil
 }
