@@ -15,10 +15,10 @@ func (walletController WalletController) SaveWallet(ctx context.Context, wallet 
 	return walletController.walletService.SaveWallet(ctx, wallet)
 }
 
-func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (types.Wallet, error) {
+func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
 	return walletController.walletService.GetWallet(ctx, uuid)
 }
 
-func (walletController WalletController) ListWallet(ctx context.Context) ([]types.Wallet, error) {
+func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletController.walletService.ListWallet(ctx)
 }

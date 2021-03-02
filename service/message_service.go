@@ -21,10 +21,10 @@ func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message) (s
 	return ms.repo.MessageRepo().SaveMessage(msg)
 }
 
-func (ms MessageService) GetMessage(ctx context.Context, uuid string) (types.Message, error) {
+func (ms MessageService) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
 	return ms.repo.MessageRepo().GetMessage(uuid)
 }
-func (ms MessageService) ListMessage(ctx context.Context) ([]types.Message, error) {
+func (ms MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListMessage()
 }
 

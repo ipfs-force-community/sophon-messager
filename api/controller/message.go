@@ -15,10 +15,10 @@ func (message Message) PushMessage(ctx context.Context, msg *types.Message) (str
 	return message.MsgService.PushMessage(ctx, msg)
 }
 
-func (message Message) GetMessage(ctx context.Context, uuid string) (types.Message, error) {
+func (message Message) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
 	return message.MsgService.GetMessage(ctx, uuid)
 }
 
-func (message Message) ListMessage(ctx context.Context) ([]types.Message, error) {
+func (message Message) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return message.MsgService.ListMessage(ctx)
 }

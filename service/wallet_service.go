@@ -20,10 +20,10 @@ func (walletService WalletService) SaveWallet(ctx context.Context, wallet *types
 	return walletService.Repo.WalletRepo().SaveWallet(wallet)
 }
 
-func (walletService WalletService) GetWallet(ctx context.Context, uuid string) (types.Wallet, error) {
+func (walletService WalletService) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
 	return walletService.Repo.WalletRepo().GetWallet(uuid)
 }
 
-func (walletService WalletService) ListWallet(ctx context.Context) ([]types.Wallet, error) {
+func (walletService WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletService.Repo.WalletRepo().ListWallet()
 }
