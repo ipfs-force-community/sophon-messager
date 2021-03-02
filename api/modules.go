@@ -90,11 +90,6 @@ func InitRouter(log *logrus.Logger) *gin.Engine {
 	g := gin.New()
 	g.Use(ginlogrus.Logger(log), gin.Recovery())
 	return g
-	/*	// Simple group: v1
-		v1 := router.Group("rpc/v1")
-		{
-			v1.POST("PushMessage", func)
-		}*/
 }
 
 func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener, log *logrus.Logger) error {

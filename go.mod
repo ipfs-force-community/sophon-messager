@@ -27,6 +27,7 @@ require (
 	github.com/toorop/gin-logrus v0.0.0-20210225092905-2c785434f26f
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/urfave/cli/v2 v2.3.0
+	go.uber.org/dig v1.10.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect

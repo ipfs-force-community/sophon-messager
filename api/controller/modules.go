@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/ipfs-force-community/venus-messager/service"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"net/http"
@@ -14,9 +14,9 @@ import (
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func SetupController(router *gin.Engine, repo repo.Repo, log *logrus.Logger) error {
+func SetupController(router *gin.Engine, sMap service.ServiceMap, log *logrus.Logger) error {
 	v1 := router.Group("rpc/v0")
-	return registerController(v1, repo, log, reflect.TypeOf(Message{}))
+	return registerController(v1, sMap, log, reflect.TypeOf(Message{}))
 }
 
 type JsonRpcResponse struct {
@@ -24,7 +24,7 @@ type JsonRpcResponse struct {
 	Result interface{} `json:"result,omitempty"`
 }
 
-func registerController(v1 *gin.RouterGroup, repo repo.Repo, log *logrus.Logger, controllerT reflect.Type) error {
+func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logrus.Logger, controllerT reflect.Type) error {
 	methodNumber := controllerT.NumMethod()
 
 	for i := 0; i < methodNumber; i++ {
@@ -61,10 +61,15 @@ func registerController(v1 *gin.RouterGroup, repo repo.Repo, log *logrus.Logger,
 			//todo how to inject filed values?
 			baseController := BaseController{
 				//Context: c,
-				Repo:   repo,
 				Logger: log,
 			}
+
 			controller.Field(0).Set(reflect.ValueOf(baseController))
+			for i := 1; i < controller.NumField(); i++ {
+				if val, ok := sMap[controller.Field(i).Type()]; ok {
+					controller.Field(i).Set(reflect.ValueOf(val))
+				}
+			}
 
 			var inParams []reflect.Value
 			inParams = append(inParams, controller)

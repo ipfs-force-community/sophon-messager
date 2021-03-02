@@ -7,7 +7,7 @@ import (
 	msgCli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models"
-	"github.com/ipfs-force-community/venus-messager/node"
+	"github.com/ipfs-force-community/venus-messager/service"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
@@ -52,7 +52,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	client, closer, err := node.NewNodeClient(ctx.Context, &cfg.Node)
+	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
 		return err
 	}
@@ -62,24 +62,28 @@ func runAction(ctx *cli.Context) error {
 
 	shutdownChan := make(chan struct{})
 	provider := fx.Options(
+		fx.Logger(fxLogger{log}),
 		//prover
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply((ShutdownChan)(shutdownChan)),
+		//db
 		fx.Provide(models.SetDataBase),
+		//service
+		service.MessagerService(),
+		//api
 		fx.Provide(api.InitRouter),
 		fx.Provide(func() net.Listener {
 			return lst
 		}),
-		fx.Logger(fxLogger{log}),
 	)
 
 	invoker := fx.Options(
 		//invoke
 		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(controller.SetupController),
-		fx.Invoke(node.StartNodeEvents),
+		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(api.RunAPI),
 	)
 	app := fx.New(provider, invoker)
