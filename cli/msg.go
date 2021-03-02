@@ -46,7 +46,7 @@ var pushCmd = &cli.Command{
 			Method:    0,
 			Params:    nil,
 			SignData:  nil,
-			IsDeleted: 0,
+			IsDeleted: -1,
 			CreatedAt: time.Time{},
 			UpdatedAt: time.Time{},
 		}

@@ -1,4 +1,4 @@
-package node
+package service
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type NodeClient struct {
 
 	ChainGetReceipts func(context.Context, cid.Cid) ([]types.MessageReceipt, error)
 
-	ChainGetParentMessages func(ctx context.Context, tsk types.TipSetKey) ([]types.Message, error)
+	ChainGetParentMessages func(ctx context.Context, cid cid.Cid) ([]types.Message, error)
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (NodeClient, jsonrpc.ClientCloser, error) {
