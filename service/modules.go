@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/fx"
 	"reflect"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"go.uber.org/fx"
 )
 
 type ServiceMap map[reflect.Type]interface{}

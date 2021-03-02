@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/pelletier/go-toml"
 	"io/ioutil"
+
+	"github.com/pelletier/go-toml"
+
+	"github.com/ipfs-force-community/venus-messager/config"
 )
 
 func main() {

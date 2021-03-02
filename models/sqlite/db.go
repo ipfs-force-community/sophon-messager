@@ -1,11 +1,12 @@
 package sqlite
 
 import (
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"golang.org/x/xerrors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 )
 
 type SqlLiteRepo struct {

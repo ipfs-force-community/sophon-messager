@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/sirupsen/logrus"
 )
 
 type WalletService struct {

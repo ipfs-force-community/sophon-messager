@@ -1,11 +1,12 @@
 package models
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/mysql"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/models/sqlite"
-	"golang.org/x/xerrors"
 )
 
 func SetDataBase(cfg *config.DbConfig) (repo.Repo, error) {

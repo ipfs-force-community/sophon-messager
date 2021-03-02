@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
-	"github.com/filecoin-project/go-jsonrpc"
 	"net/http"
+
+	"github.com/filecoin-project/go-jsonrpc"
 )
 
 // NewCommonRPC creates a new http jsonrpc client.

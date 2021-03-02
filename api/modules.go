@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	ginlogrus "github.com/toorop/gin-logrus"
-	"go.uber.org/fx"
 	"io"
 	"io/ioutil"
 	"net"
@@ -15,6 +11,11 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	ginlogrus "github.com/toorop/gin-logrus"
+	"go.uber.org/fx"
 )
 
 type JsonRpcRequest struct {
@@ -42,11 +43,11 @@ func (c *CloserReader) Close() error {
 	return nil
 }
 
-type RewriteJsonRpcToRustful struct {
+type RewriteJsonRpcToRestful struct {
 	*gin.Engine
 }
 
-func (r *RewriteJsonRpcToRustful) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *RewriteJsonRpcToRestful) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodPost && req.URL.Path == "/rpc/v0" {
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
@@ -93,7 +94,7 @@ func InitRouter(log *logrus.Logger) *gin.Engine {
 }
 
 func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener, log *logrus.Logger) error {
-	skipContextPathRouter := &RewriteJsonRpcToRustful{
+	skipContextPathRouter := &RewriteJsonRpcToRestful{
 		Engine: r,
 	}
 

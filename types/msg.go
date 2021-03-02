@@ -6,7 +6,7 @@ import (
 
 type Message struct {
 	Id      string `json:"id"` // 主键
-	Version uint64 `"json:"version"`
+	Version uint64 `json:"version"`
 
 	To    string `json:"to"`
 	From  string `json:"from"`
@@ -20,7 +20,7 @@ type Message struct {
 
 	Method   int    `json:"method"`
 	Params   []byte `json:"params"`
-	SignData []byte `json:"params"`
+	SignData []byte `json:"signData"`
 
 	IsDeleted int       `json:"isDeleted"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `json:"createAt"`  // 创建时间
