@@ -6,7 +6,7 @@ type Wallet struct {
 	Id    string `json:"id"` // 主键
 	Name  string `json:"name"`
 	Url   string `json:"url"`
-	token string `json:"token"`
+	Token string `json:"token"`
 
 	IsDeleted int       `json:"isDeleted"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `json:"createAt"`  // 创建时间

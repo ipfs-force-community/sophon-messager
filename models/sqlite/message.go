@@ -1,11 +1,12 @@
 package sqlite
 
 import (
+	"reflect"
+	"time"
+
 	"github.com/hunjixin/automapper"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"reflect"
-	"time"
 )
 
 type sqliteMessage struct {
@@ -36,8 +37,8 @@ func FromMessage(msg types.Message) *sqliteMessage {
 	return automapper.MustMapper(&msg, TSqliteMessage).(*sqliteMessage)
 }
 
-func (sqliteMsg sqliteMessage) Message() types.Message {
-	return automapper.MustMapper(sqliteMsg, TMessage).(types.Message)
+func (sqliteMsg sqliteMessage) Message() *types.Message {
+	return automapper.MustMapper(&sqliteMsg, TMessage).(*types.Message)
 }
 
 func (m *sqliteMessage) TableName() string {
@@ -59,23 +60,24 @@ func (m sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	return msg.Id, err
 }
 
-func (m sqliteMessageRepo) GetMessage(uuid string) (types.Message, error) {
+func (m sqliteMessageRepo) GetMessage(uuid string) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.GetDb().First(&msg, "id = ?", uuid, "is_deleted = ?", -1).Error; err != nil {
-		return types.Message{}, err
+	if err := m.GetDb().Where(&sqliteMessage{Id: uuid, IsDeleted: -1}).First(&msg).Error; err != nil {
+		return nil, err
 	}
+
 	return msg.Message(), nil
 }
 
-func (m sqliteMessageRepo) ListMessage() ([]types.Message, error) {
-	var internalMsg []sqliteMessage
+func (m sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
+	var internalMsg []*sqliteMessage
 	if err := m.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 
-	result, err := automapper.Mapper(internalMsg, reflect.TypeOf([]types.Message{}))
+	result, err := automapper.Mapper(internalMsg, reflect.TypeOf([]*types.Message{}))
 	if err != nil {
 		return nil, err
 	}
-	return result.([]types.Message), nil
+	return result.([]*types.Message), nil
 }

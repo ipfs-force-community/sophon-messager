@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -13,10 +14,10 @@ func (walletController WalletController) SaveWallet(ctx context.Context, wallet 
 	return walletController.Repo.WalletRepo().SaveWallet(wallet)
 }
 
-func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (types.Wallet, error) {
+func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
 	return walletController.Repo.WalletRepo().GetWallet(uuid)
 }
 
-func (walletController WalletController) ListWallet(ctx context.Context) ([]types.Wallet, error) {
+func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletController.Repo.WalletRepo().ListWallet()
 }

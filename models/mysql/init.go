@@ -1,8 +1,9 @@
 package mysql
 
 import (
-	"github.com/ipfs-force-community/venus-messager/types"
 	"reflect"
+
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 var TMysqlMessage = reflect.TypeOf(&mysqlMessage{})
