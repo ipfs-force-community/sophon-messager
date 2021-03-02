@@ -26,7 +26,11 @@ func main() {
 			Url:   "",
 			Token: "",
 		},
+		Address: config.AddressConfig{
+			LocalWalletSweepInterval:  120,
+			RemoteWalletSweepInterval: 10,
+		},
 	}
 	bytes, _ := toml.Marshal(cfg)
-	ioutil.WriteFile("example.toml", bytes, 0777)
+	ioutil.WriteFile("messager.toml", bytes, 0777)
 }

@@ -18,6 +18,7 @@ type Repo interface {
 
 	WalletRepo() WalletRepo
 	MessageRepo() MessageRepo
+	AddressRepo() AddressRepo
 }
 
 type ISqlField interface {

@@ -1,4 +1,5 @@
 build:
+	rm -rf venus-messager
 	go build -o venus-messager .
 
 deps:

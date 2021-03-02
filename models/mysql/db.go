@@ -24,9 +24,17 @@ func (d MysqlRepo) WalletRepo() repo.WalletRepo {
 	return newMysqlWalletRepo(d)
 }
 
+func (d MysqlRepo) AddressRepo() repo.AddressRepo {
+	return newMysqlAddressRepo(d)
+}
+
 func (d MysqlRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(mysqlMessage{})
 	if err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(mysqlAddress{}); err != nil {
 		return err
 	}
 

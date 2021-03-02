@@ -1,4 +1,8 @@
 
+[address]
+  localWalletSweepInterval = "120ns"
+  remoteWalletSweepInterval = "10ns"
+
 [api]
   Address = "127.0.0.1:39812"
 

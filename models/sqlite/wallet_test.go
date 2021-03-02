@@ -1,20 +1,23 @@
 package sqlite
 
 import (
+	"os"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestWallet(t *testing.T) {
-	repo, err := OpenSqlite(&config.SqliteConfig{Path: "sqlite.db"})
+	path := "sqlite_wallet.db"
+	repo, err := OpenSqlite(&config.SqliteConfig{Path: path})
 	assert.NoError(t, err)
-	//defer func() {
-	//	assert.NoError(t, repo.DbClose())
-	//}()
+	defer func() {
+		assert.NoError(t, os.Remove(path))
+	}()
 	err = repo.AutoMigrate()
 	assert.NoError(t, err)
 

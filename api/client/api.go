@@ -14,6 +14,10 @@ type IMessager interface {
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error)
 	GetWallet(ctx context.Context, uuid string) (*types.Wallet, error)
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)
+
+	SaveAddress(ctx context.Context, address *types.Address) (string, error)
+	GetAddress(ctx context.Context, addr string) (*types.Address, error)
+	ListAddress(ctx context.Context) ([]*types.Address, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -27,6 +31,10 @@ type Message struct {
 		SaveWallet func(ctx context.Context, wallet *types.Wallet) (string, error)
 		GetWallet  func(ctx context.Context, uuid string) (*types.Wallet, error)
 		ListWallet func(ctx context.Context) ([]*types.Wallet, error)
+
+		SaveAddress func(ctx context.Context, address *types.Address) (string, error)
+		GetAddress  func(ctx context.Context, addr string) (*types.Address, error)
+		ListAddress func(ctx context.Context) ([]*types.Address, error)
 	}
 }
 
@@ -52,4 +60,16 @@ func (message *Message) GetWallet(ctx context.Context, uuid string) (*types.Wall
 
 func (message *Message) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return message.Internal.ListWallet(ctx)
+}
+
+func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
+	return message.Internal.SaveAddress(ctx, address)
+}
+
+func (message *Message) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
+	return message.Internal.GetAddress(ctx, addr)
+}
+
+func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, error) {
+	return message.Internal.ListAddress(ctx)
 }
