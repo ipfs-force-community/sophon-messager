@@ -1,51 +1,72 @@
 package sqlite
 
 import (
-	"testing"
-	"time"
-
+	"encoding/json"
+	"fmt"
 	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/ipfs-force-community/venus-messager/testutils"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"testing"
 )
 
-func TestMessage(t *testing.T) {
-	repo, err := OpenSqlite(&config.SqliteConfig{Path: "sqlite.db"})
-	assert.NoError(t, err)
-	//defer func() {
-	//	//	assert.NoError(t, repo.DbClose())
-	//	//}()
-	err = repo.AutoMigrate()
-	assert.NoError(t, err)
+func objectToString(i interface{}) string {
+	res, _ := json.MarshalIndent(i, "", " ")
+	return string(res)
+}
 
-	messageRepo := repo.MessageRepo()
+var db repo.Repo
 
-	msg := &types.Message{
-		Id:         "22222222222",
-		Version:    0,
-		To:         "11",
-		From:       "22",
-		Nonce:      0,
-		Value:      nil,
-		GasLimit:   0,
-		GasFeeCap:  nil,
-		GasPremium: nil,
-		Method:     0,
-		Params:     nil,
-		SignData:   nil,
-		IsDeleted:  -1,
-		CreatedAt:  time.Time{},
-		UpdatedAt:  time.Time{},
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	shutdown()
+	os.Exit(code)
+}
+
+func shutdown() {
+	if db == nil {
+		return
 	}
+	if err := db.DbClose(); err != nil {
+		fmt.Printf("shutdown postgre client failed. %v", err)
+	}
+}
 
-	id, err := messageRepo.SaveMessage(msg)
+func setup() {
+	var err error
+	if db, err = OpenSqlite(&config.SqliteConfig{Path: "sqlite.db"}); err != nil {
+		panic(err)
+	}
+	if err = db.AutoMigrate(); err != nil {
+		panic(err)
+	}
+}
+
+func TestMessage(t *testing.T) {
+	msgDb := db.MessageRepo()
+	msg := testutils.NewTestMsg()
+	beforeSave := objectToString(msg)
+
+	t.Logf("%s", beforeSave)
+
+	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := messageRepo.GetMessage(id)
+	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
-	t.Logf("%+v", result)
+	afterSave := objectToString(result)
 
-	results, err := messageRepo.ListMessage()
+	assert.Equal(t, beforeSave, afterSave)
+
+	t.Logf("%s", afterSave)
+
+	allMsg, err := msgDb.ListMessage()
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(results))
+	assert.LessOrEqual(t, 1, len(allMsg))
+
+	unchainedMsgs, err := msgDb.ListUnchainedMsgs()
+	assert.NoError(t, err)
+	assert.LessOrEqual(t, 1, len(unchainedMsgs))
 }

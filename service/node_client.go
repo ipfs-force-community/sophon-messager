@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -26,6 +28,10 @@ type NodeClient struct {
 	ChainGetReceipts func(context.Context, cid.Cid) ([]types.MessageReceipt, error)
 
 	ChainGetParentMessages func(ctx context.Context, cid cid.Cid) ([]types.Message, error)
+
+	StateGetActor func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)
+
+	StateSearchMsgLimited func(ctx context.Context, msg cid.Cid, limit abi.ChainEpoch) (*chain.MsgLookup, error)
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (NodeClient, jsonrpc.ClientCloser, error) {

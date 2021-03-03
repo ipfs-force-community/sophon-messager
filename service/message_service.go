@@ -13,10 +13,12 @@ import (
 type MessageService struct {
 	repo repo.Repo
 	log  *logrus.Logger
+
+	nodeClient NodeClient
 }
 
-func NewMessageService(repo repo.Repo, logger *logrus.Logger) *MessageService {
-	return &MessageService{repo: repo, log: logger}
+func NewMessageService(repo repo.Repo, nc NodeClient, logger *logrus.Logger) *MessageService {
+	return &MessageService{repo: repo, log: logger, nodeClient: nc}
 }
 
 func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {

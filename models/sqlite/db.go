@@ -35,12 +35,13 @@ func (d SqlLiteRepo) GetDb() *gorm.DB {
 }
 
 func (d SqlLiteRepo) DbClose() error {
-	return d.DbClose()
+	// todo: if '*gorm.DB' need to dispose?
+	return nil
 }
 
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
 	db, err := gorm.Open(sqlite.Open(cfg.Path), &gorm.Config{
-		//Logger: logger.Default.LogMode(logger.Info), // 日志配置
+		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
 		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.Path, err)
