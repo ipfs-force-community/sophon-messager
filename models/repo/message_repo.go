@@ -5,7 +5,7 @@ import (
 )
 
 type MessageRepo interface {
-	SaveMessage(msg *types.Message) (string, error)
+	SaveMessage(msg *types.Message, spec *types.SendSpec) (string, error)
 	GetMessage(uuid string) (*types.Message, error)
 	ListMessage() ([]*types.Message, error)
 }

@@ -12,8 +12,8 @@ type Message struct {
 	MsgService *service.MessageService
 }
 
-func (message Message) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
-	return message.MsgService.PushMessage(ctx, msg)
+func (message Message) PushMessage(ctx context.Context, msg *types.Message, spec *types.SendSpec) (string, error) {
+	return message.MsgService.PushMessage(ctx, msg, spec)
 }
 
 func (message Message) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {

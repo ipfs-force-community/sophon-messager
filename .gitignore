@@ -5,3 +5,4 @@
 ./*.log
 *.db
 ./cmds/cfg_example/cfg_example
+venus-messager

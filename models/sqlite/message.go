@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"encoding/json"
 	"reflect"
 	"time"
 
@@ -29,17 +30,19 @@ type sqliteMessage struct {
 	Params   []byte `gorm:"column:params;type:text;" json:"params"`
 	SignData []byte `gorm:"column:signdata;type:varchar(256);" json:"signData"`
 
-	IsDeleted int       `gorm:"column:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;default:-1;NOT NULL" json:"isDeleted"`               // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP;NOT NULL" json:"createAt"` // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP;NOT NULL" json:"updateAt"` // 更新时间
+
+	SendSpec []byte `gorm:"column:sendspec;type:text" json:"sendSpec"`
 }
 
 func FromMessage(msg types.Message) *sqliteMessage {
 	return automapper.MustMapper(&msg, TSqliteMessage).(*sqliteMessage)
 }
 
-func (sqliteMsg sqliteMessage) Message() *types.Message {
-	return automapper.MustMapper(&sqliteMsg, TMessage).(*types.Message)
+func (m sqliteMessage) Message() *types.Message {
+	return automapper.MustMapper(&m, TMessage).(*types.Message)
 }
 
 func (m *sqliteMessage) TableName() string {
@@ -56,8 +59,14 @@ func newSqliteMessageRepo(repo repo.Repo) sqliteMessageRepo {
 	return sqliteMessageRepo{repo}
 }
 
-func (m sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
-	err := m.GetDb().Save(FromMessage(*msg)).Error
+func (m sqliteMessageRepo) SaveMessage(msg *types.Message, spec *types.SendSpec) (string, error) {
+	b := []byte{}
+	b, err := json.Marshal(spec)
+	if err != nil {
+		return "", err
+	}
+	msg.SendSpec = b
+	err = m.GetDb().Save(FromMessage(*msg)).Error
 	return msg.Id, err
 }
 

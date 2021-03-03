@@ -19,8 +19,8 @@ func NewMessageService(repo repo.Repo, logger *logrus.Logger) *MessageService {
 	return &MessageService{repo: repo, log: logger}
 }
 
-func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
-	return ms.repo.MessageRepo().SaveMessage(msg)
+func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message, spec *types.SendSpec) (string, error) {
+	return ms.repo.MessageRepo().SaveMessage(msg, spec)
 }
 
 func (ms MessageService) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
