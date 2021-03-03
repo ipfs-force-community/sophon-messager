@@ -63,7 +63,7 @@ func (m *Message) UnsingedCid() cid.Cid {
 }
 
 func (m *Message) SignedCid() cid.Cid {
-	if m.Signature != nil {
+	if m.Signature == nil {
 		return cid.Undef
 	}
 	return (&types.SignedMessage{m.UnsignedMessage, *m.Signature}).Cid()

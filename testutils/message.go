@@ -4,16 +4,15 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/crypto"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 func NewTestMsg() *types.Message {
 	return &types.Message{
-		Uid:             "22222222222",
+		Uid:             "44444",
 		UnsignedMessage: NewTestUnsignedMsg(),
-		Signature:       &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}},
+		// Signature:       &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}},
 		Meta: &types.MsgMeta{ExpireEpoch: 100,
 			MaxFee: big.NewInt(10), GasOverEstimation: 0.5},
 	}

@@ -18,9 +18,9 @@ type sqliteMessage struct {
 	Uid     string `gorm:"column:uuid;uniqueIndex"json:"uuid"`
 	Version uint64 `gorm:"column:version;"json:"version"`
 
-	To    string `gorm:"column:to;type:varchar(256);NOT NULL" json:"to"`
-	From  string `gorm:"column:from;type:varchar(256);NOT NULL" json:"from"`
-	Nonce uint64 `gorm:"column:nonce;" json:"nonce"`
+	To    string `gorm:"column:to;type:varchar(256);NOT NULL"json:"to"`
+	From  string `gorm:"column:from;type:varchar(256);NOT NULL;index:idx_from_nonce"json:"from"`
+	Nonce uint64 `gorm:"column:nonce;index:idx_from_nonce"json:"nonce"`
 
 	Value decimal.NullDecimal `gorm:"column:value;type:varchar(256);"json:"value"`
 
@@ -31,10 +31,10 @@ type sqliteMessage struct {
 	Method int `gorm:"column:method;" json:"method"`
 
 	Params    []byte             `gorm:"column:params;type:text;"json:"params"`
-	Epoch     uint64             `gorm:"index"`
-	Signature *repo.SqlSignature `gorm:"column:signdata"json:"params"`
+	Epoch     uint64             `gorm:"index:idx_epoch_txid"`
+	Signature *repo.SqlSignature `gorm:"column:signdata" json:"params"`
 	Cid       string             `gorm:"uniqueIndex"`
-	SignedCid string             `gorm:"uniqueIndex"`
+	SignedCid string             `gorm:"uniqueIndex;index:idx_epoch_txid"`
 
 	Meta *types.MsgMeta `gorm:"blob"`
 }
@@ -109,7 +109,17 @@ func newSqliteMessageRepo(repo repo.Repo) *sqliteMessageRepo {
 
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	sqlMsg := FromMessage(msg)
-	err := m.GetDb().Clauses(clause.OnConflict{DoNothing: true}).Save(sqlMsg).Error
+
+	// err := m.GetDb().Debug().Clauses(clause.OnConflict{
+	// 	Columns:   []clause.Column{{Name: "from"}, {Name: "nonce"}},
+	// 	UpdateAll: true,
+	// 	DoUpdates: clause.AssignmentColumns([]string{"private_key"}),
+	// }).Save(sqlMsg).Error
+
+	err := m.GetDb().Debug().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "uuid"}},
+		DoNothing: true}).Save(sqlMsg).Error
+
 	return msg.Uid, err
 }
 
@@ -138,8 +148,8 @@ func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
 func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	var err error
-	if err = m.Repo.GetDb().Model((*sqliteMessage)(nil)).
-		Where("epoch=0 and signed_cid is not null").
+	if err = m.Repo.GetDb().Debug().Model((*sqliteMessage)(nil)).
+		Where("epoch=0 and signdata is null").
 		Find(&sqlMsgs).Error; err != nil {
 		return nil, err
 	}
