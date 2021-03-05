@@ -125,7 +125,6 @@ func TestSaveMessages(t *testing.T) {
 }
 
 func TestUpdateMessageState(t *testing.T) {
-<<<<<<< HEAD
 	TestSaveMessages(t)
 
 	for i := 0; i < 20; i++ {
@@ -136,10 +135,6 @@ func TestUpdateMessageState(t *testing.T) {
 
 	err := msgService.DoRefreshMsgsState()
 
-=======
-	// TestSaveMessages(t)
-	err := msgService.DoRefreshMsgsState()
->>>>>>> main
 	assert.NoError(t, err)
 }
 
@@ -147,29 +142,12 @@ func TestMessage(t *testing.T) {
 	msgDb := db.MessageRepo()
 	msg := utils.NewTestMsg()
 	beforeSave := objectToString(msg)
-<<<<<<< HEAD
 
 	t.Logf("%s", beforeSave)
 
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := msgDb.GetMessage(uuid)
-=======
-
-	t.Logf("%s", beforeSave)
-
-	uuid, err := msgDb.SaveMessage(msg)
->>>>>>> main
-	assert.NoError(t, err)
-	afterSave := objectToString(result)
-
-	assert.Equal(t, beforeSave, afterSave)
-
-	t.Logf("%s", afterSave)
-
-<<<<<<< HEAD
-=======
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
 	afterSave := objectToString(result)
@@ -178,7 +156,6 @@ func TestMessage(t *testing.T) {
 
 	t.Logf("%s", afterSave)
 
->>>>>>> main
 	allMsg, err := msgDb.ListMessage()
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, 1, len(allMsg))
