@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -13,6 +14,7 @@ func (ms *MessageService) GoRefreshMessageState() {
 	ms.mutx.Lock()
 	defer ms.mutx.Unlock()
 	if ms.isStateRefreshTaskRunning {
+		ms.log.Infof("task refreshMessageState is running, ignore current invoke!\n")
 		return
 	}
 	ms.isStateRefreshTaskRunning = true

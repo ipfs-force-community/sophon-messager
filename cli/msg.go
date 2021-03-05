@@ -3,10 +3,11 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/testutils"
-	"github.com/urfave/cli/v2"
 	"net/http"
+
+	"github.com/ipfs-force-community/venus-messager/api/client"
+	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/urfave/cli/v2"
 )
 
 var MsgCmds = &cli.Command{

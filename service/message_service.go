@@ -25,23 +25,23 @@ func NewMessageService(repo repo.Repo, nc *NodeClient, logger *logrus.Logger) *M
 	return &MessageService{repo: repo, log: logger, nodeClient: nc}
 }
 
-func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
+func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
 	return ms.repo.MessageRepo().SaveMessage(msg)
 }
 
-func (ms MessageService) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
+func (ms *MessageService) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
 	return ms.repo.MessageRepo().GetMessage(uuid)
 }
-func (ms MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
+func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListMessage()
 }
 
-func (ms MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
+func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
 	ms.log.Infof("reconnect to node ")
 	return nil
 }
 
-func (ms MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
+func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
 	ms.log.Infof("receive new head from chain")
 	ms.GoRefreshMessageState()
 	return nil
