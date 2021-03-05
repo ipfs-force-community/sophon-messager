@@ -46,10 +46,14 @@ func (m *mysqlMessage) TableName() string {
 	return "messages"
 }
 
-var _ repo.MessageRepo = (*mysqlMessageRepo)(nil)
+var _ repo.MessageRepo = (mysqlMessageRepo{})
 
 type mysqlMessageRepo struct {
 	repo.Repo
+}
+
+func (m mysqlMessageRepo) UpdateMessageReceipt(msg *types.Message) (string, error) {
+	panic("implement me")
 }
 
 func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
