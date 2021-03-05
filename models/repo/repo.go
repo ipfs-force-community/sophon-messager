@@ -44,9 +44,9 @@ func (s *SqlSignature) Value() (driver.Value, error) {
 const ExitCodeToExec = exitcode.ExitCode(-1)
 
 type SqlMsgReceipt struct {
-	ExitCode    exitcode.ExitCode `gorm:"default:-1" json:"exitCode"`
-	ReturnValue []byte            `gorm:"default:null" json:"return"`
-	GasUsed     int64             `gorm:"default:0" json:"gasUsed"`
+	ExitCode    exitcode.ExitCode `json:"exitCode"`
+	ReturnValue []byte            `json:"return"`
+	GasUsed     int64             `json:"gasUsed"`
 }
 
 func (s *SqlMsgReceipt) Scan(value interface{}) error {

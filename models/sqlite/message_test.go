@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"time"
 )
 
 func objectToString(i interface{}) string {
@@ -124,8 +125,16 @@ func TestSaveMessages(t *testing.T) {
 }
 
 func TestUpdateMessageState(t *testing.T) {
-	// TestSaveMessages(t)
+	TestSaveMessages(t)
+
+	for i := 0; i < 20; i++ {
+		msgService.GoRefreshMessageState()
+	}
+
+	time.Sleep(time.Second * 10)
+
 	err := msgService.DoRefreshMsgsState()
+
 	assert.NoError(t, err)
 }
 

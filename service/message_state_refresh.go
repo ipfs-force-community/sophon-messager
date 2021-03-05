@@ -13,6 +13,7 @@ func (ms *MessageService) GoRefreshMessageState() {
 	ms.mutx.Lock()
 	defer ms.mutx.Unlock()
 	if ms.isStateRefreshTaskRunning {
+		ms.log.Infof("task refreshMessageState is running, ignore current invoke!\n")
 		return
 	}
 	ms.isStateRefreshTaskRunning = true
