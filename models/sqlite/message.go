@@ -5,6 +5,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/go-state-types/exitcode"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -30,11 +31,16 @@ type sqliteMessage struct {
 
 	Method int `gorm:"column:method;" json:"method"`
 
-	Params    []byte             `gorm:"column:params;type:text;"json:"params"`
-	Epoch     uint64             `gorm:"index:idx_epoch_txid"`
+	Params []byte `gorm:"column:params;type:text;"json:"params"`
+
 	Signature *repo.SqlSignature `gorm:"column:signdata" json:"params"`
-	Cid       string             `gorm:"uniqueIndex"`
-	SignedCid string             `gorm:"uniqueIndex;index:idx_epoch_txid"`
+
+	Cid       string `gorm:"uniqueIndex"`
+	SignedCid string `gorm:"index:idx_epoch_txid"`
+
+	Epoch    uint64              `gorm:"index:idx_epoch_txid"`
+	ExitCode exitcode.ExitCode   `gorm:"default:-1"`
+	Receipt  *repo.SqlMsgReceipt `grom:"embedded"`
 
 	Meta *types.MsgMeta `gorm:"blob"`
 }
@@ -67,7 +73,14 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
 		Cid:        srcMsg.UnsingedCid().String(),
 		SignedCid:  srcMsg.SignedCid().String(),
+		ExitCode:   repo.ExitCodeToExec,
+		Epoch:      srcMsg.Epoch,
+		Receipt:    (&repo.SqlMsgReceipt{}).FromMsgReceipt(srcMsg.Receipt),
 		Meta:       srcMsg.Meta}
+
+	if srcMsg.Receipt != nil {
+		destMsg.ExitCode = srcMsg.Receipt.ExitCode
+	}
 
 	return destMsg
 }
@@ -85,6 +98,8 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
+		Epoch:     sqlMsg.Epoch,
+		Receipt:   sqlMsg.Receipt.MsgReceipt(),
 		Signature: (*crypto.Signature)(sqlMsg.Signature),
 		Meta:      sqlMsg.Meta,
 	}
@@ -110,17 +125,19 @@ func newSqliteMessageRepo(repo repo.Repo) *sqliteMessageRepo {
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	sqlMsg := FromMessage(msg)
 
-	// err := m.GetDb().Debug().Clauses(clause.OnConflict{
-	// 	Columns:   []clause.Column{{Name: "from"}, {Name: "nonce"}},
-	// 	UpdateAll: true,
-	// 	DoUpdates: clause.AssignmentColumns([]string{"private_key"}),
-	// }).Save(sqlMsg).Error
-
 	err := m.GetDb().Debug().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "uuid"}},
 		DoNothing: true}).Save(sqlMsg).Error
 
 	return msg.Uid, err
+}
+
+func (m *sqliteMessageRepo) UpdateMessageReceipt(msg *types.Message) (string, error) {
+	sqlMsg := FromMessage(msg)
+	return sqlMsg.Cid, m.GetDb().Debug().Model((*sqliteMessage)(nil)).
+		Where("cid = ?", sqlMsg.Cid).
+		Select("epoch", "exit_code", "receipt").
+		UpdateColumns(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) GetMessage(uuid string) (*types.Message, error) {

@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/app/submodule/network"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
@@ -18,34 +21,42 @@ import (
 )
 
 type NodeClient struct {
-	// ChainNotify returns channel with chain head updates.
-	// First message is guaranteed to be of len == 1, and type == 'current'.
-	ChainNotify func(context.Context) (<-chan []*chain.HeadChange, error)
-
-	// MpoolBatchPush batch pushes a signed message to mempool.
-	MpoolBatchPush func(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
-
-	ChainGetReceipts func(context.Context, cid.Cid) ([]types.MessageReceipt, error)
-
-	ChainGetParentMessages func(ctx context.Context, cid cid.Cid) ([]types.Message, error)
-
-	StateGetActor func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)
-
-	StateSearchMsgLimited func(ctx context.Context, msg cid.Cid, limit abi.ChainEpoch) (*chain.MsgLookup, error)
+	ChainNotify            func(context.Context) (<-chan []*chain.HeadChange, error)
+	BlockTime              func(context.Context) time.Duration
+	ChainHead              func(context.Context) (*types.TipSet, error)
+	ChainList              func(context.Context, types.TipSetKey, int) ([]types.TipSetKey, error)
+	ChainSetHead           func(context.Context, types.TipSetKey) error
+	ChainGetTipSet         func(context.Context, types.TipSetKey) (*types.TipSet, error)
+	ChainGetTipSetByHeight func(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
+	ChainGetBlock          func(context.Context, cid.Cid) (*types.BlockHeader, error)
+	ChainGetMessage        func(context.Context, cid.Cid) (*types.UnsignedMessage, error)
+	ChainGetBlockMessages  func(context.Context, cid.Cid) (*chain2.BlockMessages, error)
+	ChainGetReceipts       func(context.Context, cid.Cid) ([]types.MessageReceipt, error)
+	ChainGetParentReceipts func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)
+	GetFullBlock           func(context.Context, cid.Cid) (*types.FullBlock, error)
+	GetActor               func(context.Context, address.Address) (*types.Actor, error)
+	GetEntry               func(context.Context, abi.ChainEpoch, uint64) (*types.BeaconEntry, error)
+	MessageWait            func(context.Context, cid.Cid, abi.ChainEpoch, abi.ChainEpoch) (*chain.ChainMessage, error)
+	ResolveToKeyAddr       func(context.Context, address.Address, *types.TipSet) (address.Address, error)
+	StateNetworkName       func(context.Context) (chain2.NetworkName, error)
+	StateSearchMsg         func(context.Context, cid.Cid) (*chain.MsgLookup, error)
+	StateNetworkVersion    func(context.Context, types.TipSetKey) (network.Version, error)
+	StateGetActor          func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)
+	StateSearchMsgLimited  func(context.Context, cid.Cid, abi.ChainEpoch) (*chain.MsgLookup, error)
 }
 
-func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (NodeClient, jsonrpc.ClientCloser, error) {
+func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {
 	headers := http.Header{}
 	if len(cfg.Token) != 0 {
 		headers.Add("Authorization", "Bearer "+string(cfg.Token))
 	}
 	addr, err := DialArgs(cfg.Url)
 	if err != nil {
-		return NodeClient{}, nil, err
+		return nil, nil, err
 	}
 	var res NodeClient
 	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res}, headers)
-	return res, closer, err
+	return &res, closer, err
 }
 
 func DialArgs(addr string) (string, error) {

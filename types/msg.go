@@ -46,8 +46,11 @@ type Message struct {
 	Uid string `json:"uuid"` // 主键
 
 	types.UnsignedMessage
-
 	*crypto.Signature
+
+	Epoch   uint64 `json:"epoch, omitempty"`
+	Receipt *types.MessageReceipt
+
 	Meta *MsgMeta
 }
 
@@ -55,7 +58,7 @@ func (m *Message) Cid() cid.Cid {
 	if m.Signature != nil {
 		return m.SignedCid()
 	}
-	return m.Cid()
+	return m.UnsignedMessage.Cid()
 }
 
 func (m *Message) UnsingedCid() cid.Cid {

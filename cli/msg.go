@@ -34,7 +34,7 @@ var pushCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		msg := testutils.NewTestMsg()
+		msg := utils.NewTestMsg()
 		id, err := messageClient.PushMessage(ctx.Context, msg)
 		if err != nil {
 			return err
