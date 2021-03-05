@@ -3,13 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
-	"github.com/urfave/cli/v2"
-
 	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/testutils"
+	"github.com/urfave/cli/v2"
+	"net/http"
 )
 
 var MsgCmds = &cli.Command{
@@ -37,22 +34,8 @@ var pushCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		uid := ctx.String("uuid")
-		msg := types.Message{
-			Id:        uid,
-			Version:   0,
-			To:        "1111",
-			From:      "33333",
-			Nonce:     0,
-			GasLimit:  0,
-			Method:    0,
-			Params:    nil,
-			SignData:  nil,
-			IsDeleted: -1,
-			CreatedAt: time.Time{},
-			UpdatedAt: time.Time{},
-		}
-		id, err := messageClient.PushMessage(ctx.Context, &msg)
+		msg := utils.NewTestMsg()
+		id, err := messageClient.PushMessage(ctx.Context, msg)
 		if err != nil {
 			return err
 		}

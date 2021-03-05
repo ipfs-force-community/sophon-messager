@@ -52,13 +52,17 @@ type mysqlMessageRepo struct {
 	repo.Repo
 }
 
+func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+	panic("implement me")
+}
+
 func newMysqlMessageRepo(repo repo.Repo) mysqlMessageRepo {
 	return mysqlMessageRepo{repo}
 }
 
 func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	err := m.GetDb().Save(msg).Error
-	return msg.Id, err
+	return msg.Uid, err
 }
 
 func (m mysqlMessageRepo) GetMessage(uuid string) (*types.Message, error) {

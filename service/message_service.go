@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
+	"sync"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -13,10 +13,16 @@ import (
 type MessageService struct {
 	repo repo.Repo
 	log  *logrus.Logger
+
+	nodeClient *NodeClient
+
+	mutx sync.Mutex
+
+	isStateRefreshTaskRunning bool
 }
 
-func NewMessageService(repo repo.Repo, logger *logrus.Logger) *MessageService {
-	return &MessageService{repo: repo, log: logger}
+func NewMessageService(repo repo.Repo, nc *NodeClient, logger *logrus.Logger) *MessageService {
+	return &MessageService{repo: repo, log: logger, nodeClient: nc}
 }
 
 func (ms MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
@@ -37,5 +43,6 @@ func (ms MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.Ti
 
 func (ms MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
 	ms.log.Infof("receive new head from chain")
+	ms.GoRefreshMessageState()
 	return nil
 }
