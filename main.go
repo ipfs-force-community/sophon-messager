@@ -66,9 +66,10 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.Address),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.Address, &cfg.MessageService, &cfg.MessageState),
 		fx.Supply(log),
 		fx.Supply(client),
+		fx.Supply(service.NewMessageState),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 		//db
 		fx.Provide(models.SetDataBase),

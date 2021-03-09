@@ -66,25 +66,25 @@ func (s *SqlMsgReceipt) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
-func (smr *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
-	if smr == nil {
+func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
+	if s == nil {
 		return nil
 	}
 
 	return &types.MessageReceipt{
-		ExitCode:    smr.ExitCode,
-		ReturnValue: smr.ReturnValue,
-		GasUsed:     smr.GasUsed,
+		ExitCode:    s.ExitCode,
+		ReturnValue: s.ReturnValue,
+		GasUsed:     s.GasUsed,
 	}
 }
 
-func (smr *SqlMsgReceipt) FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
+func (s *SqlMsgReceipt) FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
 	if receipt == nil {
 		return nil
 	}
 
-	smr.GasUsed = receipt.GasUsed
-	smr.ReturnValue = receipt.ReturnValue
-	smr.ExitCode = receipt.ExitCode
-	return smr
+	s.GasUsed = receipt.GasUsed
+	s.ReturnValue = receipt.ReturnValue
+	s.ExitCode = receipt.ExitCode
+	return s
 }

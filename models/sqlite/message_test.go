@@ -1,40 +1,23 @@
 package sqlite
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"context"
-	"encoding/json"
-	"fmt"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/crypto"
+	venustypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/go-state-types/big"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/google/uuid"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/service"
-	types2 "github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs-force-community/venus-messager/utils"
-	"github.com/ipfs/go-cid"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
-func objectToString(i interface{}) string {
-	res, _ := json.MarshalIndent(i, "", " ")
-	return string(res)
-}
-
 var db repo.Repo
-
-var venusApi, closer = (*service.NodeClient)(nil), jsonrpc.ClientCloser(nil)
-
-var ctx = context.TODO()
-var msgService *service.MessageService
 
 func TestMain(m *testing.M) {
 	setup()
@@ -60,103 +43,53 @@ func setup() {
 	if err = db.AutoMigrate(); err != nil {
 		panic(err)
 	}
-
-	if venusApi, closer, err = service.NewNodeClient(ctx, &config.NodeConfig{
-		Url:   "/ip4/192.168.1.134/tcp/3453",
-		Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.n0eSFUWCbosjteqktQOcOghw7VWOm5wODkgpoT2yFJw"}); err != nil {
-		panic(err)
-	}
-	msgService = service.NewMessageService(db, venusApi, logrus.New())
-}
-
-func loadTestMessages() ([]*types2.Message, error) {
-	var head *types.TipSet
-	var err error
-	var messages = make(map[cid.Cid]*types.UnsignedMessage)
-
-goOut:
-	for len(messages) < 10 {
-		if head, err = venusApi.ChainGetTipSet(ctx, head.Parents()); err != nil {
-			return nil, err
-		}
-		blocks := head.Blocks()
-		for _, block := range blocks {
-			var blockMsgs *chain2.BlockMessages
-			if blockMsgs, err = venusApi.ChainGetBlockMessages(ctx, block.Cid()); err != nil {
-				return nil, err
-			}
-			for _, msg := range blockMsgs.BlsMessages {
-				messages[msg.Cid()] = msg
-				if len(messages) >= 10 {
-					break goOut
-				}
-			}
-		}
-	}
-
-	var unsignedMsgs = make([]*types2.Message, len(messages))
-	var idx = 0
-	for _, msg := range messages {
-		unsignedMsgs[idx] = &types2.Message{
-			Uid:             uuid.New().String(),
-			UnsignedMessage: *msg,
-			Signature:       nil,
-			Epoch:           0,
-			Receipt:         nil,
-			Meta: &types2.MsgMeta{
-				ExpireEpoch:       1024,
-				GasOverEstimation: 0,
-				MaxFee:            big.NewInt(200),
-				MaxFeeCap:         big.Int{},
-			},
-		}
-		idx++
-	}
-	return unsignedMsgs, nil
 }
 
 func TestSaveMessages(t *testing.T) {
-	var msgs, err = loadTestMessages()
-	assert.NoError(t, err)
+	msg := utils.NewTestMsg()
 
-	messageRepo := db.MessageRepo()
-	for _, msg := range msgs {
-		_, err = messageRepo.SaveMessage(msg)
-		assert.NoError(t, err)
-	}
+	_, err := db.MessageRepo().SaveMessage(msg)
+	assert.NoError(t, err)
 }
 
-func TestUpdateMessageState(t *testing.T) {
-	TestSaveMessages(t)
+func TestUpdateMessageReceipt(t *testing.T) {
+	msg := utils.NewTestMsg()
+	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
+	signedCid := msg.SignedCid()
 
-	for i := 0; i < 20; i++ {
-		msgService.GoRefreshMessageState()
-	}
-
-	time.Sleep(time.Second * 10)
-
-	err := msgService.DoRefreshMsgsState()
-
+	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
+
+	rec := &venustypes.MessageReceipt{
+		ExitCode:    0,
+		ReturnValue: []byte{'g', 'd'},
+		GasUsed:     34,
+	}
+	height := abi.ChainEpoch(10)
+	state := types.OnChain
+	_, err = db.MessageRepo().UpdateMessageReceipt(signedCid.String(), rec, height, state)
+	assert.NoError(t, err)
+
+	msg2, err := db.MessageRepo().GetMessageByCid(signedCid.String())
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(height), msg2.Height)
+	assert.Equal(t, rec, msg2.Receipt)
+	assert.Equal(t, state, msg2.State)
 }
 
 func TestMessage(t *testing.T) {
 	msgDb := db.MessageRepo()
 	msg := utils.NewTestMsg()
-	beforeSave := objectToString(msg)
-
-	t.Logf("%s", beforeSave)
+	beforeSave := utils.ObjectToString(msg)
 
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
-	afterSave := objectToString(result)
 
+	afterSave := utils.ObjectToString(result)
 	assert.Equal(t, beforeSave, afterSave)
-
-	t.Logf("%s", afterSave)
 
 	allMsg, err := msgDb.ListMessage()
 	assert.NoError(t, err)
@@ -165,4 +98,25 @@ func TestMessage(t *testing.T) {
 	unchainedMsgs, err := msgDb.ListUnchainedMsgs()
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, 1, len(unchainedMsgs))
+
+	startTime := time.Now().Add(-time.Second * 3600)
+	msgs, err := msgDb.GetMessageByTime(startTime)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(msgs))
+}
+
+func TestUpdateMessageStateByCid(t *testing.T) {
+	msg := utils.NewTestMsg()
+	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
+	msg.State = types.Signed
+	signedCid := msg.SignedCid()
+
+	_, err := db.MessageRepo().SaveMessage(msg)
+	assert.NoError(t, err)
+
+	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(signedCid.String(), types.OnChain))
+
+	msg2, err := db.MessageRepo().GetMessage(msg.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, types.OnChain, msg2.State)
 }

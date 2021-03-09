@@ -4,12 +4,21 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
-	"time"
+)
+
+const (
+	Unsigned MessageState = iota
+	Signed
+	Published
+	OnChain
+	Revert
 )
 
 // Deprecated: use 'Message'
@@ -42,16 +51,20 @@ func (m *DeprecatedMessage) TableName() string {
 	return "messages"
 }
 
+type MessageState int
+
 type Message struct {
-	Uid string `json:"uuid"` // 主键
+	ID string `json:"id"` // 主键
 
 	types.UnsignedMessage
 	*crypto.Signature
 
-	Epoch   uint64 `json:"epoch, omitempty"`
+	Height  uint64 `json:"epoch, omitempty"`
 	Receipt *types.MessageReceipt
 
 	Meta *MsgMeta
+
+	State MessageState // 消息状态
 }
 
 func (m *Message) Cid() cid.Cid {
