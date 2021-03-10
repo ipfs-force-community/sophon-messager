@@ -9,17 +9,17 @@ import (
 
 type WalletController struct {
 	BaseController
-	walletService service.WalletService
+	WalletService *service.WalletService
 }
 
 func (walletController WalletController) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
-	return walletController.walletService.SaveWallet(ctx, wallet)
+	return walletController.WalletService.SaveWallet(ctx, wallet)
 }
 
 func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
-	return walletController.walletService.GetWallet(ctx, uuid)
+	return walletController.WalletService.GetWallet(ctx, uuid)
 }
 
 func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
-	return walletController.walletService.ListWallet(ctx)
+	return walletController.WalletService.ListWallet(ctx)
 }

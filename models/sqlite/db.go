@@ -21,9 +21,17 @@ func (d SqlLiteRepo) WalletRepo() repo.WalletRepo {
 	return newSqliteWalletRepo(d)
 }
 
+func (d SqlLiteRepo) AddressRepo() repo.AddressRepo {
+	return newSqliteAddressRepo(d)
+}
+
 func (d SqlLiteRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(sqliteMessage{})
 	if err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(sqliteAddress{}); err != nil {
 		return err
 	}
 

@@ -1,9 +1,14 @@
 package sqlite
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/big"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
@@ -17,9 +22,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-	"time"
 )
 
 func objectToString(i interface{}) string {

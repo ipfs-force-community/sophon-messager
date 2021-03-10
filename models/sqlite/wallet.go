@@ -58,12 +58,12 @@ func (s sqliteWalletRepo) GetWallet(uuid string) (*types.Wallet, error) {
 }
 
 func (s sqliteWalletRepo) ListWallet() ([]*types.Wallet, error) {
-	var internalMsg []*sqliteWallet
-	if err := s.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
+	var internalWallet []*sqliteWallet
+	if err := s.GetDb().Find(&internalWallet, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 
-	result, err := automapper.Mapper(internalMsg, reflect.TypeOf([]*types.Wallet{}))
+	result, err := automapper.Mapper(internalWallet, reflect.TypeOf([]*types.Wallet{}))
 	if err != nil {
 		return nil, err
 	}

@@ -3,11 +3,12 @@ package config
 import "time"
 
 type Config struct {
-	DB   DbConfig   `toml:"db"`
-	JWT  JWTConfig  `toml:"jwt"`
-	Log  LogConfig  `toml:"log"`
-	API  APIConfig  `toml:"api"`
-	Node NodeConfig `toml:"node"`
+	DB      DbConfig      `toml:"db"`
+	JWT     JWTConfig     `toml:"jwt"`
+	Log     LogConfig     `toml:"log"`
+	API     APIConfig     `toml:"api"`
+	Node    NodeConfig    `toml:"node"`
+	Address AddressConfig `toml:"address"`
 }
 
 type NodeConfig struct {
@@ -46,4 +47,8 @@ type MySqlConfig struct {
 type JWTConfig struct {
 	Secret         string        `toml:"secret"`
 	ExpireDuration time.Duration `toml:"expireDuration"`
+}
+
+type AddressConfig struct {
+	RemoteWalletSweepInterval time.Duration `toml:"remoteWalletSweepInterval"` // second
 }
