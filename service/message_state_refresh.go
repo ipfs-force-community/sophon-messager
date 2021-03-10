@@ -43,14 +43,13 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	var errs *multierror.Error
 	if len(h.revert) != 0 {
-		errs = multierror.Append(errs, xerrors.Errorf("process revert failed %v", ms.recordRevertMsgs(ctx, h)))
-
-		var tsList tipsetList
-		for _, t := range ms.tsCache {
-			tsList = append(tsList, t)
+		if err := ms.recordRevertMsgs(ctx, h); err != nil {
+			errs = multierror.Append(errs, xerrors.Errorf("process revert failed %v", err))
 		}
 
+		tsList := ms.ListTs()
 		sort.Sort(tsList)
+
 		minHeight := h.revert[0].Height()
 		earliestTs := h.revert[0]
 		for i, ts := range h.revert {
@@ -65,7 +64,17 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		for i, ts := range tsList {
 			if ts.Height == uint64(minHeight) {
 				if isEqual(ts, earliestTs) {
-					updateTipsetFile(ms.cfg.TipsetFilePath, tsList[i:])
+					if len(tsList) <= i+1 {
+						ms.ClearTs()
+						if err := resetTipsetFile(ms.cfg.TipsetFilePath); err != nil {
+							return err
+						}
+					}
+					ms.RemoveTs(tsList[:i+1])
+					if err := updateTipsetFile(ms.cfg.TipsetFilePath, tsList[i+1:]); err != nil {
+						return err
+					}
+					break
 				}
 			}
 		}
@@ -73,18 +82,16 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	for i, ts := range h.apply {
 		height := ts.Height()
-		err := ms.processOneBlock(ctx, ts.At(0).Cid(), height)
-		errs = multierror.Append(errs, xerrors.Errorf("block id: %s %v", ts.At(0).Cid().String(), err))
+		if err := ms.processOneBlock(ctx, ts.At(0).Cid(), height); err != nil {
+			errs = multierror.Append(errs, xerrors.Errorf("block id: %s %v", ts.At(0).Cid().String(), err))
+		}
 
 		if err := ms.storeTipset(h.apply[i]); err != nil {
 			ms.log.Errorf("store tipset info failed: %v", err)
 		}
 	}
-	if errs != nil {
-		return nil
-	}
 
-	return errs
+	return errs.ErrorOrNil()
 }
 
 func (ms *MessageService) recordRevertMsgs(ctx context.Context, h *headChan) error {
@@ -97,16 +104,14 @@ func (ms *MessageService) recordRevertMsgs(ctx context.Context, h *headChan) err
 			}
 
 			for _, msg := range msgs.BlsMessages {
-				// todo: check address exist
-				if true {
+				if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 					revertMsgs = append(revertMsgs, msg.Cid())
 				}
 
 			}
 
-			for _, msg := range msgs.BlsMessages {
-				// todo: check address exist
-				if true {
+			for _, msg := range msgs.SecpkMessages {
+				if _, ok := ms.addressService.addrInfo[msg.Message.From.String()]; ok {
 					revertMsgs = append(revertMsgs, msg.Cid())
 				}
 			}
@@ -116,7 +121,9 @@ func (ms *MessageService) recordRevertMsgs(ctx context.Context, h *headChan) err
 	// update message state
 	for _, cid := range revertMsgs {
 		ms.messageState.UpdateMessageStateAndReceipt(cid.String(), types.Revert, nil)
-		ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.Revert)
+		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.Revert); err != nil {
+			ms.log.Errorf("update message state failed, cid: %s, error: %v", cid.String(), err)
+		}
 	}
 
 	return nil
@@ -138,28 +145,19 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 	}
 
 	var errs *multierror.Error
-	tmpAddrNonce := make(map[string]uint64, 0)
 	for i := range receipts {
-		// todo: check address exist
-		if true {
+		msg := msgs[i].Message
+		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 			cidStr := msgs[i].Cid.String()
 			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChain); err != nil {
 				errs = multierror.Append(errs, xerrors.Errorf("cid:%s failed:%v", cidStr, err))
 			}
 
-			msg := msgs[i].Message
-			tmpAddrNonce[msg.From.String()] = msg.Nonce
-
 			ms.messageState.UpdateMessageStateAndReceipt(cidStr, types.OnChain, nil)
 		}
 	}
-	if errs != nil {
-		return errs
-	}
 
-	// todo: update online nonce
-
-	return nil
+	return errs.ErrorOrNil()
 }
 
 type tipsetFormat struct {
@@ -168,7 +166,7 @@ type tipsetFormat struct {
 }
 
 func (ms *MessageService) storeTipset(ts *venustypes.TipSet) error {
-	if _, ok := ms.tsCache[uint64(ts.Height())]; ok {
+	if ms.ExistTs(uint64(ts.Height())) {
 		ms.log.Warnf("exist same data, height: %d", ts.Height())
 		return nil
 	}
@@ -181,12 +179,12 @@ func (ms *MessageService) storeTipset(ts *venustypes.TipSet) error {
 	for i := range cids {
 		format.Cid[i] = cids[i].String()
 	}
-	ms.tsCache[format.Height] = &format
+	ms.AddTs(&format)
 
-	return writeTipset(ms.cfg.TipsetFilePath, format)
+	return appendTipsetFile(ms.cfg.TipsetFilePath, format)
 }
 
-func writeTipset(filePath string, ts tipsetFormat) error {
+func appendTipsetFile(filePath string, ts tipsetFormat) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		return err
@@ -203,8 +201,22 @@ func writeTipset(filePath string, ts tipsetFormat) error {
 	return w.Flush()
 }
 
+func resetTipsetFile(filePath string) error {
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(""); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// original data will be cleared
 func updateTipsetFile(filePath string, lists tipsetList) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
@@ -212,11 +224,12 @@ func updateTipsetFile(filePath string, lists tipsetList) error {
 
 	writer := bufio.NewWriter(file)
 	g := multierror.Group{}
-	c := make(chan struct{}, 10)
+	c := make(chan struct{}, 3)
 	for _, ts := range lists {
 		c <- struct{}{}
+		tmp := *ts
 		g.Go(func() error {
-			b, err := json.Marshal(ts)
+			b, err := json.Marshal(tmp)
 			if err != nil {
 				return err
 			}
@@ -226,13 +239,11 @@ func updateTipsetFile(filePath string, lists tipsetList) error {
 		})
 	}
 
-	multiErr := g.Wait()
+	errs := g.Wait()
 	close(c)
-	if multiErr != nil {
-		return err
-	}
+	errs = multierror.Append(errs, writer.Flush())
 
-	return nil
+	return errs.ErrorOrNil()
 }
 
 type tipsetList []*tipsetFormat

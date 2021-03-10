@@ -25,6 +25,9 @@ type builder struct {
 	venusClient      *NodeClient
 	venusClientClose jsonrpc.ClientCloser
 	msgService       *MessageService
+	addrService      *AddressService
+	walletService    *WalletService
+	event            *NodeEvents
 }
 
 func build(t *testing.T) *builder {
@@ -35,17 +38,39 @@ func build(t *testing.T) *builder {
 	venusApi, closer, err := NewNodeClient(context.Background(), &config.NodeConfig{
 		Url:   "/ip4/192.168.1.134/tcp/3453",
 		Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.n0eSFUWCbosjteqktQOcOghw7VWOm5wODkgpoT2yFJw"})
+	assert.NoError(t, err)
 
+	log := logrus.New()
+
+	walletService, err := NewWalletService(db, log)
 	assert.NoError(t, err)
-	msgService, err := NewMessageService(db, venusApi, logrus.New(), &config.MessageServiceConfig{"tipset.db"},
-		NewMessageState(db, logrus.New(), &config.MessageStateConfig{BackTime: 3600}))
+
+	addressService, err := NewAddressService(db, log, walletService, venusApi, &config.AddressConfig{RemoteWalletSweepInterval: 10})
 	assert.NoError(t, err)
+
+	messageServiceCfg := &config.MessageServiceConfig{"tipset.db"}
+	cfg := &config.Config{MessageService: *messageServiceCfg}
+	config.CheckFile(cfg)
+
+	msgService, err := NewMessageService(db, venusApi, log, messageServiceCfg,
+		NewMessageState(db, logrus.New(), &config.MessageStateConfig{BackTime: 3600}), addressService)
+	assert.NoError(t, err)
+
+	event := &NodeEvents{
+		client:     *venusApi,
+		log:        log,
+		msgService: msgService,
+	}
+
 	return &builder{
 		ctx:              context.TODO(),
 		repo:             db,
 		venusClient:      venusApi,
 		venusClientClose: closer,
 		msgService:       msgService,
+		walletService:    walletService,
+		addrService:      addressService,
+		event:            event,
 	}
 }
 
@@ -92,42 +117,32 @@ func TestMessageStateRefresh(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	head, err := builder.venusClient.ChainHead(builder.ctx)
-	assert.NoError(t, err)
-	ts, err := builder.venusClient.ChainGetTipSet(builder.ctx, head.Parents())
-	assert.NoError(t, err)
-	assert.NoError(t, builder.msgService.ReconnectCheck(builder.ctx, ts))
+	builder.event.listenHeadChangesOnce(builder.ctx)
 
-	builder.msgService.headChans <- &headChan{
-		apply: []*venustypes.TipSet{head},
-	}
-
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Hour * 3)
 }
 
 func TestReadAndWriteTipset(t *testing.T) {
-	var tsList []tipsetFormat
-	tsList = append(tsList, tipsetFormat{
+	var tsList tipsetList
+	tsList = append(tsList, &tipsetFormat{
 		Cid:    []string{"00000"},
 		Height: 0,
 	})
-	tsList = append(tsList, tipsetFormat{
+	tsList = append(tsList, &tipsetFormat{
 		Cid:    []string{"33333"},
 		Height: 3,
 	})
-	tsList = append(tsList, tipsetFormat{
+	tsList = append(tsList, &tipsetFormat{
 		Cid:    []string{"22222"},
 		Height: 2,
 	})
 
-	filePath := "./tipset.db"
+	filePath := "./test_read_write_tipset.db"
 	defer func() {
 		assert.NoError(t, os.Remove(filePath))
 	}()
-	for _, ts := range tsList {
-		err := writeTipset(filePath, ts)
-		assert.NoError(t, err)
-	}
+	err := updateTipsetFile(filePath, tsList)
+	assert.NoError(t, err)
 
 	result, err := readTipsetFromFile(filePath)
 	assert.NoError(t, err)
@@ -136,5 +151,16 @@ func TestReadAndWriteTipset(t *testing.T) {
 
 	sort.Sort(result)
 	t.Logf("after sort %+v", result)
-	assert.Equal(t, tsList[1], *result[0])
+	assert.Equal(t, tsList[1], result[0])
+}
+
+func TestResetTipsetFile(t *testing.T) {
+	path := "./test.db"
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 06666)
+	assert.NoError(t, err)
+
+	f.WriteString("ddddddd")
+	f.Close()
+
+	assert.NoError(t, resetTipsetFile(path))
 }

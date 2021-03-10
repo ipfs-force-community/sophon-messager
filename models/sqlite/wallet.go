@@ -13,7 +13,7 @@ import (
 type sqliteWallet struct {
 	Id string `gorm:"column:id;primary_key;" json:"id"` // 主键
 
-	Name  string `gorm:"column:name;type:varchar(256);NOT NULL"`
+	Name  string `gorm:"column:name;uniqueIndex;type:varchar(256);NOT NULL"`
 	Url   string `gorm:"column:url;type:varchar(256);NOT NULL"`
 	Token string `gorm:"column:token;type:varchar(256);NOT NULL"`
 

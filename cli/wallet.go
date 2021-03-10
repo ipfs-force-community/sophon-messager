@@ -45,8 +45,7 @@ var addWalletCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-		client, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx.Context)
 		if err != nil {
 			return err
 		}

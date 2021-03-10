@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"os"
 	"sort"
 	"sync"
 	"time"
@@ -21,15 +20,16 @@ const MaxHeadChangeProcess = 5
 const LookBackLimit = 1000
 
 type MessageService struct {
-	repo       repo.Repo
-	log        *logrus.Logger
-	cfg        *config.MessageServiceConfig
-	nodeClient *NodeClient
+	repo           repo.Repo
+	log            *logrus.Logger
+	cfg            *config.MessageServiceConfig
+	nodeClient     *NodeClient
+	messageState   *MessageState
+	addressService *AddressService
 
 	headChans chan *headChan
 
-	messageState *MessageState
-	tsCache      map[uint64]*tipsetFormat
+	tsCache map[uint64]*tipsetFormat
 
 	l sync.Mutex
 }
@@ -38,33 +38,25 @@ type headChan struct {
 	apply, revert []*venusTypes.TipSet
 }
 
-func NewMessageService(repo repo.Repo, nc *NodeClient, logger *logrus.Logger, cfg *config.MessageServiceConfig, messageState *MessageState) (*MessageService, error) {
+func NewMessageService(repo repo.Repo,
+	nc *NodeClient,
+	logger *logrus.Logger,
+	cfg *config.MessageServiceConfig,
+	messageState *MessageState,
+	addressService *AddressService) (*MessageService, error) {
 	ms := &MessageService{
-		repo:         repo,
-		log:          logger,
-		nodeClient:   nc,
-		cfg:          cfg,
-		headChans:    make(chan *headChan, MaxHeadChangeProcess),
-		messageState: messageState,
-		tsCache:      make(map[uint64]*tipsetFormat),
+		repo:           repo,
+		log:            logger,
+		nodeClient:     nc,
+		cfg:            cfg,
+		headChans:      make(chan *headChan, MaxHeadChangeProcess),
+		messageState:   messageState,
+		addressService: addressService,
+		tsCache:        make(map[uint64]*tipsetFormat),
 	}
-	ms.checkFile()
 	ms.refreshMessageState(context.TODO())
 
 	return ms, nil
-}
-
-func (ms *MessageService) checkFile() error {
-	if _, err := os.Stat(ms.cfg.TipsetFilePath); err != nil {
-		if os.IsNotExist(err) {
-			if _, err := os.Create(ms.cfg.TipsetFilePath); err != nil {
-				return err
-			}
-		}
-		return err
-	}
-
-	return nil
 }
 
 func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
@@ -129,12 +121,16 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 
 	// handle revert
 	if tsList[0].Height > uint64(head.Height()) || (tsList[0].Height == uint64(head.Height()) && !isEqual(tsList[0], head)) {
-		if idx > len(tsList) {
-			if err := os.Rename(ms.cfg.TipsetFilePath, ms.cfg.TipsetFilePath+".old"); err != nil {
+		if idx+1 >= len(tsList) {
+			ms.ClearTs()
+			if err := resetTipsetFile(ms.cfg.TipsetFilePath); err != nil {
 				return err
 			}
 		} else {
-			updateTipsetFile(ms.cfg.TipsetFilePath, tsList[idx:])
+			ms.RemoveTs(tsList[:idx+1])
+			if err := updateTipsetFile(ms.cfg.TipsetFilePath, tsList[idx+1:]); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -186,6 +182,47 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 	}
 
 	return gapTipset, idx, nil
+}
+
+func (ms *MessageService) RemoveTs(list []*tipsetFormat) {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	for _, ts := range list {
+		delete(ms.tsCache, ts.Height)
+	}
+}
+
+func (ms *MessageService) AddTs(list ...*tipsetFormat) {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	for _, ts := range list {
+		ms.tsCache[ts.Height] = ts
+	}
+}
+
+func (ms *MessageService) ExistTs(height uint64) bool {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	_, ok := ms.tsCache[height]
+
+	return ok
+}
+
+func (ms *MessageService) ClearTs() {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	ms.tsCache = make(map[uint64]*tipsetFormat)
+}
+
+func (ms *MessageService) ListTs() tipsetList {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	var list tipsetList
+	for _, ts := range ms.tsCache {
+		list = append(list, ts)
+	}
+
+	return list
 }
 
 func isEqual(tf *tipsetFormat, ts *venusTypes.TipSet) bool {

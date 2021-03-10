@@ -10,7 +10,7 @@ import (
 )
 
 type NodeEvents struct {
-	client     NodeClient
+	client     *NodeClient
 	log        *logrus.Logger
 	msgService *MessageService
 }

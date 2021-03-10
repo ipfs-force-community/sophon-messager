@@ -2,7 +2,6 @@ package main
 
 import (
 	"io/ioutil"
-	"time"
 
 	"github.com/pelletier/go-toml"
 
@@ -28,12 +27,12 @@ func main() {
 			Token: "",
 		},
 		Address: config.AddressConfig{
-			RemoteWalletSweepInterval: 10 * time.Second,
+			RemoteWalletSweepInterval: 10,
 		},
 		MessageState: config.MessageStateConfig{
-			BackTime:          3600 * 24 * time.Second,
-			DefaultExpiration: 3600 * 24 * 3 * time.Second,
-			CleanupInterval:   3600 * 24 * time.Second,
+			BackTime:          3600 * 24,
+			DefaultExpiration: 3600 * 24 * 3,
+			CleanupInterval:   3600 * 24,
 		},
 		MessageService: config.MessageServiceConfig{
 			TipsetFilePath: "./tipset.db",
