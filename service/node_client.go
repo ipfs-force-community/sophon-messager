@@ -6,12 +6,11 @@ import (
 	"net/url"
 	"time"
 
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/app/submodule/network"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/app/submodule/network"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -33,6 +32,7 @@ type NodeClient struct {
 	ChainGetMessage        func(context.Context, cid.Cid) (*types.UnsignedMessage, error)
 	ChainGetBlockMessages  func(context.Context, cid.Cid) (*chain2.BlockMessages, error)
 	ChainGetReceipts       func(context.Context, cid.Cid) ([]types.MessageReceipt, error)
+	ChainGetParentMessages func(ctx context.Context, bcid cid.Cid) ([]chain2.Message, error)
 	ChainGetParentReceipts func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)
 	GetFullBlock           func(context.Context, cid.Cid) (*types.FullBlock, error)
 	GetActor               func(context.Context, address.Address) (*types.Actor, error)

@@ -28,7 +28,7 @@ func MessagerService() fx.Option {
 	)
 }
 
-func StartNodeEvents(lc fx.Lifecycle, client NodeClient, msgService *MessageService, log *logrus.Logger) *NodeEvents {
+func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageService, log *logrus.Logger) *NodeEvents {
 	nd := &NodeEvents{
 		client:     client,
 		log:        log,

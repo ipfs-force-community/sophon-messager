@@ -37,8 +37,8 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 			return nil, err
 		}
 
-		if _, ok := ws.walletClients[w.Url]; !ok {
-			ws.walletClients[w.Url] = &cli
+		if _, ok := ws.walletClients[w.Name]; !ok {
+			ws.walletClients[w.Name] = &cli
 		}
 	}
 
@@ -64,8 +64,8 @@ func (walletService WalletService) updateWalletClient(ctx context.Context, walle
 	}
 	walletService.l.Lock()
 	defer walletService.l.Unlock()
-	if _, ok := walletService.walletClients[wallet.Url]; !ok {
-		walletService.walletClients[wallet.Url] = &cli
+	if _, ok := walletService.walletClients[wallet.Name]; !ok {
+		walletService.walletClients[wallet.Name] = &cli
 	}
 
 	return nil

@@ -4,18 +4,32 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/go-state-types/crypto"
 	types2 "github.com/filecoin-project/venus/pkg/types"
+	"github.com/google/uuid"
+
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 func NewTestMsg() *types.Message {
 	return &types.Message{
-		Uid:             "44444",
+		ID:              uuid.New().String(),
 		UnsignedMessage: NewTestUnsignedMsg(),
 		// Signature:       &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}},
 		Meta: &types.MsgMeta{ExpireEpoch: 100,
 			MaxFee: big.NewInt(10), GasOverEstimation: 0.5},
 	}
+}
+
+func NewTestSignedMsgs(count int) []*types.Message {
+	msgs := make([]*types.Message, 0, count)
+	for i := 0; i < count; i++ {
+		msg := NewTestMsg()
+		msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())}
+		msgs = append(msgs, msg)
+	}
+
+	return msgs
 }
 
 func NewTestUnsignedMsg() types2.UnsignedMessage {

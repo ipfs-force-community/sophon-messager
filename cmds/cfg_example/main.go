@@ -27,8 +27,15 @@ func main() {
 			Token: "",
 		},
 		Address: config.AddressConfig{
-			LocalWalletSweepInterval:  120,
 			RemoteWalletSweepInterval: 10,
+		},
+		MessageState: config.MessageStateConfig{
+			BackTime:          3600 * 24,
+			DefaultExpiration: 3600 * 24 * 3,
+			CleanupInterval:   3600 * 24,
+		},
+		MessageService: config.MessageServiceConfig{
+			TipsetFilePath: "./tipset.db",
 		},
 	}
 	bytes, _ := toml.Marshal(cfg)

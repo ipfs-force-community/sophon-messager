@@ -14,7 +14,7 @@ func TestNewAddressClient(t *testing.T) {
 	// a valid URL and token are required
 	url := "/ip4/0.0.0.0/tcp/5678"
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.GuKxM-lRDRdbSUwlhERzsF8hJK14XEcFYgWdlICHM4I"
-	cli, close, err := newAddressClient(context.Background(), url, token)
+	cli, close, err := newWalletClient(context.Background(), url, token)
 	assert.NoError(t, err)
 	defer close()
 

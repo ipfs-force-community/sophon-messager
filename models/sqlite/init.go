@@ -9,9 +9,9 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/hunjixin/automapper"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/shopspring/decimal"
 
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -41,19 +41,19 @@ func init() {
 	automapper.MustCreateMapper((*types.Message)(nil), (*sqliteMessage)(nil)).
 		Mapping(func(destVal reflect.Value, sourceVal interface{}) error {
 			var srcMsg *types.Message
-			var destPoint, isok = destVal.Interface().(**sqliteMessage)
-			if !isok {
+			var destPoint, ok = destVal.Interface().(*sqliteMessage)
+			if !ok {
 				return ERRUnspportedMappingType
 			}
-			if srcMsg, isok = sourceVal.(*types.Message); !isok {
+			if srcMsg, ok = sourceVal.(*types.Message); !ok {
 				return ERRUnspportedMappingType
 			}
 			destMsg := &sqliteMessage{}
 
-			*destPoint = destMsg
+			*destPoint = *destMsg
 
 			destMsg.GasLimit = srcMsg.GasLimit
-			destMsg.Uid = srcMsg.Uid
+			destMsg.ID = srcMsg.ID
 			destMsg.Version = srcMsg.Version
 			destMsg.To = srcMsg.To.String()
 			destMsg.From = srcMsg.From.String()
@@ -74,14 +74,14 @@ func init() {
 	automapper.MustCreateMapper((*sqliteMessage)(nil), (*types.Message)(nil)).
 		Mapping(func(destVal reflect.Value, sourceVal interface{}) error {
 			var destMsg *types.Message
-			var srcMsg, isok = destVal.Interface().(*sqliteMessage)
-			if !isok {
+			var srcMsg, ok = destVal.Interface().(*sqliteMessage)
+			if !ok {
 				return ERRUnspportedMappingType
 			}
-			if destMsg, isok = sourceVal.(*types.Message); !isok {
+			if destMsg, ok = sourceVal.(*types.Message); !ok {
 				return ERRUnspportedMappingType
 			}
-			destMsg.Uid = srcMsg.Uid
+			destMsg.ID = srcMsg.ID
 			destMsg.Version = srcMsg.Version
 			destMsg.To, _ = address.NewFromString(srcMsg.To)
 			destMsg.From, _ = address.NewFromString(srcMsg.From)

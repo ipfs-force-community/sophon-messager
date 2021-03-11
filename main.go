@@ -24,6 +24,10 @@ func main() {
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
+				Name:  "repodir",
+				Value: "~/.venus-messager",
+			},
+			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
 				Value:   "./messager.toml",
@@ -49,6 +53,10 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	if err := config.CheckFile(cfg); err != nil {
+		return err
+	}
+
 	log, err := SetLogger(&cfg.Log)
 	if err != nil {
 		return err
@@ -66,10 +74,12 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.Address),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.Address, &cfg.MessageService, &cfg.MessageState),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply((ShutdownChan)(shutdownChan)),
+
+		fx.Provide(service.NewMessageState),
 		//db
 		fx.Provide(models.SetDataBase),
 		//service
@@ -86,7 +96,6 @@ func runAction(ctx *cli.Context) error {
 		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(controller.SetupController),
 		fx.Invoke(service.StartNodeEvents),
-		fx.Invoke(service.ListenAddressChange),
 		fx.Invoke(api.RunAPI),
 	)
 	app := fx.New(provider, invoker)

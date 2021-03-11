@@ -4,6 +4,9 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/filecoin-project/go-state-types/abi"
+
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/hunjixin/automapper"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
@@ -46,18 +49,10 @@ func (m *mysqlMessage) TableName() string {
 	return "messages"
 }
 
-var _ repo.MessageRepo = (mysqlMessageRepo{})
+var _ repo.MessageRepo = (*mysqlMessageRepo)(nil)
 
 type mysqlMessageRepo struct {
 	repo.Repo
-}
-
-func (m mysqlMessageRepo) UpdateMessageReceipt(msg *types.Message) (string, error) {
-	panic("implement me")
-}
-
-func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
-	panic("implement me")
 }
 
 func newMysqlMessageRepo(repo repo.Repo) mysqlMessageRepo {
@@ -66,7 +61,7 @@ func newMysqlMessageRepo(repo repo.Repo) mysqlMessageRepo {
 
 func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	err := m.GetDb().Save(msg).Error
-	return msg.Uid, err
+	return msg.ID, err
 }
 
 func (m mysqlMessageRepo) GetMessage(uuid string) (*types.Message, error) {
@@ -75,6 +70,18 @@ func (m mysqlMessageRepo) GetMessage(uuid string) (*types.Message, error) {
 		return nil, err
 	}
 	return msg.Message(), nil
+}
+
+func (m mysqlMessageRepo) GetMessageByCid(cid string) (*types.Message, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) GetMessageByTime(start time.Time) ([]*types.Message, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+	panic("implement me")
 }
 
 func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
@@ -88,4 +95,12 @@ func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 		return nil, err
 	}
 	return result.([]*types.Message), nil
+}
+
+func (m mysqlMessageRepo) UpdateMessageReceipt(cid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	panic("implement me")
 }

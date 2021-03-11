@@ -1,6 +1,13 @@
 
+[MessageService]
+  tipsetFilePath = "./tipset.db"
+
+[MessageState]
+  CleanupInterval = "86.4µs"
+  DefaultExpiration = "259.2µs"
+  backTime = "86.4µs"
+
 [address]
-  localWalletSweepInterval = "120ns"
   remoteWalletSweepInterval = "10ns"
 
 [api]
@@ -29,5 +36,6 @@
   path = "messager.log"
 
 [node]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.50-NxTSm90nOzY5bu9XUc49Rk7k2iW7PlHb9BvErDpM"
-  url = "/ip4/127.0.0.1/tcp/3453"
+  url=   "/ip4/192.168.1.134/tcp/3453"
+  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.n0eSFUWCbosjteqktQOcOghw7VWOm5wODkgpoT2yFJw"
+
