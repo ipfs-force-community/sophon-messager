@@ -29,7 +29,7 @@ func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageS
 		repo:         repo,
 		log:          logger,
 		cfg:          cfg,
-		messageCache: cache.New(cfg.DefaultExpiration*time.Second, cfg.CleanupInterval*time.Second),
+		messageCache: cache.New(time.Duration(cfg.DefaultExpiration)*time.Second, time.Duration(cfg.CleanupInterval)*time.Second),
 		idCids: &idCidCache{
 			cache: make(map[string]string),
 		},
@@ -37,7 +37,7 @@ func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageS
 }
 
 func (ms *MessageState) loadRecentMessage() error {
-	startTime := time.Now().Add(-time.Second * ms.cfg.BackTime)
+	startTime := time.Now().Add(-time.Second * time.Duration(ms.cfg.BackTime))
 	msgs, err := ms.repo.MessageRepo().GetMessageByTime(startTime)
 	if err != nil {
 		return err

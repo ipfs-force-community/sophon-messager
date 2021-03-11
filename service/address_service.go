@@ -79,7 +79,7 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
 	go func() {
-		ticker := time.NewTicker(addressService.cfg.RemoteWalletSweepInterval * time.Second)
+		ticker := time.NewTicker(time.Duration(addressService.cfg.RemoteWalletSweepInterval) * time.Second)
 		for {
 			select {
 			case <-ticker.C:

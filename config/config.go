@@ -54,7 +54,7 @@ type JWTConfig struct {
 }
 
 type AddressConfig struct {
-	RemoteWalletSweepInterval time.Duration `toml:"remoteWalletSweepInterval"` // second
+	RemoteWalletSweepInterval int `toml:"remoteWalletSweepInterval"` // second
 }
 
 type MessageServiceConfig struct {
@@ -62,13 +62,13 @@ type MessageServiceConfig struct {
 }
 
 type MessageStateConfig struct {
-	BackTime time.Duration `toml:"backTime"` // 向前找多久的数据写到内存,单位秒
+	BackTime int `toml:"backTime"` // 向前找多久的数据写到内存,单位秒
 
-	DefaultExpiration, CleanupInterval time.Duration // message 缓存的有效时间和清理间隔
+	DefaultExpiration, CleanupInterval int // message 缓存的有效时间和清理间隔
 }
 
-func DefaultConfig() *Config {
-	return &Config{
+func DefaultConfig() Config {
+	return Config{
 		DB: DbConfig{
 			Type:   "sqlite",
 			MySql:  MySqlConfig{},
@@ -94,7 +94,7 @@ func DefaultConfig() *Config {
 			CleanupInterval:   3600 * 24,
 		},
 		MessageService: MessageServiceConfig{
-			TipsetFilePath: "tipset.db",
+			TipsetFilePath: "tipset.txt",
 		},
 	}
 }

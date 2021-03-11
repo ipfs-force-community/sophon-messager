@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -15,6 +16,7 @@ import (
 	ccli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models"
+	"github.com/ipfs-force-community/venus-messager/pkg/repo"
 	"github.com/ipfs-force-community/venus-messager/service"
 )
 
@@ -26,12 +28,6 @@ func main() {
 			&cli.StringFlag{
 				Name:  "repodir",
 				Value: "~/.venus-messager",
-			},
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Value:   "./messager.toml",
-				Usage:   "specify config file",
 			},
 		},
 		Commands: []*cli.Command{ccli.MsgCmds, ccli.AddrCmds, ccli.WalletCmds},
@@ -46,14 +42,22 @@ func main() {
 }
 
 func runAction(ctx *cli.Context) error {
-	path := ctx.String("config")
-
-	cfg, err := config.ReadConfig(path)
+	repoDir, err := repo.GetRepoPath(ctx.String("repodir"))
 	if err != nil {
 		return err
 	}
+	fmt.Println("repo dir", repoDir)
+	exist := repo.Exists(repoDir)
 
-	if err := config.CheckFile(cfg); err != nil {
+	if !exist {
+		err := repo.InitRepo(repoDir)
+		if err != nil {
+			return xerrors.Errorf("init repo failed %v", err)
+		}
+	}
+
+	cfg, err := config.ReadConfig(filepath.Join(repoDir, repo.ConfigFilename))
+	if err != nil {
 		return err
 	}
 

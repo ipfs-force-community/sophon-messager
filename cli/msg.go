@@ -3,11 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 
-	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/utils"
 	"github.com/urfave/cli/v2"
+
+	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 var MsgCmds = &cli.Command{
@@ -29,14 +28,13 @@ var pushCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-		messageClient, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 		msg := utils.NewTestMsg()
-		id, err := messageClient.PushMessage(ctx.Context, msg)
+		id, err := client.PushMessage(ctx.Context, msg)
 		if err != nil {
 			return err
 		}
@@ -58,15 +56,14 @@ var getCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-		messageClient, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
 		uid := ctx.String("uuid")
-		msg, err := messageClient.GetMessage(ctx.Context, uid)
+		msg, err := client.GetMessage(ctx.Context, uid)
 		if err != nil {
 			return err
 		}
@@ -89,14 +86,13 @@ var listCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-		messageClient, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		msg, err := messageClient.ListMessage(ctx.Context)
+		msg, err := client.ListMessage(ctx.Context)
 		if err != nil {
 			return err
 		}

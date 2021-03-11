@@ -45,7 +45,7 @@ var addWalletCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx.Context)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
