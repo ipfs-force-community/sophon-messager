@@ -3,12 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -45,7 +43,7 @@ var addWalletCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx.Context)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
@@ -80,8 +78,7 @@ var getWalletCmd = &cli.Command{
 	Usage:     "get local wallet",
 	ArgsUsage: "id",
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-		client, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
@@ -107,9 +104,7 @@ var listWalletCmd = &cli.Command{
 	Name:  "list",
 	Usage: "list local wallet",
 	Action: func(ctx *cli.Context) error {
-		header := http.Header{}
-
-		client, closer, err := client.NewMessageRPC(ctx.Context, "http://127.0.0.1:39812/rpc/v0", header)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}

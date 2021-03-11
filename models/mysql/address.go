@@ -13,8 +13,8 @@ import (
 )
 
 type mysqlAddress struct {
-	Addr  string `gorm:"column:addr;primary_key;NOT NULL"json:"id"` // 主键
-	Nonce uint64 `gorm:"column:nonce;"json:"nonce"`
+	Addr  string `gorm:"column:addr;primary_key;NOT NULL"` // 主键
+	Nonce uint64 `gorm:"column:nonce;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间

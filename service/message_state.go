@@ -4,8 +4,6 @@ import (
 	"sync"
 	"time"
 
-	venustypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 
 	"github.com/ipfs-force-community/venus-messager/config"
@@ -18,101 +16,83 @@ type MessageState struct {
 	log  *logrus.Logger
 	cfg  *config.MessageStateConfig
 
-	messageCache *cache.Cache
-	idCids       *idCidCache // 保存 cid 和 id的映射，方便从messageCache中找消息
+	idCids *idCidCache // 保存 cid 和 id的映射，方便从msgCache中找消息状态
+
+	msgState map[string]types.MessageState // id 为 key
 
 	l sync.Mutex
 }
 
-func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) *MessageState {
-	return &MessageState{
-		repo:         repo,
-		log:          logger,
-		cfg:          cfg,
-		messageCache: cache.New(cfg.DefaultExpiration*time.Second, cfg.CleanupInterval*time.Second),
+func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) (*MessageState, error) {
+	ms := &MessageState{
+		repo: repo,
+		log:  logger,
+		cfg:  cfg,
 		idCids: &idCidCache{
 			cache: make(map[string]string),
 		},
+		msgState: make(map[string]types.MessageState),
 	}
+
+	if err := ms.loadRecentMessage(); err != nil {
+		return nil, err
+	}
+
+	return ms, nil
 }
 
 func (ms *MessageState) loadRecentMessage() error {
-	startTime := time.Now().Add(-time.Second * ms.cfg.BackTime)
-	msgs, err := ms.repo.MessageRepo().GetMessageByTime(startTime)
+	startTime := time.Now().Add(-time.Second * time.Duration(ms.cfg.BackTime))
+	msgs, err := ms.repo.MessageRepo().GetSignedMessageByTime(startTime)
 	if err != nil {
 		return err
 	}
 	ms.log.Infof("load recent message: %d", len(msgs))
-	ms.SetMessages(msgs)
 
 	for _, msg := range msgs {
 		if msg.UnsignedCid != nil {
 			ms.idCids.Set(msg.ID.String(), msg.UnsignedCid.String())
+			ms.SetMessageState(msg.ID.String(), msg.State)
 		}
 	}
 	return nil
 }
 
-func (ms *MessageState) GetMessage(id string) (*types.Message, bool) {
-	v, ok := ms.messageCache.Get(id)
-	if ok {
-		return v.(*types.Message), ok
-	}
+func (ms *MessageState) GetMessageState(id string) (types.MessageState, bool) {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+	v, ok := ms.msgState[id]
 
-	return nil, ok
+	return v, ok
 }
 
-func (ms *MessageState) SetMessage(msg *types.Message) {
-	ms.messageCache.SetDefault(msg.ID.String(), msg)
+func (ms *MessageState) SetMessageState(id string, state types.MessageState) {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+
+	ms.msgState[id] = state
 }
 
-func (ms *MessageState) SetMessages(msgs []*types.Message) {
-	for _, msg := range msgs {
-		ms.SetMessage(msg)
-	}
+func (ms *MessageState) DeleteMessageState(id string) {
+	ms.l.Lock()
+	defer ms.l.Unlock()
+
+	delete(ms.msgState, id)
 }
 
-func (ms *MessageState) DeleteMessage(id string) {
-	ms.messageCache.Delete(id)
-}
-
-func (ms *MessageState) UpdateMessageState(id types.UUID, state types.MessageState) {
-	if v, ok := ms.messageCache.Get(id.String()); ok {
-		msg := v.(*types.Message)
-		msg.State = state
-		ms.messageCache.SetDefault(id.String(), msg)
-	} else {
-		m, err := ms.repo.MessageRepo().GetMessage(id)
+func (ms *MessageState) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	id, ok := ms.idCids.Get(cid)
+	if !ok {
+		msg, err := ms.repo.MessageRepo().GetMessageByCid(cid)
 		if err != nil {
-			ms.log.Errorf("get message failed, id: %v, err: %v", id, err)
-			return
+			return err
 		}
-		m.State = state
-		ms.messageCache.SetDefault(id.String(), m)
+		ms.SetMessageState(msg.ID.String(), state)
+		return nil
 	}
-}
 
-func (ms *MessageState) UpdateMessageStateAndReceipt(cidStr string, state types.MessageState, receipt *venustypes.MessageReceipt) {
-	if id, ok := ms.idCids.Get(cidStr); ok {
-		if m, ok := ms.GetMessage(id); ok {
-			m.State = state
-			if receipt != nil {
-				m.Receipt = receipt
-			}
-		}
-	} else {
-		m, err := ms.repo.MessageRepo().GetMessageByCid(cidStr)
-		if err != nil {
-			ms.log.Errorf("get message by cid failed, cid: %v, err: %v", cidStr, err)
-			return
-		}
-		m.State = state
-		if receipt != nil {
-			m.Receipt = receipt
-		}
-		ms.SetMessage(m)
-		ms.idCids.Set(m.ID.String(), cidStr)
-	}
+	ms.SetMessageState(id, state)
+	return nil
 }
 
 type idCidCache struct {
@@ -120,7 +100,7 @@ type idCidCache struct {
 	l     sync.Mutex
 }
 
-func (ic *idCidCache) Set(id, cid string) {
+func (ic *idCidCache) Set(cid, id string) {
 	ic.l.Lock()
 	defer ic.l.Unlock()
 	ic.cache[cid] = id
@@ -129,7 +109,7 @@ func (ic *idCidCache) Set(id, cid string) {
 func (ic *idCidCache) Get(cid string) (string, bool) {
 	ic.l.Lock()
 	defer ic.l.Unlock()
+	cid, ok := ic.cache[cid]
 
-	id, ok := ic.cache[cid]
-	return id, ok
+	return cid, ok
 }

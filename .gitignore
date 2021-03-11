@@ -4,6 +4,7 @@
 ./venus-messager
 ./*.log
 *.db
+*.txt
 ./cmds/cfg_example/cfg_example
 venus-messager
 *.log

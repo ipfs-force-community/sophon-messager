@@ -30,7 +30,9 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 			return xerrors.Errorf("expect hccurrent event but got %s ", noti[0].Type)
 		}
 		//todo do some check or repaire for the first connect
-		nd.msgService.ReconnectCheck(ctx, noti[0].Val)
+		if err := nd.msgService.ReconnectCheck(ctx, noti[0].Val); err != nil {
+			return xerrors.Errorf("reconnect check error: %v", err)
+		}
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -48,7 +50,9 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 			}
 		}
 
-		nd.msgService.ProcessNewHead(ctx, apply, revert)
+		if err := nd.msgService.ProcessNewHead(ctx, apply, revert); err != nil {
+			return xerrors.Errorf("process new head error: %v", err)
+		}
 	}
 	return nil
 }

@@ -22,9 +22,8 @@ func ReadConfig(path string) (*Config, error) {
 func CheckFile(cfg *Config) error {
 	if _, err := os.Stat(cfg.MessageService.TipsetFilePath); err != nil {
 		if os.IsNotExist(err) {
-			if _, err := os.Create(cfg.MessageService.TipsetFilePath); err != nil {
-				return err
-			}
+			_, err := os.Create(cfg.MessageService.TipsetFilePath)
+			return err
 		}
 		return err
 	}

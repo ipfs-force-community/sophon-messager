@@ -94,11 +94,15 @@ func (m mysqlMessageRepo) GetMessageByCid(cid string) (*types.Message, error) {
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) GetMessageByTime(start time.Time) ([]*types.Message, error) {
+func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+func (m mysqlMessageRepo) GetSignedMessageByTime(start time.Time) ([]*types.Message, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
 	panic("implement me")
 }
 

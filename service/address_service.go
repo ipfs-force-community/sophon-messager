@@ -80,7 +80,7 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
 	go func() {
-		ticker := time.NewTicker(addressService.cfg.RemoteWalletSweepInterval * time.Second)
+		ticker := time.NewTicker(time.Duration(addressService.cfg.RemoteWalletSweepInterval) * time.Second)
 		for {
 			select {
 			case <-ticker.C:
@@ -89,7 +89,9 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 						addressService.log.Errorf("process wallet failed, name: %s, error: %v", key, err)
 					}
 				}
-			default:
+			case <-ctx.Done():
+				addressService.log.Warnf("context error: %v", ctx.Err())
+				return
 			}
 		}
 	}()

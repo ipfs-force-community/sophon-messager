@@ -26,11 +26,11 @@ import (
 //-32300 ---> transport error
 
 const (
-	parseError       = -32700
+	parseError       = -32700 // nolint
 	serverError      = -32600
 	applicationError = -32500
-	systemError      = -32400
-	transportError   = -32300
+	systemError      = -32400 // nolint
+	transportError   = -32300 // nolint
 )
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()

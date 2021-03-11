@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"os"
 	"sort"
 	"testing"
 	"time"
@@ -48,16 +47,18 @@ func build(t *testing.T) *builder {
 	addressService, err := NewAddressService(db, log, walletService, venusApi, &config.AddressConfig{RemoteWalletSweepInterval: 10})
 	assert.NoError(t, err)
 
-	messageServiceCfg := &config.MessageServiceConfig{"tipset.db"}
+	messageServiceCfg := &config.MessageServiceConfig{TipsetFilePath: "tipset.txt", IsProcessHead: true}
 	cfg := &config.Config{MessageService: *messageServiceCfg}
-	config.CheckFile(cfg)
+	assert.NoError(t, config.CheckFile(cfg))
 
-	msgService, err := NewMessageService(db, venusApi, log, messageServiceCfg,
-		NewMessageState(db, logrus.New(), &config.MessageStateConfig{BackTime: 3600}), addressService)
+	messageState, err := NewMessageState(db, logrus.New(), &config.MessageStateConfig{BackTime: 3600})
+	assert.NoError(t, err)
+
+	msgService, err := NewMessageService(db, venusApi, log, messageServiceCfg, messageState, addressService)
 	assert.NoError(t, err)
 
 	event := &NodeEvents{
-		client:     *venusApi,
+		client:     venusApi,
 		log:        log,
 		msgService: msgService,
 	}
@@ -117,50 +118,45 @@ func TestMessageStateRefresh(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	builder.event.listenHeadChangesOnce(builder.ctx)
+	assert.NoError(t, builder.event.listenHeadChangesOnce(builder.ctx))
 
-	time.Sleep(time.Hour * 3)
+	time.Sleep(time.Minute * 6)
 }
 
 func TestReadAndWriteTipset(t *testing.T) {
-	var tsList tipsetList
-	tsList = append(tsList, &tipsetFormat{
-		Cid:    []string{"00000"},
+	tsCache := &TipsetCache{Cache: map[uint64]*tipsetFormat{}, CurrHeight: 0}
+	tsCache.Cache[0] = &tipsetFormat{
+		Key:    "00000",
 		Height: 0,
-	})
-	tsList = append(tsList, &tipsetFormat{
-		Cid:    []string{"33333"},
+	}
+	tsCache.Cache[3] = &tipsetFormat{
+		Key:    "33333",
 		Height: 3,
-	})
-	tsList = append(tsList, &tipsetFormat{
-		Cid:    []string{"22222"},
+	}
+	tsCache.Cache[2] = &tipsetFormat{
+		Key:    "22222",
 		Height: 2,
-	})
+	}
+	tsCache.CurrHeight = 3
 
-	filePath := "./test_read_write_tipset.db"
+	filePath := "./test_read_write_tipset.txt"
 	defer func() {
-		assert.NoError(t, os.Remove(filePath))
+		//assert.NoError(t, os.Remove(filePath))
 	}()
-	err := updateTipsetFile(filePath, tsList)
+	err := updateTipsetFile(filePath, tsCache)
 	assert.NoError(t, err)
 
-	result, err := readTipsetFromFile(filePath)
+	result, err := readTipsetFile(filePath)
 	assert.NoError(t, err)
-	assert.Len(t, result, 3)
-	t.Logf("before sort %+v", result)
+	assert.Len(t, result.Cache, 3)
 
-	sort.Sort(result)
-	t.Logf("after sort %+v", result)
-	assert.Equal(t, tsList[1], result[0])
-}
+	var tsList tipsetList
+	for _, c := range result.Cache {
+		tsList = append(tsList, c)
+	}
+	t.Logf("before sort %+v", tsList)
 
-func TestResetTipsetFile(t *testing.T) {
-	path := "./test.db"
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 06666)
-	assert.NoError(t, err)
-
-	f.WriteString("ddddddd")
-	f.Close()
-
-	assert.NoError(t, resetTipsetFile(path))
+	sort.Sort(tsList)
+	t.Logf("after sort %+v", tsList)
+	assert.Equal(t, tsList[1].Height, uint64(2))
 }

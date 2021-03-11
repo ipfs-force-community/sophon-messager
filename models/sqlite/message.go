@@ -252,9 +252,22 @@ func (m *sqliteMessageRepo) GetMessageByCid(cid string) (*types.Message, error) 
 	return msg.Message(), nil
 }
 
-func (m *sqliteMessageRepo) GetMessageByTime(start time.Time) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) GetSignedMessageByTime(start time.Time) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	if err := m.DB.Where("created_at >= ?", start).Find(&sqlMsgs).Error; err != nil {
+	if err := m.DB.Where("created_at >= ? and signed_data not null", start).Find(&sqlMsgs).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+
+	return result, nil
+}
+
+func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	if err := m.DB.Where("height >= ? and signed_data not null", uint64(height)).Find(&sqlMsgs).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*types.Message, len(sqlMsgs))
