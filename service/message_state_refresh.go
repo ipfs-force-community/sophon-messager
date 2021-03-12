@@ -120,8 +120,8 @@ func (ms *MessageService) recordRevertMsgs(ctx context.Context, h *headChan) err
 
 	// update message state
 	for _, cid := range revertMsgs {
-		ms.messageState.UpdateMessageStateAndReceipt(cid.String(), types.Revert, nil)
-		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.Revert); err != nil {
+		ms.messageState.UpdateMessageStateAndReceipt(cid.String(), types.FillMsg, nil)
+		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s, error: %v", cid.String(), err)
 		}
 	}
@@ -149,11 +149,11 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 		msg := msgs[i].Message
 		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 			cidStr := msgs[i].Cid.String()
-			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChain); err != nil {
+			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
 				errs = multierror.Append(errs, xerrors.Errorf("cid:%s failed:%v", cidStr, err))
 			}
 
-			ms.messageState.UpdateMessageStateAndReceipt(cidStr, types.OnChain, nil)
+			ms.messageState.UpdateMessageStateAndReceipt(cidStr, types.OnChainMsg, nil)
 		}
 	}
 

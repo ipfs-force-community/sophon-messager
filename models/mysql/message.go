@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"github.com/filecoin-project/go-address"
+	"gorm.io/gorm"
 	"reflect"
 	"time"
 
@@ -52,21 +54,33 @@ func (m *mysqlMessage) TableName() string {
 var _ repo.MessageRepo = (*mysqlMessageRepo)(nil)
 
 type mysqlMessageRepo struct {
-	repo.Repo
+	*gorm.DB
 }
 
-func newMysqlMessageRepo(repo repo.Repo) mysqlMessageRepo {
-	return mysqlMessageRepo{repo}
+func (m mysqlMessageRepo) ExpireMessage(msg []*types.Message) error {
+	panic("implement me")
 }
 
-func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
-	err := m.GetDb().Save(msg).Error
+func (m mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) BatchSaveMessage(msg []*types.Message) error {
+	panic("implement me")
+}
+
+func newMysqlMessageRepo(db *gorm.DB) mysqlMessageRepo {
+	return mysqlMessageRepo{DB: db}
+}
+
+func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
+	err := m.DB.Save(msg).Error
 	return msg.ID, err
 }
 
-func (m mysqlMessageRepo) GetMessage(uuid string) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) {
 	var msg *mysqlMessage
-	if err := m.GetDb().Where(&mysqlMessage{Id: uuid, IsDeleted: -1}).First(&msg).Error; err != nil {
+	if err := m.DB.Where(&mysqlMessage{Id: uuid.String(), IsDeleted: -1}).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -86,7 +100,7 @@ func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 
 func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	var internalMsg []*mysqlMessage
-	if err := m.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
+	if err := m.DB.Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 

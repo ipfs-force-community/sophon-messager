@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"gorm.io/gorm"
 	"reflect"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type mysqlWallet struct {
-	Id string `gorm:"column:id;primary_key;" json:"id"` // 主键
+	Id types.UUID `gorm:"column:id;primary_key;" json:"id"` // 主键
 
 	Name  string `gorm:"column:name;type:varchar(256);NOT NULL"`
 	Url   string `gorm:"column:url;type:varchar(256);NOT NULL"`
@@ -37,21 +38,21 @@ func (sqliteWallet mysqlWallet) TableName() string {
 var _ repo.WalletRepo = (*mysqlWalletRepo)(nil)
 
 type mysqlWalletRepo struct {
-	repo.Repo
+	*gorm.DB
 }
 
-func newMysqlWalletRepo(repo repo.Repo) mysqlWalletRepo {
-	return mysqlWalletRepo{repo}
+func newMysqlWalletRepo(db *gorm.DB) mysqlWalletRepo {
+	return mysqlWalletRepo{DB: db}
 }
 
 func (s mysqlWalletRepo) SaveWallet(wallet *types.Wallet) (string, error) {
-	err := s.GetDb().Save(FromWallet(*wallet)).Error
+	err := s.DB.Save(FromWallet(*wallet)).Error
 	return wallet.Id, err
 }
 
-func (s mysqlWalletRepo) GetWallet(uuid string) (*types.Wallet, error) {
+func (s mysqlWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {
 	var wallet mysqlWallet
-	if err := s.GetDb().Where(&mysqlWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where(&mysqlWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
 		return nil, err
 	}
 	return wallet.Wallet(), nil
@@ -59,7 +60,7 @@ func (s mysqlWalletRepo) GetWallet(uuid string) (*types.Wallet, error) {
 
 func (s mysqlWalletRepo) ListWallet() ([]*types.Wallet, error) {
 	var internalMsg []*mysqlWallet
-	if err := s.GetDb().Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
+	if err := s.DB.Find(&internalMsg, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 
@@ -70,12 +71,12 @@ func (s mysqlWalletRepo) ListWallet() ([]*types.Wallet, error) {
 	return result.([]*types.Wallet), nil
 }
 
-func (s mysqlWalletRepo) DelWallet(uuid string) error {
+func (s mysqlWalletRepo) DelWallet(uuid types.UUID) error {
 	var wallet mysqlWallet
-	if err := s.GetDb().Where(&mysqlWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where(&mysqlWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
 		return err
 	}
 	wallet.IsDeleted = 1
 
-	return s.GetDb().Save(&wallet).Error
+	return s.DB.Save(&wallet).Error
 }

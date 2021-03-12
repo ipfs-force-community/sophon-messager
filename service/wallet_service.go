@@ -49,7 +49,7 @@ func (walletService WalletService) SaveWallet(ctx context.Context, wallet *types
 	return walletService.repo.WalletRepo().SaveWallet(wallet)
 }
 
-func (walletService WalletService) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
+func (walletService WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
 	return walletService.repo.WalletRepo().GetWallet(uuid)
 }
 

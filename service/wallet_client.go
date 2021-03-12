@@ -2,18 +2,17 @@ package service
 
 import (
 	"context"
+	"github.com/filecoin-project/venus/pkg/crypto"
 	"net/http"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
-
-	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type WalletClient struct {
 	WalletList func(context.Context) ([]address.Address, error)
 	WalletHas  func(ctx context.Context, address address.Address) (bool, error)
-	WalletSign func(ctx context.Context, signer address.Address, toSign []byte, meta types.MsgMeta) (*types.Signature, error)
+	WalletSign func(context.Context, address.Address, []byte) (*crypto.Signature, error)
 }
 
 func newWalletClient(ctx context.Context, url, token string) (WalletClient, jsonrpc.ClientCloser, error) {

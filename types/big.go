@@ -287,10 +287,10 @@ func (bi *Int) NilOrZero() bool {
 
 // Value implement sql.Scanner
 func (bi *Int) Value() (driver.Value, error) {
-	if bi != nil {
+	if bi != nil && bi.Int != nil {
 		return (bi).String(), nil
 	}
-	return nil, nil
+	return "0", nil
 }
 
 // Scan assigns a value from a database driver.

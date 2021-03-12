@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"github.com/filecoin-project/go-address"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -9,10 +10,13 @@ import (
 )
 
 type MessageRepo interface {
-	SaveMessage(msg *types.Message) (string, error)
-	GetMessage(uuid string) (*types.Message, error)
+	ExpireMessage(msg []*types.Message) error
+	BatchSaveMessage(msg []*types.Message) error
+	SaveMessage(msg *types.Message) (types.UUID, error)
+	GetMessage(uuid types.UUID) (*types.Message, error)
 	UpdateMessageReceipt(cid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error)
 	ListMessage() ([]*types.Message, error)
+	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 	GetMessageByCid(cid string) (*types.Message, error)
 	GetMessageByTime(start time.Time) ([]*types.Message, error)
