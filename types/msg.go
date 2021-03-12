@@ -21,6 +21,8 @@ const (
 type Message struct {
 	ID UUID
 
+	UnsignedCid *cid.Cid
+	SignedCid   *cid.Cid
 	venusTypes.UnsignedMessage
 	*crypto.Signature
 
@@ -30,24 +32,6 @@ type Message struct {
 	Meta *MsgMeta
 
 	State MessageState // 消息状态
-}
-
-func (m *Message) Cid() cid.Cid {
-	if m.Signature != nil {
-		return m.SignedCid()
-	}
-	return m.UnsignedMessage.Cid()
-}
-
-func (m *Message) UnsingedCid() cid.Cid {
-	return m.UnsignedMessage.Cid()
-}
-
-func (m *Message) SignedCid() cid.Cid {
-	if m.Signature == nil {
-		return cid.Undef
-	}
-	return (&venusTypes.SignedMessage{m.UnsignedMessage, *m.Signature}).Cid()
 }
 
 type MsgMeta struct {

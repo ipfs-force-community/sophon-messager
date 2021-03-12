@@ -19,6 +19,10 @@ func (message Message) GetMessage(ctx context.Context, uuid types.UUID) (*types.
 	return message.MsgService.GetMessage(ctx, uuid)
 }
 
+func (message Message) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
+	return message.MsgService.GetMessageState(ctx, uuid)
+}
+
 func (message Message) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return message.MsgService.ListMessage(ctx)
 }

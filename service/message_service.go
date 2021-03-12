@@ -76,6 +76,13 @@ func (ms *MessageService) GetMessage(ctx context.Context, uuid types.UUID) (*typ
 	return ms.messageRepo.GetMessage(uuid)
 }
 
+func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
+	if msg, ok := ms.messageState.GetMessage(uuid.String()); ok {
+		return msg.State, nil
+	}
+	return ms.messageRepo.GetMessageState(uuid)
+}
+
 func (ms *MessageService) GetMessageByCid(background context.Context, cid string) (*types.Message, error) {
 	return ms.messageRepo.GetMessageByCid(cid)
 }
@@ -328,7 +335,16 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				msg.Signature = sig
 				msg.State = types.FillMsg
 
-				//todo update cid
+				unsignedCid := msg.UnsignedMessage.Cid()
+				msg.UnsignedCid = &unsignedCid
+
+				signedMsg := venusTypes.SignedMessage{
+					Message:   msg.UnsignedMessage,
+					Signature: *msg.Signature,
+				}
+
+				signedCid := signedMsg.Cid()
+				msg.SignedCid = &signedCid
 			}
 
 			//保存消息
@@ -352,6 +368,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 					Message:   msg.UnsignedMessage,
 					Signature: *msg.Signature,
 				})
+				//update cache
 			}
 
 			return nil

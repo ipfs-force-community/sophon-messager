@@ -14,6 +14,7 @@ type MessageRepo interface {
 	BatchSaveMessage(msg []*types.Message) error
 	SaveMessage(msg *types.Message) (types.UUID, error)
 	GetMessage(uuid types.UUID) (*types.Message, error)
+	GetMessageState(uuid types.UUID) (types.MessageState, error)
 	UpdateMessageReceipt(cid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error)
 	ListMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
