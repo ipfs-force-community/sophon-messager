@@ -47,7 +47,7 @@ func (ms *MessageState) loadRecentMessage() error {
 
 	for _, msg := range msgs {
 		if msg.SignedCid().Defined() {
-			ms.idCids.Set(msg.ID, msg.SignedCid().String())
+			ms.idCids.Set(msg.ID.String(), msg.SignedCid().String())
 		}
 	}
 	return nil
@@ -63,7 +63,7 @@ func (ms *MessageState) GetMessage(id string) (*types.Message, bool) {
 }
 
 func (ms *MessageState) SetMessage(msg *types.Message) {
-	ms.messageCache.SetDefault(msg.ID, msg)
+	ms.messageCache.SetDefault(msg.ID.String(), msg)
 }
 
 func (ms *MessageState) SetMessages(msgs []*types.Message) {
@@ -76,11 +76,11 @@ func (ms *MessageState) DeleteMessage(id string) {
 	ms.messageCache.Delete(id)
 }
 
-func (ms *MessageState) UpdateMessageState(id string, state types.MessageState) {
-	if v, ok := ms.messageCache.Get(id); ok {
+func (ms *MessageState) UpdateMessageState(id types.UUID, state types.MessageState) {
+	if v, ok := ms.messageCache.Get(id.String()); ok {
 		msg := v.(*types.Message)
 		msg.State = state
-		ms.messageCache.SetDefault(id, msg)
+		ms.messageCache.SetDefault(id.String(), msg)
 	} else {
 		m, err := ms.repo.MessageRepo().GetMessage(id)
 		if err != nil {
@@ -88,7 +88,7 @@ func (ms *MessageState) UpdateMessageState(id string, state types.MessageState) 
 			return
 		}
 		m.State = state
-		ms.messageCache.SetDefault(id, m)
+		ms.messageCache.SetDefault(id.String(), m)
 	}
 }
 
@@ -111,7 +111,7 @@ func (ms *MessageState) UpdateMessageStateAndReceipt(cidStr string, state types.
 			m.Receipt = receipt
 		}
 		ms.SetMessage(m)
-		ms.idCids.Set(m.ID, cidStr)
+		ms.idCids.Set(m.ID.String(), cidStr)
 	}
 }
 

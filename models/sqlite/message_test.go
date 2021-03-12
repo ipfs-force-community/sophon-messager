@@ -66,7 +66,7 @@ func TestUpdateMessageReceipt(t *testing.T) {
 		GasUsed:     34,
 	}
 	height := abi.ChainEpoch(10)
-	state := types.OnChain
+	state := types.OnChainMsg
 	_, err = db.MessageRepo().UpdateMessageReceipt(signedCid.String(), rec, height, state)
 	assert.NoError(t, err)
 
@@ -108,15 +108,15 @@ func TestMessage(t *testing.T) {
 func TestUpdateMessageStateByCid(t *testing.T) {
 	msg := utils.NewTestMsg()
 	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
-	msg.State = types.Signed
+	msg.State = types.FillMsg
 	signedCid := msg.SignedCid()
 
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
 
-	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(signedCid.String(), types.OnChain))
+	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(signedCid.String(), types.OnChainMsg))
 
 	msg2, err := db.MessageRepo().GetMessage(msg.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, types.OnChain, msg2.State)
+	assert.Equal(t, types.FillMsg, msg2.State)
 }

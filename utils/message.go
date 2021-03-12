@@ -13,7 +13,7 @@ import (
 
 func NewTestMsg() *types.Message {
 	return &types.Message{
-		ID:              uuid.New().String(),
+		ID:              types.NewUUID(),
 		UnsignedMessage: NewTestUnsignedMsg(),
 		// Signature:       &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}},
 		Meta: &types.MsgMeta{ExpireEpoch: 100,

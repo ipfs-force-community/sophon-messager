@@ -14,15 +14,15 @@ type SqlLiteRepo struct {
 }
 
 func (d SqlLiteRepo) MessageRepo() repo.MessageRepo {
-	return newSqliteMessageRepo(d)
+	return newSqliteMessageRepo(d.DB)
 }
 
 func (d SqlLiteRepo) WalletRepo() repo.WalletRepo {
-	return newSqliteWalletRepo(d)
+	return newSqliteWalletRepo(d.DB)
 }
 
 func (d SqlLiteRepo) AddressRepo() repo.AddressRepo {
-	return newSqliteAddressRepo(d)
+	return newSqliteAddressRepo(d.DB)
 }
 
 func (d SqlLiteRepo) AutoMigrate() error {
@@ -40,6 +40,32 @@ func (d SqlLiteRepo) AutoMigrate() error {
 
 func (d SqlLiteRepo) GetDb() *gorm.DB {
 	return d.DB
+}
+
+func (d SqlLiteRepo) Transaction(cb func(txRepo repo.TxRepo) error) error {
+
+	return d.DB.Transaction(func(tx *gorm.DB) error {
+		txRepo := &TxSqlliteRepo{tx}
+		return cb(txRepo)
+	})
+}
+
+var _ repo.TxRepo = (*TxSqlliteRepo)(nil)
+
+type TxSqlliteRepo struct {
+	*gorm.DB
+}
+
+func (t *TxSqlliteRepo) WalletRepo() repo.WalletRepo {
+	return newSqliteWalletRepo(t.DB)
+}
+
+func (t *TxSqlliteRepo) MessageRepo() repo.MessageRepo {
+	return newSqliteMessageRepo(t.DB)
+}
+
+func (t *TxSqlliteRepo) AddressRepo() repo.AddressRepo {
+	return newSqliteAddressRepo(t.DB)
 }
 
 func (d SqlLiteRepo) DbClose() error {

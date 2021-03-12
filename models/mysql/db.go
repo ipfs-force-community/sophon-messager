@@ -17,15 +17,15 @@ type MysqlRepo struct {
 }
 
 func (d MysqlRepo) MessageRepo() repo.MessageRepo {
-	return newMysqlMessageRepo(d)
+	return newMysqlMessageRepo(d.DB)
 }
 
 func (d MysqlRepo) WalletRepo() repo.WalletRepo {
-	return newMysqlWalletRepo(d)
+	return newMysqlWalletRepo(d.DB)
 }
 
 func (d MysqlRepo) AddressRepo() repo.AddressRepo {
-	return newMysqlAddressRepo(d)
+	return newMysqlAddressRepo(d.DB)
 }
 
 func (d MysqlRepo) AutoMigrate() error {
@@ -47,6 +47,31 @@ func (d MysqlRepo) GetDb() *gorm.DB {
 
 func (d MysqlRepo) DbClose() error {
 	return d.DbClose()
+}
+
+func (d MysqlRepo) Transaction(cb func(txRepo repo.TxRepo) error) error {
+	return d.DB.Transaction(func(tx *gorm.DB) error {
+		txRepo := &TxMysqlRepo{tx}
+		return cb(txRepo)
+	})
+}
+
+var _ repo.TxRepo = (*TxMysqlRepo)(nil)
+
+type TxMysqlRepo struct {
+	*gorm.DB
+}
+
+func (t *TxMysqlRepo) WalletRepo() repo.WalletRepo {
+	return newMysqlWalletRepo(t.DB)
+}
+
+func (t *TxMysqlRepo) MessageRepo() repo.MessageRepo {
+	return newMysqlMessageRepo(t.DB)
+}
+
+func (t *TxMysqlRepo) AddressRepo() repo.AddressRepo {
+	return newMysqlAddressRepo(t.DB)
 }
 
 func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {

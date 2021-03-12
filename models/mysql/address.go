@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"gorm.io/gorm"
 	"reflect"
 	"time"
 
@@ -33,20 +34,20 @@ func (s mysqlAddress) Address() *types.Address {
 }
 
 type mysqlAddressRepo struct {
-	repo.Repo
+	*gorm.DB
 }
 
-func newMysqlAddressRepo(repo repo.Repo) *mysqlAddressRepo {
-	return &mysqlAddressRepo{repo}
+func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
+	return &mysqlAddressRepo{DB: db}
 }
 
 func (s mysqlAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
-	return address.Addr, s.GetDb().Save(FromAddress(address)).Error
+	return address.Addr, s.DB.Save(FromAddress(address)).Error
 }
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.GetDb().Where(&mysqlAddress{
+	if err := s.DB.Where(&mysqlAddress{
 		Addr:      addr,
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
@@ -58,7 +59,7 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr string) (*types.A
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
 	var a mysqlAddress
-	if err := s.GetDb().Where(&mysqlAddress{
+	if err := s.DB.Where(&mysqlAddress{
 		Addr:      addr,
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
@@ -66,12 +67,12 @@ func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
 	}
 	a.IsDeleted = 1
 
-	return s.GetDb().Save(&a).Error
+	return s.DB.Save(&a).Error
 }
 
 func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	var list []*mysqlAddress
-	if err := s.GetDb().Find(&list, "is_deleted = ?", -1).Error; err != nil {
+	if err := s.DB.Find(&list, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 

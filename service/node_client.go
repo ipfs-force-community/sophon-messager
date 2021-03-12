@@ -35,7 +35,6 @@ type NodeClient struct {
 	ChainGetParentMessages func(ctx context.Context, bcid cid.Cid) ([]chain2.Message, error)
 	ChainGetParentReceipts func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)
 	GetFullBlock           func(context.Context, cid.Cid) (*types.FullBlock, error)
-	GetActor               func(context.Context, address.Address) (*types.Actor, error)
 	GetEntry               func(context.Context, abi.ChainEpoch, uint64) (*types.BeaconEntry, error)
 	MessageWait            func(context.Context, cid.Cid, abi.ChainEpoch, abi.ChainEpoch) (*chain.ChainMessage, error)
 	ResolveToKeyAddr       func(context.Context, address.Address, *types.TipSet) (address.Address, error)
@@ -44,6 +43,10 @@ type NodeClient struct {
 	StateNetworkVersion    func(context.Context, types.TipSetKey) (network.Version, error)
 	StateGetActor          func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)
 	StateSearchMsgLimited  func(context.Context, cid.Cid, abi.ChainEpoch) (*chain.MsgLookup, error)
+
+	GasEstimateMessageGas func(context.Context, *types.UnsignedMessage, *types.MessageSendSpec, types.TipSetKey) (*types.UnsignedMessage, error)
+
+	MpoolBatchPush func(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {

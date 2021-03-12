@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"gorm.io/gorm"
 	"reflect"
 	"time"
 
@@ -12,12 +13,13 @@ import (
 )
 
 type sqliteAddress struct {
-	Addr  string `gorm:"column:addr;primary_key;NOT NULL"json:"id"` // 主键
-	Nonce uint64 `gorm:"column:nonce;"json:"nonce"`
+	ID    types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr  string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"json:"addr"` // 主键
+	Nonce uint64     `gorm:"column:nonce;type;unsigned bigint;index;NOT NULL"json:"nonce"`
 
-	IsDeleted int       `gorm:"column:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;index:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;index:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;index:update_at;default:CURRENT_TIMESTAMP;NOT NULL"`  // 更新时间
 }
 
 func (s sqliteAddress) TableName() string {
@@ -33,20 +35,20 @@ func (s sqliteAddress) Address() *types.Address {
 }
 
 type sqliteAddressRepo struct {
-	repo.Repo
+	*gorm.DB
 }
 
-func newSqliteAddressRepo(repo repo.Repo) *sqliteAddressRepo {
-	return &sqliteAddressRepo{repo}
+func newSqliteAddressRepo(db *gorm.DB) *sqliteAddressRepo {
+	return &sqliteAddressRepo{DB: db}
 }
 
 func (s sqliteAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
-	return address.Addr, s.GetDb().Save(FromAddress(address)).Error
+	return address.Addr, s.DB.Save(FromAddress(address)).Error
 }
 
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.GetDb().Where(&sqliteAddress{
+	if err := s.DB.Where(&sqliteAddress{
 		Addr:      addr,
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
@@ -58,7 +60,7 @@ func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.
 
 func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
 	var a sqliteAddress
-	if err := s.GetDb().Where(&sqliteAddress{
+	if err := s.DB.Where(&sqliteAddress{
 		Addr:      addr,
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
@@ -66,12 +68,12 @@ func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
 	}
 	a.IsDeleted = 1
 
-	return s.GetDb().Save(&a).Error
+	return s.DB.Save(&a).Error
 }
 
 func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	var list []*sqliteAddress
-	if err := s.GetDb().Find(&list, "is_deleted = ?", -1).Error; err != nil {
+	if err := s.DB.Find(&list, "is_deleted = ?", -1).Error; err != nil {
 		return nil, err
 	}
 

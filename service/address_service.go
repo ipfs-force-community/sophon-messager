@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"sync"
 	"time"
 
@@ -110,7 +111,7 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli *Wa
 		}
 
 		var nonce uint64
-		actor, err := addressService.nodeClient.GetActor(context.Background(), addr)
+		actor, err := addressService.nodeClient.StateGetActor(context.Background(), addr, venustypes.EmptyTSK)
 		if err != nil {
 			addressService.log.Warnf("get actor failed, addr: %s, err: %v", addr, err)
 		} else {

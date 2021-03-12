@@ -16,7 +16,7 @@ func (walletController WalletController) SaveWallet(ctx context.Context, wallet 
 	return walletController.WalletService.SaveWallet(ctx, wallet)
 }
 
-func (walletController WalletController) GetWallet(ctx context.Context, uuid string) (*types.Wallet, error) {
+func (walletController WalletController) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
 	return walletController.WalletService.GetWallet(ctx, uuid)
 }
 

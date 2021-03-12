@@ -13,9 +13,15 @@ import (
 
 type Repo interface {
 	GetDb() *gorm.DB
+	Transaction(func(txRepo TxRepo) error) error
 	DbClose() error
 	AutoMigrate() error
 
+	WalletRepo() WalletRepo
+	MessageRepo() MessageRepo
+	AddressRepo() AddressRepo
+}
+type TxRepo interface {
 	WalletRepo() WalletRepo
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
@@ -46,9 +52,9 @@ func (s *SqlSignature) Value() (driver.Value, error) {
 const ExitCodeToExec = exitcode.ExitCode(-1)
 
 type SqlMsgReceipt struct {
-	ExitCode    exitcode.ExitCode `json:"exitCode"`
-	ReturnValue []byte            `json:"return"`
-	GasUsed     int64             `json:"gasUsed"`
+	ExitCode    exitcode.ExitCode `gorm:"column:exit_code;default:-1"`
+	ReturnValue []byte            `gorm:"column:return_value;type:blob;"`
+	GasUsed     int64             `gorm:"column:gas_used;type:bigint;"`
 }
 
 func (s *SqlMsgReceipt) Scan(value interface{}) error {
