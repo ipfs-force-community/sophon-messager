@@ -24,7 +24,7 @@ func TestWallet(t *testing.T) {
 	walletRepo := repo.WalletRepo()
 
 	w := &types.Wallet{
-		Id:   "wallet1",
+		ID:   types.NewUUID(),
 		Name: "wallet1",
 		Url:  "http://127.0.0.1:8080",
 
@@ -34,7 +34,7 @@ func TestWallet(t *testing.T) {
 	}
 
 	w2 := &types.Wallet{
-		Id:        "wallet2",
+		ID:        types.NewUUID(),
 		Name:      "wallet2",
 		Url:       "http://127.0.0.1:8082",
 		IsDeleted: 1,

@@ -1,9 +1,10 @@
 package mysql
 
 import (
-	"gorm.io/gorm"
 	"reflect"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/hunjixin/automapper"
 
@@ -47,7 +48,7 @@ func newMysqlWalletRepo(db *gorm.DB) mysqlWalletRepo {
 
 func (s mysqlWalletRepo) SaveWallet(wallet *types.Wallet) (string, error) {
 	err := s.DB.Save(FromWallet(*wallet)).Error
-	return wallet.Id, err
+	return wallet.ID.String(), err
 }
 
 func (s mysqlWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {

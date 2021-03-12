@@ -8,7 +8,6 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -90,17 +89,17 @@ func (b *builder) LoadMessage(count int) ([]*types.Message, error) {
 			}
 			for _, m := range blockMsgs.SecpkMessages {
 				msgs = append(msgs, &types.Message{
-					ID:              uuid.New().String(),
+					ID:              types.NewUUID(),
 					UnsignedMessage: m.Message,
 					Signature:       &m.Signature,
-					State:           types.Unsigned,
+					State:           types.UnFillMsg,
 				})
 			}
 			for _, m := range blockMsgs.BlsMessages {
 				msgs = append(msgs, &types.Message{
-					ID:              uuid.New().String(),
+					ID:              types.NewUUID(),
 					UnsignedMessage: *m,
-					State:           types.Unsigned,
+					State:           types.UnFillMsg,
 				})
 			}
 		}

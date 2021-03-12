@@ -87,9 +87,6 @@ func (ms *MessageService) GetMessage(ctx context.Context, uuid types.UUID) (*typ
 }
 
 func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
-	if msg, ok := ms.messageState.GetMessage(uuid.String()); ok {
-		return msg.State, nil
-	}
 	return ms.messageRepo.GetMessageState(uuid)
 }
 
@@ -121,6 +118,7 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 	if err != nil {
 		return xerrors.Errorf("read tipset info failed %v", err)
 	}
+	ms.tsCache = tsCache
 
 	if len(tsCache.Cache) == 0 {
 		return nil
@@ -252,13 +250,13 @@ func (ms *MessageService) findAndRecordRevertMsgs(height abi.ChainEpoch) error {
 		return err
 	}
 
-	var cid string
 	for _, msg := range msgs {
-		cid = msg.Cid().String()
-		ms.messageState.SetMessageState(cid, types.UnFillMsg)
-		ms.messageState.idCids.Set(msg.ID.String(), cid)
-		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid, types.UnFillMsg); err != nil {
-			return xerrors.Errorf("update message state failed, cid: %s, error: %v", cid, err)
+		ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
+			message.State = msg.State
+			return nil
+		})
+		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(msg.UnsignedMessage.Cid().String(), types.UnFillMsg); err != nil {
+			return xerrors.Errorf("update message state failed, id: %s, error: %v", msg.ID.String(), err)
 		}
 	}
 
@@ -383,7 +381,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 			return nil
 		}); err != nil {
-			ms.log.Errorf("select message of %s failed %w", addr.Addr, err)
+			ms.log.Errorf("select message of %s failed %v", addr.Addr, err)
 			return err
 		}
 	}
@@ -421,16 +419,16 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 		case <-tm.C:
 			newHead, err := ms.nodeClient.ChainHead(ctx)
 			if err != nil {
-				ms.log.Errorf("fail to get chain head %w", err)
+				ms.log.Errorf("fail to get chain head %v", err)
 			}
 			err = ms.pushMessageToPool(ctx, newHead)
 			if err != nil {
-				ms.log.Errorf("push message error %w", err)
+				ms.log.Errorf("push message error %v", err)
 			}
 		case newHead := <-ms.triggerPush:
 			err := ms.pushMessageToPool(ctx, newHead)
 			if err != nil {
-				ms.log.Errorf("push message error %w", err)
+				ms.log.Errorf("push message error %v", err)
 			}
 		}
 	}

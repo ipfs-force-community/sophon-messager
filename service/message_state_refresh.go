@@ -51,10 +51,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	for _, ts := range h.apply {
 		height := ts.Height()
-		ms.AddTs(&tipsetFormat{Key: ts.String(), Height: uint64(height)})
 		if err := ms.processOneBlock(ctx, ts.At(0).Cid(), height, revertMsgs); err != nil {
 			errs = multierror.Append(errs, xerrors.Errorf("block id: %s %v", ts.At(0).Cid().String(), err))
 		}
+		ms.AddTs(&tipsetFormat{Key: ts.String(), Height: uint64(height)})
 		ms.tsCache.CurrHeight = uint64(height)
 	}
 
@@ -120,7 +120,7 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 	for i := range receipts {
 		msg := msgs[i].Message
 		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
-			cidStr := msgs[i].Cid.String()
+			cidStr := msg.Cid().String()
 			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
 				errs = multierror.Append(errs, xerrors.Errorf("cid:%s failed:%v", cidStr, err))
 			}

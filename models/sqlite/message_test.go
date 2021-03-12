@@ -58,7 +58,7 @@ func TestUpdateMessageReceipt(t *testing.T) {
 
 	msg := utils.NewTestMsg()
 	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
-	signedCid := msg.SignedCid
+	unsignedCid := msg.UnsignedMessage.Cid()
 
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
@@ -70,10 +70,10 @@ func TestUpdateMessageReceipt(t *testing.T) {
 	}
 	height := abi.ChainEpoch(10)
 	state := types.OnChainMsg
-	_, err = db.MessageRepo().UpdateMessageReceipt(signedCid.String(), rec, height, types.MessageState(state))
+	_, err = db.MessageRepo().UpdateMessageReceipt(unsignedCid.String(), rec, height, state)
 	assert.NoError(t, err)
 
-	msg2, err := db.MessageRepo().GetMessageByCid(signedCid.String())
+	msg2, err := db.MessageRepo().GetMessageByCid(unsignedCid.String())
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(height), msg2.Height)
 	assert.Equal(t, rec, msg2.Receipt)
@@ -84,18 +84,18 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 	db := setup("message.db")
 
 	msg := utils.NewTestMsg()
-	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
+	msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte{1, 2, 3}}
 	msg.State = types.FillMsg
-	signedCid := msg.SignedCid
+	cid := msg.UnsignedMessage.Cid()
 
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
 
-	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(signedCid.String(), types.OnChainMsg))
+	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(cid.String(), types.OnChainMsg))
 
 	msg2, err := db.MessageRepo().GetMessage(msg.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, types.FillMsg, msg2.State)
+	assert.Equal(t, types.OnChainMsg, msg2.State)
 }
 
 func Test_sqliteMessageRepo_GetMessageState(t *testing.T) {
@@ -141,7 +141,6 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 		_, err := msgDb.SaveMessage(msg)
 		assert.NoError(t, err)
 	}
-
 	height := abi.ChainEpoch(5)
 	msgs, err := msgDb.GetSignedMessageByHeight(height)
 	assert.NoError(t, err)

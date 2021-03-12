@@ -50,10 +50,7 @@ var addWalletCmd = &cli.Command{
 		defer closer()
 		var w types.Wallet
 
-		w.Id = ctx.String("uuid")
-		if len(w.Id) == 0 {
-			return xerrors.Errorf("id cannot be empty")
-		}
+		w.ID = types.NewUUID()
 		w.Name = ctx.String("name")
 		w.Url = ctx.String("url")
 		if len(w.Url) == 0 {

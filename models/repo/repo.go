@@ -65,10 +65,7 @@ func (s *SqlMsgReceipt) Scan(value interface{}) error {
 	return json.Unmarshal(sqlBin, s)
 }
 
-func (s *SqlMsgReceipt) Value() (driver.Value, error) {
-	if s == nil {
-		return nil, nil
-	}
+func (s SqlMsgReceipt) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
@@ -84,7 +81,8 @@ func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
 	}
 }
 
-func (s *SqlMsgReceipt) FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
+func FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
+	var s SqlMsgReceipt
 	if receipt == nil {
 		return nil
 	}
@@ -92,5 +90,5 @@ func (s *SqlMsgReceipt) FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgRec
 	s.GasUsed = receipt.GasUsed
 	s.ReturnValue = receipt.ReturnValue
 	s.ExitCode = receipt.ExitCode
-	return s
+	return &s
 }

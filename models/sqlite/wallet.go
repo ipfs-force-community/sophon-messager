@@ -1,26 +1,26 @@
 package sqlite
 
 import (
-	"gorm.io/gorm"
 	"reflect"
 	"time"
 
 	"github.com/hunjixin/automapper"
+	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type sqliteWallet struct {
-	Id types.UUID `gorm:"column:id;primary_key;"` // 主键
+	ID types.UUID `gorm:"column:id;primary_key;"` // 主键
 
 	Name  string `gorm:"column:name;uniqueIndex;type:varchar(256);NOT NULL"`
 	Url   string `gorm:"column:url;type:varchar(256);NOT NULL"`
 	Token string `gorm:"column:token;type:varchar(256);NOT NULL"`
 
-	IsDeleted int       `gorm:"column:is_deleted;index:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;index:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;index:update_at;default:CURRENT_TIMESTAMP;NOT NULL"`  // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
 func FromWallet(msg types.Wallet) *sqliteWallet {
@@ -47,12 +47,12 @@ func newSqliteWalletRepo(db *gorm.DB) sqliteWalletRepo {
 
 func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) (string, error) {
 	err := s.DB.Save(FromWallet(*wallet)).Error
-	return wallet.Id, err
+	return wallet.ID.String(), err
 }
 
 func (s sqliteWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {
 	var wallet sqliteWallet
-	if err := s.DB.Where(&sqliteWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where(&sqliteWallet{ID: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
 		return nil, err
 	}
 	return wallet.Wallet(), nil
@@ -73,7 +73,7 @@ func (s sqliteWalletRepo) ListWallet() ([]*types.Wallet, error) {
 
 func (s sqliteWalletRepo) DelWallet(uuid types.UUID) error {
 	var wallet sqliteWallet
-	if err := s.DB.Where(&sqliteWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where(&sqliteWallet{ID: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
 		return err
 	}
 	wallet.IsDeleted = 1

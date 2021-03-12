@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"database/sql/driver"
+
 	"github.com/google/uuid"
 )
 
@@ -27,8 +28,8 @@ func (uid *UUID) String() string {
 }
 
 // Value implement sql.Scanner
-func (uid *UUID) Value() (driver.Value, error) {
-	return uuid.UUID(*uid).String(), nil
+func (uid UUID) Value() (driver.Value, error) {
+	return uuid.UUID(uid).String(), nil
 }
 
 // Scan assigns a value from a database driver.

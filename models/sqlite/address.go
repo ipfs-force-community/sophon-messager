@@ -16,11 +16,11 @@ import (
 type sqliteAddress struct {
 	ID    types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
 	Addr  string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"json:"addr"` // 主键
-	Nonce uint64     `gorm:"column:nonce;type;unsigned bigint;index;NOT NULL"json:"nonce"`
+	Nonce uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"json:"nonce"`
 
-	IsDeleted int       `gorm:"column:is_deleted;index:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;index:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;index:update_at;default:CURRENT_TIMESTAMP;NOT NULL"`  // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
 func (s sqliteAddress) TableName() string {
@@ -44,7 +44,7 @@ func newSqliteAddressRepo(db *gorm.DB) *sqliteAddressRepo {
 }
 
 func (s sqliteAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
-	return address.Addr, s.DB.Save(FromAddress(address)).Error
+	return address.Addr, s.DB.Debug().Save(FromAddress(address)).Error
 }
 
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {

@@ -27,23 +27,26 @@ func TestMessageStateCache(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	ms, err := NewMessageState(db, logrus.New(), &config.MessageStateConfig{
+	msgState, err := NewMessageState(db, logrus.New(), &config.MessageStateConfig{
 		BackTime:          60,
 		CleanupInterval:   3,
 		DefaultExpiration: 2,
 	})
-
 	assert.NoError(t, err)
-	assert.NoError(t, ms.loadRecentMessage())
-	assert.Equal(t, 10, len(ms.idCids.cache))
 
-	state, flag := ms.GetMessageState(msgs[0].Cid().String())
+	msgList, err := msgState.repo.MessageRepo().ListMessage()
+	assert.NoError(t, err)
+	assert.Equal(t, 10, len(msgList))
+
+	assert.NoError(t, msgState.loadRecentMessage())
+	assert.Equal(t, 10, len(msgState.idCids.cache))
+
+	state, flag := msgState.GetMessageStateByCid(msgs[0].Cid().String())
 	assert.True(t, flag)
 	assert.Equal(t, msgs[0].State, state)
 
-	ms.SetMessageState(msgs[1].Cid().String(), types.OnChain)
-	state, flag = ms.GetMessageState(msgs[1].Cid().String())
+	msgState.UpdateMessageStateByCid(msgs[1].Cid().String(), types.OnChainMsg)
+	state, flag = msgState.GetMessageStateByCid(msgs[1].Cid().String())
 	assert.True(t, flag)
-	assert.Equal(t, types.OnChain, state)
-
+	assert.Equal(t, types.OnChainMsg, state)
 }

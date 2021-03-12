@@ -3,6 +3,8 @@ package sqlite
 import (
 	"time"
 
+	"github.com/ipfs/go-cid"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -40,15 +42,15 @@ type sqliteMessage struct {
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:signed_cid"`
 
 	Height  uint64              `gorm:"column:height;type:unsigned bigint;index:height"`
-	Receipt *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
+	Receipt *repo.SqlMsgReceipt `gorm:"column:receipt"`
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	State types.MessageState `gorm:"column:state;type:int;"`
 
-	IsDeleted int       `gorm:"column:is_deleted;index:is_deleted;default:-1;NOT NULL"`                // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;index:created_at;default:CURRENT_TIMESTAMP;NOT NULL"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;index:update_at;default:CURRENT_TIMESTAMP;NOT NULL"`  // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
 func (sqlMsg *sqliteMessage) TableName() string {
@@ -76,6 +78,15 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
+	if len(sqlMsg.UnsignedCid) > 0 {
+		unsignedCid, _ := cid.Decode(sqlMsg.UnsignedCid)
+		destMsg.UnsignedCid = &unsignedCid
+	}
+	if len(sqlMsg.SignedCid) > 0 {
+		signedCid, _ := cid.Decode(sqlMsg.SignedCid)
+		destMsg.SignedCid = &signedCid
+	}
+
 	return destMsg
 }
 
@@ -90,14 +101,14 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 		GasLimit: srcMsg.GasLimit,
 		//GasFeeCap:  toDeicimal(srcMsg.GasFeeCap),
 		//GasPremium: toDeicimal(srcMsg.GasPremium),
-		Method:    int(srcMsg.Method),
-		Params:    srcMsg.Params,
-		Signature: (*repo.SqlSignature)(srcMsg.Signature),
-		//Cid:       srcMsg.UnsingedCid().String(),
+		Method:      int(srcMsg.Method),
+		Params:      srcMsg.Params,
+		Signature:   (*repo.SqlSignature)(srcMsg.Signature),
+		UnsignedCid: srcMsg.UnsignedMessage.Cid().String(),
 		//SignedCid: srcMsg.SignedCid().String(),
 		//	ExitCode:   repo.ExitCodeToExec,
 		Height:  srcMsg.Height,
-		Receipt: (&repo.SqlMsgReceipt{}).FromMsgReceipt(srcMsg.Receipt),
+		Receipt: repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:    FromMeta(srcMsg.Meta),
 		State:   srcMsg.State,
 	}
@@ -226,8 +237,7 @@ func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) 
 		DoUpdates: []clause.Assignment{
 			{
 				Column: clause.Column{
-					Table: "messages",
-					Name:  "updated_at",
+					Name: "updated_at",
 				},
 				Value: time.Now(),
 			},
@@ -244,9 +254,9 @@ func (m *sqliteMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) 
 	return msg.Message(), nil
 }
 
-func (m *sqliteMessageRepo) GetMessageByCid(cid string) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid string) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("signed_cid = ?", cid).First(&msg).Error; err != nil {
+	if err := m.DB.Where("unsigned_cid = ?", unsignedCid).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -307,19 +317,19 @@ func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) UpdateMessageReceipt(cid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
+func (m *sqliteMessageRepo) UpdateMessageReceipt(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
 	sqlMsg := sqliteMessage{
 		Height:  uint64(height),
-		Receipt: (&repo.SqlMsgReceipt{}).FromMsgReceipt(receipt),
+		Receipt: repo.FromMsgReceipt(receipt),
 		State:   state,
 	}
-	return cid, m.DB.Debug().Model(&sqliteMessage{}).
-		Where("signed_cid = ?", cid).
+	return unsignedCid, m.DB.Debug().Model(&sqliteMessage{}).
+		Where("unsigned_cid = ?", unsignedCid).
 		Select("height", "exit_code", "receipt", "state").
 		UpdateColumns(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
 	return m.DB.Debug().Model(&sqliteMessage{}).
-		Where("signed_cid = ?", cid).UpdateColumn("state", state).Error
+		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
 }
