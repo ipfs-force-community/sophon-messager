@@ -46,8 +46,8 @@ func (ms *MessageState) loadRecentMessage() error {
 	ms.SetMessages(msgs)
 
 	for _, msg := range msgs {
-		if msg.SignedCid().Defined() {
-			ms.idCids.Set(msg.ID.String(), msg.SignedCid().String())
+		if msg.UnsignedCid != nil {
+			ms.idCids.Set(msg.ID.String(), msg.UnsignedCid.String())
 		}
 	}
 	return nil

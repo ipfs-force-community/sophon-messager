@@ -57,6 +57,10 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m mysqlMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState, error) {
+	panic("implement me")
+}
+
 func (m mysqlMessageRepo) ExpireMessage(msg []*types.Message) error {
 	panic("implement me")
 }
