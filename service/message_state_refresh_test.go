@@ -109,6 +109,7 @@ func (b *builder) LoadMessage(count int) ([]*types.Message, error) {
 }
 
 func TestMessageStateRefresh(t *testing.T) {
+	t.Skip()
 	builder := build(t)
 	msgs, err := builder.LoadMessage(10)
 	assert.NoError(t, err)
