@@ -46,7 +46,9 @@ func (d MysqlRepo) GetDb() *gorm.DB {
 }
 
 func (d MysqlRepo) DbClose() error {
-	return d.DbClose()
+	// return d.DbClose()
+	// todo:
+	return nil
 }
 
 func (d MysqlRepo) Transaction(cb func(txRepo repo.TxRepo) error) error {

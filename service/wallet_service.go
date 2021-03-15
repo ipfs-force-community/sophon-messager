@@ -45,19 +45,20 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 	return ws, err
 }
 
-func (walletService WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
+func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
 	return walletService.repo.WalletRepo().SaveWallet(wallet)
 }
 
-func (walletService WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
+func (walletService *WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
 	return walletService.repo.WalletRepo().GetWallet(uuid)
 }
 
-func (walletService WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
+func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletService.repo.WalletRepo().ListWallet()
 }
 
-func (walletService WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
+// nolint
+func (walletService *WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
 	cli, _, err := newWalletClient(context.Background(), wallet.Url, wallet.Token)
 	if err != nil {
 		return err

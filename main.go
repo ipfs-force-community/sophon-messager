@@ -24,10 +24,6 @@ func main() {
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "repodir",
-				Value: "~/.venus-messager",
-			},
-			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
 				Value:   "./messager.toml",
@@ -69,6 +65,9 @@ func runAction(ctx *cli.Context) error {
 	defer closer()
 
 	lst, err := net.Listen("tcp", cfg.API.Address)
+	if err != nil {
+		return err
+	}
 
 	shutdownChan := make(chan struct{})
 	provider := fx.Options(
@@ -105,10 +104,8 @@ func runAction(ctx *cli.Context) error {
 	}
 
 	go func() {
-		select {
-		case <-shutdownChan:
-			log.Warn("received shutdown")
-		}
+		<-shutdownChan
+		log.Warn("received shutdown")
 
 		log.Warn("Shutting down...")
 		if err := app.Stop(ctx.Context); err != nil {
@@ -126,5 +123,5 @@ type fxLogger struct {
 }
 
 func (l fxLogger) Printf(str string, args ...interface{}) {
-	l.log.Infof(str, args)
+	l.log.Infof(str, args...)
 }

@@ -1,17 +1,13 @@
 package service
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"os"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
@@ -30,7 +26,9 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 					ms.log.Errorf("doRefreshMessageState occurs unexpected err:\n%v\n", err)
 				}
 				ms.log.Infof("end refresh message state, cost %d 'ms' ", time.Since(now).Milliseconds())
-			default:
+			case <-ctx.Done():
+				ms.log.Warnf("context error: %v", ctx.Err())
+				return
 			}
 		}
 	}()
@@ -42,94 +40,68 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	var errs *multierror.Error
+	var revertMsgs map[cid.Cid]struct{}
 	if len(h.revert) != 0 {
-		if err := ms.recordRevertMsgs(ctx, h); err != nil {
-			errs = multierror.Append(errs, xerrors.Errorf("process revert failed %v", err))
-		}
-
-		tsList := ms.ListTs()
-		sort.Sort(tsList)
-
-		minHeight := h.revert[0].Height()
-		earliestTs := h.revert[0]
-		for i, ts := range h.revert {
-			if i == 0 {
-				continue
-			}
-			if ts.Height() < minHeight {
-				minHeight = ts.Height()
-				earliestTs = h.revert[i]
-			}
-		}
-		for i, ts := range tsList {
-			if ts.Height == uint64(minHeight) {
-				if isEqual(ts, earliestTs) {
-					if len(tsList) <= i+1 {
-						ms.ClearTs()
-						if err := resetTipsetFile(ms.cfg.TipsetFilePath); err != nil {
-							return err
-						}
-					}
-					ms.RemoveTs(tsList[:i+1])
-					if err := updateTipsetFile(ms.cfg.TipsetFilePath, tsList[i+1:]); err != nil {
-						return err
-					}
-					break
-				}
-			}
+		var err error
+		revertMsgs, err = ms.processRevertHead(ctx, h)
+		if err != nil {
+			errs = multierror.Append(errs, xerrors.Errorf("process revert tipset failed %v", err))
 		}
 	}
 
-	for i, ts := range h.apply {
+	for _, ts := range h.apply {
 		height := ts.Height()
-		if err := ms.processOneBlock(ctx, ts.At(0).Cid(), height); err != nil {
+		if err := ms.processOneBlock(ctx, ts.At(0).Cid(), height, revertMsgs); err != nil {
 			errs = multierror.Append(errs, xerrors.Errorf("block id: %s %v", ts.At(0).Cid().String(), err))
 		}
+		ms.AddTs(&tipsetFormat{Key: ts.String(), Height: uint64(height)})
+		ms.tsCache.CurrHeight = uint64(height)
+	}
 
-		if err := ms.storeTipset(h.apply[i]); err != nil {
-			ms.log.Errorf("store tipset info failed: %v", err)
-		}
+	for cid := range revertMsgs {
+		errs = multierror.Append(errs, ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg))
+	}
+
+	if err := ms.storeTipset(); err != nil {
+		ms.log.Errorf("store tipset info failed: %v", err)
 	}
 
 	return errs.ErrorOrNil()
 }
 
-func (ms *MessageService) recordRevertMsgs(ctx context.Context, h *headChan) error {
-	revertMsgs := make([]cid.Cid, 0, 0)
+func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {
+	var c cid.Cid
+	revertMsgs := make(map[cid.Cid]struct{})
 	for _, tipset := range h.revert {
 		for _, block := range tipset.Cids() {
 			msgs, err := ms.nodeClient.ChainGetBlockMessages(ctx, block)
 			if err != nil {
-				return xerrors.Errorf("get block message failed %v", err)
+				return nil, xerrors.Errorf("get block message failed %v", err)
 			}
 
 			for _, msg := range msgs.BlsMessages {
 				if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
-					revertMsgs = append(revertMsgs, msg.Cid())
+					c = msg.Cid()
+					revertMsgs[c] = struct{}{}
+					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
 				}
 
 			}
 
 			for _, msg := range msgs.SecpkMessages {
 				if _, ok := ms.addressService.addrInfo[msg.Message.From.String()]; ok {
-					revertMsgs = append(revertMsgs, msg.Cid())
+					c = msg.Message.Cid()
+					revertMsgs[c] = struct{}{}
+					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
 				}
 			}
 		}
 	}
 
-	// update message state
-	for _, cid := range revertMsgs {
-		ms.messageState.UpdateMessageStateAndReceipt(cid.String(), types.FillMsg, nil)
-		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
-			ms.log.Errorf("update message state failed, cid: %s, error: %v", cid.String(), err)
-		}
-	}
-
-	return nil
+	return revertMsgs, nil
 }
 
-func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, height abi.ChainEpoch) error {
+func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, height abi.ChainEpoch, revertMsgs map[cid.Cid]struct{}) error {
 	msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
 	if err != nil {
 		return xerrors.Errorf("get parent message failed %w", err)
@@ -148,12 +120,14 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 	for i := range receipts {
 		msg := msgs[i].Message
 		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
-			cidStr := msgs[i].Cid.String()
+			cidStr := msg.Cid().String()
 			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
 				errs = multierror.Append(errs, xerrors.Errorf("cid:%s failed:%v", cidStr, err))
 			}
-
-			ms.messageState.UpdateMessageStateAndReceipt(cidStr, types.OnChainMsg, nil)
+			if _, ok := revertMsgs[msgs[i].Cid]; ok {
+				delete(revertMsgs, msgs[i].Cid)
+				ms.messageState.UpdateMessageStateByCid(msg.Cid().String(), types.OnChainMsg)
+			}
 		}
 	}
 
@@ -161,89 +135,14 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 }
 
 type tipsetFormat struct {
-	Cid    []string
+	Key    string
 	Height uint64
 }
 
-func (ms *MessageService) storeTipset(ts *venustypes.TipSet) error {
-	if ms.ExistTs(uint64(ts.Height())) {
-		ms.log.Warnf("exist same data, height: %d", ts.Height())
-		return nil
-	}
-	cids := ts.Cids()
-	format := tipsetFormat{
-		Cid:    make([]string, len(cids)),
-		Height: uint64(ts.Height()),
-	}
+func (ms *MessageService) storeTipset() error {
+	ms.ReduceTs()
 
-	for i := range cids {
-		format.Cid[i] = cids[i].String()
-	}
-	ms.AddTs(&format)
-
-	return appendTipsetFile(ms.cfg.TipsetFilePath, format)
-}
-
-func appendTipsetFile(filePath string, ts tipsetFormat) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	w := bufio.NewWriter(file)
-	b, err := json.Marshal(ts)
-	if err != nil {
-		return err
-	}
-	w.WriteString(string(b) + "\n")
-
-	return w.Flush()
-}
-
-func resetTipsetFile(filePath string) error {
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	if _, err := file.WriteString(""); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// original data will be cleared
-func updateTipsetFile(filePath string, lists tipsetList) error {
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	g := multierror.Group{}
-	c := make(chan struct{}, 3)
-	for _, ts := range lists {
-		c <- struct{}{}
-		tmp := *ts
-		g.Go(func() error {
-			b, err := json.Marshal(tmp)
-			if err != nil {
-				return err
-			}
-			_, err = writer.WriteString(string(b) + "\n")
-			<-c
-			return err
-		})
-	}
-
-	errs := g.Wait()
-	close(c)
-	errs = multierror.Append(errs, writer.Flush())
-
-	return errs.ErrorOrNil()
+	return updateTipsetFile(ms.cfg.TipsetFilePath, ms.tsCache)
 }
 
 type tipsetList []*tipsetFormat
@@ -260,86 +159,43 @@ func (tl tipsetList) Less(i, j int) bool {
 	return tl[i].Height > tl[j].Height
 }
 
-func (tl tipsetList) Map() map[uint64]*tipsetFormat {
-	m := make(map[uint64]*tipsetFormat, len(tl))
-	for _, t := range tl {
-		m[t.Height] = &tipsetFormat{
-			Cid:    t.Cid,
-			Height: t.Height,
-		}
-	}
-
-	return m
-}
-
-const bufSize = 1024
-const processNum = 3
-
-func readTipsetFromFile(filePath string) (tipsetList, error) {
+func readTipsetFile(filePath string) (*TipsetCache, error) {
 	file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
 	if err != nil {
-		return tipsetList{}, err
+		return nil, err
 	}
 
-	c := make(chan struct{}, processNum)
-	defer func() {
-		close(c)
-	}()
-
-	reader := bufio.NewReader(file)
-	buf := make([]byte, bufSize)
-
-	var tsList tipsetList
-
-	handleData := func(b []byte) error {
-		lines := strings.Split(string(b), "\n")
-		for _, l := range lines {
-			var ts tipsetFormat
-			if len(l) == 0 {
-				continue
-			}
-			if err := json.Unmarshal([]byte(l), &ts); err != nil {
-				return err
-			}
-
-			tsList = append(tsList, &ts)
-		}
-
-		return nil
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) < 3 { // skip empty content
+		return &TipsetCache{
+			Cache:      map[uint64]*tipsetFormat{},
+			CurrHeight: 0,
+		}, nil
+	}
+	var tsCache TipsetCache
+	if err := json.Unmarshal(b, &tsCache); err != nil {
+		return nil, err
 	}
 
-	g := multierror.Group{}
+	return &tsCache, nil
+}
 
-	for {
-		n, err := reader.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				if err := handleData(buf[:n]); err != nil {
-					return tipsetList{}, err
-				}
-				break
-			}
-			return tipsetList{}, err
-		}
-		extra, err := reader.ReadBytes('\n')
-		if err != nil && err != io.EOF {
-			return tipsetList{}, err
-		}
-
-		g.Go(func() error {
-			c <- struct{}{}
-			b := make([]byte, len(buf[:n])+len(extra))
-			copy(b, buf[:n])
-			err := handleData(append(b, extra...))
-			<-c
-			return err
-		})
+// original data will be cleared
+func updateTipsetFile(filePath string, tsCache *TipsetCache) error {
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+	if err != nil {
+		return err
 	}
+	defer file.Close()
 
-	multiErr := g.Wait()
-	if multiErr != nil {
-		return tsList, err
+	b, err := json.Marshal(tsCache)
+	if err != nil {
+		return err
 	}
+	_, err = file.Write(b)
 
-	return tsList, nil
+	return err
 }

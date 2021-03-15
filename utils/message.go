@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"math/rand"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -38,8 +40,8 @@ func NewTestUnsignedMsg() types2.UnsignedMessage {
 	return types2.UnsignedMessage{
 		From:       from,
 		To:         to,
-		Value:      big.NewInt(1024),
-		GasLimit:   100,
+		Value:      big.NewInt(rand.Int63n(1024)),
+		GasLimit:   rand.Int63n(100),
 		GasFeeCap:  abi.NewTokenAmount(2000),
 		GasPremium: abi.NewTokenAmount(1024),
 	}

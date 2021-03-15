@@ -52,7 +52,7 @@ func (r *RewriteJsonRpcToRestful) ServeHTTP(w http.ResponseWriter, req *http.Req
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			w.WriteHeader(503)
-			w.Write([]byte("failed to read json rpc body"))
+			_, _ = w.Write([]byte("failed to read json rpc body"))
 			return
 		}
 
@@ -60,7 +60,7 @@ func (r *RewriteJsonRpcToRestful) ServeHTTP(w http.ResponseWriter, req *http.Req
 		err = json.Unmarshal(body, jsonReq)
 		if err != nil {
 			w.WriteHeader(503)
-			w.Write([]byte("failed to unmarshal json rpc body"))
+			_, _ = w.Write([]byte("failed to unmarshal json rpc body"))
 			return
 		}
 		methodSeq := strings.Split(jsonReq.Method, ".")
@@ -69,7 +69,7 @@ func (r *RewriteJsonRpcToRestful) ServeHTTP(w http.ResponseWriter, req *http.Req
 		newUrl, err := url.Parse(newRequestUrl)
 		if err != nil {
 			w.WriteHeader(503)
-			w.Write([]byte("failed to parser new url"))
+			_, _ = w.Write([]byte("failed to parser new url"))
 			return
 		}
 		req.URL = newUrl
@@ -107,7 +107,9 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener, log *logrus.Logger
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				log.Info("Start rpcserver ", lst.Addr())
-				apiserv.Serve(lst)
+				if err := apiserv.Serve(lst); err != nil {
+					log.Errorf("Start rpcserver failed: %v", err)
+				}
 			}()
 			return nil
 		},

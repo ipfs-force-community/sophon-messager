@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ipfs-force-community/venus-messager/config"
@@ -34,7 +35,7 @@ func TestNewAddressClient(t *testing.T) {
 	assert.NoError(t, err)
 	defer close()
 	for _, addr := range addrs {
-		actor, err := node.GetActor(context.Background(), addr)
+		actor, err := node.StateGetActor(context.Background(), addr, venustypes.EmptyTSK)
 		t.Log(actor, err)
 	}
 }

@@ -3,6 +3,7 @@ package types
 import "time"
 
 type Address struct {
+	ID    UUID   `json:"id"`
 	Addr  string `json:"addr"`
 	Nonce uint64 `json:"nonce"`
 

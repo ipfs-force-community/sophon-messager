@@ -11,7 +11,7 @@ import (
 type MessageState int
 
 const (
-	UnKnown = iota
+	UnKnown MessageState = iota
 	UnFillMsg
 	FillMsg
 	OnChainMsg

@@ -4,13 +4,11 @@ import (
 	"sync"
 	"time"
 
-	venustypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
-
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/patrickmn/go-cache"
+	"github.com/sirupsen/logrus"
 )
 
 type MessageState struct {
@@ -18,43 +16,50 @@ type MessageState struct {
 	log  *logrus.Logger
 	cfg  *config.MessageStateConfig
 
-	messageCache *cache.Cache
-	idCids       *idCidCache // 保存 cid 和 id的映射，方便从messageCache中找消息
+	idCids *idCidCache // 保存 cid 和 id的映射，方便从msgCache中找消息状态
+
+	messageCache *cache.Cache // id 为 key
 
 	l sync.Mutex
 }
 
-func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) *MessageState {
-	return &MessageState{
-		repo:         repo,
-		log:          logger,
-		cfg:          cfg,
-		messageCache: cache.New(cfg.DefaultExpiration*time.Second, cfg.CleanupInterval*time.Second),
+func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) (*MessageState, error) {
+	ms := &MessageState{
+		repo: repo,
+		log:  logger,
+		cfg:  cfg,
 		idCids: &idCidCache{
-			cache: make(map[string]string),
+			cache: make(map[string]types.UUID),
 		},
+		messageCache: cache.New(time.Duration(cfg.DefaultExpiration)*time.Second, time.Duration(cfg.CleanupInterval)*time.Second),
 	}
+
+	if err := ms.loadRecentMessage(); err != nil {
+		return nil, err
+	}
+
+	return ms, nil
 }
 
 func (ms *MessageState) loadRecentMessage() error {
-	startTime := time.Now().Add(-time.Second * ms.cfg.BackTime)
-	msgs, err := ms.repo.MessageRepo().GetMessageByTime(startTime)
+	startTime := time.Now().Add(-time.Second * time.Duration(ms.cfg.BackTime))
+	msgs, err := ms.repo.MessageRepo().GetSignedMessageByTime(startTime)
 	if err != nil {
 		return err
 	}
 	ms.log.Infof("load recent message: %d", len(msgs))
-	ms.SetMessages(msgs)
 
 	for _, msg := range msgs {
-		if msg.UnsignedCid != nil {
-			ms.idCids.Set(msg.ID.String(), msg.UnsignedCid.String())
+		if msg.UnsignedCid.Defined() {
+			ms.idCids.Set(msg.UnsignedCid.String(), msg.ID)
+			ms.SetMessage(msg.ID.String(), msg)
 		}
 	}
 	return nil
 }
 
-func (ms *MessageState) GetMessage(id string) (*types.Message, bool) {
-	v, ok := ms.messageCache.Get(id)
+func (ms *MessageState) GetMessage(id types.UUID) (*types.Message, bool) {
+	v, ok := ms.messageCache.Get(id.String())
 	if ok {
 		return v.(*types.Message), ok
 	}
@@ -62,74 +67,80 @@ func (ms *MessageState) GetMessage(id string) (*types.Message, bool) {
 	return nil, ok
 }
 
-func (ms *MessageState) SetMessage(msg *types.Message) {
-	ms.messageCache.SetDefault(msg.ID.String(), msg)
-}
-
-func (ms *MessageState) SetMessages(msgs []*types.Message) {
-	for _, msg := range msgs {
-		ms.SetMessage(msg)
-	}
+func (ms *MessageState) SetMessage(id string, message *types.Message) {
+	ms.messageCache.SetDefault(id, message)
 }
 
 func (ms *MessageState) DeleteMessage(id string) {
 	ms.messageCache.Delete(id)
 }
 
-func (ms *MessageState) UpdateMessageState(id types.UUID, state types.MessageState) {
+func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) error) error {
+	var msg *types.Message
 	if v, ok := ms.messageCache.Get(id.String()); ok {
-		msg := v.(*types.Message)
-		msg.State = state
-		ms.messageCache.SetDefault(id.String(), msg)
+		msg = v.(*types.Message)
 	} else {
-		m, err := ms.repo.MessageRepo().GetMessage(id)
+		var err error
+		msg, err = ms.repo.MessageRepo().GetMessage(id)
 		if err != nil {
 			ms.log.Errorf("get message failed, id: %v, err: %v", id, err)
-			return
+			return err
 		}
-		m.State = state
-		ms.messageCache.SetDefault(id.String(), m)
 	}
+
+	err := f(msg)
+	if err != nil {
+		return err
+	}
+	ms.messageCache.SetDefault(id.String(), msg)
+	return nil
 }
 
-func (ms *MessageState) UpdateMessageStateAndReceipt(cidStr string, state types.MessageState, receipt *venustypes.MessageReceipt) {
-	if id, ok := ms.idCids.Get(cidStr); ok {
-		if m, ok := ms.GetMessage(id); ok {
-			m.State = state
-			if receipt != nil {
-				m.Receipt = receipt
-			}
-		}
-	} else {
-		m, err := ms.repo.MessageRepo().GetMessageByCid(cidStr)
+func (ms *MessageState) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	id, ok := ms.idCids.Get(cid)
+	if !ok {
+		msg, err := ms.repo.MessageRepo().GetMessageByCid(cid)
 		if err != nil {
-			ms.log.Errorf("get message by cid failed, cid: %v, err: %v", cidStr, err)
-			return
+			return err
 		}
-		m.State = state
-		if receipt != nil {
-			m.Receipt = receipt
-		}
-		ms.SetMessage(m)
-		ms.idCids.Set(m.ID.String(), cidStr)
+		ms.SetMessage(msg.ID.String(), msg)
+		return nil
 	}
+
+	return ms.MutatorMessage(id, func(message *types.Message) error {
+		message.State = state
+		return nil
+	})
+}
+
+func (ms *MessageState) GetMessageStateByCid(cid string) (types.MessageState, bool) {
+	id, ok := ms.idCids.Get(cid)
+	if !ok {
+		return types.UnKnown, ok
+	}
+	msg, ok := ms.GetMessage(id)
+	if !ok || msg == nil {
+		return types.UnKnown, ok
+	}
+
+	return msg.State, ok
 }
 
 type idCidCache struct {
-	cache map[string]string
+	cache map[string]types.UUID
 	l     sync.Mutex
 }
 
-func (ic *idCidCache) Set(id, cid string) {
+func (ic *idCidCache) Set(cid string, id types.UUID) {
 	ic.l.Lock()
 	defer ic.l.Unlock()
 	ic.cache[cid] = id
 }
 
-func (ic *idCidCache) Get(cid string) (string, bool) {
+func (ic *idCidCache) Get(cid string) (types.UUID, bool) {
 	ic.l.Lock()
 	defer ic.l.Unlock()
-
 	id, ok := ic.cache[cid]
+
 	return id, ok
 }

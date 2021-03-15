@@ -24,14 +24,16 @@ func TestAddress(t *testing.T) {
 	addressRepo := repo.AddressRepo()
 
 	a := &types.Address{
+		ID:        types.NewUUID(),
 		Addr:      "test1",
 		Nonce:     0,
 		IsDeleted: -1,
-		CreatedAt: time.Time{},
-		UpdatedAt: time.Time{},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	a2 := &types.Address{
+		ID:        types.NewUUID(),
 		Addr:      "test2",
 		Nonce:     2,
 		IsDeleted: -1,

@@ -10,8 +10,8 @@ type Config struct {
 	Log            LogConfig            `toml:"log"`
 	API            APIConfig            `toml:"api"`
 	Node           NodeConfig           `toml:"node"`
-	MessageService MessageServiceConfig `toml:messageService`
-	MessageState   MessageStateConfig   `toml:messageState`
+	MessageService MessageServiceConfig `toml:"messageService"`
+	MessageState   MessageStateConfig   `toml:"messageState"`
 	Address        AddressConfig        `toml:"address"`
 }
 
@@ -54,17 +54,18 @@ type JWTConfig struct {
 }
 
 type AddressConfig struct {
-	RemoteWalletSweepInterval time.Duration `toml:"remoteWalletSweepInterval"` // second
+	RemoteWalletSweepInterval int `toml:"remoteWalletSweepInterval"` // second
 }
 
 type MessageServiceConfig struct {
 	TipsetFilePath string `toml:"tipsetFilePath"`
+	IsProcessHead  bool   `toml:"isProcessHead"`
 }
 
 type MessageStateConfig struct {
-	BackTime time.Duration `toml:"backTime"` // 向前找多久的数据写到内存,单位秒
+	BackTime int `toml:"backTime"` // 向前找多久的数据写到内存,单位秒
 
-	DefaultExpiration, CleanupInterval time.Duration // message 缓存的有效时间和清理间隔
+	DefaultExpiration, CleanupInterval int // message 缓存的有效时间和清理间隔
 }
 
 func DefaultConfig() *Config {
@@ -72,7 +73,7 @@ func DefaultConfig() *Config {
 		DB: DbConfig{
 			Type:   "sqlite",
 			MySql:  MySqlConfig{},
-			Sqlite: SqliteConfig{Path: "message.db"},
+			Sqlite: SqliteConfig{Path: "./message.db"},
 		},
 		JWT: JWTConfig{},
 		Log: LogConfig{
@@ -94,7 +95,8 @@ func DefaultConfig() *Config {
 			CleanupInterval:   3600 * 24,
 		},
 		MessageService: MessageServiceConfig{
-			TipsetFilePath: "tipset.db",
+			TipsetFilePath: "./tipset.txt",
+			IsProcessHead:  true,
 		},
 	}
 }

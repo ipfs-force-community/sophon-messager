@@ -3,7 +3,7 @@ package types
 import "time"
 
 type Wallet struct {
-	Id    string `json:"id"` // 主键
+	ID    UUID   `json:"id"` // 主键
 	Name  string `json:"name"`
 	Url   string `json:"url"`
 	Token string `json:"token"`
