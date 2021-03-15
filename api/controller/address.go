@@ -12,7 +12,7 @@ type Address struct {
 	AddressService *service.AddressService
 }
 
-func (a Address) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
+func (a Address) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
 	return a.AddressService.SaveAddress(ctx, address)
 }
 

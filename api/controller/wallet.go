@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
 
 	"github.com/ipfs-force-community/venus-messager/service"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -22,4 +23,8 @@ func (walletController WalletController) GetWallet(ctx context.Context, uuid typ
 
 func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletController.WalletService.ListWallet(ctx)
+}
+
+func (walletController WalletController) ListWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
+	return walletController.WalletService.ListWalletAddress(ctx, name)
 }

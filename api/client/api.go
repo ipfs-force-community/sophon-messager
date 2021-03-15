@@ -2,11 +2,15 @@ package client
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
+	"golang.org/x/xerrors"
+	"time"
 
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type IMessager interface {
+	WaitMessage(ctx context.Context, uuid string) (*types.Message, error)
 	PushMessage(ctx context.Context, msg *types.Message) (string, error)
 	GetMessage(ctx context.Context, uuid string) (*types.Message, error)
 	ListMessage(ctx context.Context) ([]*types.Message, error)
@@ -14,6 +18,7 @@ type IMessager interface {
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error)
 	GetWallet(ctx context.Context, uuid string) (*types.Wallet, error)
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)
+	ListWalletAddress(ctx context.Context, name string) ([]address.Address, error)
 
 	SaveAddress(ctx context.Context, address *types.Address) (string, error)
 	GetAddress(ctx context.Context, addr string) (*types.Address, error)
@@ -28,9 +33,10 @@ type Message struct {
 		GetMessage  func(ctx context.Context, uuid string) (*types.Message, error)
 		ListMessage func(ctx context.Context) ([]*types.Message, error)
 
-		SaveWallet func(ctx context.Context, wallet *types.Wallet) (string, error)
-		GetWallet  func(ctx context.Context, uuid string) (*types.Wallet, error)
-		ListWallet func(ctx context.Context) ([]*types.Wallet, error)
+		SaveWallet        func(ctx context.Context, wallet *types.Wallet) (string, error)
+		GetWallet         func(ctx context.Context, uuid string) (*types.Wallet, error)
+		ListWallet        func(ctx context.Context) ([]*types.Wallet, error)
+		ListWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
 
 		SaveAddress func(ctx context.Context, address *types.Address) (string, error)
 		GetAddress  func(ctx context.Context, addr string) (*types.Address, error)
@@ -58,6 +64,10 @@ func (message *Message) GetWallet(ctx context.Context, uuid string) (*types.Wall
 	return message.Internal.GetWallet(ctx, uuid)
 }
 
+func (message *Message) ListWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
+	return message.Internal.ListWalletAddress(ctx, name)
+}
+
 func (message *Message) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return message.Internal.ListWallet(ctx)
 }
@@ -72,4 +82,25 @@ func (message *Message) GetAddress(ctx context.Context, addr string) (*types.Add
 
 func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return message.Internal.ListAddress(ctx)
+}
+
+func (message *Message) WaitMessage(ctx context.Context, uuid string) (*types.Message, error) {
+	tm := time.NewTicker(time.Second * 30)
+	defer tm.Stop()
+
+	for {
+		select {
+		case <-tm.C:
+			msg, err := message.Internal.GetMessage(ctx, uuid)
+			if err != nil {
+				return nil, err
+			}
+			if msg.State == types.OnChainMsg {
+				return msg, nil
+			}
+			continue
+		case <-ctx.Done():
+			return nil, xerrors.New("exit by client ")
+		}
+	}
 }

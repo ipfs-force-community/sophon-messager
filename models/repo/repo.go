@@ -57,6 +57,7 @@ type SqlMsgReceipt struct {
 	GasUsed     int64             `gorm:"column:gas_used;type:bigint;"`
 }
 
+/*
 func (s *SqlMsgReceipt) Scan(value interface{}) error {
 	sqlBin, isok := value.([]byte)
 	if !isok {
@@ -68,7 +69,7 @@ func (s *SqlMsgReceipt) Scan(value interface{}) error {
 func (s SqlMsgReceipt) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
-
+*/
 func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
 	if s == nil {
 		return nil

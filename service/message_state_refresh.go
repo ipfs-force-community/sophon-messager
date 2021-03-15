@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -66,7 +67,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		if err := ms.storeTipset(); err != nil {
 			ms.log.Errorf("store tipset info failed: %v", err)
 		}
-
+		ms.triggerPush <- h.apply[0]
 		return nil
 	})
 }
@@ -126,6 +127,9 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, txRepo
 
 	for i := range receipts {
 		msg := msgs[i].Message
+		if msg.From.String() == "bafy2bzacecvqhkynwpnciwmb4v7trntiefcy52qa2hceuhjoj66mf2zciixts" {
+			fmt.Println()
+		}
 		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 			cidStr := msg.Cid().String()
 			if _, err = txRepo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {

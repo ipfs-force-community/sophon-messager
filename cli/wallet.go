@@ -17,6 +17,7 @@ var WalletCmds = &cli.Command{
 		addWalletCmd,
 		getWalletCmd,
 		listWalletCmd,
+		listWalletAddrCmd,
 	},
 }
 
@@ -100,6 +101,36 @@ var getWalletCmd = &cli.Command{
 var listWalletCmd = &cli.Command{
 	Name:  "list",
 	Usage: "list local wallet",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		w, err := client.ListWallet(ctx.Context)
+		if err != nil {
+			return err
+		}
+
+		bytes, err := json.MarshalIndent(w, " ", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(bytes))
+		return nil
+	},
+}
+
+var listWalletAddrCmd = &cli.Command{
+	Name:  "list-addr",
+	Usage: "list local wallet",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "wallet",
+			Usage: "specify which wallet to show",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {

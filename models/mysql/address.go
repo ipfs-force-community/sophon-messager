@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
 	"gorm.io/gorm"
 	"reflect"
 	"time"
@@ -41,8 +42,12 @@ func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
 	return &mysqlAddressRepo{DB: db}
 }
 
-func (s mysqlAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
-	return address.Addr, s.DB.Save(FromAddress(address)).Error
+func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	panic("implement me")
+}
+
+func (s mysqlAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
+	panic("implement me")
 }
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {

@@ -22,7 +22,7 @@ type sqliteMessage struct {
 	ID      types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
 	Version uint64     `gorm:"column:version;unsigned bigint"`
 
-	From  string `gorm:"column:from;type:varchar(256);NOT NULL;index;index:idx_from_nonce"`
+	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index;index:idx_from_nonce"`
 	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
@@ -42,7 +42,7 @@ type sqliteMessage struct {
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:signed_cid"`
 
 	Height  uint64              `gorm:"column:height;type:unsigned bigint;index:height"`
-	Receipt *repo.SqlMsgReceipt `gorm:"column:receipt"`
+	Receipt *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
@@ -193,7 +193,7 @@ func (m *sqliteMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState
 
 func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").UpdateColumn("state", types.ExpireMsg).Where("id=?", msg.ID.String()).Error
+		err := m.DB.Table("messages").Where("id=?", msg.ID.String()).UpdateColumn("state", types.ExpireMsg).Error
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from=? && state=?", addr.String(), types.UnFillMsg).Error
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -318,15 +318,17 @@ func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 }
 
 func (m *sqliteMessageRepo) UpdateMessageReceipt(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
-	sqlMsg := sqliteMessage{
-		Height:  uint64(height),
-		Receipt: repo.FromMsgReceipt(receipt),
-		State:   state,
+	rcp := repo.FromMsgReceipt(receipt)
+	updateClause := map[string]interface{}{
+		"height":               uint64(height),
+		"receipt_exit_code":    rcp.ExitCode,
+		"receipt_return_value": rcp.ReturnValue,
+		"receipt_gas_used":     rcp.GasUsed,
+		"state":                state,
 	}
 	return unsignedCid, m.DB.Debug().Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
-		Select("height", "exit_code", "receipt", "state").
-		UpdateColumns(sqlMsg).Error
+		UpdateColumns(updateClause).Error
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
