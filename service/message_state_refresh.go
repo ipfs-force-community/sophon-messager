@@ -64,7 +64,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		}
 
 		if err := ms.storeTipset(); err != nil {
-			return xerrors.Errorf("store tipset info failed: %v", err)
+			ms.log.Errorf("store tipset info failed: %v", err)
 		}
 
 		return nil
