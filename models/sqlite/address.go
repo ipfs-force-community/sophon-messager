@@ -2,9 +2,10 @@ package sqlite
 
 import (
 	"context"
-	"github.com/filecoin-project/go-address"
 	"reflect"
 	"time"
+
+	"github.com/filecoin-project/go-address"
 
 	"gorm.io/gorm"
 
@@ -16,8 +17,8 @@ import (
 
 type sqliteAddress struct {
 	ID     types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr   string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"json:"addr"` // 主键
-	Nonce  uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"json:"nonce"`
+	Addr   string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"` // 主键
+	Nonce  uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
 	Weight int64      `gorm:"column:weight;type:bigint;index;NOT NULL"json:"weight"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
@@ -63,10 +64,7 @@ func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address)
 }
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Where(&sqliteAddress{
-		Addr:      addr,
-		IsDeleted: -1,
-	}).First(&a).Error; err != nil {
+	if err := s.DB.Debug().Where("addr = ? and is_deleted = -1", addr).First(&a).Error; err != nil {
 		return nil, err
 	}
 
@@ -75,10 +73,7 @@ func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.
 
 func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
 	var a sqliteAddress
-	if err := s.DB.Where(&sqliteAddress{
-		Addr:      addr,
-		IsDeleted: -1,
-	}).First(&a).Error; err != nil {
+	if err := s.DB.Where("addr = ? and is_deleted = -1", addr).First(&a).Error; err != nil {
 		return err
 	}
 	a.IsDeleted = 1

@@ -3,6 +3,7 @@ module github.com/ipfs-force-community/venus-messager
 go 1.15
 
 require (
+	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
@@ -11,7 +12,6 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/uuid v1.1.2
-	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs/go-cid v0.0.7
@@ -22,7 +22,6 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shopspring/decimal v1.2.0
 	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.7.0
 	github.com/toorop/gin-logrus v0.0.0-20210225092905-2c785434f26f

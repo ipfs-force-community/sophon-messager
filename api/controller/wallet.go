@@ -13,7 +13,7 @@ type WalletController struct {
 	WalletService *service.WalletService
 }
 
-func (walletController WalletController) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
+func (walletController WalletController) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
 	return walletController.WalletService.SaveWallet(ctx, wallet)
 }
 

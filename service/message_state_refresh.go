@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/filecoin-project/go-address"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
@@ -89,7 +90,9 @@ func (ms *MessageService) processRevertHead(ctx context.Context, txRepo repo.TxR
 					if err := txRepo.MessageRepo().UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
 						return nil, err
 					}
-					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
+					if err := ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
+						ms.log.Errorf("update message state failed, cid: %s error: %v", c.String(), err)
+					}
 				}
 
 			}
@@ -101,7 +104,9 @@ func (ms *MessageService) processRevertHead(ctx context.Context, txRepo repo.TxR
 					if err := txRepo.MessageRepo().UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
 						return nil, err
 					}
-					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
+					if err := ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
+						ms.log.Errorf("update message state failed, cid: %s error: %v", c.String(), err)
+					}
 				}
 			}
 		}
@@ -125,20 +130,33 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, txRepo
 		return xerrors.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
 	}
 
+	gapNonce := make(map[address.Address]uint64)
 	for i := range receipts {
 		msg := msgs[i].Message
-		if msg.From.String() == "bafy2bzacecvqhkynwpnciwmb4v7trntiefcy52qa2hceuhjoj66mf2zciixts" {
-			fmt.Println()
-		}
-		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
+		if addrInfo, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 			cidStr := msg.Cid().String()
 			if _, err = txRepo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
 				return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", cidStr, err)
 			}
 			if _, ok := revertMsgs[msgs[i].Cid]; ok {
-				ms.messageState.UpdateMessageStateByCid(msg.Cid().String(), types.OnChainMsg)
+				if err := ms.messageState.UpdateMessageStateByCid(msg.Cid().String(), types.OnChainMsg); err != nil {
+					ms.log.Errorf("update message state failed, cid: %s error: %v", msg.Cid().String(), err)
+				}
+			}
+			if addrInfo.Nonce < msg.Nonce {
+				if nonce, ok := gapNonce[msg.From]; ok && nonce >= msg.Nonce {
+					continue
+				}
+				gapNonce[msg.From] = msg.Nonce
 			}
 		}
+	}
+
+	for addr, nonce := range gapNonce {
+		if err := ms.addressService.StoreNonce(addr.String(), nonce); err != nil {
+			return err
+		}
+		ms.addressService.SetNonce(addr.String(), nonce)
 	}
 
 	return nil

@@ -218,7 +218,7 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 
 	revertTs, err := ms.convertTipsetFormatToTipset(revertTsf)
 
-	return gapTipset, revertTs, nil
+	return gapTipset, revertTs, err
 }
 
 func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*venusTypes.TipSet, error) {

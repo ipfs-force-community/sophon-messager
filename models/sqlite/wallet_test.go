@@ -44,30 +44,26 @@ func TestWallet(t *testing.T) {
 
 	id, err := walletRepo.SaveWallet(w)
 	assert.NoError(t, err)
-	uuid, err := types.ParseUUID(id)
-	assert.NoError(t, err)
 
 	id2, err := walletRepo.SaveWallet(w2)
 	assert.NoError(t, err)
-	uuid2, err := types.ParseUUID(id2)
-	assert.NoError(t, err)
 
-	r, err := walletRepo.GetWallet(uuid)
+	r, err := walletRepo.GetWallet(id)
 	assert.NoError(t, err)
 	assert.Equal(t, w.Name, r.Name)
 	assert.Equal(t, w.Url, r.Url)
 	t.Logf("%+v", r)
 
-	_, err = walletRepo.GetWallet(uuid2)
+	_, err = walletRepo.GetWallet(id2)
 	assert.Error(t, err)
 
 	rs, err := walletRepo.ListWallet()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(rs))
 
-	err = walletRepo.DelWallet(uuid)
+	err = walletRepo.DelWallet(id)
 	assert.NoError(t, err)
 
-	_, err = walletRepo.GetWallet(uuid)
+	_, err = walletRepo.GetWallet(id)
 	assert.Error(t, err)
 }

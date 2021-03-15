@@ -45,14 +45,14 @@ func newSqliteWalletRepo(db *gorm.DB) sqliteWalletRepo {
 	return sqliteWalletRepo{DB: db}
 }
 
-func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) (string, error) {
+func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) (types.UUID, error) {
 	err := s.DB.Save(FromWallet(*wallet)).Error
-	return wallet.ID.String(), err
+	return wallet.ID, err
 }
 
 func (s sqliteWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {
 	var wallet sqliteWallet
-	if err := s.DB.Where(&sqliteWallet{ID: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where("id = ? and is_deleted = -1", uuid).First(&wallet).Error; err != nil {
 		return nil, err
 	}
 	return wallet.Wallet(), nil
@@ -73,7 +73,7 @@ func (s sqliteWalletRepo) ListWallet() ([]*types.Wallet, error) {
 
 func (s sqliteWalletRepo) DelWallet(uuid types.UUID) error {
 	var wallet sqliteWallet
-	if err := s.DB.Where(&sqliteWallet{ID: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
+	if err := s.DB.Where("id = ? and is_deleted = -1", uuid).First(&wallet).Error; err != nil {
 		return err
 	}
 	wallet.IsDeleted = 1
