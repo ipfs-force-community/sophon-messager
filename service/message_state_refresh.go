@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -39,37 +39,39 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		return nil
 	}
 
-	var errs *multierror.Error
-	var revertMsgs map[cid.Cid]struct{}
-	if len(h.revert) != 0 {
-		var err error
-		revertMsgs, err = ms.processRevertHead(ctx, h)
-		if err != nil {
-			errs = multierror.Append(errs, xerrors.Errorf("process revert tipset failed %v", err))
+	return ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+		var revertMsgs map[cid.Cid]struct{}
+		if len(h.revert) != 0 {
+			var err error
+			revertMsgs, err = ms.processRevertHead(ctx, txRepo, h)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	for _, ts := range h.apply {
-		height := ts.Height()
-		if err := ms.processOneBlock(ctx, ts.At(0).Cid(), height, revertMsgs); err != nil {
-			errs = multierror.Append(errs, xerrors.Errorf("block id: %s %v", ts.At(0).Cid().String(), err))
+		for _, ts := range h.apply {
+			height := ts.Height()
+			if !ts.Defined() {
+				continue
+			}
+			if err := ms.processBlockParentMessages(ctx, txRepo, ts.At(0).Cid(), height, revertMsgs); err != nil {
+				return xerrors.Errorf("process block failed, block id: %s %v", ts.At(0).Cid().String(), err)
+			}
+			ms.tsCache.AddTs(&tipsetFormat{Key: ts.String(), Height: uint64(height)})
 		}
-		ms.AddTs(&tipsetFormat{Key: ts.String(), Height: uint64(height)})
-		ms.tsCache.CurrHeight = uint64(height)
-	}
+		if len(h.apply) > 0 {
+			ms.tsCache.CurrHeight = uint64(h.apply[0].Height())
+		}
 
-	for cid := range revertMsgs {
-		errs = multierror.Append(errs, ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg))
-	}
+		if err := ms.storeTipset(); err != nil {
+			return xerrors.Errorf("store tipset info failed: %v", err)
+		}
 
-	if err := ms.storeTipset(); err != nil {
-		ms.log.Errorf("store tipset info failed: %v", err)
-	}
-
-	return errs.ErrorOrNil()
+		return nil
+	})
 }
 
-func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {
+func (ms *MessageService) processRevertHead(ctx context.Context, txRepo repo.TxRepo, h *headChan) (map[cid.Cid]struct{}, error) {
 	var c cid.Cid
 	revertMsgs := make(map[cid.Cid]struct{})
 	for _, tipset := range h.revert {
@@ -83,6 +85,9 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 				if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 					c = msg.Cid()
 					revertMsgs[c] = struct{}{}
+					if err := txRepo.MessageRepo().UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
+						return nil, err
+					}
 					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
 				}
 
@@ -92,6 +97,9 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 				if _, ok := ms.addressService.addrInfo[msg.Message.From.String()]; ok {
 					c = msg.Message.Cid()
 					revertMsgs[c] = struct{}{}
+					if err := txRepo.MessageRepo().UpdateMessageStateByCid(c.String(), types.UnFillMsg); err != nil {
+						return nil, err
+					}
 					ms.messageState.UpdateMessageStateByCid(c.String(), types.UnFillMsg)
 				}
 			}
@@ -101,7 +109,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 	return revertMsgs, nil
 }
 
-func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, height abi.ChainEpoch, revertMsgs map[cid.Cid]struct{}) error {
+func (ms *MessageService) processBlockParentMessages(ctx context.Context, txRepo repo.TxRepo, bcid cid.Cid, height abi.ChainEpoch, revertMsgs map[cid.Cid]struct{}) error {
 	msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
 	if err != nil {
 		return xerrors.Errorf("get parent message failed %w", err)
@@ -116,22 +124,20 @@ func (ms *MessageService) processOneBlock(ctx context.Context, bcid cid.Cid, hei
 		return xerrors.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
 	}
 
-	var errs *multierror.Error
 	for i := range receipts {
 		msg := msgs[i].Message
 		if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
 			cidStr := msg.Cid().String()
-			if _, err = ms.repo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
-				errs = multierror.Append(errs, xerrors.Errorf("cid:%s failed:%v", cidStr, err))
+			if _, err = txRepo.MessageRepo().UpdateMessageReceipt(cidStr, receipts[i], height, types.OnChainMsg); err != nil {
+				return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", cidStr, err)
 			}
 			if _, ok := revertMsgs[msgs[i].Cid]; ok {
-				delete(revertMsgs, msgs[i].Cid)
 				ms.messageState.UpdateMessageStateByCid(msg.Cid().String(), types.OnChainMsg)
 			}
 		}
 	}
 
-	return errs.ErrorOrNil()
+	return nil
 }
 
 type tipsetFormat struct {
@@ -140,7 +146,7 @@ type tipsetFormat struct {
 }
 
 func (ms *MessageService) storeTipset() error {
-	ms.ReduceTs()
+	ms.tsCache.ReduceTs()
 
 	return updateTipsetFile(ms.cfg.TipsetFilePath, ms.tsCache)
 }

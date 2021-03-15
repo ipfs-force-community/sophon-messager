@@ -6,14 +6,12 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/crypto"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 func setup(path string) repo.Repo {
@@ -32,8 +30,8 @@ func TestSageAndGetMessage(t *testing.T) {
 	db := setup("message.db")
 
 	msgDb := db.MessageRepo()
-	msg := utils.NewTestMsg()
-	beforeSave := utils.ObjectToString(msg)
+	msg := NewMessage()
+	beforeSave := ObjectToString(msg)
 
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
@@ -41,7 +39,7 @@ func TestSageAndGetMessage(t *testing.T) {
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
 
-	afterSave := utils.ObjectToString(result)
+	afterSave := ObjectToString(result)
 	assert.Equal(t, beforeSave, afterSave)
 
 	allMsg, err := msgDb.ListMessage()
@@ -56,9 +54,8 @@ func TestSageAndGetMessage(t *testing.T) {
 func TestUpdateMessageReceipt(t *testing.T) {
 	db := setup("message.db")
 
-	msg := utils.NewTestMsg()
-	msg.Signature = &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}}
-	unsignedCid := msg.UnsignedMessage.Cid()
+	msg := NewSignedMessages(1)[0]
+	unsignedCid := msg.UnsignedCid
 
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
@@ -83,10 +80,10 @@ func TestUpdateMessageReceipt(t *testing.T) {
 func TestUpdateMessageStateByCid(t *testing.T) {
 	db := setup("message.db")
 
-	msg := utils.NewTestMsg()
-	msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte{1, 2, 3}}
+	msg := NewSignedMessages(1)[0]
 	msg.State = types.FillMsg
 	cid := msg.UnsignedMessage.Cid()
+	msg.UnsignedCid = &cid
 
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
@@ -109,11 +106,11 @@ func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
 	}()
 
 	msgDb := db.MessageRepo()
-	msg := utils.NewTestMsg()
+	msg := NewMessage()
 	_, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	signedMsgs := utils.NewTestSignedMsgs(10)
+	signedMsgs := NewSignedMessages(10)
 	for _, msg := range signedMsgs {
 		_, err := msgDb.SaveMessage(msg)
 		assert.NoError(t, err)
@@ -131,11 +128,11 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 	}()
 
 	msgDb := db.MessageRepo()
-	msg := utils.NewTestMsg()
+	msg := NewMessage()
 	_, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	signedMsgs := utils.NewTestSignedMsgs(10)
+	signedMsgs := NewSignedMessages(10)
 	for i, msg := range signedMsgs {
 		msg.Height = uint64(i)
 		_, err := msgDb.SaveMessage(msg)
