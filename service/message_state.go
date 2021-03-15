@@ -52,7 +52,7 @@ func (ms *MessageState) loadRecentMessage() error {
 	for _, msg := range msgs {
 		if msg.UnsignedCid.Defined() {
 			ms.idCids.Set(msg.UnsignedCid.String(), msg.ID)
-			ms.SetMessage(msg.ID.String(), msg)
+			ms.SetMessage(msg.ID, msg)
 		}
 	}
 	return nil
@@ -67,12 +67,12 @@ func (ms *MessageState) GetMessage(id types.UUID) (*types.Message, bool) {
 	return nil, ok
 }
 
-func (ms *MessageState) SetMessage(id string, message *types.Message) {
-	ms.messageCache.SetDefault(id, message)
+func (ms *MessageState) SetMessage(id types.UUID, message *types.Message) {
+	ms.messageCache.SetDefault(id.String(), message)
 }
 
-func (ms *MessageState) DeleteMessage(id string) {
-	ms.messageCache.Delete(id)
+func (ms *MessageState) DeleteMessage(id types.UUID) {
+	ms.messageCache.Delete(id.String())
 }
 
 func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) error) error {
@@ -103,7 +103,7 @@ func (ms *MessageState) UpdateMessageStateByCid(cid string, state types.MessageS
 		if err != nil {
 			return err
 		}
-		ms.SetMessage(msg.ID.String(), msg)
+		ms.SetMessage(msg.ID, msg)
 		return nil
 	}
 
@@ -124,23 +124,4 @@ func (ms *MessageState) GetMessageStateByCid(cid string) (types.MessageState, bo
 	}
 
 	return msg.State, ok
-}
-
-type idCidCache struct {
-	cache map[string]types.UUID
-	l     sync.Mutex
-}
-
-func (ic *idCidCache) Set(cid string, id types.UUID) {
-	ic.l.Lock()
-	defer ic.l.Unlock()
-	ic.cache[cid] = id
-}
-
-func (ic *idCidCache) Get(cid string) (types.UUID, bool) {
-	ic.l.Lock()
-	defer ic.l.Unlock()
-	id, ok := ic.cache[cid]
-
-	return id, ok
 }

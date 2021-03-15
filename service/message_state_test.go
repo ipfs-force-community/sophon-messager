@@ -10,7 +10,6 @@ import (
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/sqlite"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 func TestMessageStateCache(t *testing.T) {
@@ -21,7 +20,7 @@ func TestMessageStateCache(t *testing.T) {
 	}()
 	assert.NoError(t, db.AutoMigrate())
 
-	msgs := utils.NewTestSignedMsgs(10)
+	msgs := sqlite.NewSignedMessages(10)
 	for _, msg := range msgs {
 		_, err := db.MessageRepo().SaveMessage(msg)
 		assert.NoError(t, err)

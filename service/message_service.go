@@ -8,7 +8,6 @@ import (
 
 	"github.com/filecoin-project/go-address"
 
-	"github.com/filecoin-project/go-state-types/abi"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
@@ -28,8 +27,6 @@ const (
 
 type MessageService struct {
 	repo           repo.Repo
-	messageRepo    repo.MessageRepo
-	addressRepo    repo.AddressRepo
 	log            *logrus.Logger
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
@@ -39,9 +36,8 @@ type MessageService struct {
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
 
-	tsCache *TipsetCache
-
-	l sync.Mutex
+	readFileOnce sync.Once
+	tsCache      *TipsetCache
 }
 
 type headChan struct {
@@ -51,6 +47,8 @@ type headChan struct {
 type TipsetCache struct {
 	Cache      map[uint64]*tipsetFormat
 	CurrHeight uint64
+
+	l sync.Mutex
 }
 
 func NewMessageService(repo repo.Repo,
@@ -60,7 +58,7 @@ func NewMessageService(repo repo.Repo,
 	messageState *MessageState,
 	addressService *AddressService) (*MessageService, error) {
 	ms := &MessageService{
-		messageRepo:    repo.MessageRepo(),
+		repo:           repo,
 		log:            logger,
 		nodeClient:     nc,
 		cfg:            cfg,
@@ -79,23 +77,28 @@ func NewMessageService(repo repo.Repo,
 
 func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (types.UUID, error) {
 	msg.State = types.UnFillMsg
-	return ms.messageRepo.SaveMessage(msg)
+	id, err := ms.repo.MessageRepo().SaveMessage(msg)
+	if err == nil {
+		ms.messageState.SetMessage(msg.ID, msg)
+	}
+
+	return id, err
 }
 
 func (ms *MessageService) GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error) {
-	return ms.messageRepo.GetMessage(uuid)
+	return ms.repo.MessageRepo().GetMessage(uuid)
 }
 
 func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
-	return ms.messageRepo.GetMessageState(uuid)
+	return ms.repo.MessageRepo().GetMessageState(uuid)
 }
 
 func (ms *MessageService) GetMessageByCid(background context.Context, cid string) (*types.Message, error) {
-	return ms.messageRepo.GetMessageByCid(cid)
+	return ms.repo.MessageRepo().GetMessageByCid(cid)
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
-	return ms.messageRepo.ListMessage()
+	return ms.repo.MessageRepo().ListMessage()
 }
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
@@ -108,23 +111,26 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		apply:  apply,
 		revert: revert,
 	}
+	ms.log.Infof("%d head wait to process", len(ms.headChans))
 	return nil
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
 	ms.log.Infof("reconnect to node")
 
-	tsCache, err := readTipsetFile(ms.cfg.TipsetFilePath)
-	if err != nil {
-		return xerrors.Errorf("read tipset info failed %v", err)
-	}
-	ms.tsCache = tsCache
+	ms.readFileOnce.Do(func() {
+		tsCache, err := readTipsetFile(ms.cfg.TipsetFilePath)
+		if err != nil {
+			ms.log.Errorf("read tipset file failed %v", err)
+		}
+		ms.tsCache = tsCache
+	})
 
-	if len(tsCache.Cache) == 0 {
+	if len(ms.tsCache.Cache) == 0 {
 		return nil
 	}
 
-	tsList := ms.ListTs()
+	tsList := ms.tsCache.ListTs()
 	sort.Sort(tsList)
 
 	if tsList[0].Height == uint64(head.Height()) && tsList[0].Key == head.String() {
@@ -132,37 +138,25 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		return nil
 	}
 
-	gapTipset, err := ms.lookAncestors(ctx, tsList, head)
+	gapTipset, revertTipset, err := ms.lookAncestors(ctx, tsList, head)
 	if err != nil {
 		return err
 	}
 
-	if len(gapTipset) == 0 {
-		return nil
-	}
-
-	// handle revert
-	if tsList[0].Height > uint64(head.Height()) || (tsList[0].Height == uint64(head.Height()) && tsList[0].Key != head.String()) {
-		if err := ms.findAndRecordRevertMsgs(gapTipset[0].Height()); err != nil {
-			return err
-		}
-	}
-
-	err = ms.doRefreshMessageState(ctx, &headChan{
+	ms.headChans <- &headChan{
 		apply:  gapTipset,
-		revert: nil,
-	})
+		revert: revertTipset,
+	}
 
-	return err
+	return nil
 }
 
-func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetList, head *venusTypes.TipSet) ([]*venusTypes.TipSet, error) {
+func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetList, head *venusTypes.TipSet) ([]*venusTypes.TipSet, []*venusTypes.TipSet, error) {
 	var err error
 
 	ts := &venusTypes.TipSet{}
 	*ts = *head
 
-	localTs := localTipset[0]
 	idx := 0
 	localTsLen := len(localTipset)
 
@@ -175,6 +169,8 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 		if idx >= localTsLen {
 			break
 		}
+		localTs := localTipset[idx]
+
 		if ts.Height() == 0 {
 			break
 		}
@@ -189,78 +185,46 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 			gapTipset = append(gapTipset, ts)
 			ts, err = ms.nodeClient.ChainGetTipSet(ctx, ts.Parents())
 			if err != nil {
-				return nil, xerrors.Errorf("get tipset failed %v", err)
+				return nil, nil, xerrors.Errorf("get tipset failed %v", err)
 			}
 		}
 		loopCount++
 	}
 
-	return gapTipset, nil
-}
-
-func (ms *MessageService) RemoveTs(list []*tipsetFormat) {
-	ms.l.Lock()
-	defer ms.l.Unlock()
-	for _, ts := range list {
-		delete(ms.tsCache.Cache, ts.Height)
+	var revertTsf []*tipsetFormat
+	if idx >= localTsLen {
+		idx = localTsLen
 	}
+	revertTsf = localTipset[:idx]
+
+	revertTs, err := ms.convertTipsetFormatToTipset(revertTsf)
+
+	return gapTipset, revertTs, nil
 }
 
-func (ms *MessageService) AddTs(list ...*tipsetFormat) {
-	ms.l.Lock()
-	defer ms.l.Unlock()
-	for _, ts := range list {
-		ms.tsCache.Cache[ts.Height] = ts
-	}
-}
-
-func (ms *MessageService) ExistTs(height uint64) bool {
-	ms.l.Lock()
-	defer ms.l.Unlock()
-	_, ok := ms.tsCache.Cache[height]
-
-	return ok
-}
-
-func (ms *MessageService) ReduceTs() {
-	ms.l.Lock()
-	defer ms.l.Unlock()
-	minHeight := ms.tsCache.CurrHeight - maxStoreTipsetCount
-	for _, v := range ms.tsCache.Cache {
-		if v.Height < minHeight {
-			delete(ms.tsCache.Cache, v.Height)
+func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*venusTypes.TipSet, error) {
+	var tsList []*venusTypes.TipSet
+	var err error
+	key := &venusTypes.TipSetKey{}
+	for _, t := range tf {
+		if err := key.UnmarshalJSON([]byte(t.Key)); err != nil {
+			return nil, err
 		}
-	}
-}
-
-func (ms *MessageService) ListTs() tipsetList {
-	ms.l.Lock()
-	defer ms.l.Unlock()
-	var list tipsetList
-	for _, ts := range ms.tsCache.Cache {
-		list = append(list, ts)
-	}
-
-	return list
-}
-
-func (ms *MessageService) findAndRecordRevertMsgs(height abi.ChainEpoch) error {
-	msgs, err := ms.repo.MessageRepo().GetSignedMessageByHeight(height)
-	if err != nil {
-		return err
-	}
-
-	for _, msg := range msgs {
-		ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
-			message.State = msg.State
-			return nil
-		})
-		if err := ms.repo.MessageRepo().UpdateMessageStateByCid(msg.UnsignedMessage.Cid().String(), types.UnFillMsg); err != nil {
-			return xerrors.Errorf("update message state failed, id: %s, error: %v", msg.ID.String(), err)
+		blocks := make([]*venusTypes.BlockHeader, len(key.Cids()))
+		for i, cid := range key.Cids() {
+			blocks[i], err = ms.nodeClient.ChainGetBlock(context.TODO(), cid)
+			if err != nil {
+				return nil, err
+			}
 		}
+		ts, err := venusTypes.NewTipSet(blocks...)
+		if err != nil {
+			return nil, err
+		}
+		tsList = append(tsList, ts)
 	}
 
-	return nil
+	return tsList, err
 }
 
 ///   Message push    ////

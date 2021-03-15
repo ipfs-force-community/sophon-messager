@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/ipfs-force-community/venus-messager/types"
+
+	venustypes "github.com/filecoin-project/venus/pkg/types"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,7 +37,37 @@ var pushCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		msg := utils.NewTestMsg()
+
+		to, err := address.NewFromString("f01000")
+		if err != nil {
+			return err
+		}
+		from, err := address.NewFromString("f01002")
+		if err != nil {
+			return err
+		}
+		msg := &types.Message{
+			ID:          types.NewUUID(),
+			UnsignedCid: nil,
+			SignedCid:   nil,
+			UnsignedMessage: venustypes.UnsignedMessage{
+				Version:    0,
+				To:         to,
+				From:       from,
+				Nonce:      0,
+				Value:      abi.TokenAmount{},
+				GasLimit:   0,
+				GasFeeCap:  abi.TokenAmount{},
+				GasPremium: abi.TokenAmount{},
+				Method:     0,
+				Params:     nil,
+			},
+			Signature: nil,
+			Height:    0,
+			Receipt:   nil,
+			Meta:      nil,
+			State:     0,
+		}
 		id, err := client.PushMessage(ctx.Context, msg)
 		if err != nil {
 			return err

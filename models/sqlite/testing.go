@@ -1,6 +1,7 @@
-package utils
+package sqlite
 
 import (
+	"encoding/json"
 	"math/rand"
 
 	"github.com/filecoin-project/go-address"
@@ -8,33 +9,44 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	types2 "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/google/uuid"
 
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
-func NewTestMsg() *types.Message {
-	return &types.Message{
-		ID:              types.NewUUID(),
-		UnsignedMessage: NewTestUnsignedMsg(),
-		// Signature:       &crypto.Signature{Type: crypto.SigTypeBLS, Data: []byte{1, 2, 3}},
-		Meta: &types.MsgMeta{ExpireEpoch: 100,
-			MaxFee: big.NewInt(10), GasOverEstimation: 0.5},
-	}
-}
-
-func NewTestSignedMsgs(count int) []*types.Message {
+func NewSignedMessages(count int) []*types.Message {
 	msgs := make([]*types.Message, 0, count)
 	for i := 0; i < count; i++ {
-		msg := NewTestMsg()
+		msg := NewMessage()
+		msg.Nonce = uint64(i)
 		msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())}
+		unsignedCid := msg.UnsignedMessage.Cid()
+		msg.UnsignedCid = &unsignedCid
+		signedCid := (&venustypes.SignedMessage{
+			Message:   msg.UnsignedMessage,
+			Signature: *msg.Signature,
+		}).Cid()
+		msg.SignedCid = &signedCid
 		msgs = append(msgs, msg)
 	}
 
 	return msgs
 }
 
-func NewTestUnsignedMsg() types2.UnsignedMessage {
+func NewMessage() *types.Message {
+	return &types.Message{
+		ID:              types.NewUUID(),
+		UnsignedMessage: NewUnsignedMessage(),
+		Meta: &types.MsgMeta{
+			ExpireEpoch:       100,
+			MaxFee:            big.NewInt(10),
+			GasOverEstimation: 0.5,
+		},
+	}
+}
+
+func NewUnsignedMessage() types2.UnsignedMessage {
 	from, _ := address.NewFromString("f01234")
 	to, _ := address.NewFromString("f01235")
 	return types2.UnsignedMessage{
@@ -45,4 +57,9 @@ func NewTestUnsignedMsg() types2.UnsignedMessage {
 		GasFeeCap:  abi.NewTokenAmount(2000),
 		GasPremium: abi.NewTokenAmount(1024),
 	}
+}
+
+func ObjectToString(i interface{}) string {
+	res, _ := json.MarshalIndent(i, "", " ")
+	return string(res)
 }
