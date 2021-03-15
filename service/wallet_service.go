@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
+	"golang.org/x/xerrors"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -14,7 +16,7 @@ type WalletService struct {
 	repo repo.Repo
 	log  *logrus.Logger
 
-	walletClients map[string]*WalletClient
+	walletClients map[string]IWalletClient
 
 	l sync.Mutex
 }
@@ -23,8 +25,10 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 	ws := &WalletService{
 		repo:          repo,
 		log:           logger,
-		walletClients: make(map[string]*WalletClient),
+		walletClients: make(map[string]IWalletClient),
 	}
+
+	ws.walletClients["inmem"] = NewMemWallet()
 
 	walletList, err := ws.ListWallet(context.TODO())
 	if err != nil {
@@ -55,6 +59,15 @@ func (walletService *WalletService) GetWallet(ctx context.Context, uuid types.UU
 
 func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletService.repo.WalletRepo().ListWallet()
+}
+
+func (walletService *WalletService) ListWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
+	cli, ok := walletService.walletClients[name]
+	if !ok {
+		xerrors.Errorf("wallet %s not exit", name)
+	}
+
+	return cli.WalletList(ctx)
 }
 
 // nolint

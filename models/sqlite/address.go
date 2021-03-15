@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
 	"reflect"
 	"time"
 
@@ -14,9 +15,10 @@ import (
 )
 
 type sqliteAddress struct {
-	ID    types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr  string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"json:"addr"` // 主键
-	Nonce uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"json:"nonce"`
+	ID     types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr   string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"json:"addr"` // 主键
+	Nonce  uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"json:"nonce"`
+	Weight int64      `gorm:"column:weight;type:bigint;index;NOT NULL"json:"weight"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -43,10 +45,22 @@ func newSqliteAddressRepo(db *gorm.DB) *sqliteAddressRepo {
 	return &sqliteAddressRepo{DB: db}
 }
 
-func (s sqliteAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
-	return address.Addr, s.DB.Debug().Save(FromAddress(address)).Error
+func (s sqliteAddressRepo) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
+	err := s.DB.Save(FromAddress(address)).Error
+	if err != nil {
+		return types.UUID{}, err
+	}
+	return address.ID, nil
 }
 
+func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	var count int64
+	err := s.DB.Model(&sqliteAddress{}).Where("addr=?", addr.String()).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
 	if err := s.DB.Where(&sqliteAddress{

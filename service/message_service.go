@@ -69,6 +69,7 @@ func NewMessageService(repo repo.Repo,
 			Cache:      make(map[uint64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
 		},
+		triggerPush: make(chan *venusTypes.TipSet, 20),
 	}
 	ms.refreshMessageState(context.TODO())
 
@@ -76,7 +77,25 @@ func NewMessageService(repo repo.Repo,
 }
 
 func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (types.UUID, error) {
+	//replace address
+	if msg.From.Protocol() == address.BLS {
+		fromA, err := ms.nodeClient.ResolveToKeyAddr(ctx, msg.From, nil)
+		if err != nil {
+			return types.UUID{}, xerrors.Errorf("getting key address: %w", err)
+		}
+		ms.log.Warnf("Push from ID address (%s), adjusting to %s", msg.From, fromA)
+		msg.From = fromA
+	}
+
+	has, err := ms.repo.AddressRepo().HasAddress(ctx, msg.From)
+	if err != nil {
+		return types.UUID{}, err
+	}
+	if !has {
+		return types.UUID{}, xerrors.Errorf("address %s not in wallet", msg.From)
+	}
 	msg.State = types.UnFillMsg
+	msg.Nonce = 0
 	id, err := ms.repo.MessageRepo().SaveMessage(msg)
 	if err == nil {
 		ms.messageState.SetMessage(msg.ID, msg)
@@ -234,21 +253,29 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	if err != nil {
 		return err
 	}
+	//sort by addr weight
+	sort.Slice(addrList, func(i, j int) bool {
+		return addrList[i].Weight < addrList[j].Weight
+	})
 
 	var toPushMessage []*venusTypes.SignedMessage
 	for _, addr := range addrList {
-
 		if err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-			addrInfo, _ := ms.addressService.GetAddressInfo(addr.Addr)
+			addrInfo, exit := ms.addressService.GetAddressInfo(addr.Addr)
+			if !exit {
+				return xerrors.Errorf("no wallet cliet of address %s", addr.Addr)
+			}
 
 			mAddr, err := address.NewFromString(addr.Addr)
 			if err != nil {
 				return err
 			}
+
 			//判断是否需要推送消息
 			actor, err := ms.nodeClient.StateGetActor(ctx, mAddr, ts.Key())
 			if err != nil {
-				return err
+				ms.log.Warnf("actor of address %s not found", mAddr)
+				return nil
 			}
 
 			if actor.Nonce > addr.Nonce {
@@ -257,8 +284,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				ms.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d", addr.Addr, addr.Nonce, actor.Nonce)
 				return nil
 			}
+
 			nonceGap := addr.Nonce - actor.Nonce
-			if nonceGap < 20 {
+			if nonceGap > 20 {
 				ms.log.Debugf("%s there are %d message not to be package ", addr.Addr, nonceGap)
 				return nil
 			}
@@ -268,22 +296,21 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			if err != nil {
 				return err
 			}
-			if len(messages) == 0 {
-				ms.log.Debugf("%s have no message", addr.Addr)
-				return nil
-			}
 			messages, expireMsgs := ms.excludeExpire(ts, messages)
 			//todo 如何筛选
 			selectMsg := messages[:]
 			if uint64(len(messages)) > selectCount {
 				selectMsg = messages[:selectCount]
 			}
+			if len(messages) == 0 {
+				ms.log.Debugf("%s have no message", addr.Addr)
+				return nil
+			}
 
 			for _, msg := range selectMsg {
 				//分配nonce
-				addr.Nonce++
 				msg.Nonce = addr.Nonce
-
+				addr.Nonce++
 				//todo 估算gas, spec怎么做？
 				//通过配置影响 maxfee
 				newMsg, err := ms.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
@@ -294,21 +321,17 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				msg.GasPremium = newMsg.GasPremium
 				msg.GasLimit = newMsg.GasLimit
 
+				unsignedCid := msg.UnsignedMessage.Cid()
+				msg.UnsignedCid = &unsignedCid
 				//签名
-				mb, err := msg.ToStorageBlock()
-				if err != nil {
-					return xerrors.Errorf("serializing message: %w", err)
-				}
-				sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, mb.RawData())
+				sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes())
 				if err != nil {
 					return err
 				}
 
 				msg.Signature = sig
+				//state
 				msg.State = types.FillMsg
-
-				unsignedCid := msg.UnsignedMessage.Cid()
-				msg.UnsignedCid = &unsignedCid
 
 				signedMsg := venusTypes.SignedMessage{
 					Message:   msg.UnsignedMessage,
@@ -320,7 +343,6 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			}
 
 			//保存消息
-			//todo transaction
 			err = txRepo.MessageRepo().ExpireMessage(expireMsgs)
 			if err != nil {
 				return err
@@ -335,12 +357,25 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			if err != nil {
 				return err
 			}
+
 			for _, msg := range selectMsg {
 				toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
 					Message:   msg.UnsignedMessage,
 					Signature: *msg.Signature,
 				})
 				//update cache
+				err := ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
+					message.SignedCid = msg.SignedCid
+					message.UnsignedCid = msg.UnsignedCid
+					message.UnsignedMessage = msg.UnsignedMessage
+					message.State = msg.State
+					message.Signature = msg.Signature
+					message.Nonce = msg.Nonce
+					return nil
+				})
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -357,11 +392,11 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 }
 
 func (ms *MessageService) excludeExpire(ts *venusTypes.TipSet, msgs []*types.Message) ([]*types.Message, []*types.Message) {
-	//todo 判断过期
+	//todo check whether message is expired
 	var result []*types.Message
 	var expireMsg []*types.Message
 	for _, msg := range msgs {
-		if msg.Meta.ExpireEpoch != 0 && msg.Meta.ExpireEpoch > ts.Height() {
+		if msg.Meta.ExpireEpoch != 0 && msg.Meta.ExpireEpoch <= ts.Height() {
 			//expire
 			msg.State = types.ExpireMsg
 			expireMsg = append(expireMsg, msg)

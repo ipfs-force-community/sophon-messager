@@ -43,7 +43,6 @@ func (d SqlLiteRepo) GetDb() *gorm.DB {
 }
 
 func (d SqlLiteRepo) Transaction(cb func(txRepo repo.TxRepo) error) error {
-
 	return d.DB.Transaction(func(tx *gorm.DB) error {
 		txRepo := &TxSqlliteRepo{tx}
 		return cb(txRepo)

@@ -28,7 +28,7 @@ type AddressService struct {
 
 type AddressInfo struct {
 	Nonce        uint64
-	WalletClient *WalletClient
+	WalletClient IWalletClient
 }
 
 func NewAddressService(repo repo.Repo, logger *logrus.Logger, walletService *WalletService, nodeClient *NodeClient, cfg *config.AddressConfig) (*AddressService, error) {
@@ -48,7 +48,7 @@ func NewAddressService(repo repo.Repo, logger *logrus.Logger, walletService *Wal
 	return addressService, nil
 }
 
-func (addressService *AddressService) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
+func (addressService *AddressService) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
 	return addressService.repo.AddressRepo().SaveAddress(ctx, address)
 }
 
@@ -99,7 +99,7 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 	return nil
 }
 
-func (addressService *AddressService) ProcessWallet(ctx context.Context, cli *WalletClient) error {
+func (addressService *AddressService) ProcessWallet(ctx context.Context, cli IWalletClient) error {
 	addrs, err := cli.WalletList(ctx)
 	if err != nil {
 		return xerrors.Errorf("get wallet list failed error: %v", err)
@@ -117,7 +117,7 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli *Wa
 		if err != nil {
 			addressService.log.Warnf("get actor failed, addr: %s, err: %v", addr, err)
 		} else {
-			nonce = actor.Nonce
+			nonce = actor.Nonce //current nonce should big than nonce on chain
 		}
 
 		ta := &types.Address{
@@ -125,8 +125,20 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli *Wa
 			Nonce:     nonce,
 			UpdatedAt: time.Now(),
 		}
-		if err := addressService.SetNonceToLocal(addr.String(), actor.Nonce); err != nil {
+
+		_, err = addressService.SaveAddress(context.Background(), &types.Address{
+			ID:        types.NewUUID(),
+			Addr:      addr.String(),
+			Nonce:     nonce,
+			UpdatedAt: time.Now(),
+		})
+		if err != nil {
 			addressService.log.Errorf("set nonce failed addr: %v, err: %v", ta, err)
+			continue
+		}
+		addressService.addrInfo[addr.String()] = &AddressInfo{
+			Nonce:        0,
+			WalletClient: cli,
 		}
 	}
 
@@ -166,14 +178,4 @@ func (addressService *AddressService) GetAddressInfo(addr string) (*AddressInfo,
 	}
 
 	return nil, false
-}
-
-func (addressService *AddressService) SetNonceToLocal(addr string, nonce uint64) error {
-	_, err := addressService.SaveAddress(context.Background(), &types.Address{
-		Addr:      addr,
-		Nonce:     nonce,
-		UpdatedAt: time.Now(),
-	})
-
-	return err
 }
