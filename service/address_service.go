@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/go-address"
+
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
@@ -59,6 +61,10 @@ func (addressService *AddressService) UpdateNonce(ctx context.Context, uuid type
 
 func (addressService *AddressService) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	return addressService.repo.AddressRepo().GetAddress(ctx, addr)
+}
+
+func (addressService *AddressService) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	return addressService.repo.AddressRepo().HasAddress(ctx, addr)
 }
 
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {

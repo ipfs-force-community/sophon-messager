@@ -51,12 +51,16 @@ func (s mysqlWalletRepo) SaveWallet(wallet *types.Wallet) (types.UUID, error) {
 	return wallet.ID, err
 }
 
-func (s mysqlWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {
+func (s mysqlWalletRepo) GetWalletByID(uuid types.UUID) (*types.Wallet, error) {
 	var wallet mysqlWallet
 	if err := s.DB.Where(&mysqlWallet{Id: uuid, IsDeleted: -1}).First(&wallet).Error; err != nil {
 		return nil, err
 	}
 	return wallet.Wallet(), nil
+}
+
+func (s mysqlWalletRepo) GetWalletByName(name string) (*types.Wallet, error) {
+	panic("implement me")
 }
 
 func (s mysqlWalletRepo) ListWallet() ([]*types.Wallet, error) {

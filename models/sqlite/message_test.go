@@ -55,6 +55,13 @@ func TestSageAndGetMessage(t *testing.T) {
 	unchainedMsgs, err := msgDb.ListUnchainedMsgs()
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, 1, len(unchainedMsgs))
+
+	signedMsg := NewSignedMessages(1)[0]
+	_, err = msgDb.SaveMessage(signedMsg)
+	assert.NoError(t, err)
+	msg2, err := msgDb.GetMessageBySignedCid(signedMsg.SignedCid.String())
+	assert.NoError(t, err)
+	assert.Equal(t, signedMsg.SignedCid, msg2.SignedCid)
 }
 
 func TestUpdateMessageInfoByCid(t *testing.T) {
@@ -107,7 +114,8 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 	_, err := db.MessageRepo().SaveMessage(msg)
 	assert.NoError(t, err)
 
-	assert.NoError(t, db.MessageRepo().UpdateMessageStateByCid(cid.String(), types.OnChainMsg))
+	_, err = db.MessageRepo().UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
+	assert.NoError(t, err)
 
 	msg2, err := db.MessageRepo().GetMessage(msg.ID)
 	assert.NoError(t, err)

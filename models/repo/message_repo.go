@@ -18,13 +18,16 @@ type MessageRepo interface {
 	GetMessage(uuid types.UUID) (*types.Message, error)
 	GetMessageState(uuid types.UUID) (types.MessageState, error)
 	GetMessageByCid(unsignedCid string) (*types.Message, error)
+	GetMessageBySignedCid(signedCid string) (*types.Message, error)
 	GetSignedMessageByTime(start time.Time) ([]*types.Message, error)
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
+	ListSignedMsgs() ([]*types.Message, error)
 
-	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey string) (string, error)
+	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) (string, error)
+	UpdateMessageStateByID(uuid types.UUID, state types.MessageState) (types.UUID, error)
 }

@@ -18,8 +18,7 @@ func TestWallet(t *testing.T) {
 	defer func() {
 		assert.NoError(t, os.Remove(path))
 	}()
-	err = repo.AutoMigrate()
-	assert.NoError(t, err)
+	assert.NoError(t, repo.AutoMigrate())
 
 	walletRepo := repo.WalletRepo()
 
@@ -48,13 +47,17 @@ func TestWallet(t *testing.T) {
 	id2, err := walletRepo.SaveWallet(w2)
 	assert.NoError(t, err)
 
-	r, err := walletRepo.GetWallet(id)
+	r, err := walletRepo.GetWalletByID(id)
 	assert.NoError(t, err)
 	assert.Equal(t, w.Name, r.Name)
 	assert.Equal(t, w.Url, r.Url)
-	t.Logf("%+v", r)
 
-	_, err = walletRepo.GetWallet(id2)
+	r2, err := walletRepo.GetWalletByName(w.Name)
+	assert.NoError(t, err)
+	assert.Equal(t, w.Name, r2.Name)
+	assert.Equal(t, w.Url, r2.Url)
+
+	_, err = walletRepo.GetWalletByID(id2)
 	assert.Error(t, err)
 
 	rs, err := walletRepo.ListWallet()
@@ -64,6 +67,6 @@ func TestWallet(t *testing.T) {
 	err = walletRepo.DelWallet(id)
 	assert.NoError(t, err)
 
-	_, err = walletRepo.GetWallet(id)
+	_, err = walletRepo.GetWalletByID(id)
 	assert.Error(t, err)
 }

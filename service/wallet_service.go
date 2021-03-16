@@ -63,8 +63,12 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 	return uuid, nil
 }
 
-func (walletService *WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
-	return walletService.repo.WalletRepo().GetWallet(uuid)
+func (walletService *WalletService) GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
+	return walletService.repo.WalletRepo().GetWalletByID(uuid)
+}
+
+func (walletService *WalletService) GetWalletByName(ctx context.Context, name string) (*types.Wallet, error) {
+	return walletService.repo.WalletRepo().GetWalletByName(name)
 }
 
 func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
