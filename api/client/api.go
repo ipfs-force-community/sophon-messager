@@ -2,9 +2,10 @@ package client
 
 import (
 	"context"
+	"time"
+
 	"github.com/filecoin-project/go-address"
 	"golang.org/x/xerrors"
-	"time"
 
 	"github.com/ipfs-force-community/venus-messager/types"
 )
@@ -15,7 +16,7 @@ type IMessager interface {
 	GetMessage(ctx context.Context, uuid string) (*types.Message, error)
 	ListMessage(ctx context.Context) ([]*types.Message, error)
 
-	SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error)
+	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWallet(ctx context.Context, uuid string) (*types.Wallet, error)
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)
 	ListWalletAddress(ctx context.Context, name string) ([]address.Address, error)
@@ -33,7 +34,7 @@ type Message struct {
 		GetMessage  func(ctx context.Context, uuid string) (*types.Message, error)
 		ListMessage func(ctx context.Context) ([]*types.Message, error)
 
-		SaveWallet        func(ctx context.Context, wallet *types.Wallet) (string, error)
+		SaveWallet        func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWallet         func(ctx context.Context, uuid string) (*types.Wallet, error)
 		ListWallet        func(ctx context.Context) ([]*types.Wallet, error)
 		ListWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
@@ -56,7 +57,7 @@ func (message *Message) ListMessage(ctx context.Context) ([]*types.Message, erro
 	return message.Internal.ListMessage(ctx)
 }
 
-func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
+func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
 	return message.Internal.SaveWallet(ctx, wallet)
 }
 

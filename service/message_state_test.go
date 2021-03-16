@@ -44,7 +44,8 @@ func TestMessageStateCache(t *testing.T) {
 	assert.True(t, flag)
 	assert.Equal(t, msgs[0].State, state)
 
-	msgState.UpdateMessageStateByCid(msgs[1].Cid().String(), types.OnChainMsg)
+	err = msgState.UpdateMessageStateByCid(msgs[1].Cid().String(), types.OnChainMsg)
+	assert.NoError(t, err)
 	state, flag = msgState.GetMessageStateByCid(msgs[1].Cid().String())
 	assert.True(t, flag)
 	assert.Equal(t, types.OnChainMsg, state)

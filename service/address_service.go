@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"sync"
 	"time"
 
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
@@ -28,6 +28,7 @@ type AddressService struct {
 
 type AddressInfo struct {
 	Nonce        uint64
+	UUID         types.UUID
 	WalletClient IWalletClient
 }
 
@@ -60,14 +61,15 @@ func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types
 	return addressService.repo.AddressRepo().ListAddress(ctx)
 }
 func (addressService *AddressService) getLocalAddressAndNonce() error {
-	addrs, err := addressService.ListAddress(context.Background())
+	addrsInfo, err := addressService.ListAddress(context.Background())
 	if err != nil {
 		return err
 	}
 
-	for _, addr := range addrs {
-		addressService.SetAddressInfo(addr.Addr, &AddressInfo{
-			Nonce:        addr.Nonce,
+	for _, info := range addrsInfo {
+		addressService.SetAddressInfo(info.Addr, &AddressInfo{
+			Nonce:        info.Nonce,
+			UUID:         info.ID,
 			WalletClient: nil,
 		})
 	}
@@ -126,18 +128,20 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli IWa
 			UpdatedAt: time.Now(),
 		}
 
-		_, err = addressService.SaveAddress(context.Background(), &types.Address{
+		a := &types.Address{
 			ID:        types.NewUUID(),
 			Addr:      addr.String(),
 			Nonce:     nonce,
 			UpdatedAt: time.Now(),
-		})
+		}
+		_, err = addressService.SaveAddress(context.Background(), a)
 		if err != nil {
-			addressService.log.Errorf("set nonce failed addr: %v, err: %v", ta, err)
+			addressService.log.Errorf("save address failed, addr: %v, err: %v", ta, err)
 			continue
 		}
 		addressService.addrInfo[addr.String()] = &AddressInfo{
-			Nonce:        0,
+			Nonce:        nonce,
+			UUID:         a.ID,
 			WalletClient: cli,
 		}
 	}
@@ -178,4 +182,19 @@ func (addressService *AddressService) GetAddressInfo(addr string) (*AddressInfo,
 	}
 
 	return nil, false
+}
+
+func (addressService *AddressService) StoreNonce(addr string, nonce uint64) error {
+	addrInfo, ok := addressService.GetAddressInfo(addr)
+	if !ok {
+		return xerrors.Errorf("not found address info: %s", addr)
+	}
+	_, err := addressService.SaveAddress(context.Background(), &types.Address{
+		ID:        addrInfo.UUID,
+		Addr:      addr,
+		Nonce:     nonce,
+		UpdatedAt: time.Now(),
+	})
+
+	return err
 }

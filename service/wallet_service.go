@@ -49,7 +49,7 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 	return ws, err
 }
 
-func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
+func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
 	return walletService.repo.WalletRepo().SaveWallet(wallet)
 }
 

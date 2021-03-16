@@ -1,7 +1,6 @@
 package service
 
 import (
-	"sync"
 	"time"
 
 	"github.com/ipfs-force-community/venus-messager/config"
@@ -19,8 +18,6 @@ type MessageState struct {
 	idCids *idCidCache // 保存 cid 和 id的映射，方便从msgCache中找消息状态
 
 	messageCache *cache.Cache // id 为 key
-
-	l sync.Mutex
 }
 
 func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) (*MessageState, error) {
