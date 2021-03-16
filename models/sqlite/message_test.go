@@ -35,7 +35,6 @@ func TestSageAndGetMessage(t *testing.T) {
 
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
-	beforeSave := ObjectToString(msg)
 
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
@@ -43,6 +42,8 @@ func TestSageAndGetMessage(t *testing.T) {
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
 
+	msg.Receipt = &venustypes.MessageReceipt{ExitCode: -1}
+	beforeSave := ObjectToString(msg)
 	afterSave := ObjectToString(result)
 	assert.Equal(t, beforeSave, afterSave)
 
