@@ -13,7 +13,13 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          # Must fetch at least the immediate parents so that if this is
+          # a pull request then we can checkout the head of the pull request.
+          # Only include this option if you are running this workflow on pull requests.
+          fetch-depth: 2
       - name: Deps
         run: |
           sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
@@ -21,7 +27,7 @@ jobs:
           ./extern/filecoin-ffi/install-filcrypto
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2.5.1
+        uses: golangci/golangci-lint-action@v2.5.0
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v2.5.1
+          version: v2.5.0
