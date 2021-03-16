@@ -12,6 +12,7 @@ import (
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 func setup(path string) repo.Repo {
@@ -56,8 +57,8 @@ func TestSageAndGetMessage(t *testing.T) {
 	assert.LessOrEqual(t, 1, len(unchainedMsgs))
 }
 
-func TestUpdateMessageReceipt(t *testing.T) {
-	name := "TestUpdateMessageReceipt.db"
+func TestUpdateMessageInfoByCid(t *testing.T) {
+	name := "TestUpdateMessageInfoByCid.db"
 	db := setup(name)
 	defer func() {
 		assert.NoError(t, os.Remove(name))
@@ -74,9 +75,13 @@ func TestUpdateMessageReceipt(t *testing.T) {
 		ReturnValue: []byte{'g', 'd'},
 		GasUsed:     34,
 	}
+	tsKeyStr := "{ bafy2bzacec7ymsvmwjgew5whbhs4c3gg5k76pu6y7tun67lqw6unt6xo2nn62 bafy2bzacediq3wdlglhbc6ezlmnks46hdl2kyc3alghiov3c6jpt5qcf76s32 bafy2bzacebjjsg2vqadraxippg46rkysbyucgl27qzu6p6bgepcn7ybgjmqxs }"
+	tsKey, err := utils.StringToTipsetKey(tsKeyStr)
+	assert.NoError(t, err)
+
 	height := abi.ChainEpoch(10)
 	state := types.OnChainMsg
-	_, err = db.MessageRepo().UpdateMessageReceipt(unsignedCid.String(), rec, height, state)
+	_, err = db.MessageRepo().UpdateMessageInfoByCid(unsignedCid.String(), rec, height, state, tsKey.String())
 	assert.NoError(t, err)
 
 	msg2, err := db.MessageRepo().GetMessageByCid(unsignedCid.String())
@@ -84,6 +89,7 @@ func TestUpdateMessageReceipt(t *testing.T) {
 	assert.Equal(t, uint64(height), msg2.Height)
 	assert.Equal(t, rec, msg2.Receipt)
 	assert.Equal(t, state, msg2.State)
+	assert.Equal(t, tsKeyStr, msg2.TipSetKey.String())
 }
 
 func TestUpdateMessageStateByCid(t *testing.T) {

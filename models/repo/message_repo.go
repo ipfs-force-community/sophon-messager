@@ -25,5 +25,5 @@ type MessageRepo interface {
 	ListUnchainedMsgs() ([]*types.Message, error)
 
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
-	UpdateMessageReceipt(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error)
+	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey string) (string, error)
 }
