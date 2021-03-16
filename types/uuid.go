@@ -23,6 +23,11 @@ func ParseUUID(uid string) (UUID, error) {
 }
 
 // Value implement sql.Scanner
+func (uid UUID) IsEmpty() bool {
+	return uid == UUID{}
+}
+
+// Value implement sql.Scanner
 func (uid *UUID) String() string {
 	return uuid.UUID(*uid).String()
 }

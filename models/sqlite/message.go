@@ -41,7 +41,7 @@ type sqliteMessage struct {
 	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:unsigned_cid;"`
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:signed_cid"`
 
-	Height    uint64              `gorm:"column:height;type:unsigned bigint;index:height"`
+	Height    int64               `gorm:"column:height;type:bigint;index:height"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 

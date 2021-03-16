@@ -85,7 +85,18 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			}
 		}
 		for addr, nonce := range nonceGap {
-			if err := ms.addressService.StoreNonce(addr.String(), nonce); err != nil {
+			addrInfo, ok := ms.addressService.GetAddressInfo(addr.String())
+			if !ok {
+				return xerrors.Errorf("not found address info: %s", addr)
+			}
+
+			_, err := txRepo.AddressRepo().SaveAddress(context.Background(), &types.Address{
+				ID:        addrInfo.UUID,
+				Addr:      addr.String(),
+				Nonce:     nonce,
+				UpdatedAt: time.Now(),
+			})
+			if err != nil {
 				return err
 			}
 		}

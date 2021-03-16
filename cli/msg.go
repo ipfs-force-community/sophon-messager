@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ipfs-force-community/venus-messager/types"
 
 	"github.com/urfave/cli/v2"
 )
@@ -36,7 +37,12 @@ var getCmd = &cli.Command{
 		}
 		defer closer()
 
-		uid := ctx.String("uuid")
+		uidStr := ctx.String("uuid")
+		uid, err := types.ParseUUID(uidStr)
+		if err != nil {
+			return err
+		}
+
 		msg, err := client.GetMessage(ctx.Context, uid)
 		if err != nil {
 			return err

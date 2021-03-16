@@ -30,9 +30,9 @@ func main() {
 
 	defer closer()
 	addr, _ := address.NewFromString("t3v3vpwnsfqmp6cj65lzflxxv3vkiiwdj33l3f4bgrwkio7w27jmwtsby372m677g7x5h6eqsaieelwr6n74la")
-	uid, err := client.PushMessage(context.Background(), &types.Message{
-		ID: types.NewUUID(),
-		UnsignedMessage: venustypes.UnsignedMessage{
+	uid, err := client.PushMessageWithId(context.Background(),
+		types.NewUUID(),
+		&venustypes.UnsignedMessage{
 			Version: 0,
 			To:      addr,
 			From:    addr,
@@ -40,21 +40,20 @@ func main() {
 			Value:   abi.NewTokenAmount(100),
 			Method:  0,
 		},
-		Meta: &types.MsgMeta{
+		&types.MsgMeta{
 			ExpireEpoch:       1000000,
 			GasOverEstimation: 1.25,
 			MaxFee:            big.NewInt(10000000000000000),
 			MaxFeeCap:         big.NewInt(10000000000000000),
-		},
-	})
+		})
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	fmt.Println("send message " + uid)
+	fmt.Println("send message " + uid.String())
 
-	msg, err := client.WaitMessage(context.Background(), uid)
+	msg, err := client.WaitMessage(context.Background(), uid, 5)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -64,4 +63,6 @@ func main() {
 	fmt.Println("code:", msg.Receipt.ExitCode)
 	fmt.Println("gas_used:", msg.Receipt.GasUsed)
 	fmt.Println("return_value:", msg.Receipt.ReturnValue)
+	fmt.Println("Height:", msg.Height)
+	fmt.Println("Tipset:", msg.TipSetKey.String())
 }

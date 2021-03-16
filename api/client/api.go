@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -11,9 +12,10 @@ import (
 )
 
 type IMessager interface {
-	WaitMessage(ctx context.Context, uuid string) (*types.Message, error)
-	PushMessage(ctx context.Context, msg *types.Message) (string, error)
-	GetMessage(ctx context.Context, uuid string) (*types.Message, error)
+	WaitMessage(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
+	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
+	PushMessageWithId(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
+	GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error)
 	ListMessage(ctx context.Context) ([]*types.Message, error)
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
@@ -30,9 +32,11 @@ var _ IMessager = (*Message)(nil)
 
 type Message struct {
 	Internal struct {
-		PushMessage func(ctx context.Context, msg *types.Message) (string, error)
-		GetMessage  func(ctx context.Context, uuid string) (*types.Message, error)
-		ListMessage func(ctx context.Context) ([]*types.Message, error)
+		WaitMessage       func(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
+		PushMessage       func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
+		PushMessageWithId func(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
+		GetMessage        func(ctx context.Context, uuid types.UUID) (*types.Message, error)
+		ListMessage       func(ctx context.Context) ([]*types.Message, error)
 
 		SaveWallet        func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWallet         func(ctx context.Context, uuid string) (*types.Wallet, error)
@@ -45,11 +49,15 @@ type Message struct {
 	}
 }
 
-func (message *Message) PushMessage(ctx context.Context, msg *types.Message) (string, error) {
-	return message.Internal.PushMessage(ctx, msg)
+func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (types.UUID, error) {
+	return message.Internal.PushMessage(ctx, msg, meta)
 }
 
-func (message *Message) GetMessage(ctx context.Context, uuid string) (*types.Message, error) {
+func (message *Message) PushMessageWithId(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error) {
+	return message.Internal.PushMessageWithId(ctx, uuid, msg, meta)
+}
+
+func (message *Message) GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error) {
 	return message.Internal.GetMessage(ctx, uuid)
 }
 
@@ -85,7 +93,7 @@ func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, erro
 	return message.Internal.ListAddress(ctx)
 }
 
-func (message *Message) WaitMessage(ctx context.Context, uuid string) (*types.Message, error) {
+func (message *Message) WaitMessage(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error) {
 	tm := time.NewTicker(time.Second * 30)
 	defer tm.Stop()
 
@@ -96,7 +104,8 @@ func (message *Message) WaitMessage(ctx context.Context, uuid string) (*types.Me
 			if err != nil {
 				return nil, err
 			}
-			if msg.State == types.OnChainMsg {
+
+			if msg.State == types.OnChainMsg && msg.Confidence > int64(confidence) {
 				return msg, nil
 			}
 			continue
