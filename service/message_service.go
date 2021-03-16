@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipfs-force-community/venus-messager/utils"
+
 	"github.com/filecoin-project/go-address"
 
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
@@ -232,9 +234,9 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*venusTypes.TipSet, error) {
 	var tsList []*venusTypes.TipSet
 	var err error
-	key := &venusTypes.TipSetKey{}
 	for _, t := range tf {
-		if err := key.UnmarshalJSON([]byte(t.Key)); err != nil {
+		key, err := utils.StringToTipsetKey(t.Key)
+		if err != nil {
 			return nil, err
 		}
 		blocks := make([]*venusTypes.BlockHeader, len(key.Cids()))

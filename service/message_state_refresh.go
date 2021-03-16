@@ -53,24 +53,26 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		}
 	}
 
-	pendingMsgs := make([]pendingMessage, 0)
+	applyMsgs := make([]pendingMessage, 0)
 	nonceGap := make(map[address.Address]uint64, len(ms.addressService.addrInfo))
+	tsKeys := make(map[abi.ChainEpoch]string)
 	for _, ts := range h.apply {
 		height := ts.Height()
 		if !ts.Defined() {
 			continue
 		}
-		pendingMsgs, nonceGap, err = ms.processBlockParentMessages(ctx, ts.At(0).Cid(), height, pendingMsgs, nonceGap)
+		applyMsgs, nonceGap, err = ms.processBlockParentMessages(ctx, ts.At(0).Cid(), height, applyMsgs, nonceGap)
 		if err != nil {
 			return xerrors.Errorf("process block failed, block id: %s %v", ts.At(0).Cid().String(), err)
 		}
-		tsList = append(tsList, &tipsetFormat{Key: ts.String(), Height: uint64(height)})
+		tsList = append(tsList, &tipsetFormat{Key: ts.Key().String(), Height: uint64(height)})
+		tsKeys[height] = ts.Key().String()
 	}
 
 	// update db
 	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		for _, msg := range pendingMsgs {
-			if _, err = txRepo.MessageRepo().UpdateMessageReceipt(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg); err != nil {
+		for _, msg := range applyMsgs {
+			if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
 				return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 			}
 			if _, ok := revertMsgs[msg.cid]; ok {
@@ -95,7 +97,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update cache
-	for _, msg := range pendingMsgs {
+	for _, msg := range applyMsgs {
 		if err := ms.messageState.UpdateMessageStateByCid(msg.cid.String(), types.OnChainMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", msg.cid.String(), err)
 		}
@@ -152,7 +154,7 @@ type pendingMessage struct {
 func (ms *MessageService) processBlockParentMessages(ctx context.Context,
 	bcid cid.Cid,
 	height abi.ChainEpoch,
-	pendingMsgs []pendingMessage,
+	applyMsgs []pendingMessage,
 	nonceGap map[address.Address]uint64) ([]pendingMessage, map[address.Address]uint64, error) {
 	msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
 	if err != nil {
@@ -171,7 +173,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context,
 	for i := range receipts {
 		msg := msgs[i].Message
 		if addrInfo, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
-			pendingMsgs = append(pendingMsgs, pendingMessage{
+			applyMsgs = append(applyMsgs, pendingMessage{
 				cid:     msg.Cid(),
 				height:  height,
 				receipt: receipts[i],
@@ -185,7 +187,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context,
 		}
 	}
 
-	return pendingMsgs, nonceGap, nil
+	return applyMsgs, nonceGap, nil
 }
 
 type tipsetFormat struct {

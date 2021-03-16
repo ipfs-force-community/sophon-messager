@@ -3,19 +3,19 @@ package sqlite
 import (
 	"time"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 type sqliteMessage struct {
@@ -41,8 +41,9 @@ type sqliteMessage struct {
 	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:unsigned_cid;"`
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:signed_cid"`
 
-	Height  uint64              `gorm:"column:height;type:unsigned bigint;index:height"`
-	Receipt *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
+	Height    uint64              `gorm:"column:height;type:unsigned bigint;index:height"`
+	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
+	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
@@ -85,6 +86,9 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 	if len(sqlMsg.SignedCid) > 0 {
 		signedCid, _ := cid.Decode(sqlMsg.SignedCid)
 		destMsg.SignedCid = &signedCid
+	}
+	if len(sqlMsg.TipsetKey) > 0 {
+		destMsg.TipSetKey, _ = utils.StringToTipsetKey(sqlMsg.TipsetKey)
 	}
 
 	return destMsg
@@ -131,6 +135,10 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 
 	if srcMsg.GasPremium.Int != nil {
 		destMsg.GasPremium = types.Int{Int: srcMsg.GasPremium.Int}
+	}
+
+	if !srcMsg.TipSetKey.IsEmpty() {
+		destMsg.TipsetKey = srcMsg.TipSetKey.String()
 	}
 
 	return destMsg
@@ -317,7 +325,11 @@ func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) UpdateMessageReceipt(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
+func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
+	receipt *venustypes.MessageReceipt,
+	height abi.ChainEpoch,
+	state types.MessageState,
+	tsKey string) (string, error) {
 	rcp := repo.FromMsgReceipt(receipt)
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),
@@ -325,6 +337,7 @@ func (m *sqliteMessageRepo) UpdateMessageReceipt(unsignedCid string, receipt *ve
 		"receipt_return_value": rcp.ReturnValue,
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
+		"tipset_key":           tsKey,
 	}
 	return unsignedCid, m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).

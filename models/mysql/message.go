@@ -1,10 +1,11 @@
 package mysql
 
 import (
-	"github.com/filecoin-project/go-address"
-	"gorm.io/gorm"
 	"reflect"
 	"time"
+
+	"github.com/filecoin-project/go-address"
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/go-state-types/abi"
 
@@ -119,7 +120,7 @@ func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	return result.([]*types.Message), nil
 }
 
-func (m mysqlMessageRepo) UpdateMessageReceipt(cid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState) (string, error) {
+func (m mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey string) (string, error) {
 	panic("implement me")
 }
 

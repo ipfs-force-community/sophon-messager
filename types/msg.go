@@ -26,12 +26,13 @@ type Message struct {
 	venusTypes.UnsignedMessage
 	*crypto.Signature
 
-	Height  uint64
-	Receipt *venusTypes.MessageReceipt
+	Height    uint64
+	Receipt   *venusTypes.MessageReceipt
+	TipSetKey venusTypes.TipSetKey
 
 	Meta *MsgMeta
 
-	State MessageState // 消息状态
+	State MessageState
 }
 
 type MsgMeta struct {
