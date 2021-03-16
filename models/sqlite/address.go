@@ -64,7 +64,7 @@ func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address)
 }
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Debug().Where("addr = ? and is_deleted = -1", addr).First(&a).Error; err != nil {
+	if err := s.DB.Where("addr = ? and is_deleted = -1", addr).First(&a).Error; err != nil {
 		return nil, err
 	}
 

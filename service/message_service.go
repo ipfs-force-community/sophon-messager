@@ -35,6 +35,7 @@ type MessageService struct {
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
+	failedHeads []failedHead
 
 	readFileOnce sync.Once
 	tsCache      *TipsetCache
@@ -42,6 +43,11 @@ type MessageService struct {
 
 type headChan struct {
 	apply, revert []*venusTypes.TipSet
+}
+
+type failedHead struct {
+	headChan
+	time.Time
 }
 
 type TipsetCache struct {
@@ -58,11 +64,12 @@ func NewMessageService(repo repo.Repo,
 	messageState *MessageState,
 	addressService *AddressService) (*MessageService, error) {
 	ms := &MessageService{
-		repo:           repo,
-		log:            logger,
-		nodeClient:     nc,
-		cfg:            cfg,
-		headChans:      make(chan *headChan, MaxHeadChangeProcess),
+		repo:       repo,
+		log:        logger,
+		nodeClient: nc,
+		cfg:        cfg,
+		headChans:  make(chan *headChan, MaxHeadChangeProcess),
+
 		messageState:   messageState,
 		addressService: addressService,
 		tsCache: &TipsetCache{
@@ -70,6 +77,7 @@ func NewMessageService(repo repo.Repo,
 			CurrHeight: 0,
 		},
 		triggerPush: make(chan *venusTypes.TipSet, 20),
+		failedHeads: make([]failedHead, 0),
 	}
 	ms.refreshMessageState(context.TODO())
 

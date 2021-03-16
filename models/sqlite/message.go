@@ -232,7 +232,7 @@ func newSqliteMessageRepo(db *gorm.DB) *sqliteMessageRepo {
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
 	sqlMsg := FromMessage(msg)
 	//todo check
-	err := m.DB.Debug().Clauses(clause.OnConflict{
+	err := m.DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "id"}},
 		DoUpdates: []clause.Assignment{
 			{
@@ -303,7 +303,7 @@ func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
 
 func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	if err := m.DB.Debug().Model((*sqliteMessage)(nil)).
+	if err := m.DB.Model((*sqliteMessage)(nil)).
 		Where("height=0 and signed_data is null").
 		Find(&sqlMsgs).Error; err != nil {
 		return nil, err
@@ -326,12 +326,12 @@ func (m *sqliteMessageRepo) UpdateMessageReceipt(unsignedCid string, receipt *ve
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
 	}
-	return unsignedCid, m.DB.Debug().Model(&sqliteMessage{}).
+	return unsignedCid, m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
 		UpdateColumns(updateClause).Error
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
-	return m.DB.Debug().Model(&sqliteMessage{}).
+	return m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
 }
