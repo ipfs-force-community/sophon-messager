@@ -27,11 +27,14 @@ func setup(path string) repo.Repo {
 }
 
 func TestSageAndGetMessage(t *testing.T) {
-	db := setup("message.db")
+	name := "TestSageAndGetMessage.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
 
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
-	beforeSave := ObjectToString(msg)
 
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
@@ -39,6 +42,8 @@ func TestSageAndGetMessage(t *testing.T) {
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
 
+	msg.Receipt = &venustypes.MessageReceipt{ExitCode: -1}
+	beforeSave := ObjectToString(msg)
 	afterSave := ObjectToString(result)
 	assert.Equal(t, beforeSave, afterSave)
 
@@ -52,7 +57,11 @@ func TestSageAndGetMessage(t *testing.T) {
 }
 
 func TestUpdateMessageReceipt(t *testing.T) {
-	db := setup("message.db")
+	name := "TestUpdateMessageReceipt.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
 
 	msg := NewSignedMessages(1)[0]
 	unsignedCid := msg.UnsignedCid
@@ -78,7 +87,11 @@ func TestUpdateMessageReceipt(t *testing.T) {
 }
 
 func TestUpdateMessageStateByCid(t *testing.T) {
-	db := setup("message.db")
+	name := "TestSageAndGetMessage.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
 
 	msg := NewSignedMessages(1)[0]
 	msg.State = types.FillMsg
@@ -100,9 +113,10 @@ func Test_sqliteMessageRepo_GetMessageState(t *testing.T) {
 }
 
 func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
-	db := setup("message2.db")
+	name := "GetSignedMessageByTim.db"
+	db := setup(name)
 	defer func() {
-		assert.NoError(t, os.Remove("message2.db"))
+		assert.NoError(t, os.Remove(name))
 	}()
 
 	msgDb := db.MessageRepo()
@@ -122,9 +136,10 @@ func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
 }
 
 func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
-	db := setup("message3.db")
+	name := "GetSignedMessageByHeight.db"
+	db := setup(name)
 	defer func() {
-		assert.NoError(t, os.Remove("message3.db"))
+		assert.NoError(t, os.Remove(name))
 	}()
 
 	msgDb := db.MessageRepo()
