@@ -115,7 +115,18 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (
 }
 
 func (ms *MessageService) GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessage(uuid)
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := ms.repo.MessageRepo().GetMessage(uuid)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State == types.OnChainMsg {
+		msg.Confidence = int64(ts.Height()) - msg.Height
+	}
+	return msg, nil
 }
 
 func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
@@ -127,7 +138,21 @@ func (ms *MessageService) GetMessageByCid(background context.Context, cid string
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListMessage()
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := ms.repo.MessageRepo().ListMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, msg := range msgs {
+		if msg.State == types.OnChainMsg {
+			msg.Confidence = int64(ts.Height()) - int64(msg.Height)
+		}
+	}
+	return msgs, nil
 }
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {

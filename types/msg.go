@@ -18,6 +18,11 @@ const (
 	ExpireMsg
 )
 
+type MessageWithUID struct {
+	UnsignedMessage venusTypes.UnsignedMessage
+	ID              UUID
+}
+
 type Message struct {
 	ID UUID
 
@@ -26,13 +31,20 @@ type Message struct {
 	venusTypes.UnsignedMessage
 	*crypto.Signature
 
-	Height    uint64
-	Receipt   *venusTypes.MessageReceipt
-	TipSetKey venusTypes.TipSetKey
+	Height     int64
+	Confidence int64
+	Receipt    *venusTypes.MessageReceipt
+	TipSetKey  venusTypes.TipSetKey
 
 	Meta *MsgMeta
 
 	State MessageState
+}
+
+func FromUnsignedMessage(unsignedMsg venusTypes.UnsignedMessage) *Message {
+	return &Message{
+		UnsignedMessage: unsignedMsg,
+	}
 }
 
 type MsgMeta struct {
