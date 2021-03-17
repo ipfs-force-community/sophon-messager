@@ -283,6 +283,14 @@ func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid string) (*types.Message,
 	return msg.Message(), nil
 }
 
+func (m *sqliteMessageRepo) GetMessageBySignedCid(signedCid string) (*types.Message, error) {
+	var msg sqliteMessage
+	if err := m.DB.Where("signed_cid = ?", signedCid).First(&msg).Error; err != nil {
+		return nil, err
+	}
+	return msg.Message(), nil
+}
+
 func (m *sqliteMessageRepo) GetSignedMessageByTime(start time.Time) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Where("created_at >= ? and signed_data not null", start).Find(&sqlMsgs).Error; err != nil {
@@ -338,6 +346,22 @@ func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	return result, nil
 }
 
+func (m *sqliteMessageRepo) ListSignedMsgs() ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	if err := m.DB.Model((*sqliteMessage)(nil)).
+		Where("height=0 and signed_data not null").
+		Find(&sqlMsgs).Error; err != nil {
+		return nil, err
+	}
+
+	var result = make([]*types.Message, len(sqlMsgs))
+
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+	return result, nil
+}
+
 func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	receipt *venustypes.MessageReceipt,
 	height abi.ChainEpoch,
@@ -357,7 +381,12 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		UpdateColumns(updateClause).Error
 }
 
-func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
-	return m.DB.Model(&sqliteMessage{}).
+func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) (string, error) {
+	return cid, m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
+}
+
+func (m *sqliteMessageRepo) UpdateMessageStateByID(uuid types.UUID, state types.MessageState) (types.UUID, error) {
+	return uuid, m.DB.Debug().Model(&sqliteMessage{}).
+		Where("id = ?", uuid).UpdateColumn("state", state).Error
 }

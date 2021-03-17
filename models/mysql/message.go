@@ -99,7 +99,15 @@ func (m mysqlMessageRepo) GetMessageByCid(cid string) (*types.Message, error) {
 	panic("implement me")
 }
 
+func (m mysqlMessageRepo) GetMessageBySignedCid(signedCid string) (*types.Message, error) {
+	panic("implement me")
+}
+
 func (m mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) ListSignedMsgs() ([]*types.Message, error) {
 	panic("implement me")
 }
 
@@ -128,6 +136,10 @@ func (m mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string, receipt *ve
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+func (m mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) (string, error) {
+	panic("implement me")
+}
+
+func (m mysqlMessageRepo) UpdateMessageStateByID(uuid types.UUID, state types.MessageState) (types.UUID, error) {
 	panic("implement me")
 }

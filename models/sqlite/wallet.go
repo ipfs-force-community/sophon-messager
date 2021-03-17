@@ -50,9 +50,17 @@ func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) (types.UUID, error) {
 	return wallet.ID, err
 }
 
-func (s sqliteWalletRepo) GetWallet(uuid types.UUID) (*types.Wallet, error) {
+func (s sqliteWalletRepo) GetWalletByID(uuid types.UUID) (*types.Wallet, error) {
 	var wallet sqliteWallet
 	if err := s.DB.Where("id = ? and is_deleted = -1", uuid).First(&wallet).Error; err != nil {
+		return nil, err
+	}
+	return wallet.Wallet(), nil
+}
+
+func (s sqliteWalletRepo) GetWalletByName(name string) (*types.Wallet, error) {
+	var wallet sqliteWallet
+	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&wallet).Error; err != nil {
 		return nil, err
 	}
 	return wallet.Wallet(), nil

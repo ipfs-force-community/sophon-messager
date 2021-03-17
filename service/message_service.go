@@ -6,13 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs-force-community/venus-wallet/core"
-
-	"github.com/ipfs-force-community/venus-messager/utils"
-
 	"github.com/filecoin-project/go-address"
-
+	"github.com/filecoin-project/go-state-types/abi"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/ipfs-force-community/venus-wallet/core"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
@@ -135,8 +133,16 @@ func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) 
 	return ms.repo.MessageRepo().GetMessageState(uuid)
 }
 
-func (ms *MessageService) GetMessageByCid(background context.Context, cid string) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageByCid(cid)
+func (ms *MessageService) GetMessageByCid(ctx context.Context, unsignedCid string) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
+}
+
+func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid string) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageBySignedCid(signedCid)
+}
+
+func (ms *MessageService) GetMessageByUnsignedCid(ctx context.Context, unsignedCid string) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
@@ -155,6 +161,18 @@ func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, er
 		}
 	}
 	return msgs, nil
+}
+
+func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
+	return ms.repo.MessageRepo().UpdateMessageStateByCid(cid, state)
+}
+
+func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error) {
+	return ms.repo.MessageRepo().UpdateMessageStateByID(id, state)
+}
+
+func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *venusTypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey string) (string, error) {
+	return ms.repo.MessageRepo().UpdateMessageInfoByCid(unsignedCid, receipt, height, state, tsKey)
 }
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
@@ -494,4 +512,49 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (ms *MessageService) UpdateAllSignedMessage(ctx context.Context) (int, error) {
+	msgs, err := ms.repo.MessageRepo().ListSignedMsgs()
+	if err != nil {
+		return 0, err
+	}
+
+	updateCount := 0
+	for _, msg := range msgs {
+		if err := ms.updateSignedMessage(ctx, msg); err != nil {
+			return updateCount, nil
+		}
+		updateCount++
+	}
+
+	return updateCount, nil
+}
+
+func (ms *MessageService) updateSignedMessage(ctx context.Context, msg *types.Message) error {
+	cid := msg.SignedCid
+	if msg.From.Protocol() == address.BLS {
+		cid = msg.UnsignedCid
+	}
+	if cid != nil {
+		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, *cid)
+		if err != nil {
+			return xerrors.Errorf("search message from node %s %v", cid.String(), err)
+		}
+		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet.String()); err != nil {
+			return err
+		}
+		ms.log.Infof("update signed message success %v", msg.ID)
+	}
+
+	return nil
+}
+
+func (ms *MessageService) UpdateSignedMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error) {
+	msg, err := ms.GetMessage(ctx, uuid)
+	if err != nil {
+		return uuid, err
+	}
+
+	return uuid, ms.updateSignedMessage(ctx, msg)
 }

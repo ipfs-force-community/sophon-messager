@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -46,6 +47,7 @@ var addWalletCmd = &cli.Command{
 		defer closer()
 		var w types.Wallet
 
+		w.CreatedAt = time.Now()
 		w.ID = types.NewUUID()
 		w.Name = ctx.String("name")
 		w.Url = ctx.String("url")
@@ -67,9 +69,18 @@ var addWalletCmd = &cli.Command{
 }
 
 var getWalletCmd = &cli.Command{
-	Name:      "get",
-	Usage:     "get local wallet",
-	ArgsUsage: "id",
+	Name:  "get",
+	Usage: "get local wallet",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "uuid",
+			Usage: "Search data according to uuid",
+		},
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "Search data according to name",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -77,14 +88,26 @@ var getWalletCmd = &cli.Command{
 		}
 		defer closer()
 
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass id")
+		var wallet *types.Wallet
+		if uuidStr := ctx.String("uuid"); len(uuidStr) > 0 {
+			uuid, err := types.ParseUUID(uuidStr)
+			if err != nil {
+				return err
+			}
+			wallet, err = client.GetWalletByID(ctx.Context, uuid)
+			if err != nil {
+				return err
+			}
+		} else if name := ctx.String("name"); len(name) > 0 {
+			wallet, err = client.GetWalletByName(ctx.Context, ctx.Args().First())
+			if err != nil {
+				return err
+			}
+		} else {
+			return xerrors.Errorf("value of query must be entered")
 		}
-		w, err := client.GetWallet(ctx.Context, ctx.Args().First())
-		if err != nil {
-			return err
-		}
-		bytes, err := json.MarshalIndent(w, " ", "\t")
+
+		bytes, err := json.MarshalIndent(wallet, " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -118,9 +141,18 @@ var listWalletCmd = &cli.Command{
 }
 
 var listRemoteWalletAddrCmd = &cli.Command{
-	Name:      "list-addr",
-	Usage:     "list remote wallet address by uuid",
-	ArgsUsage: "id",
+	Name:  "list-addr",
+	Usage: "list remote wallet address by uuid",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "uuid",
+			Usage: "Search data according to uuid",
+		},
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "Search data according to name",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -128,10 +160,23 @@ var listRemoteWalletAddrCmd = &cli.Command{
 		}
 		defer closer()
 
-		uuid, err := types.ParseUUID(ctx.Args().First())
-		if err != nil {
-			return err
+		var uuid types.UUID
+		uuidStr := ctx.String("uuid")
+		if len(uuidStr) > 0 {
+			uuid, err = types.ParseUUID(uuidStr)
+			if err != nil {
+				return err
+			}
+		} else if name := ctx.String("name"); len(name) > 0 {
+			w, err := client.GetWalletByName(ctx.Context, name)
+			if err != nil {
+				return err
+			}
+			uuid = w.ID
+		} else {
+			return xerrors.Errorf("value of query must be entered")
 		}
+
 		addrs, err := client.ListRemoteWalletAddress(ctx.Context, uuid)
 		if err != nil {
 			return err

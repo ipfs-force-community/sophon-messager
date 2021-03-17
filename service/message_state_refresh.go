@@ -78,7 +78,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			delete(revertMsgs, msg.cid)
 		}
 		for cid := range revertMsgs {
-			if err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg); err != nil {
+			if _, err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg); err != nil {
 				return err
 			}
 		}

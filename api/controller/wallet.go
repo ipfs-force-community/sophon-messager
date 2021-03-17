@@ -18,8 +18,12 @@ func (walletController WalletController) SaveWallet(ctx context.Context, wallet 
 	return walletController.WalletService.SaveWallet(ctx, wallet)
 }
 
-func (walletController WalletController) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
-	return walletController.WalletService.GetWallet(ctx, uuid)
+func (walletController WalletController) GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
+	return walletController.WalletService.GetWalletByID(ctx, uuid)
+}
+
+func (walletController WalletController) GetWalletByName(ctx context.Context, name string) (*types.Wallet, error) {
+	return walletController.WalletService.GetWalletByName(ctx, name)
 }
 
 func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {

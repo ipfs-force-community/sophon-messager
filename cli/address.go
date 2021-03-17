@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/filecoin-project/go-address"
+
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
@@ -17,6 +19,7 @@ var AddrCmds = &cli.Command{
 		setAddrCmd,
 		getAddrCmd,
 		listAddrCmd,
+		updateNonceCmd,
 	},
 }
 
@@ -28,6 +31,10 @@ var setAddrCmd = &cli.Command{
 			Name:    "address",
 			Usage:   "address",
 			Aliases: []string{"a"},
+		},
+		&cli.StringFlag{
+			Name:  "wallet_id",
+			Usage: "bind ID of remote Wallet",
 		},
 		&cli.Uint64Flag{
 			Name:  "nonce",
@@ -47,6 +54,20 @@ var setAddrCmd = &cli.Command{
 			return xerrors.Errorf("Address cannot be empty")
 		}
 		addr.Nonce = ctx.Uint64("nonce")
+		addr.WalletID, err = types.ParseUUID(ctx.String("wallet_id"))
+		if err != nil {
+			return err
+		}
+		addr.IsDeleted = -1
+
+		a, err := address.NewFromString(addr.Addr)
+		if err != nil {
+			return err
+		}
+		hasAddr, err := client.HasAddress(ctx.Context, a)
+		if hasAddr {
+			return xerrors.Errorf("The same address exists")
+		}
 
 		_, err = client.SaveAddress(ctx.Context, &addr)
 		if err != nil {
@@ -71,6 +92,7 @@ var getAddrCmd = &cli.Command{
 		if !ctx.Args().Present() {
 			return xerrors.Errorf("must pass address")
 		}
+
 		addr, err := client.GetAddress(ctx.Context, ctx.Args().First())
 		if err != nil {
 			return err
@@ -104,6 +126,41 @@ var listAddrCmd = &cli.Command{
 			return err
 		}
 		fmt.Println(string(bytes))
+		return nil
+	},
+}
+
+var updateNonceCmd = &cli.Command{
+	Name:      "update_nonce",
+	Usage:     "update address nonce",
+	ArgsUsage: "address",
+	Flags: []cli.Flag{
+		&cli.Uint64Flag{
+			Name:  "nonce",
+			Usage: "the address corresponds to the nonce",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		addr, err := client.GetAddress(ctx.Context, ctx.Args().First())
+		if err != nil {
+			return err
+		}
+
+		nonce := ctx.Uint64("nonce")
+		if _, err := client.UpdateNonce(ctx.Context, addr.ID, nonce); err != nil {
+			return err
+		}
+
 		return nil
 	},
 }
