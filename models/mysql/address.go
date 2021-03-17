@@ -2,10 +2,11 @@ package mysql
 
 import (
 	"context"
-	"github.com/filecoin-project/go-address"
-	"gorm.io/gorm"
 	"reflect"
 	"time"
+
+	"github.com/filecoin-project/go-address"
+	"gorm.io/gorm"
 
 	"github.com/hunjixin/automapper"
 
@@ -36,6 +37,10 @@ func (s mysqlAddress) Address() *types.Address {
 
 type mysqlAddressRepo struct {
 	*gorm.DB
+}
+
+func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
+	panic("implement me")
 }
 
 func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {

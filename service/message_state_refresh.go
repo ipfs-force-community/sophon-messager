@@ -75,9 +75,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
 				return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 			}
-			if _, ok := revertMsgs[msg.cid]; ok {
-				delete(revertMsgs, msg.cid)
-			}
+			delete(revertMsgs, msg.cid)
 		}
 		for cid := range revertMsgs {
 			if err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg); err != nil {
@@ -90,13 +88,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				return xerrors.Errorf("not found address info: %s", addr)
 			}
 
-			_, err := txRepo.AddressRepo().SaveAddress(context.Background(), &types.Address{
-				ID:        addrInfo.UUID,
-				Addr:      addr.String(),
-				Nonce:     nonce,
-				UpdatedAt: time.Now(),
-				IsDeleted: -1,
-			})
+			_, err := txRepo.AddressRepo().UpdateNonce(context.Background(), addrInfo.UUID, nonce)
 			if err != nil {
 				return err
 			}

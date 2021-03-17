@@ -86,7 +86,7 @@ func TestUpdateMessageInfoByCid(t *testing.T) {
 
 	msg2, err := db.MessageRepo().GetMessageByCid(unsignedCid.String())
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(height), msg2.Height)
+	assert.Equal(t, int64(height), msg2.Height)
 	assert.Equal(t, rec, msg2.Receipt)
 	assert.Equal(t, state, msg2.State)
 	assert.Equal(t, tsKeyStr, msg2.TipSetKey.String())
@@ -155,7 +155,7 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 
 	signedMsgs := NewSignedMessages(10)
 	for i, msg := range signedMsgs {
-		msg.Height = uint64(i)
+		msg.Height = int64(i)
 		_, err := msgDb.SaveMessage(msg)
 		assert.NoError(t, err)
 	}

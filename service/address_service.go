@@ -53,6 +53,10 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 	return addressService.repo.AddressRepo().SaveAddress(ctx, address)
 }
 
+func (addressService *AddressService) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
+	return addressService.repo.AddressRepo().UpdateNonce(ctx, uuid, nonce)
+}
+
 func (addressService *AddressService) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
 	return addressService.repo.AddressRepo().GetAddress(ctx, addr)
 }
@@ -60,6 +64,7 @@ func (addressService *AddressService) GetAddress(ctx context.Context, addr strin
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return addressService.repo.AddressRepo().ListAddress(ctx)
 }
+
 func (addressService *AddressService) getLocalAddressAndNonce() error {
 	addrsInfo, err := addressService.ListAddress(context.Background())
 	if err != nil {
@@ -67,10 +72,16 @@ func (addressService *AddressService) getLocalAddressAndNonce() error {
 	}
 
 	for _, info := range addrsInfo {
+		cli, ok := addressService.walletService.walletClients[info.WalletID]
+		if !ok {
+			addressService.log.Errorf("not found wallet client, uuid: %v", info.WalletID)
+			continue
+		}
+
 		addressService.SetAddressInfo(info.Addr, &AddressInfo{
 			Nonce:        info.Nonce,
 			UUID:         info.ID,
-			WalletClient: nil,
+			WalletClient: cli,
 		})
 	}
 
@@ -81,19 +92,14 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 	if err := addressService.getLocalAddressAndNonce(); err != nil {
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
-	for key, cli := range addressService.walletService.walletClients {
-		if err := addressService.ProcessWallet(ctx, cli); err != nil {
-			addressService.log.Errorf("process wallet failed, name: %s, error: %v", key, err)
-		}
-	}
 	go func() {
 		ticker := time.NewTicker(time.Duration(addressService.cfg.RemoteWalletSweepInterval) * time.Second)
 		for {
 			select {
 			case <-ticker.C:
-				for key, cli := range addressService.walletService.walletClients {
-					if err := addressService.ProcessWallet(ctx, cli); err != nil {
-						addressService.log.Errorf("process wallet failed, name: %s, error: %v", key, err)
+				for walletID, cli := range addressService.walletService.walletClients {
+					if err := addressService.ProcessWallet(ctx, walletID, cli); err != nil {
+						addressService.log.Errorf("process wallet failed, name: %s, error: %v", walletID, err)
 					}
 				}
 			case <-ctx.Done():
@@ -106,19 +112,12 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 	return nil
 }
 
-func (addressService *AddressService) ProcessWallet(ctx context.Context, cli IWalletClient) error {
+func (addressService *AddressService) ProcessWallet(ctx context.Context, walletID types.UUID, cli IWalletClient) error {
 	addrs, err := cli.WalletList(ctx)
 	if err != nil {
 		return xerrors.Errorf("get wallet list failed error: %v", err)
 	}
 	for _, addr := range addrs {
-		if info, ok := addressService.addrInfo[addr.String()]; ok {
-			if info.WalletClient == nil {
-				info.WalletClient = cli
-			}
-			continue
-		}
-
 		var nonce uint64
 		actor, err := addressService.nodeClient.StateGetActor(context.Background(), addr, venustypes.EmptyTSK)
 		if err != nil {
@@ -127,29 +126,34 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli IWa
 			nonce = actor.Nonce //current nonce should big than nonce on chain
 		}
 
-		ta := &types.Address{
-			Addr:      addr.String(),
-			Nonce:     nonce,
-			UpdatedAt: time.Now(),
+		if addrInfo, ok := addressService.addrInfo[addr.String()]; ok {
+			if addrInfo.Nonce < nonce {
+				if _, err := addressService.UpdateNonce(ctx, addrInfo.UUID, nonce); err != nil {
+					return err
+				}
+				addressService.SetNonce(addr.String(), nonce)
+			}
+			continue
 		}
 
-		a := &types.Address{
+		ta := &types.Address{
 			ID:        types.NewUUID(),
 			Addr:      addr.String(),
 			Nonce:     nonce,
+			WalletID:  walletID,
 			UpdatedAt: time.Now(),
 			IsDeleted: -1,
 		}
-		_, err = addressService.SaveAddress(context.Background(), a)
+		_, err = addressService.SaveAddress(context.Background(), ta)
 		if err != nil {
-			addressService.log.Errorf("save address failed, addr: %v, err: %v", ta, err)
+			addressService.log.Errorf("save address failed, addr: %v, err: %v", addr.String(), err)
 			continue
 		}
-		addressService.addrInfo[addr.String()] = &AddressInfo{
+		addressService.SetAddressInfo(addr.String(), &AddressInfo{
 			Nonce:        nonce,
-			UUID:         a.ID,
+			UUID:         ta.ID,
 			WalletClient: cli,
-		}
+		})
 	}
 
 	return nil

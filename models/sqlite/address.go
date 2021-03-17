@@ -16,10 +16,11 @@ import (
 )
 
 type sqliteAddress struct {
-	ID     types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr   string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"` // 主键
-	Nonce  uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
-	Weight int64      `gorm:"column:weight;type:bigint;index;NOT NULL"json:"weight"`
+	ID       types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr     string     `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"` // 主键
+	Nonce    uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
+	Weight   int64      `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	WalletID types.UUID `gorm:"column:wallet_id;type:varchar(256)"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -52,6 +53,10 @@ func (s sqliteAddressRepo) SaveAddress(ctx context.Context, address *types.Addre
 		return types.UUID{}, err
 	}
 	return address.ID, nil
+}
+
+func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
+	return uuid, s.DB.Model(&sqliteAddress{}).Where("id = ?", uuid).UpdateColumn("nonce", nonce).Error
 }
 
 func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {

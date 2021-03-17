@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"github.com/ipfs-force-community/venus-wallet/core"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/ipfs-force-community/venus-wallet/core"
 
 	"github.com/ipfs-force-community/venus-messager/utils"
 
@@ -317,10 +318,15 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			if actor.Nonce > addr.Nonce {
 				ms.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d", addr.Addr, addr.Nonce, actor.Nonce)
 				addr.Nonce = actor.Nonce
-				txRepo.AddressRepo().SaveAddress(ctx, addr)
+				if _, err := txRepo.AddressRepo().SaveAddress(ctx, addr); err != nil {
+					ms.log.Errorf("save address %v", err)
+				}
 			}
 			//todo push sigined but not onchain message, when to resend message
 			filledMessage, err := txRepo.MessageRepo().ListFilledMessageByAddress(mAddr)
+			if err != nil {
+				ms.log.Errorf("found filled message %v", err)
+			}
 			for _, msg := range filledMessage {
 				toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
 					Message:   msg.UnsignedMessage,
@@ -356,7 +362,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				//通过配置影响 maxfee
 				newMsg, err := ms.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
 				if err != nil {
-					ms.log.Errorf("GasEstimateMessageGas msg id fail %v", msg.ID.String(), err)
+					ms.log.Errorf("GasEstimateMessageGas msg id fail, id: %v, error: %v", msg.ID.String(), err)
 					continue
 				}
 				msg.GasFeeCap = newMsg.GasFeeCap
