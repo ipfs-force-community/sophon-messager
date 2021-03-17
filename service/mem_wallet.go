@@ -5,6 +5,7 @@ import (
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus/pkg/crypto"
+	"github.com/ipfs-force-community/venus-wallet/core"
 	"golang.org/x/xerrors"
 	"sync"
 )
@@ -46,7 +47,7 @@ func (memWallet *MemWallet) WalletHas(ctx context.Context, addr address.Address)
 	return ok, nil
 }
 
-func (memWallet *MemWallet) WalletSign(ctx context.Context, addr address.Address, data []byte) (*crypto.Signature, error) {
+func (memWallet *MemWallet) WalletSign(ctx context.Context, addr address.Address, data []byte, meta core.MsgMeta) (*crypto.Signature, error) {
 	memWallet.lk.Lock()
 	defer memWallet.lk.Unlock()
 	priv, ok := memWallet.keys[addr]

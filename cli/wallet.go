@@ -127,7 +127,7 @@ var listWalletAddrCmd = &cli.Command{
 	Usage: "list local wallet",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:  "wallet",
+			Name:  "name",
 			Usage: "specify which wallet to show",
 		},
 	},
@@ -138,12 +138,12 @@ var listWalletAddrCmd = &cli.Command{
 		}
 		defer closer()
 
-		w, err := client.ListWallet(ctx.Context)
+		addrs, err := client.ListWalletAddress(ctx.Context, ctx.String("name"))
 		if err != nil {
 			return err
 		}
 
-		bytes, err := json.MarshalIndent(w, " ", "\t")
+		bytes, err := json.MarshalIndent(addrs, " ", "\t")
 		if err != nil {
 			return err
 		}

@@ -14,6 +14,7 @@ type Message struct {
 
 func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error) {
 	return message.MsgService.PushMessage(ctx, &types.Message{
+		ID:              types.NewUUID(),
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,

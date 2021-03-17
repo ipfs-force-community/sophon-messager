@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ipfs-force-community/venus-wallet/core"
 	"sort"
 	"sync"
 	"time"
@@ -88,7 +89,7 @@ func NewMessageService(repo repo.Repo,
 
 func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) (types.UUID, error) {
 	//replace address
-	if msg.From.Protocol() == address.BLS {
+	if msg.From.Protocol() == address.ID {
 		fromA, err := ms.nodeClient.ResolveToKeyAddr(ctx, msg.From, nil)
 		if err != nil {
 			return types.UUID{}, xerrors.Errorf("getting key address: %w", err)
@@ -314,12 +315,20 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			}
 
 			if actor.Nonce > addr.Nonce {
-				//todo maybe a message create outof system, this should corrent in status check
-				//todo or corrent here?
 				ms.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d", addr.Addr, addr.Nonce, actor.Nonce)
-				return nil
+				addr.Nonce = actor.Nonce
+				txRepo.AddressRepo().SaveAddress(ctx, addr)
+			}
+			//todo push sigined but not onchain message, when to resend message
+			filledMessage, err := txRepo.MessageRepo().ListFilledMessageByAddress(mAddr)
+			for _, msg := range filledMessage {
+				toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
+					Message:   msg.UnsignedMessage,
+					Signature: *msg.Signature,
+				})
 			}
 
+			//sign new message
 			nonceGap := addr.Nonce - actor.Nonce
 			if nonceGap > 20 {
 				ms.log.Debugf("%s there are %d message not to be package ", addr.Addr, nonceGap)
@@ -333,16 +342,13 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			}
 			messages, expireMsgs := ms.excludeExpire(ts, messages)
 			//todo 如何筛选
-			selectMsg := messages[:]
-			if uint64(len(messages)) > selectCount {
-				selectMsg = messages[:selectCount]
-			}
 			if len(messages) == 0 {
 				ms.log.Debugf("%s have no message", addr.Addr)
 				return nil
 			}
-
-			for _, msg := range selectMsg {
+			var selectMsg []*types.Message
+			var count = uint64(0)
+			for _, msg := range messages {
 				//分配nonce
 				msg.Nonce = addr.Nonce
 				addr.Nonce++
@@ -350,7 +356,8 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				//通过配置影响 maxfee
 				newMsg, err := ms.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
 				if err != nil {
-					return err
+					ms.log.Errorf("GasEstimateMessageGas msg id fail %v", msg.ID.String(), err)
+					continue
 				}
 				msg.GasFeeCap = newMsg.GasFeeCap
 				msg.GasPremium = newMsg.GasPremium
@@ -359,9 +366,19 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				unsignedCid := msg.UnsignedMessage.Cid()
 				msg.UnsignedCid = &unsignedCid
 				//签名
-				sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes())
+				data, err := msg.UnsignedMessage.ToStorageBlock()
 				if err != nil {
-					return err
+					ms.log.Errorf("calc message unsigned message id %s fail %v", msg.ID.String(), err)
+					continue
+				}
+				sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes(), core.MsgMeta{
+					Type:  core.MTChainMsg,
+					Extra: data.RawData(),
+				})
+				if err != nil {
+					//todo client net crash?
+					ms.log.Errorf("wallet sign failed %s fail %v", msg.ID.String(), err)
+					continue
 				}
 
 				msg.Signature = sig
@@ -375,6 +392,11 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 				signedCid := signedMsg.Cid()
 				msg.SignedCid = &signedCid
+
+				if count < selectCount {
+					selectMsg = append(selectMsg, msg)
+					count++
+				}
 			}
 
 			//保存消息

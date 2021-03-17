@@ -58,6 +58,10 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
+	panic("implement me")
+}
+
 func (m mysqlMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState, error) {
 	panic("implement me")
 }

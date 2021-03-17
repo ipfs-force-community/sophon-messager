@@ -81,6 +81,11 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 	if err := addressService.getLocalAddressAndNonce(); err != nil {
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
+	for key, cli := range addressService.walletService.walletClients {
+		if err := addressService.ProcessWallet(ctx, cli); err != nil {
+			addressService.log.Errorf("process wallet failed, name: %s, error: %v", key, err)
+		}
+	}
 	go func() {
 		ticker := time.NewTicker(time.Duration(addressService.cfg.RemoteWalletSweepInterval) * time.Second)
 		for {
@@ -133,6 +138,7 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, cli IWa
 			Addr:      addr.String(),
 			Nonce:     nonce,
 			UpdatedAt: time.Now(),
+			IsDeleted: -1,
 		}
 		_, err = addressService.SaveAddress(context.Background(), a)
 		if err != nil {
@@ -194,6 +200,7 @@ func (addressService *AddressService) StoreNonce(addr string, nonce uint64) erro
 		Addr:      addr,
 		Nonce:     nonce,
 		UpdatedAt: time.Now(),
+		IsDeleted: -1,
 	})
 
 	return err
