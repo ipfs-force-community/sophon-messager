@@ -26,7 +26,7 @@ func TestAddress(t *testing.T) {
 	a := &types.Address{
 		ID:        types.NewUUID(),
 		Addr:      "test1",
-		Nonce:     0,
+		Nonce:     3,
 		IsDeleted: -1,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -55,6 +55,13 @@ func TestAddress(t *testing.T) {
 	r, err := addressRepo.GetAddress(ctx, a.Addr)
 	assert.NoError(t, err)
 	assert.Equal(t, a.Nonce, r.Nonce)
+
+	newNonce := uint64(5)
+	_, err = addressRepo.UpdateNonce(ctx, a.ID, newNonce)
+	assert.NoError(t, err)
+	r2, err := addressRepo.GetAddress(ctx, a.Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, newNonce, r2.Nonce)
 
 	err = addressRepo.DelAddress(ctx, a.Addr)
 	assert.NoError(t, err)

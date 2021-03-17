@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"time"
+
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
 
 	"github.com/filecoin-project/go-address"
 	"golang.org/x/xerrors"
@@ -21,7 +22,7 @@ type IMessager interface {
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWallet(ctx context.Context, uuid string) (*types.Wallet, error)
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)
-	ListWalletAddress(ctx context.Context, name string) ([]address.Address, error)
+	ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error)
 
 	SaveAddress(ctx context.Context, address *types.Address) (string, error)
 	GetAddress(ctx context.Context, addr string) (*types.Address, error)
@@ -38,10 +39,10 @@ type Message struct {
 		GetMessage        func(ctx context.Context, uuid types.UUID) (*types.Message, error)
 		ListMessage       func(ctx context.Context) ([]*types.Message, error)
 
-		SaveWallet        func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
-		GetWallet         func(ctx context.Context, uuid string) (*types.Wallet, error)
-		ListWallet        func(ctx context.Context) ([]*types.Wallet, error)
-		ListWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
+		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
+		GetWallet               func(ctx context.Context, uuid string) (*types.Wallet, error)
+		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
+		ListRemoteWalletAddress func(ctx context.Context, uuid types.UUID) ([]address.Address, error)
 
 		SaveAddress func(ctx context.Context, address *types.Address) (string, error)
 		GetAddress  func(ctx context.Context, addr string) (*types.Address, error)
@@ -73,8 +74,8 @@ func (message *Message) GetWallet(ctx context.Context, uuid string) (*types.Wall
 	return message.Internal.GetWallet(ctx, uuid)
 }
 
-func (message *Message) ListWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
-	return message.Internal.ListWalletAddress(ctx, name)
+func (message *Message) ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error) {
+	return message.Internal.ListRemoteWalletAddress(ctx, uuid)
 }
 
 func (message *Message) ListWallet(ctx context.Context) ([]*types.Wallet, error) {

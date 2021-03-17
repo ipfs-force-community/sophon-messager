@@ -17,7 +17,7 @@ var WalletCmds = &cli.Command{
 		addWalletCmd,
 		getWalletCmd,
 		listWalletCmd,
-		listWalletAddrCmd,
+		listRemoteWalletAddrCmd,
 	},
 }
 
@@ -25,11 +25,6 @@ var addWalletCmd = &cli.Command{
 	Name:  "add",
 	Usage: "add wallet",
 	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "uuid",
-			Usage:   "uuid",
-			Aliases: []string{"id"},
-		},
 		&cli.StringFlag{
 			Name:  "name",
 			Usage: "name",
@@ -122,15 +117,10 @@ var listWalletCmd = &cli.Command{
 	},
 }
 
-var listWalletAddrCmd = &cli.Command{
-	Name:  "list-addr",
-	Usage: "list local wallet",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "name",
-			Usage: "specify which wallet to show",
-		},
-	},
+var listRemoteWalletAddrCmd = &cli.Command{
+	Name:      "list-addr",
+	Usage:     "list remote wallet address by uuid",
+	ArgsUsage: "id",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -138,7 +128,11 @@ var listWalletAddrCmd = &cli.Command{
 		}
 		defer closer()
 
-		addrs, err := client.ListWalletAddress(ctx.Context, ctx.String("name"))
+		uuid, err := types.ParseUUID(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+		addrs, err := client.ListRemoteWalletAddress(ctx.Context, uuid)
 		if err != nil {
 			return err
 		}

@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"sync"
+
 	"github.com/filecoin-project/go-address"
 	"golang.org/x/xerrors"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,7 +17,7 @@ type WalletService struct {
 	repo repo.Repo
 	log  *logrus.Logger
 
-	walletClients map[string]IWalletClient
+	walletClients map[types.UUID]IWalletClient
 
 	l sync.Mutex
 }
@@ -25,10 +26,11 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 	ws := &WalletService{
 		repo:          repo,
 		log:           logger,
-		walletClients: make(map[string]IWalletClient),
+		walletClients: make(map[types.UUID]IWalletClient),
 	}
 
-	ws.walletClients["inmem"] = NewMemWallet()
+	//ws.walletClients["inmem"] = NewMemWallet()
+	ws.walletClients[types.NewUUID()] = NewMemWallet()
 
 	walletList, err := ws.ListWallet(context.TODO())
 	if err != nil {
@@ -41,8 +43,8 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 			return nil, err
 		}
 
-		if _, ok := ws.walletClients[w.Name]; !ok {
-			ws.walletClients[w.Name] = &cli
+		if _, ok := ws.walletClients[w.ID]; !ok {
+			ws.walletClients[w.ID] = &cli
 		}
 	}
 
@@ -50,22 +52,15 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	cli, _, err := newWalletClient(context.Background(), wallet.Url, wallet.Token)
+	uuid, err := walletService.repo.WalletRepo().SaveWallet(wallet)
 	if err != nil {
 		return types.UUID{}, err
 	}
-
-	uid, err := walletService.repo.WalletRepo().SaveWallet(wallet)
-	if err != nil {
+	if err := walletService.updateWalletClient(ctx, wallet); err != nil {
 		return types.UUID{}, err
 	}
 
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	if _, ok := walletService.walletClients[wallet.Name]; !ok {
-		walletService.walletClients[wallet.Name] = &cli
-	}
-	return uid, nil
+	return uuid, nil
 }
 
 func (walletService *WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
@@ -76,11 +71,26 @@ func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wa
 	return walletService.repo.WalletRepo().ListWallet()
 }
 
-func (walletService *WalletService) ListWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
-	cli, ok := walletService.walletClients[name]
+func (walletService *WalletService) ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error) {
+	cli, ok := walletService.walletClients[uuid]
 	if !ok {
-		xerrors.Errorf("wallet %s not exit", name)
+		return nil, xerrors.Errorf("wallet %v not exit", uuid)
 	}
 
 	return cli.WalletList(ctx)
+}
+
+// nolint
+func (walletService *WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
+	walletService.l.Lock()
+	defer walletService.l.Unlock()
+	if _, ok := walletService.walletClients[wallet.ID]; !ok {
+		cli, _, err := newWalletClient(ctx, wallet.Url, wallet.Token)
+		if err != nil {
+			return err
+		}
+		walletService.walletClients[wallet.ID] = &cli
+	}
+
+	return nil
 }

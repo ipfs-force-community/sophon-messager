@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"sync"
+
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	"github.com/ipfs-force-community/venus-wallet/core"
 	"golang.org/x/xerrors"
-	"sync"
 )
 
 type MemWallet struct {
@@ -34,7 +35,7 @@ func (memWallet *MemWallet) WalletList(ctx context.Context) ([]address.Address, 
 	memWallet.lk.Lock()
 	defer memWallet.lk.Unlock()
 	var addrs []address.Address
-	for addr, _ := range memWallet.keys {
+	for addr := range memWallet.keys {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
