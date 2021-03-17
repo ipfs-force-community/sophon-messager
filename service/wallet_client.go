@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/filecoin-project/venus/pkg/crypto"
+	"github.com/ipfs-force-community/venus-wallet/core"
 	"net/http"
 
 	"github.com/filecoin-project/go-address"
@@ -12,7 +13,7 @@ import (
 type IWalletClient interface {
 	WalletList(context.Context) ([]address.Address, error)
 	WalletHas(context.Context, address.Address) (bool, error)
-	WalletSign(context.Context, address.Address, []byte) (*crypto.Signature, error)
+	WalletSign(ctx context.Context, signer address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error)
 }
 
 var _ IWalletClient = (*WalletClient)(nil)
@@ -21,7 +22,7 @@ type WalletClient struct {
 	Internal struct {
 		WalletList func(context.Context) ([]address.Address, error)
 		WalletHas  func(ctx context.Context, address address.Address) (bool, error)
-		WalletSign func(context.Context, address.Address, []byte) (*crypto.Signature, error)
+		WalletSign func(ctx context.Context, signer address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error)
 	}
 }
 
@@ -33,8 +34,8 @@ func (walletClient *WalletClient) WalletHas(ctx context.Context, addr address.Ad
 	return walletClient.Internal.WalletHas(ctx, addr)
 }
 
-func (walletClient *WalletClient) WalletSign(ctx context.Context, addr address.Address, data []byte) (*crypto.Signature, error) {
-	return walletClient.Internal.WalletSign(ctx, addr, data)
+func (walletClient *WalletClient) WalletSign(ctx context.Context, signer address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error) {
+	return walletClient.Internal.WalletSign(ctx, signer, toSign, meta)
 }
 
 func newWalletClient(ctx context.Context, url, token string) (WalletClient, jsonrpc.ClientCloser, error) {
@@ -47,6 +48,6 @@ func newWalletClient(ctx context.Context, url, token string) (WalletClient, json
 		return WalletClient{}, nil, err
 	}
 	var res WalletClient
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res}, headers)
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res.Internal}, headers)
 	return res, closer, err
 }

@@ -50,7 +50,22 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	return walletService.repo.WalletRepo().SaveWallet(wallet)
+	cli, _, err := newWalletClient(context.Background(), wallet.Url, wallet.Token)
+	if err != nil {
+		return types.UUID{}, err
+	}
+
+	uid, err := walletService.repo.WalletRepo().SaveWallet(wallet)
+	if err != nil {
+		return types.UUID{}, err
+	}
+
+	walletService.l.Lock()
+	defer walletService.l.Unlock()
+	if _, ok := walletService.walletClients[wallet.Name]; !ok {
+		walletService.walletClients[wallet.Name] = &cli
+	}
+	return uid, nil
 }
 
 func (walletService *WalletService) GetWallet(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
@@ -68,19 +83,4 @@ func (walletService *WalletService) ListWalletAddress(ctx context.Context, name 
 	}
 
 	return cli.WalletList(ctx)
-}
-
-// nolint
-func (walletService *WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
-	cli, _, err := newWalletClient(context.Background(), wallet.Url, wallet.Token)
-	if err != nil {
-		return err
-	}
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	if _, ok := walletService.walletClients[wallet.Name]; !ok {
-		walletService.walletClients[wallet.Name] = &cli
-	}
-
-	return nil
 }

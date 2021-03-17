@@ -95,6 +95,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				Addr:      addr.String(),
 				Nonce:     nonce,
 				UpdatedAt: time.Now(),
+				IsDeleted: -1,
 			})
 			if err != nil {
 				return err

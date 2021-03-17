@@ -209,6 +209,19 @@ func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	return nil
 }
 
+func (m *sqliteMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.FillMsg).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error

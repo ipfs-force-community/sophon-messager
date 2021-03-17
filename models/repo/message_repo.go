@@ -22,6 +22,7 @@ type MessageRepo interface {
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
+	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
