@@ -2,11 +2,11 @@ package client
 
 import (
 	"context"
+	"github.com/ipfs/go-cid"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -16,7 +16,8 @@ type IMessager interface {
 	WaitMessage(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
 	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
 	PushMessageWithId(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-	GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error)
+	GetMessageByUid(ctx context.Context, uuid types.UUID) (*types.Message, error)
+	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
 	GetMessageByFromAndNonce(ctx context.Context, from string, nonce uint64) (*types.Message, error)
@@ -48,7 +49,8 @@ type Message struct {
 		WaitMessage              func(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
 		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
 		PushMessageWithId        func(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-		GetMessage               func(ctx context.Context, uuid types.UUID) (*types.Message, error)
+		GetMessageByUid         func(ctx context.Context, uuid types.UUID) (*types.Message, error)
+		GetMessageByCid         func(ctx context.Context, id cid.Cid) (*types.Message, error)
 		GetMessageBySignedCid    func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByUnsignedCid  func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByFromAndNonce func(ctx context.Context, from string, nonce uint64) (*types.Message, error)
@@ -82,8 +84,12 @@ func (message *Message) PushMessageWithId(ctx context.Context, uuid types.UUID, 
 	return message.Internal.PushMessageWithId(ctx, uuid, msg, meta)
 }
 
-func (message *Message) GetMessage(ctx context.Context, uuid types.UUID) (*types.Message, error) {
-	return message.Internal.GetMessage(ctx, uuid)
+func (message *Message) GetMessageByUid(ctx context.Context, uuid types.UUID) (*types.Message, error) {
+	return message.Internal.GetMessageByUid(ctx, uuid)
+}
+
+func (message *Message) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
+	return message.Internal.GetMessageByCid(ctx, id)
 }
 
 func (message *Message) GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error) {
@@ -170,10 +176,13 @@ func (message *Message) WaitMessage(ctx context.Context, uuid types.UUID, confid
 	tm := time.NewTicker(time.Second * 30)
 	defer tm.Stop()
 
+	doneCh := make(chan struct{}, 1)
+	doneCh <- struct{}{}
+
 	for {
 		select {
-		case <-tm.C:
-			msg, err := message.Internal.GetMessage(ctx, uuid)
+		case <-doneCh:
+			msg, err := message.Internal.GetMessageByUid(ctx, uuid)
 			if err != nil {
 				return nil, err
 			}
@@ -182,6 +191,8 @@ func (message *Message) WaitMessage(ctx context.Context, uuid types.UUID, confid
 				return msg, nil
 			}
 			continue
+		case <-tm.C:
+			doneCh <- struct{}{}
 		case <-ctx.Done():
 			return nil, xerrors.New("exit by client ")
 		}

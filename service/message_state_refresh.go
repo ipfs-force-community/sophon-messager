@@ -37,45 +37,53 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 }
 
 func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan) error {
-	if len(h.apply) == 0 && len(h.revert) == 0 {
+	if len(h.apply) == 0 {
 		return nil
 	}
 
-	var err error
-	var tsList tipsetList
-	revertMsgs := make(map[cid.Cid]struct{})
-
-	if len(h.revert) != 0 {
-		revertMsgs, err = ms.processRevertHead(ctx, h)
-		if err != nil {
-			ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
-			ms.handleAgain(nil)
-			return err
-		}
+	revertMsgs, err := ms.processRevertHead(ctx, h)
+	if err != nil {
+		ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
+		return err
 	}
 
-	applyMsgs := make([]pendingMessage, 0)
-	nonceGap := make(map[address.Address]uint64, len(ms.addressService.addrInfo))
-	tsKeys := make(map[abi.ChainEpoch]string)
+	applyMsgs, nonceGap, err := ms.processBlockParentMessages(ctx, h.apply)
+	if err != nil {
+		return xerrors.Errorf("process apply failed %v", err)
+	}
+
+	var tsList tipsetList
+	tsKeys := make(map[abi.ChainEpoch]venustypes.TipSetKey)
 	for _, ts := range h.apply {
 		height := ts.Height()
-		if !ts.Defined() {
-			continue
-		}
-		applyMsgs, nonceGap, err = ms.processBlockParentMessages(ctx, ts.At(0).Cid(), height, applyMsgs, nonceGap)
-		if err != nil {
-			ms.handleAgain(nil)
-			return xerrors.Errorf("process block failed, block id: %s %v", ts.At(0).Cid().String(), err)
-		}
 		tsList = append(tsList, &tipsetFormat{Key: ts.Key().String(), Height: int64(height)})
-		tsKeys[height] = ts.Key().String()
+		tsKeys[height] = ts.Key()
 	}
 
 	// update db
 	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		for _, msg := range applyMsgs {
-			if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
-				return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
+			if err != nil {
+				ms.log.Warning("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
+				continue
+			}
+
+			if *localMsg.UnsignedCid != msg.cid {
+				//replace msg
+				ms.log.Warning("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
+				localMsg.UnsignedMessage = *msg.msg
+				localMsg.State = types.ReplacedMsg
+				localMsg.Receipt = msg.receipt
+				localMsg.Height = int64(msg.height)
+				localMsg.TipSetKey = tsKeys[msg.height]
+				if _, err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
+			} else {
+				if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
 			}
 			delete(revertMsgs, msg.cid)
 		}
@@ -84,6 +92,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				return err
 			}
 		}
+
 		for addr, nonce := range nonceGap {
 			addrInfo, ok := ms.addressService.GetAddressInfo(addr.String())
 			if !ok {
@@ -99,18 +108,17 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	})
 	if err != nil {
 		ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
-		ms.handleAgain(revertMsgs)
 		return err
 	}
 
 	// update cache
 	for _, msg := range applyMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(msg.cid.String(), types.OnChainMsg); err != nil {
+		if err := ms.messageState.UpdateMessageStateByCid(msg.cid, types.OnChainMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", msg.cid.String(), err)
 		}
 	}
 	for cid := range revertMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
+		if err := ms.messageState.UpdateMessageStateByCid(cid, types.UnFillMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
 		}
 	}
@@ -125,7 +133,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			ms.log.Errorf("store tipset info failed: %v", err)
 		}
 	}
-
+	ms.log.Infof("process block %d, revert %d message apply %d message ", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs))
 	ms.triggerPush <- h.apply[0]
 
 	return nil
@@ -154,46 +162,49 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 
 type pendingMessage struct {
 	cid     cid.Cid
+	msg     *venustypes.UnsignedMessage
 	height  abi.ChainEpoch
 	receipt *venustypes.MessageReceipt
 }
 
-func (ms *MessageService) processBlockParentMessages(ctx context.Context,
-	bcid cid.Cid,
-	height abi.ChainEpoch,
-	applyMsgs []pendingMessage,
-	nonceGap map[address.Address]uint64) ([]pendingMessage, map[address.Address]uint64, error) {
-	msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
-	if err != nil {
-		return nil, nil, xerrors.Errorf("get parent message failed %w", err)
-	}
+func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, map[address.Address]uint64, error) {
+	nonceGap := make(map[address.Address]uint64)
+	var applyMsgs []pendingMessage
+	for _, ts := range apply {
+		bcid := ts.At(0).Cid()
+		height := ts.Height()
+		msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
+		if err != nil {
+			return nil, nil, xerrors.Errorf("get parent message failed %w", err)
+		}
 
-	receipts, err := ms.nodeClient.ChainGetParentReceipts(ctx, bcid)
-	if err != nil {
-		return nil, nil, xerrors.Errorf("get parent Receipt failed %w", err)
-	}
+		receipts, err := ms.nodeClient.ChainGetParentReceipts(ctx, bcid)
+		if err != nil {
+			return nil, nil, xerrors.Errorf("get parent Receipt failed %w", err)
+		}
 
-	if len(msgs) != len(receipts) {
-		return nil, nil, xerrors.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
-	}
+		if len(msgs) != len(receipts) {
+			return nil, nil, xerrors.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
+		}
 
-	for i := range receipts {
-		msg := msgs[i].Message
-		if addrInfo, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
-			applyMsgs = append(applyMsgs, pendingMessage{
-				cid:     msg.Cid(),
-				height:  height,
-				receipt: receipts[i],
-			})
-			if addrInfo.Nonce < msg.Nonce {
-				if nonce, ok := nonceGap[msg.From]; ok && nonce >= msg.Nonce {
-					continue
+		for i := range receipts {
+			msg := msgs[i].Message
+			if addrInfo, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
+				applyMsgs = append(applyMsgs, pendingMessage{
+					height:  height,
+					receipt: receipts[i],
+					msg:     msg,
+					cid:     msg.Cid(),
+				})
+				if addrInfo.Nonce < msg.Nonce {
+					if nonce, ok := nonceGap[msg.From]; ok && nonce >= msg.Nonce {
+						continue
+					}
+					nonceGap[msg.From] = msg.Nonce
 				}
-				nonceGap[msg.From] = msg.Nonce
 			}
 		}
 	}
-
 	return applyMsgs, nonceGap, nil
 }
 
@@ -224,7 +235,7 @@ func (ms *MessageService) handleAgain(revertMsgs map[cid.Cid]struct{}) {
 					continue
 				}
 				delete(revertMsgs, msg.UnsignedMessage.Cid())
-				if err := ms.messageState.UpdateMessageStateByCid(msg.UnsignedCid.String(), types.OnChainMsg); err != nil {
+				if err := ms.messageState.UpdateMessageStateByCid(*msg.UnsignedCid, types.OnChainMsg); err != nil {
 					ms.log.Errorf("update message state failed, cid: %s error: %v", msg.UnsignedCid.String(), err)
 				}
 			}
@@ -234,7 +245,7 @@ func (ms *MessageService) handleAgain(revertMsgs map[cid.Cid]struct{}) {
 					ms.log.Errorf("update message state %v", err)
 					continue
 				}
-				if err := ms.messageState.UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
+				if err := ms.messageState.UpdateMessageStateByCid(cid, types.FillMsg); err != nil {
 					ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
 				}
 			}

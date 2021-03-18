@@ -19,6 +19,7 @@
 
   [db.sqlite]
     path = "./message.db"
+    debug = false
 
 [jwt]
   expireDuration = "0s"
@@ -38,6 +39,6 @@
 
 [node]
     url = "/ip4/127.0.0.1/tcp/3453"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.wGq0HTC_srSzbyhxZrooDxZ-KszhvM_qIc7yoR9kMJw"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.8dSWe7S53eF1Ue6XfYUUN-vPSfUWL12xyWkOJv6DNks"
   #url=   "/ip4/192.168.1.134/tcp/3453"
   #token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.n0eSFUWCbosjteqktQOcOghw7VWOm5wODkgpoT2yFJw"

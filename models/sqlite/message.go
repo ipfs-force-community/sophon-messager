@@ -9,21 +9,19 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs/go-cid"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/ipfs/go-cid"
+	"gorm.io/gorm"
 )
 
 type sqliteMessage struct {
 	ID      types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
 	Version uint64     `gorm:"column:version;unsigned bigint"`
 
-	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index;index:idx_from_nonce"`
-	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:idx_from_nonce"`
+	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;"`
+	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
 	Value types.Int `gorm:"column:value;type:varchar(256);"`
@@ -38,16 +36,16 @@ type sqliteMessage struct {
 
 	Signature *repo.SqlSignature `gorm:"column:signed_data;type:blob;"`
 
-	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:unsigned_cid;"`
-	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:signed_cid"`
+	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:msg_unsigned_cid;"`
+	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:msg_signed_cid"`
 
-	Height    int64               `gorm:"column:height;type:bigint;index:height"`
+	Height    int64               `gorm:"column:height;type:bigint;index:msg_height"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
-	State types.MessageState `gorm:"column:state;type:int;"`
+	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -162,6 +160,14 @@ func (meta *MsgMeta) Meta() *types.MsgMeta {
 }
 
 func FromMeta(srcMeta *types.MsgMeta) *MsgMeta {
+	if srcMeta == nil {
+		return &MsgMeta{
+			ExpireEpoch:       0,
+			GasOverEstimation: 0,
+			MaxFee:            types.Int{},
+			MaxFeeCap:         types.Int{},
+		}
+	}
 	meta := &MsgMeta{
 		ExpireEpoch:       srcMeta.ExpireEpoch,
 		GasOverEstimation: srcMeta.GasOverEstimation,
@@ -181,6 +187,10 @@ var _ repo.MessageRepo = (*sqliteMessageRepo)(nil)
 
 type sqliteMessageRepo struct {
 	*gorm.DB
+}
+
+func newSqliteMessageRepo(db *gorm.DB) *sqliteMessageRepo {
+	return &sqliteMessageRepo{DB: db}
 }
 
 func (m *sqliteMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState, error) {
@@ -225,7 +235,7 @@ func (m *sqliteMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]
 
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Error
 	if err != nil {
 		return nil, err
 	}
@@ -247,28 +257,23 @@ func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	return nil
 }
 
-func newSqliteMessageRepo(db *gorm.DB) *sqliteMessageRepo {
-	return &sqliteMessageRepo{DB: db}
+func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
+	sqlMsg := FromMessage(msg)
+	sqlMsg.CreatedAt = time.Now()
+	sqlMsg.UpdatedAt = time.Now()
+	return m.DB.Create(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
 	sqlMsg := FromMessage(msg)
+	sqlMsg.UpdatedAt = time.Now()
 	//todo check
-	err := m.DB.Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "id"}},
-		DoUpdates: []clause.Assignment{
-			{
-				Column: clause.Column{
-					Name: "updated_at",
-				},
-				Value: time.Now(),
-			},
-		}}).Save(sqlMsg).Error
+	err := m.DB.Save(sqlMsg).Error
 
 	return msg.ID, err
 }
 
-func (m *sqliteMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByUid(uuid types.UUID) (*types.Message, error) {
 	var msg sqliteMessage
 	if err := m.DB.Where("id = ?", uuid.String()).First(&msg).Error; err != nil {
 		return nil, err
@@ -276,17 +281,17 @@ func (m *sqliteMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) 
 	return msg.Message(), nil
 }
 
-func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid string) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("unsigned_cid = ?", unsignedCid).First(&msg).Error; err != nil {
+	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
 }
 
-func (m *sqliteMessageRepo) GetMessageBySignedCid(signedCid string) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("signed_cid = ?", signedCid).First(&msg).Error; err != nil {
+	if err := m.DB.Where("signed_cid = ?", signedCid.String()).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -318,9 +323,9 @@ func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from string, nonce uint64) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("from_addr = ? and nonce = ?", from, nonce).First(&msg).Error; err != nil {
+	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -375,7 +380,7 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	receipt *venustypes.MessageReceipt,
 	height abi.ChainEpoch,
 	state types.MessageState,
-	tsKey string) (string, error) {
+	tsKey venustypes.TipSetKey) (string, error) {
 	rcp := repo.FromMsgReceipt(receipt)
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),
@@ -383,7 +388,7 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		"receipt_return_value": rcp.ReturnValue,
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
-		"tipset_key":           tsKey,
+		"tipset_key":           tsKey.String(),
 	}
 	return unsignedCid, m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).

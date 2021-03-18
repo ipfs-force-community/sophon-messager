@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"github.com/ipfs/go-cid"
 	"reflect"
 	"time"
 
@@ -58,9 +59,14 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
-func (m mysqlMessageRepo) GetMessageByFromAndNonce(from string, nonce uint64) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	panic("implement me")
 }
+
+func (m mysqlMessageRepo) CreateMessage(msg *types.Message) error {
+	panic("implement me")
+}
+
 
 func (m mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	panic("implement me")
@@ -91,7 +97,7 @@ func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
 	return msg.ID, err
 }
 
-func (m mysqlMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessageByUid(uuid types.UUID) (*types.Message, error) {
 	var msg *mysqlMessage
 	if err := m.DB.Where(&mysqlMessage{Id: uuid.String(), IsDeleted: -1}).First(&msg).Error; err != nil {
 		return nil, err
@@ -99,11 +105,11 @@ func (m mysqlMessageRepo) GetMessage(uuid types.UUID) (*types.Message, error) {
 	return msg.Message(), nil
 }
 
-func (m mysqlMessageRepo) GetMessageByCid(cid string) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessageByCid(id cid.Cid) (*types.Message, error) {
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) GetMessageBySignedCid(signedCid string) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error) {
 	panic("implement me")
 }
 
@@ -136,7 +142,7 @@ func (m mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	return result.([]*types.Message), nil
 }
 
-func (m mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey string) (string, error) {
+func (m mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) (string, error) {
 	panic("implement me")
 }
 

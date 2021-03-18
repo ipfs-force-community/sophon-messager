@@ -29,9 +29,6 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 		walletClients: make(map[types.UUID]IWalletClient),
 	}
 
-	//ws.walletClients["inmem"] = NewMemWallet()
-	//ws.walletClients[types.NewUUID()] = NewMemWallet()
-
 	walletList, err := ws.ListWallet(context.TODO())
 	if err != nil {
 		return nil, err

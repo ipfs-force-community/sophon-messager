@@ -16,6 +16,7 @@ const (
 	FillMsg
 	OnChainMsg
 	ExpireMsg
+	ReplacedMsg
 )
 
 type MessageWithUID struct {
