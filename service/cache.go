@@ -22,7 +22,7 @@ func (tsCache *TipsetCache) AddTs(list ...*tipsetFormat) {
 	}
 }
 
-func (tsCache *TipsetCache) ExistTs(height uint64) bool {
+func (tsCache *TipsetCache) ExistTs(height int64) bool {
 	tsCache.l.Lock()
 	defer tsCache.l.Unlock()
 	_, ok := tsCache.Cache[height]

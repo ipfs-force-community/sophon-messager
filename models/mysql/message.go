@@ -58,6 +58,10 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m mysqlMessageRepo) GetMessageByFromAndNonce(from string, nonce uint64) (*types.Message, error) {
+	panic("implement me")
+}
+
 func (m mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	panic("implement me")
 }

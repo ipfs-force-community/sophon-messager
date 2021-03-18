@@ -2,15 +2,19 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/utils"
 	"github.com/ipfs-force-community/venus-wallet/core"
+	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
@@ -22,9 +26,9 @@ import (
 const (
 	MaxHeadChangeProcess = 5
 
-	LookBackLimit = 1000
+	LookBackLimit = 900
 
-	maxStoreTipsetCount = 1000
+	maxStoreTipsetCount = 900
 )
 
 type MessageService struct {
@@ -53,8 +57,8 @@ type failedHead struct {
 }
 
 type TipsetCache struct {
-	Cache      map[uint64]*tipsetFormat
-	CurrHeight uint64
+	Cache      map[int64]*tipsetFormat
+	CurrHeight int64
 
 	l sync.Mutex
 }
@@ -75,7 +79,7 @@ func NewMessageService(repo repo.Repo,
 		messageState:   messageState,
 		addressService: addressService,
 		tsCache: &TipsetCache{
-			Cache:      make(map[uint64]*tipsetFormat, maxStoreTipsetCount),
+			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
 		},
 		triggerPush: make(chan *venusTypes.TipSet, 20),
@@ -133,16 +137,20 @@ func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) 
 	return ms.repo.MessageRepo().GetMessageState(uuid)
 }
 
-func (ms *MessageService) GetMessageByCid(ctx context.Context, unsignedCid string) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
+func (ms *MessageService) GetMessageByCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid.String())
 }
 
-func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid string) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageBySignedCid(signedCid)
+func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageBySignedCid(signedCid.String())
 }
 
-func (ms *MessageService) GetMessageByUnsignedCid(ctx context.Context, unsignedCid string) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
+func (ms *MessageService) GetMessageByUnsignedCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid.String())
+}
+
+func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from string, nonce uint64) (*types.Message, error) {
+	return ms.repo.MessageRepo().GetMessageByFromAndNonce(from, nonce)
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
@@ -157,10 +165,14 @@ func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, er
 
 	for _, msg := range msgs {
 		if msg.State == types.OnChainMsg {
-			msg.Confidence = int64(ts.Height()) - int64(msg.Height)
+			msg.Confidence = int64(ts.Height()) - msg.Height
 		}
 	}
 	return msgs, nil
+}
+
+func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
@@ -207,7 +219,17 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 	tsList := ms.tsCache.ListTs()
 	sort.Sort(tsList)
 
-	if tsList[0].Height == uint64(head.Height()) && tsList[0].Key == head.String() {
+	// long time not use
+	if int64(head.Height())-tsList[0].Height >= LookBackLimit {
+		count, err := ms.UpdateAllFilledMessage(ctx)
+		if err != nil {
+			return err
+		}
+		ms.log.Infof("gap height %v, update filled message count %v", int64(head.Height())-tsList[0].Height, count)
+		return nil
+	}
+
+	if tsList[0].Height == int64(head.Height()) && tsList[0].Key == head.String() {
 		ms.log.Infof("The head does not change and returns directly.")
 		return nil
 	}
@@ -248,9 +270,9 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 		if ts.Height() == 0 {
 			break
 		}
-		if localTs.Height > uint64(ts.Height()) {
+		if localTs.Height > int64(ts.Height()) {
 			idx++
-		} else if localTs.Height == uint64(ts.Height()) {
+		} else if localTs.Height == int64(ts.Height()) {
 			if localTs.Key == ts.String() {
 				break
 			}
@@ -387,31 +409,10 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				msg.GasPremium = newMsg.GasPremium
 				msg.GasLimit = newMsg.GasLimit
 
-				unsignedCid := msg.UnsignedMessage.Cid()
-				msg.UnsignedCid = &unsignedCid
-				//签名
-				data, err := msg.UnsignedMessage.ToStorageBlock()
+				signedMsg, err := ToSignedMsg(ctx, addrInfo.WalletClient, msg)
 				if err != nil {
-					ms.log.Errorf("calc message unsigned message id %s fail %v", msg.ID.String(), err)
-					continue
-				}
-				sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes(), core.MsgMeta{
-					Type:  core.MTChainMsg,
-					Extra: data.RawData(),
-				})
-				if err != nil {
-					//todo client net crash?
 					ms.log.Errorf("wallet sign failed %s fail %v", msg.ID.String(), err)
 					continue
-				}
-
-				msg.Signature = sig
-				//state
-				msg.State = types.FillMsg
-
-				signedMsg := venusTypes.SignedMessage{
-					Message:   msg.UnsignedMessage,
-					Signature: *msg.Signature,
 				}
 
 				signedCid := signedMsg.Cid()
@@ -514,16 +515,24 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 	}
 }
 
-func (ms *MessageService) UpdateAllSignedMessage(ctx context.Context) (int, error) {
-	msgs, err := ms.repo.MessageRepo().ListSignedMsgs()
-	if err != nil {
-		return 0, err
+func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
+	msgs := make([]*types.Message, 0)
+	for addrStr := range ms.addressService.ListAddressInfo() {
+		addr, err := address.NewFromString(addrStr)
+		if err != nil {
+			return 0, xerrors.Errorf("invalid address %v", addrStr)
+		}
+		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
+		if err != nil {
+			return 0, err
+		}
+		msgs = append(msgs, filledMsgs...)
 	}
 
 	updateCount := 0
 	for _, msg := range msgs {
-		if err := ms.updateSignedMessage(ctx, msg); err != nil {
-			return updateCount, nil
+		if err := ms.updateFilledMessage(ctx, msg); err != nil {
+			return 0, err
 		}
 		updateCount++
 	}
@@ -531,30 +540,145 @@ func (ms *MessageService) UpdateAllSignedMessage(ctx context.Context) (int, erro
 	return updateCount, nil
 }
 
-func (ms *MessageService) updateSignedMessage(ctx context.Context, msg *types.Message) error {
+func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Message) error {
 	cid := msg.SignedCid
 	if msg.From.Protocol() == address.BLS {
 		cid = msg.UnsignedCid
 	}
 	if cid != nil {
 		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, *cid)
-		if err != nil {
+		if err != nil || msgLookup == nil {
 			return xerrors.Errorf("search message from node %s %v", cid.String(), err)
 		}
 		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet.String()); err != nil {
 			return err
 		}
-		ms.log.Infof("update signed message success %v", msg.ID)
+		ms.log.Infof("update message by node success %v", msg.ID)
 	}
 
 	return nil
 }
 
-func (ms *MessageService) UpdateSignedMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error) {
+func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error) {
 	msg, err := ms.GetMessage(ctx, uuid)
 	if err != nil {
 		return uuid, err
 	}
 
-	return uuid, ms.updateSignedMessage(ctx, msg)
+	return uuid, ms.updateFilledMessage(ctx, msg)
+}
+
+func (ms *MessageService) ReplaceMessage(ctx context.Context, uuid types.UUID, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
+	msg, err := ms.GetMessage(ctx, uuid)
+	if err != nil {
+		return cid.Undef, xerrors.Errorf("found message %v", err)
+	}
+	if msg.State == types.OnChainMsg {
+		return cid.Undef, xerrors.Errorf("message already on chain")
+	}
+
+	if auto {
+		minRBF := messagepool.ComputeMinRBF(msg.GasPremium)
+
+		var mss *venusTypes.MessageSendSpec
+		if len(maxFee) > 0 {
+			maxFee, err := venusTypes.BigFromString(maxFee)
+			if err != nil {
+				return cid.Undef, fmt.Errorf("parsing max-spend: %w", err)
+			}
+			mss = &venusTypes.MessageSendSpec{
+				MaxFee: maxFee,
+			}
+		}
+
+		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
+		msg.GasFeeCap = abi.NewTokenAmount(0)
+		msg.GasPremium = abi.NewTokenAmount(0)
+		retm, err := ms.nodeClient.GasEstimateMessageGas(ctx, &msg.UnsignedMessage, mss, venusTypes.EmptyTSK)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("failed to estimate gas values: %w", err)
+		}
+
+		msg.GasPremium = big.Max(retm.GasPremium, minRBF)
+		msg.GasFeeCap = big.Max(retm.GasFeeCap, msg.GasPremium)
+
+		mff := func() (abi.TokenAmount, error) {
+			return abi.TokenAmount(venusTypes.DefaultDefaultMaxFee), nil
+		}
+
+		messagepool.CapGasFee(mff, &msg.UnsignedMessage, mss)
+	} else {
+		if gasLimit > 0 {
+			msg.GasLimit = gasLimit
+		}
+		msg.GasPremium, err = venusTypes.BigFromString(gasPremium)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("parsing gas-premium: %w", err)
+		}
+		// TODO: estimate fee cap here
+		msg.GasFeeCap, err = venusTypes.BigFromString(gasFeecap)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("parsing gas-feecap: %w", err)
+		}
+	}
+
+	addrInfo, exist := ms.addressService.GetAddressInfo(msg.From.String())
+	if !exist {
+		return cid.Undef, xerrors.Errorf("address not found %s", msg.From.String())
+	}
+
+	signedMsg, err := ToSignedMsg(ctx, addrInfo.WalletClient, msg)
+	if err != nil {
+		return cid.Undef, err
+	}
+
+	if _, err := ms.repo.MessageRepo().SaveMessage(msg); err != nil {
+		return cid.Undef, err
+	}
+	err = ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
+		message.SignedCid = msg.SignedCid
+		message.UnsignedCid = msg.UnsignedCid
+		message.UnsignedMessage = msg.UnsignedMessage
+		message.State = msg.State
+		message.Signature = msg.Signature
+		message.Nonce = msg.Nonce
+		return nil
+	})
+	if err != nil {
+		return cid.Undef, err
+	}
+
+	_, err = ms.nodeClient.MpoolBatchPush(ctx, []*venusTypes.SignedMessage{&signedMsg})
+
+	return signedMsg.Cid(), err
+}
+
+func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+	unsignedCid := msg.UnsignedMessage.Cid()
+	msg.UnsignedCid = &unsignedCid
+	//签名
+	data, err := msg.UnsignedMessage.ToStorageBlock()
+	if err != nil {
+		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID.String(), err)
+	}
+	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), core.MsgMeta{
+		Type:  core.MTChainMsg,
+		Extra: data.RawData(),
+	})
+	if err != nil {
+		return venusTypes.SignedMessage{}, xerrors.Errorf("wallet sign failed %s fail %v", msg.ID.String(), err)
+	}
+
+	msg.Signature = sig
+	//state
+	msg.State = types.FillMsg
+
+	signedMsg := venusTypes.SignedMessage{
+		Message:   msg.UnsignedMessage,
+		Signature: *msg.Signature,
+	}
+	signedCid := signedMsg.Cid()
+	msg.SignedCid = &signedCid
+
+	return signedMsg, nil
 }

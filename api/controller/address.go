@@ -33,3 +33,7 @@ func (a Address) ListAddress(ctx context.Context) ([]*types.Address, error) {
 func (a Address) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
 	return a.AddressService.UpdateNonce(ctx, uuid, nonce)
 }
+
+func (a Address) DeleteAddress(ctx context.Context, addr string) (string, error) {
+	return a.AddressService.DeleteAddress(ctx, addr)
+}

@@ -43,7 +43,6 @@ func TestSageAndGetMessage(t *testing.T) {
 	result, err := msgDb.GetMessage(uuid)
 	assert.NoError(t, err)
 
-	msg.Receipt = &venustypes.MessageReceipt{ExitCode: -1}
 	beforeSave := ObjectToString(msg)
 	afterSave := ObjectToString(result)
 	assert.Equal(t, beforeSave, afterSave)
@@ -171,4 +170,22 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 	msgs, err := msgDb.GetSignedMessageByHeight(height)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(msgs))
+}
+
+func TestSqliteMessageRepo_GetMessageByFromAndNonce(t *testing.T) {
+	name := "GetMessageByFromAndNonce.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
+
+	msgDb := db.MessageRepo()
+	msg := NewSignedMessages(1)[0]
+	_, err := msgDb.SaveMessage(msg)
+	assert.NoError(t, err)
+
+	result, err := msgDb.GetMessageByFromAndNonce(msg.From.String(), msg.Nonce)
+	assert.NoError(t, err)
+
+	assert.Equal(t, ObjectToString(msg), ObjectToString(result))
 }

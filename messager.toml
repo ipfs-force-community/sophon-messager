@@ -38,6 +38,6 @@
 
 [node]
     url = "/ip4/127.0.0.1/tcp/3453"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.dzaeu23O0X55yc1kbu759rhSwf9c0hGb6WZpSemAb8g"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.wGq0HTC_srSzbyhxZrooDxZ-KszhvM_qIc7yoR9kMJw"
   #url=   "/ip4/192.168.1.134/tcp/3453"
   #token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.n0eSFUWCbosjteqktQOcOghw7VWOm5wODkgpoT2yFJw"

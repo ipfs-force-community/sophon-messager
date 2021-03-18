@@ -111,10 +111,11 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 		//UnsignedCid: srcMsg.UnsignedMessage.Cid().String(),
 		//SignedCid: srcMsg.SignedCid().String(),
 		//	ExitCode:   repo.ExitCodeToExec,
-		Height:  srcMsg.Height,
-		Receipt: repo.FromMsgReceipt(srcMsg.Receipt),
-		Meta:    FromMeta(srcMsg.Meta),
-		State:   srcMsg.State,
+		Height:    srcMsg.Height,
+		Receipt:   repo.FromMsgReceipt(srcMsg.Receipt),
+		Meta:      FromMeta(srcMsg.Meta),
+		State:     srcMsg.State,
+		IsDeleted: -1,
 	}
 
 	if srcMsg.UnsignedCid != nil {
@@ -315,6 +316,14 @@ func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*
 	}
 
 	return result, nil
+}
+
+func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from string, nonce uint64) (*types.Message, error) {
+	var msg sqliteMessage
+	if err := m.DB.Where("from_addr = ? and nonce = ?", from, nonce).First(&msg).Error; err != nil {
+		return nil, err
+	}
+	return msg.Message(), nil
 }
 
 func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
