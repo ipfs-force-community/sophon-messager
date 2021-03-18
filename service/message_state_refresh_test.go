@@ -124,7 +124,7 @@ func TestMessageStateRefresh(t *testing.T) {
 }
 
 func TestReadAndWriteTipset(t *testing.T) {
-	tsCache := &TipsetCache{Cache: map[uint64]*tipsetFormat{}, CurrHeight: 0}
+	tsCache := &TipsetCache{Cache: map[int64]*tipsetFormat{}, CurrHeight: 0}
 	tsCache.Cache[0] = &tipsetFormat{
 		Key:    "00000",
 		Height: 0,
@@ -158,5 +158,5 @@ func TestReadAndWriteTipset(t *testing.T) {
 
 	sort.Sort(tsList)
 	t.Logf("after sort %+v", tsList)
-	assert.Equal(t, tsList[1].Height, uint64(2))
+	assert.Equal(t, tsList[1].Height, int64(2))
 }

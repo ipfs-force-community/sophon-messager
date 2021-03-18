@@ -71,6 +71,10 @@ func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types
 	return addressService.repo.AddressRepo().ListAddress(ctx)
 }
 
+func (addressService *AddressService) DeleteAddress(ctx context.Context, addr string) (string, error) {
+	return addr, addressService.repo.AddressRepo().DelAddress(ctx, addr)
+}
+
 func (addressService *AddressService) getLocalAddressAndNonce() error {
 	addrsInfo, err := addressService.ListAddress(context.Background())
 	if err != nil {
@@ -124,22 +128,16 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, walletI
 		return xerrors.Errorf("get wallet list failed error: %v", err)
 	}
 	for _, addr := range addrs {
+		if _, ok := addressService.addrInfo[addr.String()]; ok {
+			continue
+		}
+
 		var nonce uint64
 		actor, err := addressService.nodeClient.StateGetActor(context.Background(), addr, venustypes.EmptyTSK)
 		if err != nil {
 			addressService.log.Warnf("get actor failed, addr: %s, err: %v", addr, err)
 		} else {
 			nonce = actor.Nonce //current nonce should big than nonce on chain
-		}
-
-		if addrInfo, ok := addressService.addrInfo[addr.String()]; ok {
-			if addrInfo.Nonce < nonce {
-				if _, err := addressService.UpdateNonce(ctx, addrInfo.UUID, nonce); err != nil {
-					return err
-				}
-				addressService.SetNonce(addr.String(), nonce)
-			}
-			continue
 		}
 
 		ta := &types.Address{
@@ -198,6 +196,17 @@ func (addressService *AddressService) GetAddressInfo(addr string) (*AddressInfo,
 	}
 
 	return nil, false
+}
+
+func (addressService *AddressService) ListAddressInfo() map[string]AddressInfo {
+	addressService.l.Lock()
+	defer addressService.l.Unlock()
+	addrInfos := make(map[string]AddressInfo, len(addressService.addrInfo))
+	for addr, info := range addressService.addrInfo {
+		addrInfos[addr] = *info
+	}
+
+	return addrInfos
 }
 
 func (addressService *AddressService) StoreNonce(addr string, nonce uint64) error {

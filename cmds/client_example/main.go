@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -10,12 +14,10 @@ import (
 	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"log"
-	"net/http"
 )
 
 func main() {
-	cfg, err := config.ReadConfig("/Users/lijunlong/Desktop/workload/venus-messager/messager.toml")
+	cfg, err := config.ReadConfig("./messager.toml")
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -27,42 +29,56 @@ func main() {
 		log.Fatal(err)
 		return
 	}
-
 	defer closer()
-	addr, _ := address.NewFromString("t3v3vpwnsfqmp6cj65lzflxxv3vkiiwdj33l3f4bgrwkio7w27jmwtsby372m677g7x5h6eqsaieelwr6n74la")
-	uid, err := client.PushMessageWithId(context.Background(),
-		types.NewUUID(),
-		&venustypes.UnsignedMessage{
-			Version: 0,
-			To:      addr,
-			From:    addr,
-			Nonce:   1,
-			Value:   abi.NewTokenAmount(100),
-			Method:  0,
-		},
-		&types.MsgMeta{
-			ExpireEpoch:       1000000,
-			GasOverEstimation: 1.25,
-			MaxFee:            big.NewInt(10000000000000000),
-			MaxFeeCap:         big.NewInt(10000000000000000),
-		})
-	if err != nil {
-		log.Fatal(err)
-		return
+
+	timer := time.NewTicker(time.Second * 3)
+	defer timer.Stop()
+
+	sendMsg := func() {
+		addr, _ := address.NewFromString("t3wgwvaidoz27bigs6dcqoutcyf6tqhinzrphbprahrmc7xz3lhilmllkzytmi6sihw6wxmtnaf6eh3knvppzq")
+		uid, err := client.PushMessageWithId(context.Background(),
+			types.NewUUID(),
+			&venustypes.UnsignedMessage{
+				Version: 0,
+				To:      addr,
+				From:    addr,
+				Nonce:   1,
+				Value:   abi.NewTokenAmount(100),
+				Method:  0,
+			},
+			&types.MsgMeta{
+				ExpireEpoch:       1000000,
+				GasOverEstimation: 1.25,
+				MaxFee:            big.NewInt(10000000000000000),
+				MaxFeeCap:         big.NewInt(10000000000000000),
+			})
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		fmt.Println("send message " + uid.String())
+
 	}
 
-	fmt.Println("send message " + uid.String())
-
-	msg, err := client.WaitMessage(context.Background(), uid, 5)
-	if err != nil {
-		log.Fatal(err)
-		return
+	for {
+		select {
+		case <-timer.C:
+			for i := 0; i < 5; i++ {
+				sendMsg()
+			}
+		}
 	}
 
-	fmt.Println("wait for message ", msg.SignedCid)
-	fmt.Println("code:", msg.Receipt.ExitCode)
-	fmt.Println("gas_used:", msg.Receipt.GasUsed)
-	fmt.Println("return_value:", msg.Receipt.ReturnValue)
-	fmt.Println("Height:", msg.Height)
-	fmt.Println("Tipset:", msg.TipSetKey.String())
+	//msg, err := client.WaitMessage(context.Background(), uid, 5)
+	//if err != nil {
+	//	log.Fatal(err)
+	//	return
+	//}
+	//
+	//fmt.Println("wait for message ", msg.SignedCid)
+	//fmt.Println("code:", msg.Receipt.ExitCode)
+	//fmt.Println("gas_used:", msg.Receipt.GasUsed)
+	//fmt.Println("return_value:", msg.Receipt.ReturnValue)
+	//fmt.Println("Height:", msg.Height)
+	//fmt.Println("Tipset:", msg.TipSetKey.String())
 }

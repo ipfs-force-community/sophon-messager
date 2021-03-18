@@ -43,6 +43,7 @@ func NewMessage() *types.Message {
 			MaxFee:            big.NewInt(10),
 			GasOverEstimation: 0.5,
 		},
+		Receipt: &venustypes.MessageReceipt{ExitCode: -1},
 	}
 }
 

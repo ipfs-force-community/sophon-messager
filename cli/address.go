@@ -17,8 +17,9 @@ var AddrCmds = &cli.Command{
 	Usage: "address commands",
 	Subcommands: []*cli.Command{
 		setAddrCmd,
-		getAddrCmd,
+		findAddrCmd,
 		listAddrCmd,
+		deleteAddrCmd,
 		updateNonceCmd,
 	},
 }
@@ -27,6 +28,9 @@ var setAddrCmd = &cli.Command{
 	Name:  "set",
 	Usage: "set local address",
 	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name: "uuid",
+		},
 		&cli.StringFlag{
 			Name:    "address",
 			Usage:   "address",
@@ -38,7 +42,7 @@ var setAddrCmd = &cli.Command{
 		},
 		&cli.Uint64Flag{
 			Name:  "nonce",
-			Usage: "the address corresponds to the nonce",
+			Usage: "address nonce",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -48,6 +52,16 @@ var setAddrCmd = &cli.Command{
 		}
 		defer closer()
 		var addr types.Address
+
+		if uuidStr := ctx.String("uuid"); len(uuidStr) > 0 {
+			uuid, err := types.ParseUUID(uuidStr)
+			if err != nil {
+				return err
+			}
+			addr.ID = uuid
+		} else {
+			addr.ID = types.NewUUID()
+		}
 
 		addr.Addr = ctx.String("address")
 		if len(addr.Addr) == 0 {
@@ -65,6 +79,9 @@ var setAddrCmd = &cli.Command{
 			return err
 		}
 		hasAddr, err := client.HasAddress(ctx.Context, a)
+		if err != nil {
+			return err
+		}
 		if hasAddr {
 			return xerrors.Errorf("The same address exists")
 		}
@@ -73,14 +90,14 @@ var setAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(addr)
+
 		return nil
 	},
 }
 
-var getAddrCmd = &cli.Command{
-	Name:      "get",
-	Usage:     "get local address",
+var findAddrCmd = &cli.Command{
+	Name:      "find",
+	Usage:     "find local address",
 	ArgsUsage: "address",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -137,7 +154,7 @@ var updateNonceCmd = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.Uint64Flag{
 			Name:  "nonce",
-			Usage: "the address corresponds to the nonce",
+			Usage: "address nonce",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -158,6 +175,30 @@ var updateNonceCmd = &cli.Command{
 
 		nonce := ctx.Uint64("nonce")
 		if _, err := client.UpdateNonce(ctx.Context, addr.ID, nonce); err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var deleteAddrCmd = &cli.Command{
+	Name:      "del",
+	Usage:     "delete local address",
+	ArgsUsage: "address",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		_, err = client.DeleteAddress(ctx.Context, ctx.Args().First())
+		if err != nil {
 			return err
 		}
 

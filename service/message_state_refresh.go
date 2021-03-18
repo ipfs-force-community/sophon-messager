@@ -41,14 +41,15 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		return nil
 	}
 
-	var revertMsgs map[cid.Cid]struct{}
 	var err error
 	var tsList tipsetList
+	revertMsgs := make(map[cid.Cid]struct{})
 
 	if len(h.revert) != 0 {
 		revertMsgs, err = ms.processRevertHead(ctx, h)
 		if err != nil {
 			ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
+			ms.handleAgain(nil)
 			return err
 		}
 	}
@@ -63,9 +64,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		}
 		applyMsgs, nonceGap, err = ms.processBlockParentMessages(ctx, ts.At(0).Cid(), height, applyMsgs, nonceGap)
 		if err != nil {
+			ms.handleAgain(nil)
 			return xerrors.Errorf("process block failed, block id: %s %v", ts.At(0).Cid().String(), err)
 		}
-		tsList = append(tsList, &tipsetFormat{Key: ts.Key().String(), Height: uint64(height)})
+		tsList = append(tsList, &tipsetFormat{Key: ts.Key().String(), Height: int64(height)})
 		tsKeys[height] = ts.Key().String()
 	}
 
@@ -78,7 +80,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			delete(revertMsgs, msg.cid)
 		}
 		for cid := range revertMsgs {
-			if _, err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.UnFillMsg); err != nil {
+			if _, err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
 				return err
 			}
 		}
@@ -88,7 +90,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				return xerrors.Errorf("not found address info: %s", addr)
 			}
 
-			_, err := txRepo.AddressRepo().UpdateNonce(context.Background(), addrInfo.UUID, nonce)
+			_, err := txRepo.AddressRepo().UpdateNonce(context.Background(), addrInfo.UUID, nonce+1)
 			if err != nil {
 				return err
 			}
@@ -97,6 +99,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	})
 	if err != nil {
 		ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
+		ms.handleAgain(revertMsgs)
 		return err
 	}
 
@@ -107,16 +110,16 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		}
 	}
 	for cid := range revertMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(cid.String(), types.UnFillMsg); err != nil {
+		if err := ms.messageState.UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
 		}
 	}
 	for addr, nonce := range nonceGap {
-		ms.addressService.SetNonce(addr.String(), nonce)
+		ms.addressService.SetNonce(addr.String(), nonce+1)
 	}
 
 	if len(h.apply) > 0 {
-		ms.tsCache.CurrHeight = uint64(h.apply[0].Height())
+		ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 		ms.tsCache.AddTs(tsList...)
 		if err := ms.storeTipset(); err != nil {
 			ms.log.Errorf("store tipset info failed: %v", err)
@@ -194,9 +197,54 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context,
 	return applyMsgs, nonceGap, nil
 }
 
+func (ms *MessageService) handleAgain(revertMsgs map[cid.Cid]struct{}) {
+	for addrStr := range ms.addressService.ListAddressInfo() {
+		addr, err := address.NewFromString(addrStr)
+		if err != nil {
+			ms.log.Errorf("invalid address %v", addrStr)
+			continue
+		}
+
+		actor, err := ms.nodeClient.StateGetActor(context.TODO(), addr, venustypes.EmptyTSK)
+		if err != nil {
+			ms.log.Errorf("get actor %v", err)
+			continue
+		}
+
+		msgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
+		if err != nil {
+			ms.log.Errorf("get filled message %v", err)
+		} else {
+			for _, msg := range msgs {
+				if msg.Nonce >= actor.Nonce {
+					continue
+				}
+				if err := ms.updateFilledMessage(context.TODO(), msg); err != nil {
+					ms.log.Errorf("update signed message %v", err)
+					continue
+				}
+				delete(revertMsgs, msg.UnsignedMessage.Cid())
+				if err := ms.messageState.UpdateMessageStateByCid(msg.UnsignedCid.String(), types.OnChainMsg); err != nil {
+					ms.log.Errorf("update message state failed, cid: %s error: %v", msg.UnsignedCid.String(), err)
+				}
+			}
+
+			for cid := range revertMsgs {
+				if _, err := ms.repo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
+					ms.log.Errorf("update message state %v", err)
+					continue
+				}
+				if err := ms.messageState.UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
+					ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
+				}
+			}
+		}
+	}
+}
+
 type tipsetFormat struct {
 	Key    string
-	Height uint64
+	Height int64
 }
 
 func (ms *MessageService) storeTipset() error {
@@ -231,7 +279,7 @@ func readTipsetFile(filePath string) (*TipsetCache, error) {
 	}
 	if len(b) < 3 { // skip empty content
 		return &TipsetCache{
-			Cache:      map[uint64]*tipsetFormat{},
+			Cache:      map[int64]*tipsetFormat{},
 			CurrHeight: 0,
 		}, nil
 	}

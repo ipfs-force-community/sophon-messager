@@ -16,9 +16,10 @@ var WalletCmds = &cli.Command{
 	Usage: "wallet commands",
 	Subcommands: []*cli.Command{
 		addWalletCmd,
-		getWalletCmd,
+		findWalletCmd,
 		listWalletCmd,
 		listRemoteWalletAddrCmd,
+		deleteWalletCmd,
 	},
 }
 
@@ -28,15 +29,15 @@ var addWalletCmd = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "name",
-			Usage: "name",
+			Usage: "wallet name",
 		},
 		&cli.StringFlag{
 			Name:  "url",
-			Usage: "url",
+			Usage: "wallet url",
 		},
 		&cli.StringFlag{
 			Name:  "token",
-			Usage: "token",
+			Usage: "wallet token",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -68,17 +69,17 @@ var addWalletCmd = &cli.Command{
 	},
 }
 
-var getWalletCmd = &cli.Command{
-	Name:  "get",
-	Usage: "get local wallet",
+var findWalletCmd = &cli.Command{
+	Name:  "find",
+	Usage: "find local wallet",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "uuid",
-			Usage: "Search data according to uuid",
+			Usage: "Search wallet according to uuid",
 		},
 		&cli.StringFlag{
 			Name:  "name",
-			Usage: "Search data according to name",
+			Usage: "Search wallet according to name",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -99,7 +100,8 @@ var getWalletCmd = &cli.Command{
 				return err
 			}
 		} else if name := ctx.String("name"); len(name) > 0 {
-			wallet, err = client.GetWalletByName(ctx.Context, ctx.Args().First())
+			fmt.Println("name", name)
+			wallet, err = client.GetWalletByName(ctx.Context, name)
 			if err != nil {
 				return err
 			}
@@ -141,6 +143,57 @@ var listWalletCmd = &cli.Command{
 }
 
 var listRemoteWalletAddrCmd = &cli.Command{
+	Name:  "list-addr",
+	Usage: "list remote wallet address by uuid",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "uuid",
+			Usage: "Search data according to uuid",
+		},
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "Search data according to name",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		var uuid types.UUID
+		uuidStr := ctx.String("uuid")
+		if len(uuidStr) > 0 {
+			uuid, err = types.ParseUUID(uuidStr)
+			if err != nil {
+				return err
+			}
+		} else if name := ctx.String("name"); len(name) > 0 {
+			w, err := client.GetWalletByName(ctx.Context, name)
+			if err != nil {
+				return err
+			}
+			uuid = w.ID
+		} else {
+			return xerrors.Errorf("value of query must be entered")
+		}
+
+		addrs, err := client.ListRemoteWalletAddress(ctx.Context, uuid)
+		if err != nil {
+			return err
+		}
+
+		bytes, err := json.MarshalIndent(addrs, " ", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(bytes))
+		return nil
+	},
+}
+
+var deleteWalletCmd = &cli.Command{
 	Name:  "list-addr",
 	Usage: "list remote wallet address by uuid",
 	Flags: []cli.Flag{

@@ -30,7 +30,7 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 	}
 
 	//ws.walletClients["inmem"] = NewMemWallet()
-	ws.walletClients[types.NewUUID()] = NewMemWallet()
+	//ws.walletClients[types.NewUUID()] = NewMemWallet()
 
 	walletList, err := ws.ListWallet(context.TODO())
 	if err != nil {

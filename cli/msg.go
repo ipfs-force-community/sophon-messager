@@ -3,7 +3,9 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -15,18 +17,21 @@ var MsgCmds = &cli.Command{
 	Name:  "msg",
 	Usage: "msg commands",
 	Subcommands: []*cli.Command{
-		getCmd,
+		findCmd,
 		listCmd,
+		updateFilledMessageCmd,
+		updateAllFilledMessageCmd,
+		replaceCmd,
 	},
 }
 
-var getCmd = &cli.Command{
-	Name:  "get",
-	Usage: "get local msg test",
+var findCmd = &cli.Command{
+	Name:  "find",
+	Usage: "find local msg test",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     "uuid",
-			Required: true,
+			Name:  "uuid",
+			Usage: "message uuid",
 		},
 		&cli.StringFlag{
 			Name:    "signed_cid",
@@ -63,13 +68,19 @@ var getCmd = &cli.Command{
 			}
 		} else if cidStr := ctx.String("signed_cid"); len(cidStr) > 0 {
 			c, err := cid.Decode(cidStr)
-			msg, err = client.GetMessageBySignedCid(ctx.Context, c.String())
+			if err != nil {
+				return err
+			}
+			msg, err = client.GetMessageBySignedCid(ctx.Context, c)
 			if err != nil {
 				return err
 			}
 		} else if cidStr := ctx.String("unsigned_cid"); len(cidStr) > 0 {
 			c, err := cid.Decode(cidStr)
-			msg, err = client.GetMessageByUnsignedCid(ctx.Context, c.String())
+			if err != nil {
+				return err
+			}
+			msg, err = client.GetMessageByUnsignedCid(ctx.Context, c)
 			if err != nil {
 				return err
 			}
@@ -115,62 +126,9 @@ var listCmd = &cli.Command{
 	},
 }
 
-var updateMessageStateCmd = &cli.Command{
-	Name:  "update_msg_state",
-	Usage: "manual update message state",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "id",
-			Usage: "message id",
-		},
-		&cli.IntFlag{
-			Name:     "state",
-			Usage:    "message state",
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:  "cid",
-			Usage: "message unsigned cid",
-		},
-	},
-	Action: func(ctx *cli.Context) error {
-		cli, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		id := ctx.String("id")
-		cid := ctx.String("cid")
-		if len(id) == 0 && len(cid) == 0 {
-			return xerrors.Errorf("id and cid cannot both be empty")
-		}
-
-		state := types.MessageState(ctx.Int("state"))
-		if state > types.ExpireMsg {
-			return xerrors.Errorf("invalid message state")
-		}
-		if len(id) != 0 {
-			uuid, err := types.ParseUUID(id)
-			if err != nil {
-				return err
-			}
-			if _, err := cli.UpdateMessageStateByID(ctx.Context, uuid, state); err != nil {
-				return err
-			}
-		} else if len(cid) != 0 {
-			if _, err := cli.UpdateMessageStateByCid(ctx.Context, cid, state); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	},
-}
-
-var updateAllSignedMessageCmd = &cli.Command{
-	Name:  "update_all_signed_msg",
-	Usage: "manual update all signed message state",
+var updateAllFilledMessageCmd = &cli.Command{
+	Name:  "update_all_filled_msg",
+	Usage: "manual update all filled message state",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "really-do-it",
@@ -187,7 +145,7 @@ var updateAllSignedMessageCmd = &cli.Command{
 		if !ctx.Bool("really-do-it") {
 			return xerrors.Errorf("pass --really-do-it to confirm this action")
 		}
-		count, err := cli.UpdateAllSignedMessage(ctx.Context)
+		count, err := cli.UpdateAllFilledMessage(ctx.Context)
 		if err != nil {
 			return err
 		}
@@ -197,9 +155,9 @@ var updateAllSignedMessageCmd = &cli.Command{
 	},
 }
 
-var updateSignedMessageCmd = &cli.Command{
-	Name:  "update_signed_msg",
-	Usage: "manual update one signed message state",
+var updateFilledMessageCmd = &cli.Command{
+	Name:  "update_filled_msg",
+	Usage: "manual update one filled message state",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "really-do-it",
@@ -241,7 +199,7 @@ var updateSignedMessageCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			msg, err := client.GetMessageBySignedCid(ctx.Context, signedCid.String())
+			msg, err := client.GetMessageBySignedCid(ctx.Context, signedCid)
 			if err != nil {
 				return err
 			}
@@ -251,7 +209,7 @@ var updateSignedMessageCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			msg, err := client.GetMessageByUnsignedCid(ctx.Context, unsignedCid.String())
+			msg, err := client.GetMessageByUnsignedCid(ctx.Context, unsignedCid)
 			if err != nil {
 				return err
 			}
@@ -260,12 +218,81 @@ var updateSignedMessageCmd = &cli.Command{
 			return xerrors.Errorf("value of query must be entered")
 		}
 
-		count, err := client.UpdateSignedMessageByID(ctx.Context, uuid)
+		_, err = client.UpdateFilledMessageByID(ctx.Context, uuid)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("update message count: %d\n", count)
 
+		return nil
+	},
+}
+
+var replaceCmd = &cli.Command{
+	Name:  "replace",
+	Usage: "replace a message",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "gas-feecap",
+			Usage: "gas feecap for new message (burn and pay to miner, attoFIL/GasUnit)",
+		},
+		&cli.StringFlag{
+			Name:  "gas-premium",
+			Usage: "gas price for new message (pay to miner, attoFIL/GasUnit)",
+		},
+		&cli.Int64Flag{
+			Name:  "gas-limit",
+			Usage: "gas limit for new message (GasUnit)",
+		},
+		&cli.BoolFlag{
+			Name:  "auto",
+			Usage: "automatically reprice the specified message",
+		},
+		&cli.StringFlag{
+			Name:  "max-fee",
+			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
+		},
+	},
+	ArgsUsage: "<from nonce> | <message-uuid>",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		var uuid types.UUID
+		switch ctx.Args().Len() {
+		case 1:
+			uuid, err = types.ParseUUID(ctx.Args().First())
+			if err != nil {
+				return err
+			}
+		case 2:
+			f, err := address.NewFromString(ctx.Args().Get(0))
+			if err != nil {
+				return err
+			}
+
+			n, err := strconv.ParseUint(ctx.Args().Get(1), 10, 64)
+			if err != nil {
+				return err
+			}
+			msg, err := client.GetMessageByFromAndNonce(ctx.Context, f.String(), n)
+			if err != nil {
+				return fmt.Errorf("could not find referenced message: %w", err)
+			}
+			uuid = msg.ID
+		default:
+			return cli.ShowCommandHelp(ctx, ctx.Command.Name)
+		}
+
+		cid, err := client.ReplaceMessage(ctx.Context, uuid, ctx.Bool("auto"), ctx.String("max-fee"),
+			ctx.Int64("gas-limit"), ctx.String("gas-premium"), ctx.String("gas-feecap"))
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("new message cid: ", cid)
 		return nil
 	},
 }
