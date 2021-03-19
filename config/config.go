@@ -35,7 +35,8 @@ type DbConfig struct {
 }
 
 type SqliteConfig struct {
-	Path string `toml:"path"`
+	Path  string `toml:"path"`
+	Debug bool   `toml:"debug"`
 }
 
 type MySqlConfig struct {

@@ -29,7 +29,6 @@ type AddressService struct {
 }
 
 type AddressInfo struct {
-	Nonce        uint64
 	UUID         types.UUID
 	WalletClient IWalletClient
 }
@@ -75,7 +74,7 @@ func (addressService *AddressService) DeleteAddress(ctx context.Context, addr st
 	return addr, addressService.repo.AddressRepo().DelAddress(ctx, addr)
 }
 
-func (addressService *AddressService) getLocalAddressAndNonce() error {
+func (addressService *AddressService) getLocalAddress() error {
 	addrsInfo, err := addressService.ListAddress(context.Background())
 	if err != nil {
 		return err
@@ -89,7 +88,6 @@ func (addressService *AddressService) getLocalAddressAndNonce() error {
 		}
 
 		addressService.SetAddressInfo(info.Addr, &AddressInfo{
-			Nonce:        info.Nonce,
 			UUID:         info.ID,
 			WalletClient: cli,
 		})
@@ -99,7 +97,7 @@ func (addressService *AddressService) getLocalAddressAndNonce() error {
 }
 
 func (addressService *AddressService) listenAddressChange(ctx context.Context) error {
-	if err := addressService.getLocalAddressAndNonce(); err != nil {
+	if err := addressService.getLocalAddress(); err != nil {
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
 	go func() {
@@ -154,31 +152,12 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, walletI
 			continue
 		}
 		addressService.SetAddressInfo(addr.String(), &AddressInfo{
-			Nonce:        nonce,
 			UUID:         ta.ID,
 			WalletClient: cli,
 		})
 	}
 
 	return nil
-}
-
-func (addressService *AddressService) GetNonce(addr string) uint64 {
-	addressService.l.Lock()
-	defer addressService.l.Unlock()
-	if info, ok := addressService.addrInfo[addr]; ok {
-		return info.Nonce
-	}
-
-	return 0
-}
-
-func (addressService *AddressService) SetNonce(addr string, nonce uint64) {
-	addressService.l.Lock()
-	defer addressService.l.Unlock()
-	if info, ok := addressService.addrInfo[addr]; ok {
-		info.Nonce = nonce
-	}
 }
 
 func (addressService *AddressService) SetAddressInfo(addr string, info *AddressInfo) {

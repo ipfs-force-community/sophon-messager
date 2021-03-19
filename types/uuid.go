@@ -28,8 +28,8 @@ func (uid UUID) IsEmpty() bool {
 }
 
 // Value implement sql.Scanner
-func (uid *UUID) String() string {
-	return uuid.UUID(*uid).String()
+func (uid UUID) String() string {
+	return uuid.UUID(uid).String()
 }
 
 // Value implement sql.Scanner

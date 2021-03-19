@@ -3,14 +3,15 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus/pkg/constants"
+	"github.com/ipfs-force-community/venus-messager/types"
 	"strconv"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
-	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/urfave/cli/v2"
 )
 
 var MsgCmds = &cli.Command{
@@ -22,6 +23,7 @@ var MsgCmds = &cli.Command{
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
 		replaceCmd,
+		waitMessagerCmds,
 	},
 }
 
@@ -62,7 +64,7 @@ var findCmd = &cli.Command{
 				return err
 			}
 
-			msg, err = client.GetMessage(ctx.Context, uid)
+			msg, err = client.GetMessageByUid(ctx.Context, uid)
 			if err != nil {
 				return err
 			}
@@ -93,6 +95,42 @@ var findCmd = &cli.Command{
 			return err
 		}
 		fmt.Println(string(bytes))
+		return nil
+	},
+}
+
+
+var waitMessagerCmds = &cli.Command{
+	Name:  "wait",
+	Usage: "wait a messager msg uid for result",
+	Action: func(cctx *cli.Context) error {
+		client, closer, err := getAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if cctx.NArg() == 0 {
+			return xerrors.New("must has uuid argument")
+		}
+
+		uidStr := cctx.Args().Get(0)
+		uid, err := types.ParseUUID(uidStr)
+		if err != nil {
+			return err
+		}
+
+		msg, err := client.WaitMessage(cctx.Context, uid, uint64(constants.MessageConfidence))
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("message cid ", msg.SignedCid)
+		fmt.Println("Height:", msg.Height)
+		fmt.Println("Tipset:", msg.TipSetKey.String())
+		fmt.Println("exitcode:", msg.Receipt.ExitCode)
+		fmt.Println("gas_used:", msg.Receipt.GasUsed)
+		fmt.Println("return_value:", msg.Receipt.ReturnValue)
 		return nil
 	},
 }

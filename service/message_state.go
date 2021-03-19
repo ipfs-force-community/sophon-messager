@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/ipfs/go-cid"
 	"time"
 
 	"github.com/ipfs-force-community/venus-messager/config"
@@ -78,7 +79,7 @@ func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) err
 		msg = v.(*types.Message)
 	} else {
 		var err error
-		msg, err = ms.repo.MessageRepo().GetMessage(id)
+		msg, err = ms.repo.MessageRepo().GetMessageByUid(id)
 		if err != nil {
 			ms.log.Errorf("get message failed, id: %v, err: %v", id, err)
 			return err
@@ -93,8 +94,8 @@ func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) err
 	return nil
 }
 
-func (ms *MessageState) UpdateMessageStateByCid(cid string, state types.MessageState) error {
-	id, ok := ms.idCids.Get(cid)
+func (ms *MessageState) UpdateMessageStateByCid(cid cid.Cid, state types.MessageState) error {
+	id, ok := ms.idCids.Get(cid.String())
 	if !ok {
 		msg, err := ms.repo.MessageRepo().GetMessageByCid(cid)
 		if err != nil {
