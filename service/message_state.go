@@ -1,14 +1,15 @@
 package service
 
 import (
-	"github.com/ipfs/go-cid"
 	"time"
+
+	"github.com/ipfs/go-cid"
+	"github.com/patrickmn/go-cache"
+	"github.com/sirupsen/logrus"
 
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
 )
 
 type MessageState struct {
@@ -27,7 +28,7 @@ func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageS
 		log:  logger,
 		cfg:  cfg,
 		idCids: &idCidCache{
-			cache: make(map[string]types.UUID),
+			cache: make(map[string]string),
 		},
 		messageCache: cache.New(time.Duration(cfg.DefaultExpiration)*time.Second, time.Duration(cfg.CleanupInterval)*time.Second),
 	}
@@ -56,8 +57,8 @@ func (ms *MessageState) loadRecentMessage() error {
 	return nil
 }
 
-func (ms *MessageState) GetMessage(id types.UUID) (*types.Message, bool) {
-	v, ok := ms.messageCache.Get(id.String())
+func (ms *MessageState) GetMessage(id string) (*types.Message, bool) {
+	v, ok := ms.messageCache.Get(id)
 	if ok {
 		return v.(*types.Message), ok
 	}
@@ -65,17 +66,17 @@ func (ms *MessageState) GetMessage(id types.UUID) (*types.Message, bool) {
 	return nil, ok
 }
 
-func (ms *MessageState) SetMessage(id types.UUID, message *types.Message) {
-	ms.messageCache.SetDefault(id.String(), message)
+func (ms *MessageState) SetMessage(id string, message *types.Message) {
+	ms.messageCache.SetDefault(id, message)
 }
 
-func (ms *MessageState) DeleteMessage(id types.UUID) {
-	ms.messageCache.Delete(id.String())
+func (ms *MessageState) DeleteMessage(id string) {
+	ms.messageCache.Delete(id)
 }
 
-func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) error) error {
+func (ms *MessageState) MutatorMessage(id string, f func(*types.Message) error) error {
 	var msg *types.Message
-	if v, ok := ms.messageCache.Get(id.String()); ok {
+	if v, ok := ms.messageCache.Get(id); ok {
 		msg = v.(*types.Message)
 	} else {
 		var err error
@@ -90,7 +91,7 @@ func (ms *MessageState) MutatorMessage(id types.UUID, f func(*types.Message) err
 	if err != nil {
 		return err
 	}
-	ms.messageCache.SetDefault(id.String(), msg)
+	ms.messageCache.SetDefault(id, msg)
 	return nil
 }
 

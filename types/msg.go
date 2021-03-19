@@ -29,11 +29,11 @@ const (
 
 type MessageWithUID struct {
 	UnsignedMessage venusTypes.UnsignedMessage
-	ID              UUID
+	ID              string
 }
 
 type Message struct {
-	ID UUID
+	ID string
 
 	UnsignedCid *cid.Cid
 	SignedCid   *cid.Cid

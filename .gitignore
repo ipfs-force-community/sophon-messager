@@ -4,6 +4,8 @@
 ./venus-messager
 ./*.log
 *.db
+*.db-shm
+*.db-wal
 *.txt
 *.db-shm
 *.db-wal

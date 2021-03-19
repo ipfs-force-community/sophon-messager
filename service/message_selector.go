@@ -9,12 +9,13 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs-force-community/venus-wallet/core"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
+
+	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type MessageSelector struct {
@@ -169,7 +170,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		//签名
 		data, err := msg.UnsignedMessage.ToStorageBlock()
 		if err != nil {
-			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID.String(), err)
+			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 			continue
 		}
 		sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes(), core.MsgMeta{
@@ -178,7 +179,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		})
 		if err != nil {
 			//todo client net crash?
-			messageSelector.log.Errorf("wallet sign failed %s fail %v", msg.ID.String(), err)
+			messageSelector.log.Errorf("wallet sign failed %s fail %v", msg.ID, err)
 			continue
 		}
 

@@ -60,7 +60,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	replaceMsg := make(map[types.UUID]*types.Message)
+	replaceMsg := make(map[string]*types.Message)
 	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		for _, msg := range applyMsgs {
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)

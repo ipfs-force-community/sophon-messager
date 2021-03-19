@@ -33,8 +33,8 @@ var findCmd = &cli.Command{
 	Usage: "find local msg test",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:  "uuid",
-			Usage: "message uuid",
+			Name:  "id",
+			Usage: "message id",
 		},
 		&cli.StringFlag{
 			Name:    "signed_cid",
@@ -59,13 +59,8 @@ var findCmd = &cli.Command{
 		defer closer()
 
 		var msg *types.Message
-		if uidStr := ctx.String("uuid"); len(uidStr) > 0 {
-			uid, err := types.ParseUUID(uidStr)
-			if err != nil {
-				return err
-			}
-
-			msg, err = client.GetMessageByUid(ctx.Context, uid)
+		if id := ctx.String("id"); len(id) > 0 {
+			msg, err = client.GetMessageByUid(ctx.Context, id)
 			if err != nil {
 				return err
 			}
@@ -102,7 +97,7 @@ var findCmd = &cli.Command{
 
 var waitMessagerCmds = &cli.Command{
 	Name:  "wait",
-	Usage: "wait a messager msg uid for result",
+	Usage: "wait a messager msg id for result",
 	Action: func(cctx *cli.Context) error {
 		client, closer, err := getAPI(cctx)
 		if err != nil {
@@ -111,16 +106,11 @@ var waitMessagerCmds = &cli.Command{
 		defer closer()
 
 		if cctx.NArg() == 0 {
-			return xerrors.New("must has uuid argument")
+			return xerrors.New("must has id argument")
 		}
 
-		uidStr := cctx.Args().Get(0)
-		uid, err := types.ParseUUID(uidStr)
-		if err != nil {
-			return err
-		}
-
-		msg, err := client.WaitMessage(cctx.Context, uid, uint64(constants.MessageConfidence))
+		id := cctx.Args().Get(0)
+		msg, err := client.WaitMessage(cctx.Context, id, uint64(constants.MessageConfidence))
 		if err != nil {
 			return err
 		}
@@ -202,7 +192,7 @@ var updateFilledMessageCmd = &cli.Command{
 			Usage: "pass this flag if you know what you are doing",
 		},
 		&cli.StringFlag{
-			Name:  "uuid",
+			Name:  "id",
 			Usage: "message id",
 		},
 		&cli.StringFlag{
@@ -226,12 +216,9 @@ var updateFilledMessageCmd = &cli.Command{
 		if !ctx.Bool("really-do-it") {
 			return xerrors.Errorf("pass --really-do-it to confirm this action")
 		}
-		var uuid types.UUID
-		if uuidStr := ctx.String("uuid"); len(uuidStr) > 0 {
-			uuid, err = types.ParseUUID(uuidStr)
-			if err != nil {
-				return err
-			}
+		var id string
+		if id = ctx.String("uuid"); len(id) > 0 {
+
 		} else if signedCidStr := ctx.String("signed_cid"); len(signedCidStr) > 0 {
 			signedCid, err := cid.Decode(signedCidStr)
 			if err != nil {
@@ -241,7 +228,7 @@ var updateFilledMessageCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			uuid = msg.ID
+			id = msg.ID
 		} else if unsignedCidStr := ctx.String("unsigned_cid"); len(unsignedCidStr) > 0 {
 			unsignedCid, err := cid.Decode(unsignedCidStr)
 			if err != nil {
@@ -251,12 +238,12 @@ var updateFilledMessageCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			uuid = msg.ID
+			id = msg.ID
 		} else {
 			return xerrors.Errorf("value of query must be entered")
 		}
 
-		_, err = client.UpdateFilledMessageByID(ctx.Context, uuid)
+		_, err = client.UpdateFilledMessageByID(ctx.Context, id)
 		if err != nil {
 			return err
 		}
@@ -298,13 +285,10 @@ var replaceCmd = &cli.Command{
 		}
 		defer closer()
 
-		var uuid types.UUID
+		var id string
 		switch ctx.Args().Len() {
 		case 1:
-			uuid, err = types.ParseUUID(ctx.Args().First())
-			if err != nil {
-				return err
-			}
+			id = ctx.Args().First()
 		case 2:
 			f, err := address.NewFromString(ctx.Args().Get(0))
 			if err != nil {
@@ -319,12 +303,12 @@ var replaceCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("could not find referenced message: %w", err)
 			}
-			uuid = msg.ID
+			id = msg.ID
 		default:
 			return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 		}
 
-		cid, err := client.ReplaceMessage(ctx.Context, uuid, ctx.Bool("auto"), ctx.String("max-fee"),
+		cid, err := client.ReplaceMessage(ctx.Context, id, ctx.Bool("auto"), ctx.String("max-fee"),
 			ctx.Int64("gas-limit"), ctx.String("gas-premium"), ctx.String("gas-feecap"))
 		if err != nil {
 			return err
