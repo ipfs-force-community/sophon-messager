@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -146,7 +147,13 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		//通过配置影响 maxfee
 		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
 		if err != nil {
-			messageSelector.log.Errorf("GasEstimateMessageGas msg id fail %v", msg.ID.String(), err)
+			if strings.Contains(err.Error(), "exit SysErrSenderStateInvalid(2)") {
+				// SysErrSenderStateInvalid(2))
+				messageSelector.log.Errorf("message %s estimate message fail %v break address %s", msg.ID, err, addr.Addr)
+				break
+			}
+			messageSelector.log.Errorf("message %s estimate message fail %v, try to next message", msg.ID, err)
+
 			continue
 		}
 		msg.GasFeeCap = newMsg.GasFeeCap
