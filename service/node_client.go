@@ -46,6 +46,7 @@ type NodeClient struct {
 
 	GasEstimateMessageGas func(context.Context, *types.UnsignedMessage, *types.MessageSendSpec, types.TipSetKey) (*types.UnsignedMessage, error)
 
+	MpoolPush      func(context.Context, *types.SignedMessage) (cid.Cid, error)
 	MpoolBatchPush func(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
 }
 

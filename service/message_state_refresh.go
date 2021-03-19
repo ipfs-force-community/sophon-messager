@@ -61,6 +61,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
+	replaceMsg := make(map[types.UUID]*types.Message)
 	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		for _, msg := range applyMsgs {
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
@@ -69,10 +70,12 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				continue
 			}
 
-			if *localMsg.UnsignedCid != msg.cid {
+			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
 				//replace msg
-				ms.log.Warning("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
+				unsignedCid := msg.msg.Cid()
 				localMsg.UnsignedMessage = *msg.msg
+				localMsg.UnsignedCid = &unsignedCid
+				localMsg.SignedCid = &msg.cid
 				localMsg.State = types.ReplacedMsg
 				localMsg.Receipt = msg.receipt
 				localMsg.Height = int64(msg.height)
@@ -80,6 +83,8 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				if _, err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
+				replaceMsg[localMsg.ID] = localMsg
+				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
 			} else {
 				if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
@@ -100,11 +105,16 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update cache
+	for id, msg := range replaceMsg {
+		ms.messageState.SetMessage(id, msg)
+	}
+
 	for _, msg := range applyMsgs {
 		if err := ms.messageState.UpdateMessageStateByCid(msg.cid, types.OnChainMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", msg.cid.String(), err)
 		}
 	}
+
 	for cid := range revertMsgs {
 		if err := ms.messageState.UpdateMessageStateByCid(cid, types.UnFillMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)

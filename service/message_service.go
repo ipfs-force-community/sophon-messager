@@ -429,7 +429,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	tPush := time.Now()
 	//广播推送
 	//todo 多点推送
-	_, err = ms.nodeClient.MpoolBatchPush(ctx, toPushMessage)
+	for _, msg := range toPushMessage {
+		_, err = ms.nodeClient.MpoolPush(ctx, msg)
+	}
 
 	if err != nil {
 		fmt.Println(toPushMessage[0].Cid().String(), toPushMessage[0].Message.Nonce)
