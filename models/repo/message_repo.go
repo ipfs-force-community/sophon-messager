@@ -1,8 +1,9 @@
 package repo
 
 import (
-	"github.com/ipfs/go-cid"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
@@ -27,6 +28,7 @@ type MessageRepo interface {
 	ListMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
+	ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
 	ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error)

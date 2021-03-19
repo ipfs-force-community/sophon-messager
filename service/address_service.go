@@ -71,7 +71,16 @@ func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr string) (string, error) {
-	return addr, addressService.repo.AddressRepo().DelAddress(ctx, addr)
+	err := addressService.repo.AddressRepo().DelAddress(ctx, addr)
+	if err != nil {
+		return "", err
+	}
+
+	// TODO: 确定已签名消息都已上链
+	addressService.RemoveAddressInfo(addr)
+	addressService.log.Infof("delete address %v", addr)
+
+	return addr, nil
 }
 
 func (addressService *AddressService) getLocalAddress() error {
@@ -177,6 +186,13 @@ func (addressService *AddressService) GetAddressInfo(addr string) (*AddressInfo,
 	return nil, false
 }
 
+func (addressService *AddressService) RemoveAddressInfo(addr string) {
+	addressService.l.Lock()
+	defer addressService.l.Unlock()
+
+	delete(addressService.addrInfo, addr)
+}
+
 func (addressService *AddressService) ListAddressInfo() map[string]AddressInfo {
 	addressService.l.Lock()
 	defer addressService.l.Unlock()
@@ -186,20 +202,4 @@ func (addressService *AddressService) ListAddressInfo() map[string]AddressInfo {
 	}
 
 	return addrInfos
-}
-
-func (addressService *AddressService) StoreNonce(addr string, nonce uint64) error {
-	addrInfo, ok := addressService.GetAddressInfo(addr)
-	if !ok {
-		return xerrors.Errorf("not found address info: %s", addr)
-	}
-	_, err := addressService.SaveAddress(context.Background(), &types.Address{
-		ID:        addrInfo.UUID,
-		Addr:      addr,
-		Nonce:     nonce,
-		UpdatedAt: time.Now(),
-		IsDeleted: -1,
-	})
-
-	return err
 }

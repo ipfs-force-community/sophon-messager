@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/ipfs/go-cid"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -41,7 +42,6 @@ type MessageService struct {
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
-	failedHeads []failedHead
 
 	readFileOnce sync.Once
 	tsCache      *TipsetCache
@@ -51,11 +51,6 @@ type MessageService struct {
 
 type headChan struct {
 	apply, revert []*venusTypes.TipSet
-}
-
-type failedHead struct {
-	headChan
-	time.Time
 }
 
 type TipsetCache struct {
@@ -87,7 +82,6 @@ func NewMessageService(repo repo.Repo,
 			CurrHeight: 0,
 		},
 		triggerPush: make(chan *venusTypes.TipSet, 20),
-		failedHeads: make([]failedHead, 0),
 	}
 	ms.refreshMessageState(context.TODO())
 
@@ -115,7 +109,6 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	if !has {
 		return xerrors.Errorf("address %s not in wallet", msg.From)
 	}
-	msg.State = types.UnFillMsg
 	msg.Nonce = 0
 	err = ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
@@ -438,10 +431,10 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		fmt.Println(err)
 	}
 	ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
-		time.Now().Sub(tSelect).Milliseconds(),
-		time.Now().Sub(tSaveDb).Milliseconds(),
-		time.Now().Sub(tCacheUpdate).Milliseconds(),
-		time.Now().Sub(tPush).Milliseconds(),
+		time.Since(tSelect).Milliseconds(),
+		time.Since(tSaveDb).Milliseconds(),
+		time.Since(tCacheUpdate).Milliseconds(),
+		time.Since(tPush).Milliseconds(),
 	)
 	return err
 }
@@ -471,7 +464,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			if err != nil {
 				ms.log.Errorf("push message error %v", err)
 			}
-			ms.log.Infof("end push message spent %d ms", time.Now().Sub(start).Milliseconds())
+			ms.log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
 		}
 	}
 }
@@ -481,11 +474,13 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	for addrStr := range ms.addressService.ListAddressInfo() {
 		addr, err := address.NewFromString(addrStr)
 		if err != nil {
-			return 0, xerrors.Errorf("invalid address %v", addrStr)
+			ms.log.Errorf("invalid address %v", addrStr)
+			continue
 		}
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
-			return 0, err
+			ms.log.Errorf("list filled message %v %v", addr, err)
+			continue
 		}
 		msgs = append(msgs, filledMsgs...)
 	}
@@ -493,7 +488,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
-			return 0, err
+			ms.log.Errorf("update filled message %v", err)
 		}
 		updateCount++
 	}

@@ -2,6 +2,11 @@ package service
 
 import (
 	"context"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/config"
@@ -10,10 +15,6 @@ import (
 	"github.com/ipfs-force-community/venus-wallet/core"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
-	"sort"
-	"strings"
-	"sync"
-	"time"
 )
 
 type MessageSelector struct {
@@ -109,6 +110,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 	//todo push sigined but not onchain message, when to resend message
 	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(mAddr)
+	if err != nil {
+		messageSelector.log.Warnf("list filled message %v", err)
+	}
 	for _, msg := range filledMessage {
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
 			Message:   msg.UnsignedMessage,

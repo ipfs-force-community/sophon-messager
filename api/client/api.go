@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
-	"github.com/ipfs/go-cid"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
@@ -20,7 +21,7 @@ type IMessager interface {
 	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
-	GetMessageByFromAndNonce(ctx context.Context, from string, nonce uint64) (*types.Message, error)
+	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 	ListMessage(ctx context.Context) ([]*types.Message, error)
 	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 	UpdateMessageStateByID(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error)
@@ -49,11 +50,11 @@ type Message struct {
 		WaitMessage              func(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
 		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
 		PushMessageWithId        func(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-		GetMessageByUid         func(ctx context.Context, uuid types.UUID) (*types.Message, error)
-		GetMessageByCid         func(ctx context.Context, id cid.Cid) (*types.Message, error)
+		GetMessageByUid          func(ctx context.Context, uuid types.UUID) (*types.Message, error)
+		GetMessageByCid          func(ctx context.Context, id cid.Cid) (*types.Message, error)
 		GetMessageBySignedCid    func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByUnsignedCid  func(ctx context.Context, cid cid.Cid) (*types.Message, error)
-		GetMessageByFromAndNonce func(ctx context.Context, from string, nonce uint64) (*types.Message, error)
+		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 		UpdateMessageStateByID   func(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error)
@@ -100,7 +101,7 @@ func (message *Message) GetMessageBySignedCid(ctx context.Context, cid cid.Cid) 
 	return message.Internal.GetMessageBySignedCid(ctx, cid)
 }
 
-func (message *Message) GetMessageByFromAndNonce(ctx context.Context, from string, nonce uint64) (*types.Message, error) {
+func (message *Message) GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error) {
 	return message.Internal.GetMessageByFromAndNonce(ctx, from, nonce)
 }
 
