@@ -29,6 +29,7 @@ type MessageRepo interface {
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
+	ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error)
 
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) (string, error)
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) (string, error)

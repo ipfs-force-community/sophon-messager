@@ -105,7 +105,6 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		if err != nil {
 			return nil, nil, nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
 		}
-		messageSelector.addressService.SetNonce(addr.Addr, addr.Nonce)
 	}
 	//todo push sigined but not onchain message, when to resend message
 	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(mAddr)

@@ -17,7 +17,15 @@ const (
 	OnChainMsg
 	ExpireMsg
 	ReplacedMsg
+	NoWalletMsg
 )
+
+//						---> ExpireMsg <------
+//					    |					 |
+// 				UnFillMsg ---------------> FillMsg --------> OnChainMsg
+//						|					 |
+//		 NoWalletMsg <---				     ---->ReplacedMsg
+//
 
 type MessageWithUID struct {
 	UnsignedMessage venusTypes.UnsignedMessage

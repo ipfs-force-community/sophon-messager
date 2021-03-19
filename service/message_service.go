@@ -211,10 +211,35 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		ms.log.Infof("skip process new head")
 		return nil
 	}
-	ms.headChans <- &headChan{
-		apply:  apply,
-		revert: revert,
+
+	if len(apply) == 0 {
+		ms.log.Errorf("expect apply blocks, but got none")
+		return nil
 	}
+
+	ts := ms.tsCache.ListTs()
+	sort.Sort(ts)
+	smallestTs := apply[len(apply)-1]
+
+	if ts == nil || smallestTs.Parents().String() == ts[0].Key {
+		ms.headChans <- &headChan{
+			apply:  apply,
+			revert: nil,
+		}
+	} else {
+		gapTipset, revertTipset, err := ms.lookAncestors(ctx, ts, smallestTs)
+		if err != nil {
+			ms.log.Errorf("look ancestor error from %s and %s", smallestTs, ts[0].Key)
+			return nil
+		}
+
+		apply = append(apply, gapTipset...)
+		ms.headChans <- &headChan{
+			apply:  apply,
+			revert: revertTipset,
+		}
+	}
+
 	ms.log.Infof("%d head wait to process", len(ms.headChans))
 	return nil
 }
@@ -381,10 +406,6 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 	tCacheUpdate := time.Now()
 	//update cache
-	for _, addr := range modifyAddrs {
-		ms.addressService.SetNonce(addr.Addr, addr.Nonce)
-	}
-
 	for _, msg := range selectMsg {
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
 			Message:   msg.UnsignedMessage,
@@ -480,9 +501,6 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 
 func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Message) error {
 	cid := msg.SignedCid
-	if msg.From.Protocol() == address.BLS {
-		cid = msg.UnsignedCid
-	}
 	if cid != nil {
 		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, *cid)
 		if err != nil || msgLookup == nil {
