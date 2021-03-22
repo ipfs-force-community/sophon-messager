@@ -31,15 +31,20 @@ type IMessager interface {
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
 	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)
+	HasWallet(Context context.Context, name string) (bool, error)
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)
 	ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error)
+	DeleteWallet(ctx context.Context, name string) (string, error)
+	UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error)
 
 	SaveAddress(ctx context.Context, address *types.Address) (string, error)
-	GetAddress(ctx context.Context, addr string) (*types.Address, error)
+	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 	ListAddress(ctx context.Context) ([]*types.Address, error)
-	UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error)
-	DeleteAddress(Context context.Context, addr string) (string, error)
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
+	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
+	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
+	PermitAddress(ctx context.Context, addr address.Address) (address.Address, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -64,15 +69,20 @@ type Message struct {
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByID           func(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
 		GetWalletByName         func(ctx context.Context, name string) (*types.Wallet, error)
+		HasWallet               func(ctx context.Context, name string) (bool, error)
 		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
 		ListRemoteWalletAddress func(ctx context.Context, uuid types.UUID) ([]address.Address, error)
+		DeleteWallet            func(ctx context.Context, name string) (string, error)
+		UpdateWallet            func(ctx context.Context, wallet *types.Wallet) (string, error)
 
-		SaveAddress   func(ctx context.Context, address *types.Address) (string, error)
-		GetAddress    func(ctx context.Context, addr string) (*types.Address, error)
-		HasAddress    func(ctx context.Context, addr address.Address) (bool, error)
-		ListAddress   func(ctx context.Context) ([]*types.Address, error)
-		UpdateNonce   func(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error)
-		DeleteAddress func(ctx context.Context, addr string) (string, error)
+		SaveAddress      func(ctx context.Context, address *types.Address) (string, error)
+		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
+		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
+		ListAddress      func(ctx context.Context) ([]*types.Address, error)
+		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
+		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
+		PermitAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 	}
 }
 
@@ -140,6 +150,10 @@ func (message *Message) GetWalletByName(ctx context.Context, name string) (*type
 	return message.Internal.GetWalletByName(ctx, name)
 }
 
+func (message *Message) HasWallet(ctx context.Context, name string) (bool, error) {
+	return message.Internal.HasWallet(ctx, name)
+}
+
 func (message *Message) ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error) {
 	return message.Internal.ListRemoteWalletAddress(ctx, uuid)
 }
@@ -148,11 +162,19 @@ func (message *Message) ListWallet(ctx context.Context) ([]*types.Wallet, error)
 	return message.Internal.ListWallet(ctx)
 }
 
+func (message *Message) DeleteWallet(ctx context.Context, name string) (string, error) {
+	return message.Internal.DeleteWallet(ctx, name)
+}
+
+func (message *Message) UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
+	return message.Internal.UpdateWallet(ctx, wallet)
+}
+
 func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
 	return message.Internal.SaveAddress(ctx, address)
 }
 
-func (message *Message) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
+func (message *Message) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	return message.Internal.GetAddress(ctx, addr)
 }
 
@@ -164,12 +186,20 @@ func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, erro
 	return message.Internal.ListAddress(ctx)
 }
 
-func (message *Message) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
-	return message.Internal.UpdateNonce(ctx, uuid, nonce)
+func (message *Message) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
+	return message.Internal.UpdateNonce(ctx, addr, nonce)
 }
 
-func (message *Message) DeleteAddress(ctx context.Context, addr string) (string, error) {
+func (message *Message) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return message.Internal.DeleteAddress(ctx, addr)
+}
+
+func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.ForbiddenAddress(ctx, addr)
+}
+
+func (message *Message) PermitAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.PermitAddress(ctx, addr)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

@@ -66,6 +66,14 @@ func (s sqliteWalletRepo) GetWalletByName(name string) (*types.Wallet, error) {
 	return wallet.Wallet(), nil
 }
 
+func (s sqliteWalletRepo) HasWallet(name string) (bool, error) {
+	var count int64
+	if err := s.DB.Model(&sqliteWallet{}).Where("name = ?", name).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (s sqliteWalletRepo) ListWallet() ([]*types.Wallet, error) {
 	var internalWallet []*sqliteWallet
 	if err := s.DB.Find(&internalWallet, "is_deleted = ?", -1).Error; err != nil {

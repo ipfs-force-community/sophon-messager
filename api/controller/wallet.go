@@ -26,10 +26,18 @@ func (walletController WalletController) GetWalletByName(ctx context.Context, na
 	return walletController.WalletService.GetWalletByName(ctx, name)
 }
 
+func (walletController WalletController) HasWallet(ctx context.Context, name string) (bool, error) {
+	return walletController.WalletService.HasWallet(ctx, name)
+}
+
 func (walletController WalletController) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletController.WalletService.ListWallet(ctx)
 }
 
 func (walletController WalletController) ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error) {
 	return walletController.WalletService.ListRemoteWalletAddress(ctx, uuid)
+}
+
+func (walletController WalletController) DeleteWallet(ctx context.Context, name string) (string, error) {
+	return walletController.WalletService.DeleteWallet(ctx, name)
 }

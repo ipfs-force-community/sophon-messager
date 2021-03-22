@@ -95,7 +95,7 @@ func (ms *MessageState) MutatorMessage(id string, f func(*types.Message) error) 
 	return nil
 }
 
-func (ms *MessageState) UpdateMessageStateByCid(cid cid.Cid, state types.MessageState) error {
+func (ms *MessageState) UpdateMessageByCid(cid cid.Cid, f func(message *types.Message) error) error {
 	id, ok := ms.idCids.Get(cid.String())
 	if !ok {
 		msg, err := ms.repo.MessageRepo().GetMessageByCid(cid)
@@ -103,13 +103,10 @@ func (ms *MessageState) UpdateMessageStateByCid(cid cid.Cid, state types.Message
 			return err
 		}
 		ms.SetMessage(msg.ID, msg)
-		return nil
+		id = msg.ID
 	}
 
-	return ms.MutatorMessage(id, func(message *types.Message) error {
-		message.State = state
-		return nil
-	})
+	return ms.MutatorMessage(id, f)
 }
 
 func (ms *MessageState) GetMessageStateByCid(cid string) (types.MessageState, bool) {

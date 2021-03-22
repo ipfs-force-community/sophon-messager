@@ -6,6 +6,7 @@ type WalletRepo interface {
 	SaveWallet(wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(uuid types.UUID) (*types.Wallet, error)
 	GetWalletByName(name string) (*types.Wallet, error)
+	HasWallet(name string) (bool, error)
 	ListWallet() ([]*types.Wallet, error)
 	DelWallet(uuid types.UUID) error
 }

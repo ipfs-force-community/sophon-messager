@@ -18,6 +18,7 @@ type WalletService struct {
 	log  *logrus.Logger
 
 	walletClients map[types.UUID]IWalletClient
+	delWalletChan chan types.UUID
 
 	l sync.Mutex
 }
@@ -27,6 +28,7 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 		repo:          repo,
 		log:           logger,
 		walletClients: make(map[types.UUID]IWalletClient),
+		delWalletChan: make(chan types.UUID, 10),
 	}
 
 	walletList, err := ws.ListWallet(context.TODO())
@@ -68,6 +70,10 @@ func (walletService *WalletService) GetWalletByName(ctx context.Context, name st
 	return walletService.repo.WalletRepo().GetWalletByName(name)
 }
 
+func (walletService *WalletService) HasWallet(ctx context.Context, name string) (bool, error) {
+	return walletService.repo.WalletRepo().HasWallet(name)
+}
+
 func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
 	return walletService.repo.WalletRepo().ListWallet()
 }
@@ -81,7 +87,24 @@ func (walletService *WalletService) ListRemoteWalletAddress(ctx context.Context,
 	return cli.WalletList(ctx)
 }
 
-// nolint
+func (walletService *WalletService) DeleteWallet(ctx context.Context, name string) (string, error) {
+	w, err := walletService.GetWalletByName(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if err := walletService.repo.WalletRepo().DelWallet(w.ID); err != nil {
+		return "", err
+	}
+
+	walletService.removeWalletClient(ctx, w.ID)
+
+	walletService.delWalletChan <- w.ID
+	walletService.log.Infof("delete wallet %s", name)
+
+	return name, nil
+}
+
+/// wallet client ///
 func (walletService *WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
 	walletService.l.Lock()
 	defer walletService.l.Unlock()
@@ -94,4 +117,11 @@ func (walletService *WalletService) updateWalletClient(ctx context.Context, wall
 	}
 
 	return nil
+}
+
+func (walletService *WalletService) removeWalletClient(ctx context.Context, walletId types.UUID) {
+	walletService.l.Lock()
+	defer walletService.l.Unlock()
+
+	delete(walletService.walletClients, walletId)
 }

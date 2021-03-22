@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -92,7 +91,8 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			delete(revertMsgs, msg.cid)
 		}
 		for cid := range revertMsgs {
-			if _, err := txRepo.MessageRepo().UpdateMessageStateByCid(cid.String(), types.FillMsg); err != nil {
+			if _, err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
+				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
 				return err
 			}
 		}
@@ -108,21 +108,31 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	for _, msg := range applyMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(msg.cid, types.OnChainMsg); err != nil {
-			ms.log.Errorf("update message state failed, cid: %s error: %v", msg.cid.String(), err)
+		if err := ms.messageState.UpdateMessageByCid(msg.cid, func(message *types.Message) error {
+			message.Receipt = msg.receipt
+			message.Height = int64(msg.height)
+			message.State = types.OnChainMsg
+			return nil
+		}); err != nil {
+			ms.log.Errorf("update message failed cid: %s error: %v", msg.cid.String(), err)
 		}
 	}
 
 	for cid := range revertMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(cid, types.FillMsg); err != nil {
-			ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
+		if err := ms.messageState.UpdateMessageByCid(cid, func(message *types.Message) error {
+			message.Receipt = &venustypes.MessageReceipt{ExitCode: -1}
+			message.Height = 0
+			message.State = types.FillMsg
+			return nil
+		}); err != nil {
+			ms.log.Errorf("update message failed cid: %s error: %v", cid.String(), err)
 		}
 	}
 
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 	ms.tsCache.AddTs(tsList...)
 	if err := ms.storeTipset(); err != nil {
-		ms.log.Errorf("store tipset info failed: %v", err)
+		ms.log.Errorf("store tipset info failed %v", err)
 	}
 
 	ms.log.Infof("process block %d, revert %d message apply %d message ", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs))
@@ -140,7 +150,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 		}
 
 		for _, msg := range msgs {
-			if _, ok := ms.addressService.GetAddressInfo(msg.From.String()); ok && msg.UnsignedCid != nil {
+			if _, ok := ms.addressService.GetAddressInfo(msg.From); ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
 			}
 
@@ -178,7 +188,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		for i := range receipts {
 			msg := msgs[i].Message
-			if _, ok := ms.addressService.addrInfo[msg.From.String()]; ok {
+			if _, ok := ms.addressService.addrInfo[msg.From]; ok {
 				applyMsgs = append(applyMsgs, pendingMessage{
 					height:  height,
 					receipt: receipts[i],
@@ -191,14 +201,9 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 	return applyMsgs, nil
 }
 
+// nolint
 func (ms *MessageService) correctAddrMessagesState() {
-	for addrStr := range ms.addressService.ListAddressInfo() {
-		addr, err := address.NewFromString(addrStr)
-		if err != nil {
-			ms.log.Errorf("invalid address %v", addrStr)
-			continue
-		}
-
+	for addr := range ms.addressService.ListAddressInfo() {
 		actor, err := ms.nodeClient.StateGetActor(context.TODO(), addr, venustypes.EmptyTSK)
 		if err != nil {
 			ms.log.Errorf("get %s's actor %v", addr, err)
@@ -276,7 +281,7 @@ func updateTipsetFile(filePath string, tsCache *TipsetCache) error {
 	}
 	defer file.Close()
 
-	b, err := json.Marshal(tsCache)
+	b, err := json.MarshalIndent(tsCache, " ", "\t")
 	if err != nil {
 		return err
 	}

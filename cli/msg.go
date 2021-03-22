@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/filecoin-project/venus/pkg/constants"
-	"github.com/ipfs-force-community/venus-messager/types"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/ipfs/go-cid"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/urfave/cli/v2"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 var MsgCmds = &cli.Command{
@@ -157,12 +156,6 @@ var listCmd = &cli.Command{
 var updateAllFilledMessageCmd = &cli.Command{
 	Name:  "update_all_filled_msg",
 	Usage: "manual update all filled message state",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "really-do-it",
-			Usage: "pass this flag if you know what you are doing",
-		},
-	},
 	Action: func(ctx *cli.Context) error {
 		cli, closer, err := getAPI(ctx)
 		if err != nil {
@@ -170,9 +163,6 @@ var updateAllFilledMessageCmd = &cli.Command{
 		}
 		defer closer()
 
-		if !ctx.Bool("really-do-it") {
-			return xerrors.Errorf("pass --really-do-it to confirm this action")
-		}
 		count, err := cli.UpdateAllFilledMessage(ctx.Context)
 		if err != nil {
 			return err
@@ -187,10 +177,6 @@ var updateFilledMessageCmd = &cli.Command{
 	Name:  "update_filled_msg",
 	Usage: "manual update one filled message state",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "really-do-it",
-			Usage: "pass this flag if you know what you are doing",
-		},
 		&cli.StringFlag{
 			Name:  "id",
 			Usage: "message id",
@@ -213,9 +199,6 @@ var updateFilledMessageCmd = &cli.Command{
 		}
 		defer closer()
 
-		if !ctx.Bool("really-do-it") {
-			return xerrors.Errorf("pass --really-do-it to confirm this action")
-		}
 		var id string
 		if id = ctx.String("uuid"); len(id) > 0 {
 
