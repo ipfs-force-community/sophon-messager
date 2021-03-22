@@ -246,6 +246,19 @@ func (m *sqliteMessageRepo) ListFilledMessageBelowNonce(addr address.Address, no
 	return result, nil
 }
 
+func (m *sqliteMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	err := m.DB.Find(&sqlMsgs, "height=? AND state=?", height, types.FillMsg).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Error

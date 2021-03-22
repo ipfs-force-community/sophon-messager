@@ -5,6 +5,8 @@
 ./*.log
 *.db
 *.txt
+*.db-shm
+*.db-wal
 ./cmds/cfg_example/cfg_example
 venus-messager
 *.log

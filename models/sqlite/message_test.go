@@ -40,7 +40,7 @@ func TestSageAndGetMessage(t *testing.T) {
 	uuid, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := msgDb.GetMessage(uuid)
+	result, err := msgDb.GetMessageByUid(uuid)
 	assert.NoError(t, err)
 
 	beforeSave := ObjectToString(msg)
@@ -58,7 +58,7 @@ func TestSageAndGetMessage(t *testing.T) {
 	signedMsg := NewSignedMessages(1)[0]
 	_, err = msgDb.SaveMessage(signedMsg)
 	assert.NoError(t, err)
-	msg2, err := msgDb.GetMessageBySignedCid(signedMsg.SignedCid.String())
+	msg2, err := msgDb.GetMessageBySignedCid(*signedMsg.SignedCid)
 	assert.NoError(t, err)
 	assert.Equal(t, signedMsg.SignedCid, msg2.SignedCid)
 }
@@ -87,10 +87,10 @@ func TestUpdateMessageInfoByCid(t *testing.T) {
 
 	height := abi.ChainEpoch(10)
 	state := types.OnChainMsg
-	_, err = db.MessageRepo().UpdateMessageInfoByCid(unsignedCid.String(), rec, height, state, tsKey.String())
+	_, err = db.MessageRepo().UpdateMessageInfoByCid(unsignedCid.String(), rec, height, state, tsKey)
 	assert.NoError(t, err)
 
-	msg2, err := db.MessageRepo().GetMessageByCid(unsignedCid.String())
+	msg2, err := db.MessageRepo().GetMessageByCid(*unsignedCid)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(height), msg2.Height)
 	assert.Equal(t, rec, msg2.Receipt)
@@ -116,7 +116,7 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 	_, err = db.MessageRepo().UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
 	assert.NoError(t, err)
 
-	msg2, err := db.MessageRepo().GetMessage(msg.ID)
+	msg2, err := db.MessageRepo().GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, types.OnChainMsg, msg2.State)
 }
@@ -184,8 +184,27 @@ func TestSqliteMessageRepo_GetMessageByFromAndNonce(t *testing.T) {
 	_, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := msgDb.GetMessageByFromAndNonce(msg.From.String(), msg.Nonce)
+	result, err := msgDb.GetMessageByFromAndNonce(msg.From, msg.Nonce)
 	assert.NoError(t, err)
 
 	assert.Equal(t, ObjectToString(msg), ObjectToString(result))
+}
+
+func TestSqliteMessageRepo_ListFilledMessageByHeight(t *testing.T) {
+	name := "ListFilledMessageByHeight.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
+	msgDb := db.MessageRepo()
+	for _, msg := range NewSignedMessages(10) {
+		msg.Height = 10
+		msg.State = types.FillMsg
+		_, err := msgDb.SaveMessage(msg)
+		assert.NoError(t, err)
+	}
+
+	result, err := msgDb.ListFilledMessageByHeight(10)
+	assert.NoError(t, err)
+	assert.Len(t, result, 10)
 }

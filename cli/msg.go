@@ -3,9 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"strconv"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
@@ -98,7 +99,6 @@ var findCmd = &cli.Command{
 		return nil
 	},
 }
-
 
 var waitMessagerCmds = &cli.Command{
 	Name:  "wait",
@@ -315,7 +315,7 @@ var replaceCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			msg, err := client.GetMessageByFromAndNonce(ctx.Context, f.String(), n)
+			msg, err := client.GetMessageByFromAndNonce(ctx.Context, f, n)
 			if err != nil {
 				return fmt.Errorf("could not find referenced message: %w", err)
 			}

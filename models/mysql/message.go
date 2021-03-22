@@ -1,9 +1,10 @@
 package mysql
 
 import (
-	"github.com/ipfs/go-cid"
 	"reflect"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	"gorm.io/gorm"
@@ -57,6 +58,10 @@ var _ repo.MessageRepo = (*mysqlMessageRepo)(nil)
 
 type mysqlMessageRepo struct {
 	*gorm.DB
+}
+
+func (m mysqlMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
+	panic("implement me")
 }
 
 func (m mysqlMessageRepo) ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error) {

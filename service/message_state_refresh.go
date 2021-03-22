@@ -43,7 +43,6 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	revertMsgs, err := ms.processRevertHead(ctx, h)
 	if err != nil {
-		ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
 		return err
 	}
 
@@ -66,7 +65,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		for _, msg := range applyMsgs {
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
 			if err != nil {
-				ms.log.Warning("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
+				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
 				continue
 			}
 
@@ -100,7 +99,6 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		return nil
 	})
 	if err != nil {
-		ms.failedHeads = append(ms.failedHeads, failedHead{headChan: headChan{h.apply, h.revert}, Time: time.Now()})
 		return err
 	}
 
@@ -116,7 +114,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	for cid := range revertMsgs {
-		if err := ms.messageState.UpdateMessageStateByCid(cid, types.UnFillMsg); err != nil {
+		if err := ms.messageState.UpdateMessageStateByCid(cid, types.FillMsg); err != nil {
 			ms.log.Errorf("update message state failed, cid: %s error: %v", cid.String(), err)
 		}
 	}
@@ -135,19 +133,17 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {
 	revertMsgs := make(map[cid.Cid]struct{})
-	for _, tipset := range h.revert {
-		if tipset.Defined() {
-			msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, tipset.At(0).Cid())
-			if err != nil {
-				return nil, xerrors.Errorf("get block message failed %v", err)
+	for _, ts := range h.revert {
+		msgs, err := ms.repo.MessageRepo().ListFilledMessageByHeight(ts.Height())
+		if err != nil {
+			return nil, xerrors.Errorf("found message at height %d error %v", ts.Height(), err)
+		}
+
+		for _, msg := range msgs {
+			if _, ok := ms.addressService.GetAddressInfo(msg.From.String()); ok && msg.UnsignedCid != nil {
+				revertMsgs[*msg.UnsignedCid] = struct{}{}
 			}
 
-			for _, msg := range msgs {
-				if _, ok := ms.addressService.addrInfo[msg.Message.From.String()]; ok {
-					revertMsgs[msg.Message.Cid()] = struct{}{}
-				}
-
-			}
 		}
 	}
 
