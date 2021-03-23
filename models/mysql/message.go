@@ -80,7 +80,7 @@ func (m mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*t
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState, error) {
+func (m mysqlMessageRepo) GetMessageState(id string) (types.MessageState, error) {
 	panic("implement me")
 }
 
@@ -100,14 +100,14 @@ func newMysqlMessageRepo(db *gorm.DB) mysqlMessageRepo {
 	return mysqlMessageRepo{DB: db}
 }
 
-func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
+func (m mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	err := m.DB.Save(msg).Error
 	return msg.ID, err
 }
 
-func (m mysqlMessageRepo) GetMessageByUid(uuid types.UUID) (*types.Message, error) {
+func (m mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 	var msg *mysqlMessage
-	if err := m.DB.Where(&mysqlMessage{Id: uuid.String(), IsDeleted: -1}).First(&msg).Error; err != nil {
+	if err := m.DB.Where(&mysqlMessage{Id: id, IsDeleted: -1}).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -158,6 +158,6 @@ func (m mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.Messag
 	panic("implement me")
 }
 
-func (m mysqlMessageRepo) UpdateMessageStateByID(uuid types.UUID, state types.MessageState) (types.UUID, error) {
+func (m mysqlMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) (string, error) {
 	panic("implement me")
 }

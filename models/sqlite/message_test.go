@@ -37,10 +37,10 @@ func TestSageAndGetMessage(t *testing.T) {
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
 
-	uuid, err := msgDb.SaveMessage(msg)
+	id, err := msgDb.SaveMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := msgDb.GetMessageByUid(uuid)
+	result, err := msgDb.GetMessageByUid(id)
 	assert.NoError(t, err)
 
 	beforeSave := ObjectToString(msg)

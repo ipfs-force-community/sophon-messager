@@ -4,6 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"log"
+	"math/rand"
+	"net/http"
+	"time"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -11,10 +16,6 @@ import (
 	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"log"
-	"math/rand"
-	"net/http"
-	"time"
 )
 
 func main() {
@@ -49,7 +50,7 @@ func main() {
 				to := addrs[rand.Intn(2)]
 				fmt.Println(from)
 				uid, err := client.PushMessageWithId(context.Background(),
-					types.NewUUID(),
+					types.NewUUID().String(),
 					&venustypes.UnsignedMessage{
 						Version: 0,
 						To:      from,
@@ -69,7 +70,7 @@ func main() {
 					return
 				}
 
-				fmt.Println("send message " + uid.String())
+				fmt.Println("send message " + uid)
 			}
 		}
 	}

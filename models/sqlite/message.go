@@ -17,8 +17,8 @@ import (
 )
 
 type sqliteMessage struct {
-	ID      types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Version uint64     `gorm:"column:version;unsigned bigint"`
+	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
+	Version uint64 `gorm:"column:version;unsigned bigint"`
 
 	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;"`
 	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
@@ -193,7 +193,7 @@ func newSqliteMessageRepo(db *gorm.DB) *sqliteMessageRepo {
 	return &sqliteMessageRepo{DB: db}
 }
 
-func (m *sqliteMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState, error) {
+func (m *sqliteMessageRepo) GetMessageState(id string) (types.MessageState, error) {
 	type Result struct {
 		State int
 	}
@@ -212,7 +212,7 @@ func (m *sqliteMessageRepo) GetMessageState(uuid types.UUID) (types.MessageState
 
 func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").Where("id=?", msg.ID.String()).UpdateColumn("state", types.ExpireMsg).Error
+		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.ExpireMsg).Error
 		if err != nil {
 			return err
 		}
@@ -290,7 +290,7 @@ func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
-func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) {
+func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	sqlMsg := FromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 	//todo check
@@ -299,9 +299,9 @@ func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (types.UUID, error) 
 	return msg.ID, err
 }
 
-func (m *sqliteMessageRepo) GetMessageByUid(uuid types.UUID) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("id = ?", uuid.String()).First(&msg).Error; err != nil {
+	if err := m.DB.Where("id = ?", id).First(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -426,7 +426,7 @@ func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.Mess
 		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
 }
 
-func (m *sqliteMessageRepo) UpdateMessageStateByID(uuid types.UUID, state types.MessageState) (types.UUID, error) {
-	return uuid, m.DB.Debug().Model(&sqliteMessage{}).
-		Where("id = ?", uuid).UpdateColumn("state", state).Error
+func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) (string, error) {
+	return id, m.DB.Debug().Model(&sqliteMessage{}).
+		Where("id = ?", id).UpdateColumn("state", state).Error
 }

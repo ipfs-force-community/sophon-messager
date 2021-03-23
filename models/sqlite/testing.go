@@ -36,7 +36,7 @@ func NewSignedMessages(count int) []*types.Message {
 
 func NewMessage() *types.Message {
 	return &types.Message{
-		ID:              types.NewUUID(),
+		ID:              types.NewUUID().String(),
 		UnsignedMessage: NewUnsignedMessage(),
 		Meta: &types.MsgMeta{
 			ExpireEpoch:       100,

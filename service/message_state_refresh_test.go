@@ -89,7 +89,7 @@ func (b *builder) LoadMessage(count int) ([]*types.Message, error) {
 			}
 			for _, m := range blockMsgs.SecpkMessages {
 				msgs = append(msgs, &types.Message{
-					ID:              types.NewUUID(),
+					ID:              types.NewUUID().String(),
 					UnsignedMessage: m.Message,
 					Signature:       &m.Signature,
 					State:           types.UnFillMsg,
@@ -97,7 +97,7 @@ func (b *builder) LoadMessage(count int) ([]*types.Message, error) {
 			}
 			for _, m := range blockMsgs.BlsMessages {
 				msgs = append(msgs, &types.Message{
-					ID:              types.NewUUID(),
+					ID:              types.NewUUID().String(),
 					UnsignedMessage: *m,
 					State:           types.UnFillMsg,
 				})

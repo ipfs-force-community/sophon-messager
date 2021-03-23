@@ -4,30 +4,29 @@ import (
 	"context"
 	"time"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type IMessager interface {
-	WaitMessage(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
-	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-	PushMessageWithId(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-	GetMessageByUid(ctx context.Context, uuid types.UUID) (*types.Message, error)
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
+	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
+	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
 	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
 	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 	ListMessage(ctx context.Context) ([]*types.Message, error)
 	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
-	UpdateMessageStateByID(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error)
+	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)
 	UpdateAllFilledMessage(ctx context.Context) (int, error)
-	UpdateFilledMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error)
-	ReplaceMessage(ctx context.Context, uuid types.UUID, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
+	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -47,20 +46,20 @@ var _ IMessager = (*Message)(nil)
 
 type Message struct {
 	Internal struct {
-		WaitMessage              func(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error)
-		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-		PushMessageWithId        func(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error)
-		GetMessageByUid          func(ctx context.Context, uuid types.UUID) (*types.Message, error)
+		WaitMessage              func(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
+		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
+		GetMessageByUid          func(ctx context.Context, id string) (*types.Message, error)
 		GetMessageByCid          func(ctx context.Context, id cid.Cid) (*types.Message, error)
 		GetMessageBySignedCid    func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByUnsignedCid  func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
-		UpdateMessageStateByID   func(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error)
+		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
-		UpdateFilledMessageByID  func(ctx context.Context, uuid types.UUID) (types.UUID, error)
-		ReplaceMessage           func(ctx context.Context, uuid types.UUID, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
+		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByID           func(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -77,16 +76,16 @@ type Message struct {
 	}
 }
 
-func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (types.UUID, error) {
+func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	return message.Internal.PushMessage(ctx, msg, meta)
 }
 
-func (message *Message) PushMessageWithId(ctx context.Context, uuid types.UUID, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (types.UUID, error) {
-	return message.Internal.PushMessageWithId(ctx, uuid, msg, meta)
+func (message *Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.Internal.PushMessageWithId(ctx, id, msg, meta)
 }
 
-func (message *Message) GetMessageByUid(ctx context.Context, uuid types.UUID) (*types.Message, error) {
-	return message.Internal.GetMessageByUid(ctx, uuid)
+func (message *Message) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
+	return message.Internal.GetMessageByUid(ctx, id)
 }
 
 func (message *Message) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
@@ -113,7 +112,7 @@ func (message *Message) UpdateMessageStateByCid(ctx context.Context, cid cid.Cid
 	return message.Internal.UpdateMessageStateByCid(ctx, cid, state)
 }
 
-func (message *Message) UpdateMessageStateByID(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error) {
+func (message *Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
 	return message.Internal.UpdateMessageStateByID(ctx, id, state)
 }
 
@@ -121,12 +120,12 @@ func (message *Message) UpdateAllFilledMessage(ctx context.Context) (int, error)
 	return message.Internal.UpdateAllFilledMessage(ctx)
 }
 
-func (message *Message) UpdateFilledMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error) {
-	return message.Internal.UpdateFilledMessageByID(ctx, uuid)
+func (message *Message) UpdateFilledMessageByID(ctx context.Context, id string) (string, error) {
+	return message.Internal.UpdateFilledMessageByID(ctx, id)
 }
 
-func (message *Message) ReplaceMessage(ctx context.Context, uuid types.UUID, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
-	return message.Internal.ReplaceMessage(ctx, uuid, auto, maxFee, gasLimit, gasPremium, gasFeecap)
+func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
+	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
 
 func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
@@ -173,7 +172,7 @@ func (message *Message) DeleteAddress(ctx context.Context, addr string) (string,
 	return message.Internal.DeleteAddress(ctx, addr)
 }
 
-func (message *Message) WaitMessage(ctx context.Context, uuid types.UUID, confidence uint64) (*types.Message, error) {
+func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
 	tm := time.NewTicker(time.Second * 30)
 	defer tm.Stop()
 
@@ -183,7 +182,7 @@ func (message *Message) WaitMessage(ctx context.Context, uuid types.UUID, confid
 	for {
 		select {
 		case <-doneCh:
-			msg, err := message.Internal.GetMessageByUid(ctx, uuid)
+			msg, err := message.Internal.GetMessageByUid(ctx, id)
 			if err != nil {
 				return nil, err
 			}

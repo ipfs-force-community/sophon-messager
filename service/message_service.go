@@ -7,21 +7,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
 	"github.com/ipfs-force-community/venus-wallet/core"
+	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 const (
@@ -89,7 +88,7 @@ func NewMessageService(repo repo.Repo,
 }
 
 func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) error {
-	if msg.ID.IsEmpty() {
+	if len(msg.ID) == 0 {
 		return xerrors.New("empty uid")
 	}
 	//replace address
@@ -118,12 +117,12 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
-func (ms *MessageService) GetMessageByUid(ctx context.Context, uuid types.UUID) (*types.Message, error) {
+func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	msg, err := ms.repo.MessageRepo().GetMessageByUid(uuid)
+	msg, err := ms.repo.MessageRepo().GetMessageByUid(id)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +147,8 @@ func (ms *MessageService) GetMessageByCid(ctx context.Context, id cid.Cid) (*typ
 	return msg, nil
 }
 
-func (ms *MessageService) GetMessageState(ctx context.Context, uuid types.UUID) (types.MessageState, error) {
-	return ms.repo.MessageRepo().GetMessageState(uuid)
+func (ms *MessageService) GetMessageState(ctx context.Context, id string) (types.MessageState, error) {
+	return ms.repo.MessageRepo().GetMessageState(id)
 }
 
 func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error) {
@@ -190,7 +189,7 @@ func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid strin
 	return ms.repo.MessageRepo().UpdateMessageStateByCid(cid, state)
 }
 
-func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id types.UUID, state types.MessageState) (types.UUID, error) {
+func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
 	return ms.repo.MessageRepo().UpdateMessageStateByID(id, state)
 }
 
@@ -489,6 +488,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
 			ms.log.Errorf("update filled message %v", err)
+			continue
 		}
 		updateCount++
 	}
@@ -512,17 +512,17 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 	return nil
 }
 
-func (ms *MessageService) UpdateSignedMessageByID(ctx context.Context, uuid types.UUID) (types.UUID, error) {
-	msg, err := ms.GetMessageByUid(ctx, uuid)
+func (ms *MessageService) UpdateSignedMessageByID(ctx context.Context, id string) (string, error) {
+	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
-		return uuid, err
+		return id, err
 	}
 
-	return uuid, ms.updateFilledMessage(ctx, msg)
+	return id, ms.updateFilledMessage(ctx, msg)
 }
 
-func (ms *MessageService) ReplaceMessage(ctx context.Context, uuid types.UUID, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
-	msg, err := ms.GetMessageByUid(ctx, uuid)
+func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
+	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
 		return cid.Undef, xerrors.Errorf("found message %v", err)
 	}
@@ -612,14 +612,14 @@ func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Messag
 	//签名
 	data, err := msg.UnsignedMessage.ToStorageBlock()
 	if err != nil {
-		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID.String(), err)
+		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
 	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), core.MsgMeta{
 		Type:  core.MTChainMsg,
 		Extra: data.RawData(),
 	})
 	if err != nil {
-		return venusTypes.SignedMessage{}, xerrors.Errorf("wallet sign failed %s fail %v", msg.ID.String(), err)
+		return venusTypes.SignedMessage{}, xerrors.Errorf("wallet sign failed %s fail %v", msg.ID, err)
 	}
 
 	msg.Signature = sig
