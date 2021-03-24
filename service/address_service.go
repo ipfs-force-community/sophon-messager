@@ -242,7 +242,7 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, walletI
 	// address to handle remote wallet deletion
 	for addr := range walletAddrs {
 		addrInfo, ok := addressService.GetAddressInfo(addr)
-		if !ok || addrInfo.State != types.Alive {
+		if !ok || addrInfo.State == types.Notfound {
 			continue
 		}
 		addressService.log.Infof("remote wallet delete address %s", addr.String())
@@ -277,7 +277,7 @@ func (addressService *AddressService) checkAddressState() error {
 			if err != nil {
 				addressService.log.Errorf("get filled message %v", err)
 			} else if len(msgs) == 0 {
-				// maybe add address again
+				// add address again
 				if addrInfo, err := addressService.repo.AddressRepo().GetAddress(context.TODO(), addr); err == nil && addrInfo.State == types.Alive {
 					isDeleted = true
 				} else if err := addressService.repo.AddressRepo().DelAddress(context.TODO(), addr); err != nil {
