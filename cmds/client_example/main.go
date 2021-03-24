@@ -49,6 +49,15 @@ func main() {
 				from := addrs[rand.Intn(2)]
 				to := addrs[rand.Intn(2)]
 				fmt.Println(from)
+				msgMate := &types.MsgMeta{
+					ExpireEpoch:       abi.ChainEpoch(1000000+i),
+					GasOverEstimation: 1.25,
+					MaxFee:            big.NewInt(10000000000000000),
+					MaxFeeCap:         big.NewInt(10000000000000000),
+				}
+				if i < 5 {
+					msgMate.ExpireEpoch = 0
+				}
 				uid, err := client.PushMessageWithId(context.Background(),
 					types.NewUUID().String(),
 					&venustypes.UnsignedMessage{
@@ -59,12 +68,7 @@ func main() {
 						Value:   abi.NewTokenAmount(100),
 						Method:  0,
 					},
-					&types.MsgMeta{
-						ExpireEpoch:       1000000,
-						GasOverEstimation: 1.25,
-						MaxFee:            big.NewInt(10000000000000000),
-						MaxFeeCap:         big.NewInt(10000000000000000),
-					})
+					msgMate)
 				if err != nil {
 					log.Fatal(err)
 					return

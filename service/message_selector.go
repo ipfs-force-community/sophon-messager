@@ -135,6 +135,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		return nil, nil, nil, xerrors.Errorf("list %s unpackage message error %v", mAddr, err)
 	}
 	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].Meta.ExpireEpoch < messages[j].Meta.ExpireEpoch
+	})
 
 	//sign new message
 	nonceGap := addr.Nonce - actor.Nonce
