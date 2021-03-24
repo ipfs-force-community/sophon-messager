@@ -119,7 +119,7 @@ func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr
 	return address.Undef, nil
 }
 
-func (addressService *AddressService) PermitAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (addressService *AddressService) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	_, err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Alive)
 	if err != nil {
 		return address.Undef, err

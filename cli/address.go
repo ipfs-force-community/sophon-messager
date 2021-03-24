@@ -281,7 +281,7 @@ var permitAddrCmd = &cli.Command{
 			return xerrors.Errorf("address not exist")
 		}
 
-		_, err = client.PermitAddress(ctx.Context, addr)
+		_, err = client.ActiveAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
