@@ -39,10 +39,10 @@ func TestSageAndGetMessage(t *testing.T) {
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
 
-	id, err := msgDb.SaveMessage(msg)
+	err := msgDb.CreateMessage(msg)
 	assert.NoError(t, err)
 
-	result, err := msgDb.GetMessageByUid(id)
+	result, err := msgDb.GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
 
 	beforeSave := ObjectToString(msg)
@@ -58,7 +58,7 @@ func TestSageAndGetMessage(t *testing.T) {
 	assert.LessOrEqual(t, 1, len(unchainedMsgs))
 
 	signedMsg := NewSignedMessages(1)[0]
-	_, err = msgDb.SaveMessage(signedMsg)
+	err = msgDb.CreateMessage(signedMsg)
 	assert.NoError(t, err)
 	msg2, err := msgDb.GetMessageBySignedCid(*signedMsg.SignedCid)
 	assert.NoError(t, err)
@@ -75,7 +75,7 @@ func TestUpdateMessageInfoByCid(t *testing.T) {
 	msg := NewSignedMessages(1)[0]
 	unsignedCid := msg.UnsignedCid
 
-	_, err := db.MessageRepo().SaveMessage(msg)
+	err := db.MessageRepo().CreateMessage(msg)
 	assert.NoError(t, err)
 
 	rec := &venustypes.MessageReceipt{
@@ -112,7 +112,7 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 	cid := msg.UnsignedMessage.Cid()
 	msg.UnsignedCid = &cid
 
-	_, err := db.MessageRepo().SaveMessage(msg)
+	err := db.MessageRepo().CreateMessage(msg)
 	assert.NoError(t, err)
 
 	_, err = db.MessageRepo().UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
@@ -136,12 +136,12 @@ func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
 
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
-	_, err := msgDb.SaveMessage(msg)
+	err := msgDb.CreateMessage(msg)
 	assert.NoError(t, err)
 
 	signedMsgs := NewSignedMessages(10)
 	for _, msg := range signedMsgs {
-		_, err := msgDb.SaveMessage(msg)
+		err := msgDb.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 	startTime := time.Now().Add(-time.Second * 3600)
@@ -159,13 +159,13 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 
 	msgDb := db.MessageRepo()
 	msg := NewMessage()
-	_, err := msgDb.SaveMessage(msg)
+	err := msgDb.CreateMessage(msg)
 	assert.NoError(t, err)
 
 	signedMsgs := NewSignedMessages(10)
 	for i, msg := range signedMsgs {
 		msg.Height = int64(i)
-		_, err := msgDb.SaveMessage(msg)
+		err := msgDb.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 	height := abi.ChainEpoch(5)
@@ -183,7 +183,7 @@ func TestSqliteMessageRepo_GetMessageByFromAndNonce(t *testing.T) {
 
 	msgDb := db.MessageRepo()
 	msg := NewSignedMessages(1)[0]
-	_, err := msgDb.SaveMessage(msg)
+	err := msgDb.CreateMessage(msg)
 	assert.NoError(t, err)
 
 	result, err := msgDb.GetMessageByFromAndNonce(msg.From, msg.Nonce)
@@ -202,7 +202,7 @@ func TestSqliteMessageRepo_ListFilledMessageByHeight(t *testing.T) {
 	for _, msg := range NewSignedMessages(10) {
 		msg.Height = 10
 		msg.State = types.FillMsg
-		_, err := msgDb.SaveMessage(msg)
+		err := msgDb.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 
@@ -231,7 +231,7 @@ func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
 		if i%2 == 0 {
 			msg.State = types.FillMsg
 		}
-		_, err := msgDb.SaveMessage(msg)
+		err := msgDb.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 
@@ -251,7 +251,7 @@ func TestSqliteMessageRepo_UpdateUnFilledMessageStateByAddress(t *testing.T) {
 	msgs := NewMessages(10)
 	for _, msg := range msgs {
 		msg.State = types.UnFillMsg
-		_, err := msgDb.SaveMessage(msg)
+		err := msgDb.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 

@@ -22,7 +22,7 @@ func TestMessageStateCache(t *testing.T) {
 
 	msgs := sqlite.NewSignedMessages(10)
 	for _, msg := range msgs {
-		_, err := db.MessageRepo().SaveMessage(msg)
+		err := db.MessageRepo().CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 
