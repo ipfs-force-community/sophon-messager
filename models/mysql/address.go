@@ -39,7 +39,15 @@ type mysqlAddressRepo struct {
 	*gorm.DB
 }
 
-func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
+func (s mysqlAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address) error {
+	panic("implement me")
+}
+
+func (s mysqlAddressRepo) UpdateAddressState(ctx context.Context, addr address.Address, state types.AddressState) (address.Address, error) {
+	panic("implement me")
+}
+
+func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
 	panic("implement me")
 }
 
@@ -55,10 +63,10 @@ func (s mysqlAddressRepo) SaveAddress(ctx context.Context, address *types.Addres
 	panic("implement me")
 }
 
-func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
+func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
 	if err := s.DB.Where(&mysqlAddress{
-		Addr:      addr,
+		Addr:      addr.String(),
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
 		return nil, err
@@ -67,10 +75,10 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr string) (*types.A
 	return a.Address(), nil
 }
 
-func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
+func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
 	var a mysqlAddress
 	if err := s.DB.Where(&mysqlAddress{
-		Addr:      addr,
+		Addr:      addr.String(),
 		IsDeleted: -1,
 	}).First(&a).Error; err != nil {
 		return err

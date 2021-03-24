@@ -42,6 +42,10 @@ type mysqlWalletRepo struct {
 	*gorm.DB
 }
 
+func (s mysqlWalletRepo) HasWallet(name string) (bool, error) {
+	panic("implement me")
+}
+
 func newMysqlWalletRepo(db *gorm.DB) mysqlWalletRepo {
 	return mysqlWalletRepo{DB: db}
 }

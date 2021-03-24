@@ -18,7 +18,7 @@ func (a Address) SaveAddress(ctx context.Context, address *types.Address) (types
 	return a.AddressService.SaveAddress(ctx, address)
 }
 
-func (a Address) GetAddress(ctx context.Context, addr string) (*types.Address, error) {
+func (a Address) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	return a.AddressService.GetAddress(ctx, addr)
 }
 
@@ -30,10 +30,18 @@ func (a Address) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return a.AddressService.ListAddress(ctx)
 }
 
-func (a Address) UpdateNonce(ctx context.Context, uuid types.UUID, nonce uint64) (types.UUID, error) {
-	return a.AddressService.UpdateNonce(ctx, uuid, nonce)
+func (a Address) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
+	return a.AddressService.UpdateNonce(ctx, addr, nonce)
 }
 
-func (a Address) DeleteAddress(ctx context.Context, addr string) (string, error) {
+func (a Address) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return a.AddressService.DeleteAddress(ctx, addr)
+}
+
+func (a Address) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return a.AddressService.ForbiddenAddress(ctx, addr)
+}
+
+func (a Address) PermitAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return a.AddressService.PermitAddress(ctx, addr)
 }

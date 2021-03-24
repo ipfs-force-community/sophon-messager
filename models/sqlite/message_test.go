@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/go-address"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -207,4 +209,55 @@ func TestSqliteMessageRepo_ListFilledMessageByHeight(t *testing.T) {
 	result, err := msgDb.ListFilledMessageByHeight(10)
 	assert.NoError(t, err)
 	assert.Len(t, result, 10)
+}
+
+func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
+	name := "ListFilledMessageByAddress.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
+	msgDb := db.MessageRepo()
+
+	addr, err := address.NewFromString("f01005")
+	assert.NoError(t, err)
+	msgs, err := msgDb.ListFilledMessageByAddress(addr)
+	assert.NoError(t, err)
+	assert.Len(t, msgs, 0)
+
+	count := 10
+	signedMsgs := NewSignedMessages(count)
+	for i, msg := range signedMsgs {
+		if i%2 == 0 {
+			msg.State = types.FillMsg
+		}
+		_, err := msgDb.SaveMessage(msg)
+		assert.NoError(t, err)
+	}
+
+	msgs, err = msgDb.ListFilledMessageByAddress(signedMsgs[0].From)
+	assert.NoError(t, err)
+	assert.Len(t, msgs, count/2)
+}
+
+func TestSqliteMessageRepo_UpdateUnFilledMessageStateByAddress(t *testing.T) {
+	name := "ListFilledMessageByAddress.db"
+	db := setup(name)
+	defer func() {
+		assert.NoError(t, os.Remove(name))
+	}()
+	msgDb := db.MessageRepo()
+
+	msgs := NewMessages(10)
+	for _, msg := range msgs {
+		msg.State = types.UnFillMsg
+		_, err := msgDb.SaveMessage(msg)
+		assert.NoError(t, err)
+	}
+
+	assert.NoError(t, msgDb.UpdateUnFilledMessageStateByAddress(msgs[0].From, types.NoWalletMsg))
+
+	msg, err := msgDb.GetMessageByUid(msgs[0].ID)
+	assert.NoError(t, err)
+	assert.Equal(t, types.NoWalletMsg, msg.State)
 }

@@ -34,6 +34,15 @@ func NewSignedMessages(count int) []*types.Message {
 	return msgs
 }
 
+func NewMessages(count int) []*types.Message {
+	msgs := make([]*types.Message, count)
+	for i := 0; i < count; i++ {
+		msgs[i] = NewMessage()
+	}
+
+	return msgs
+}
+
 func NewMessage() *types.Message {
 	return &types.Message{
 		ID:              types.NewUUID().String(),

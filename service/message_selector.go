@@ -84,9 +84,13 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	maxAllowPendingMessage := uint64(50)
 	var toPushMessage []*venusTypes.SignedMessage
 
-	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addr.Addr)
+	addrT, err := address.NewFromString(addr.Addr)
+	if err != nil {
+		return nil, nil, nil, xerrors.Errorf("invalid address %v", addr.Addr)
+	}
+	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addrT)
 	if !exit {
-		return nil, nil, nil, xerrors.Errorf("no wallet cliet of address %s", addr.Addr)
+		return nil, nil, nil, xerrors.Errorf("no wallet client of address %s", addr.Addr)
 	}
 
 	mAddr, err := address.NewFromString(addr.Addr)
@@ -109,7 +113,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			return nil, nil, nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
 		}
 	}
-	//todo push sigined but not onchain message, when to resend message
+	//todo push signed but not onchain message, when to resend message
 	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(mAddr)
 	if err != nil {
 		messageSelector.log.Warnf("list filled message %v", err)
@@ -121,6 +125,10 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		})
 	}
 
+	if addrInfo.State == types.Notfound {
+		messageSelector.log.Infof("%s state is %d, skip select unchain message", addr.Addr, addrInfo.State)
+		return nil, nil, toPushMessage, nil
+	}
 	//消息排序
 	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(mAddr)
 	if err != nil {

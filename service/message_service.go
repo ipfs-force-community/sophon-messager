@@ -28,7 +28,7 @@ const (
 
 	LookBackLimit = 900
 
-	maxStoreTipsetCount = 900
+	maxStoreTipsetCount = 3000
 )
 
 type MessageService struct {
@@ -91,6 +91,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	if len(msg.ID) == 0 {
 		return xerrors.New("empty uid")
 	}
+
 	//replace address
 	if msg.From.Protocol() == address.ID {
 		fromA, err := ms.nodeClient.ResolveToKeyAddr(ctx, msg.From, nil)
@@ -108,6 +109,10 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	if !has {
 		return xerrors.Errorf("address %s not in wallet", msg.From)
 	}
+	if addrInfo, ok := ms.addressService.GetAddressInfo(msg.From); ok && addrInfo.State != types.Alive {
+		return xerrors.Errorf("address not available, state %d", addrInfo.State)
+	}
+
 	msg.Nonce = 0
 	err = ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
@@ -448,14 +453,14 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			ms.log.Infof("Stop push message")
 			return
 		case <-tm.C:
-			/*newHead, err := ms.nodeClient.ChainHead(ctx)
-			if err != nil {
-				ms.log.Errorf("fail to get chain head %v", err)
-			}
-			err = ms.pushMessageToPool(ctx, newHead)
-			if err != nil {
-				ms.log.Errorf("push message error %v", err)
-			}*/
+			//newHead, err := ms.nodeClient.ChainHead(ctx)
+			//if err != nil {
+			//	ms.log.Errorf("fail to get chain head %v", err)
+			//}
+			//err = ms.pushMessageToPool(ctx, newHead)
+			//if err != nil {
+			//	ms.log.Errorf("push message error %v", err)
+			//}
 		case newHead := <-ms.triggerPush:
 			start := time.Now()
 			ms.log.Infof("start to push message %d task wait", len(ms.triggerPush))
@@ -470,12 +475,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
-	for addrStr := range ms.addressService.ListAddressInfo() {
-		addr, err := address.NewFromString(addrStr)
-		if err != nil {
-			ms.log.Errorf("invalid address %v", addrStr)
-			continue
-		}
+	for addr := range ms.addressService.ListAddressInfo() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)
@@ -575,7 +575,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	addrInfo, exist := ms.addressService.GetAddressInfo(msg.From.String())
+	addrInfo, exist := ms.addressService.GetAddressInfo(msg.From)
 	if !exist {
 		return cid.Undef, xerrors.Errorf("address not found %s", msg.From.String())
 	}

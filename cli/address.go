@@ -21,6 +21,8 @@ var AddrCmds = &cli.Command{
 		listAddrCmd,
 		deleteAddrCmd,
 		updateNonceCmd,
+		forbiddenAddrCmd,
+		permitAddrCmd,
 	},
 }
 
@@ -83,7 +85,7 @@ var setAddrCmd = &cli.Command{
 			return err
 		}
 		if hasAddr {
-			return xerrors.Errorf("The same address exists")
+			return xerrors.Errorf("address exist")
 		}
 
 		_, err = client.SaveAddress(ctx.Context, &addr)
@@ -110,11 +112,15 @@ var findAddrCmd = &cli.Command{
 			return xerrors.Errorf("must pass address")
 		}
 
-		addr, err := client.GetAddress(ctx.Context, ctx.Args().First())
+		addr, err := address.NewFromString(ctx.Args().First())
 		if err != nil {
 			return err
 		}
-		bytes, err := json.MarshalIndent(addr, " ", "\t")
+		addrInfo, err := client.GetAddress(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+		bytes, err := json.MarshalIndent(addrInfo, " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -168,13 +174,13 @@ var updateNonceCmd = &cli.Command{
 			return xerrors.Errorf("must pass address")
 		}
 
-		addr, err := client.GetAddress(ctx.Context, ctx.Args().First())
+		addr, err := address.NewFromString(ctx.Args().First())
 		if err != nil {
 			return err
 		}
 
 		nonce := ctx.Uint64("nonce")
-		if _, err := client.UpdateNonce(ctx.Context, addr.ID, nonce); err != nil {
+		if _, err := client.UpdateNonce(ctx.Context, addr, nonce); err != nil {
 			return err
 		}
 
@@ -197,7 +203,85 @@ var deleteAddrCmd = &cli.Command{
 			return xerrors.Errorf("must pass address")
 		}
 
-		_, err = client.DeleteAddress(ctx.Context, ctx.Args().First())
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+		_, err = client.DeleteAddress(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var forbiddenAddrCmd = &cli.Command{
+	Name:      "forbidden",
+	Usage:     "forbidden address",
+	ArgsUsage: "address",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+
+		hasAddr, err := client.HasAddress(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+		if !hasAddr {
+			return xerrors.Errorf("address not exist")
+		}
+
+		_, err = client.ForbiddenAddress(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var permitAddrCmd = &cli.Command{
+	Name:      "permit",
+	Usage:     "permit address",
+	ArgsUsage: "address",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+
+		hasAddr, err := client.HasAddress(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+		if !hasAddr {
+			return xerrors.Errorf("address not exist")
+		}
+
+		_, err = client.PermitAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}

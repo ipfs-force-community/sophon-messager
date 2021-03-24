@@ -430,3 +430,8 @@ func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.Messag
 	return id, m.DB.Debug().Model(&sqliteMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
+
+func (m *sqliteMessageRepo) UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error {
+	return m.DB.Debug().Model(&sqliteMessage{}).Where("from_addr = ? and state = ?", addr.String(), types.UnFillMsg).
+		UpdateColumn("state", state).Error
+}

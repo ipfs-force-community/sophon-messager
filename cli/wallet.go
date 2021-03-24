@@ -25,7 +25,7 @@ var WalletCmds = &cli.Command{
 
 var addWalletCmd = &cli.Command{
 	Name:  "add",
-	Usage: "add wallet",
+	Usage: "add a new wallet",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "name",
@@ -46,11 +46,11 @@ var addWalletCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		var w types.Wallet
 
+		var w types.Wallet
+		w.Name = ctx.String("name")
 		w.CreatedAt = time.Now()
 		w.ID = types.NewUUID()
-		w.Name = ctx.String("name")
 		w.Url = ctx.String("url")
 		if len(w.Url) == 0 {
 			return xerrors.Errorf("url cannot be empty")
@@ -58,6 +58,15 @@ var addWalletCmd = &cli.Command{
 		w.Token = ctx.String("token")
 		if len(w.Token) == 0 {
 			return xerrors.Errorf("token cannot be empty")
+		}
+
+		has, err := client.HasWallet(ctx.Context, w.Name)
+		if err != nil {
+			return err
+		}
+		if has {
+			return xerrors.Errorf("wallet exist")
+
 		}
 
 		_, err = client.SaveWallet(ctx.Context, &w)
@@ -194,18 +203,9 @@ var listRemoteWalletAddrCmd = &cli.Command{
 }
 
 var deleteWalletCmd = &cli.Command{
-	Name:  "list-addr",
-	Usage: "list remote wallet address by uuid",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "uuid",
-			Usage: "Search data according to uuid",
-		},
-		&cli.StringFlag{
-			Name:  "name",
-			Usage: "Search data according to name",
-		},
-	},
+	Name:      "del",
+	Usage:     "delete wallet by name",
+	ArgsUsage: "name",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -213,33 +213,17 @@ var deleteWalletCmd = &cli.Command{
 		}
 		defer closer()
 
-		var uuid types.UUID
-		uuidStr := ctx.String("uuid")
-		if len(uuidStr) > 0 {
-			uuid, err = types.ParseUUID(uuidStr)
-			if err != nil {
-				return err
-			}
-		} else if name := ctx.String("name"); len(name) > 0 {
-			w, err := client.GetWalletByName(ctx.Context, name)
-			if err != nil {
-				return err
-			}
-			uuid = w.ID
-		} else {
-			return xerrors.Errorf("value of query must be entered")
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass name")
 		}
+		name := ctx.Args().First()
+		fmt.Println("name", name)
 
-		addrs, err := client.ListRemoteWalletAddress(ctx.Context, uuid)
+		_, err = client.DeleteWallet(ctx.Context, name)
 		if err != nil {
 			return err
 		}
 
-		bytes, err := json.MarshalIndent(addrs, " ", "\t")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(bytes))
 		return nil
 	},
 }

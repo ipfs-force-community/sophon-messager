@@ -60,6 +60,10 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m mysqlMessageRepo) UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error {
+	panic("implement me")
+}
+
 func (m mysqlMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
 	panic("implement me")
 }
