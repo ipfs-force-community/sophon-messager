@@ -44,7 +44,7 @@ type IMessager interface {
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
-	PermitAddress(ctx context.Context, addr address.Address) (address.Address, error)
+	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -82,7 +82,7 @@ type Message struct {
 		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
 		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
-		PermitAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 	}
 }
 
@@ -198,8 +198,8 @@ func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Addre
 	return message.Internal.ForbiddenAddress(ctx, addr)
 }
 
-func (message *Message) PermitAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return message.Internal.PermitAddress(ctx, addr)
+func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.ActiveAddress(ctx, addr)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

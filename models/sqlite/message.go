@@ -290,13 +290,12 @@ func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
+// SaveMessage used to update message and create message with CreateMessage
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
 	sqlMsg := FromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
-	//todo check
-	err := m.DB.Save(sqlMsg).Error
 
-	return msg.ID, err
+	return msg.ID, m.DB.Omit("created_at").Save(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

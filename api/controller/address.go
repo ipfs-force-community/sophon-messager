@@ -42,6 +42,6 @@ func (a Address) ForbiddenAddress(ctx context.Context, addr address.Address) (ad
 	return a.AddressService.ForbiddenAddress(ctx, addr)
 }
 
-func (a Address) PermitAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return a.AddressService.PermitAddress(ctx, addr)
+func (a Address) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return a.AddressService.ActiveAddress(ctx, addr)
 }
