@@ -17,4 +17,5 @@ type AddressRepo interface {
 	ListAddress(ctx context.Context) ([]*types.Address, error)
 	DelAddress(ctx context.Context, addr address.Address) error
 	UpdateAddress(ctx context.Context, addr *types.Address) error
+	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) error
 }
