@@ -27,8 +27,10 @@ type Address struct {
 	//max for current, use nonce and +1
 	Nonce    uint64       `json:"nonce"`
 	Weight   int64        `json:"weight"`
-	WalletID UUID         `json:"wallet_id"`
+	WalletID UUID         `json:"walletID"`
 	State    AddressState `json:"state"`
+	//number of address selection messages
+	SelectMsgNum int `json:"SelectMsgNum"`
 
 	IsDeleted int       `json:"isDeleted"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `json:"createAt"`  // 创建时间

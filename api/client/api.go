@@ -45,6 +45,7 @@ type IMessager interface {
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)
+	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -75,14 +76,15 @@ type Message struct {
 		DeleteWallet            func(ctx context.Context, name string) (string, error)
 		UpdateWallet            func(ctx context.Context, wallet *types.Wallet) (string, error)
 
-		SaveAddress      func(ctx context.Context, address *types.Address) (string, error)
-		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
-		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
-		ListAddress      func(ctx context.Context) ([]*types.Address, error)
-		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
-		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
-		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		SaveAddress        func(ctx context.Context, address *types.Address) (string, error)
+		GetAddress         func(ctx context.Context, addr address.Address) (*types.Address, error)
+		HasAddress         func(ctx context.Context, addr address.Address) (bool, error)
+		ListAddress        func(ctx context.Context) ([]*types.Address, error)
+		UpdateNonce        func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
+		DeleteAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
+		ForbiddenAddress   func(ctx context.Context, addr address.Address) (address.Address, error)
+		ActiveAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
+		UpdateSelectMsgNum func(ctx context.Context, addr address.Address, num int) (address.Address, error)
 	}
 }
 
@@ -200,6 +202,10 @@ func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Addre
 
 func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return message.Internal.ActiveAddress(ctx, addr)
+}
+
+func (message *Message) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
+	return message.Internal.UpdateSelectMsgNum(ctx, addr, num)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

@@ -80,12 +80,16 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 }
 
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, error) {
-	maxAllowPendingMessage := uint64(50)
 	var toPushMessage []*venusTypes.SignedMessage
 
 	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addr.Addr)
 	if !exit {
 		return nil, nil, nil, xerrors.Errorf("no wallet client of address %s", addr.Addr)
+	}
+	// TODO: 全局每个地址选择数量
+	maxAllowPendingMessage := uint64(50)
+	if addrInfo.SelectMsgNum != 0 {
+		maxAllowPendingMessage = uint64(addrInfo.SelectMsgNum)
 	}
 
 	//判断是否需要推送消息

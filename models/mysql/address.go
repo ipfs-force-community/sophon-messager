@@ -2,24 +2,25 @@ package mysql
 
 import (
 	"context"
-	"github.com/filecoin-project/go-address"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"gorm.io/gorm"
 	"reflect"
 	"time"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/hunjixin/automapper"
+	"gorm.io/gorm"
 
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type mysqlAddress struct {
-	ID       types.UUID         `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr     string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"` // 主键
-	Nonce    uint64             `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
-	Weight   int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
-	WalletID types.UUID         `gorm:"column:wallet_id;type:varchar(256)"`
-	State    types.AddressState `gorm:"column:state;type:int;index:addr_state;"`
+	ID           types.UUID         `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr         string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"` // 主键
+	Nonce        uint64             `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
+	Weight       int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	WalletID     types.UUID         `gorm:"column:wallet_id;type:varchar(256)"`
+	State        types.AddressState `gorm:"column:state;type:int;index:addr_state;"`
+	SelectMsgNum int                `gorm:"column:select_msg_num;type:int;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -32,15 +33,16 @@ func (s mysqlAddress) TableName() string {
 
 func FromAddress(addr *types.Address) *mysqlAddress {
 	return &mysqlAddress{
-		ID:        addr.ID,
-		Addr:      addr.Addr.String(),
-		Nonce:     addr.Nonce,
-		Weight:    addr.Weight,
-		WalletID:  addr.WalletID,
-		State:     addr.State,
-		IsDeleted: addr.IsDeleted,
-		CreatedAt: addr.CreatedAt,
-		UpdatedAt: addr.UpdatedAt,
+		ID:           addr.ID,
+		Addr:         addr.Addr.String(),
+		Nonce:        addr.Nonce,
+		Weight:       addr.Weight,
+		WalletID:     addr.WalletID,
+		State:        addr.State,
+		SelectMsgNum: addr.SelectMsgNum,
+		IsDeleted:    addr.IsDeleted,
+		CreatedAt:    addr.CreatedAt,
+		UpdatedAt:    addr.UpdatedAt,
 	}
 }
 
@@ -50,15 +52,16 @@ func (s mysqlAddress) Address() (*types.Address, error) {
 		return nil, err
 	}
 	return &types.Address{
-		ID:        s.ID,
-		Addr:      addr,
-		Nonce:     s.Nonce,
-		Weight:    s.Weight,
-		WalletID:  s.WalletID,
-		State:     s.State,
-		IsDeleted: s.IsDeleted,
-		CreatedAt: s.CreatedAt,
-		UpdatedAt: s.UpdatedAt,
+		ID:           s.ID,
+		Addr:         addr,
+		Nonce:        s.Nonce,
+		Weight:       s.Weight,
+		WalletID:     s.WalletID,
+		State:        s.State,
+		SelectMsgNum: s.SelectMsgNum,
+		IsDeleted:    s.IsDeleted,
+		CreatedAt:    s.CreatedAt,
+		UpdatedAt:    s.UpdatedAt,
 	}, nil
 }
 
@@ -135,4 +138,9 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 	}
 
 	return result.([]*types.Address), nil
+}
+
+func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) error {
+	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ?", addr.String()).
+		UpdateColumn("select_msg_num", num).Error
 }

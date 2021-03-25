@@ -31,6 +31,7 @@ type AddressService struct {
 type AddressInfo struct {
 	State        types.AddressState
 	WalletId     types.UUID
+	SelectMsgNum int
 	WalletClient IWalletClient
 }
 
@@ -131,6 +132,10 @@ func (addressService *AddressService) ActiveAddress(ctx context.Context, addr ad
 	return address.Undef, nil
 }
 
+func (addressService *AddressService) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
+	return addr, addressService.repo.AddressRepo().UpdateSelectMsgNum(ctx, addr, num)
+}
+
 func (addressService *AddressService) getLocalAddress() error {
 	addrsInfo, err := addressService.ListAddress(context.Background())
 	if err != nil {
@@ -147,6 +152,7 @@ func (addressService *AddressService) getLocalAddress() error {
 		addressService.SetAddressInfo(info.Addr, &AddressInfo{
 			State:        info.State,
 			WalletId:     info.WalletID,
+			SelectMsgNum: info.SelectMsgNum,
 			WalletClient: cli,
 		})
 	}
