@@ -2,11 +2,12 @@ package models
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/stretchr/testify/assert"
@@ -129,8 +130,9 @@ func TestSqliteAddressRepo_UpdateAddressNonce(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
-		rand.Seed(time.Now().Unix())
-		addr, err := address.NewIDAddress(rand.Uint64() / 2)
+		uid, err := uuid.NewUUID()
+		assert.NoError(t, err)
+		addr, err := address.NewActorAddress(uid[:])
 		assert.NoError(t, err)
 
 		addrInfo := &types.Address{
@@ -214,8 +216,9 @@ func TestSqliteAddressRepo_HasAddress(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
-		rand.Seed(time.Now().Unix())
-		addr, err := address.NewIDAddress(rand.Uint64() / 2)
+		uid, err := uuid.NewUUID()
+		assert.NoError(t, err)
+		addr, err := address.NewActorAddress(uid[:])
 		assert.NoError(t, err)
 
 		addrInfo := &types.Address{

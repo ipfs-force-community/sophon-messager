@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/filecoin-project/go-address"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -304,9 +306,11 @@ func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
-
-		addr, err := address.NewIDAddress(rand.Uint64() / 2)
+		uid, err := uuid.NewUUID()
 		assert.NoError(t, err)
+		addr, err := address.NewActorAddress(uid[:])
+		assert.NoError(t, err)
+
 		msgs, err := messageRepo.ListFilledMessageByAddress(addr)
 		assert.NoError(t, err)
 		assert.Len(t, msgs, 0)
@@ -317,6 +321,7 @@ func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
 			if i%2 == 0 {
 				msg.State = types.FillMsg
 			}
+			msg.From = addr
 			err := messageRepo.CreateMessage(msg)
 			assert.NoError(t, err)
 		}

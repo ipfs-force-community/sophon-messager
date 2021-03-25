@@ -50,7 +50,7 @@ func main() {
 				to := addrs[rand.Intn(2)]
 				fmt.Println(from)
 				msgMate := &types.MsgMeta{
-					ExpireEpoch:       abi.ChainEpoch(1000000+i),
+					ExpireEpoch:       abi.ChainEpoch(1000000 + i),
 					GasOverEstimation: 1.25,
 					MaxFee:            big.NewInt(10000000000000000),
 					MaxFeeCap:         big.NewInt(10000000000000000),
