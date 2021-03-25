@@ -46,6 +46,8 @@ type MessageService struct {
 	tsCache      *TipsetCache
 
 	messageSelector *MessageSelector
+
+	defaultMsgMeta *types.MsgMeta
 }
 
 type headChan struct {
@@ -82,6 +84,10 @@ func NewMessageService(repo repo.Repo,
 		},
 		triggerPush: make(chan *venusTypes.TipSet, 20),
 	}
+	var err error
+	if ms.defaultMsgMeta, err = ms.GetMsgMeta(); err != nil {
+		return nil, err
+	}
 	ms.refreshMessageState(context.TODO())
 
 	return ms, nil
@@ -110,9 +116,10 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 		return xerrors.Errorf("address %s not in wallet", msg.From)
 	}
 	if addrInfo, ok := ms.addressService.GetAddressInfo(msg.From); ok && addrInfo.State != types.Alive {
-		return xerrors.Errorf("address not available, state %d", addrInfo.State)
+		return xerrors.Errorf("address not available, state %s", types.AddrStateToString(addrInfo.State))
 	}
 
+	ms.replaceMessageMeta(msg.Meta)
 	msg.Nonce = 0
 	err = ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
@@ -120,6 +127,22 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	}
 
 	return err
+}
+
+func (ms *MessageService) replaceMessageMeta(meta *types.MsgMeta) {
+	if meta == nil {
+		meta = ms.defaultMsgMeta
+		return
+	}
+	if meta.GasOverEstimation == 0 {
+		meta.GasOverEstimation = ms.defaultMsgMeta.GasOverEstimation
+	}
+	if meta.MaxFee.NilOrZero() {
+		meta.MaxFee = ms.defaultMsgMeta.MaxFee
+	}
+	if meta.MaxFeeCap.NilOrZero() {
+		meta.MaxFeeCap = ms.defaultMsgMeta.MaxFeeCap
+	}
 }
 
 func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
@@ -604,6 +627,32 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	_, err = ms.nodeClient.MpoolBatchPush(ctx, []*venusTypes.SignedMessage{&signedMsg})
 
 	return signedMsg.Cid(), err
+}
+
+func (ms *MessageService) RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error) {
+	msgMeta, err := ms.GetMsgMeta()
+	if err != nil {
+		return nil, err
+	}
+	ms.defaultMsgMeta = msgMeta
+
+	return ms.defaultMsgMeta, nil
+}
+
+func (ms *MessageService) GetMsgMeta() (*types.MsgMeta, error) {
+	return nil, nil
+}
+
+func (ms *MessageService) getMsgMetaLoop() {
+	ticker := time.NewTicker(time.Minute * 3)
+	for range ticker.C {
+		msgMeta, err := ms.GetMsgMeta()
+		if err != nil {
+			ms.log.Errorf("get message meta %v", err)
+			continue
+		}
+		ms.defaultMsgMeta = msgMeta
+	}
 }
 
 func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {

@@ -27,6 +27,7 @@ type IMessager interface {
 	UpdateAllFilledMessage(ctx context.Context) (int, error)
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+	RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error)
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -69,6 +70,7 @@ type Message struct {
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+		RefreshMsgMeta           func(ctx context.Context) (*types.MsgMeta, error)
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByID           func(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -146,6 +148,12 @@ func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool
 	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
 
+func (message *Message) RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error) {
+	return message.Internal.RefreshMsgMeta(ctx)
+}
+
+///////  wallet  ///////
+
 func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
 	return message.Internal.SaveWallet(ctx, wallet)
 }
@@ -177,6 +185,8 @@ func (message *Message) DeleteWallet(ctx context.Context, name string) (string, 
 func (message *Message) UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
 	return message.Internal.UpdateWallet(ctx, wallet)
 }
+
+///////  address ///////
 
 func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
 	return message.Internal.SaveAddress(ctx, address)

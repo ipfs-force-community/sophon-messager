@@ -86,3 +86,7 @@ func (message Message) UpdateFilledMessageByID(ctx context.Context, id string) (
 func (message Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	return message.MsgService.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
+
+func (message Message) RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error) {
+	return message.MsgService.RefreshMsgMeta(ctx)
+}

@@ -103,7 +103,7 @@ func (addressService *AddressService) DeleteAddress(ctx context.Context, addr ad
 	go func() {
 		addressService.amendAddr <- addr
 	}()
-	addressService.log.Infof("change address %v state to %d", addr.String(), types.Notfound)
+	addressService.log.Infof("change address %v state to %s", addr.String(), types.AddrStateToString(types.Notfound))
 
 	return addr, nil
 }
@@ -127,7 +127,7 @@ func (addressService *AddressService) ActiveAddress(ctx context.Context, addr ad
 	}
 
 	addressService.setAddressState(addr, types.Alive)
-	addressService.log.Infof("permit address %v", addr.String())
+	addressService.log.Infof("active address %v", addr.String())
 
 	return address.Undef, nil
 }
@@ -305,7 +305,7 @@ func (addressService *AddressService) listenWalletDel() {
 			for addr := range addrs {
 				addressService.log.Infof("wallet %v delete address %s", walletId, addr)
 				if _, err := addressService.DeleteAddress(context.TODO(), addr); err != nil {
-					addressService.log.Errorf("delete address from wallet %s %s %v", walletId.String(), addr, err)
+					addressService.log.Infof("wallet %v delete address %s %v", walletId, addr, err)
 				}
 			}
 		}

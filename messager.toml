@@ -18,8 +18,8 @@
     user = ""
 
   [db.sqlite]
-    path = "./message.db"
     debug = false
+    path = "./message.db"
 
 [jwt]
   expireDuration = "0s"

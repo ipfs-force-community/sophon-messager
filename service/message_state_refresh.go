@@ -188,7 +188,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		for i := range receipts {
 			msg := msgs[i].Message
-			if _, ok := ms.addressService.addrInfo[msg.From]; ok {
+			if _, ok := ms.addressService.GetAddressInfo(msg.From); ok {
 				applyMsgs = append(applyMsgs, pendingMessage{
 					height:  height,
 					receipt: receipts[i],

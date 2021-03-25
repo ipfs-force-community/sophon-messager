@@ -88,11 +88,13 @@ func (s mysqlAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address
 }
 
 func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
-	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).UpdateColumn("nonce", nonce).Error
+	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
+		UpdateColumn("nonce", nonce).Error
 }
 
 func (s mysqlAddressRepo) UpdateAddressState(ctx context.Context, addr address.Address, state types.AddressState) (address.Address, error) {
-	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).UpdateColumn("state", state).Error
+	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
+		UpdateColumn("state", state).Error
 }
 
 func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
@@ -114,14 +116,8 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) 
 }
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	var a mysqlAddress
-	if err := s.DB.Where("addr = ? and is_deleted = -1", addr.String()).First(&a).Error; err != nil {
-		return err
-	}
-	a.IsDeleted = 1
-	a.State = types.Removed
-
-	return s.DB.Save(&a).Error
+	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+		Updates(map[string]interface{}{"is_deleted": 1, "state": types.Removed}).Error
 }
 
 func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
