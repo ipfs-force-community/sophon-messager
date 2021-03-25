@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/ipfs-force-community/venus-messager/models"
 	"os"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestMessageStateCache(t *testing.T) {
 	}()
 	assert.NoError(t, db.AutoMigrate())
 
-	msgs := sqlite.NewSignedMessages(10)
+	msgs := models.NewSignedMessages(10)
 	for _, msg := range msgs {
 		err := db.MessageRepo().CreateMessage(msg)
 		assert.NoError(t, err)

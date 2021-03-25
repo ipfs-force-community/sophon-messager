@@ -144,11 +144,7 @@ func (addressService *AddressService) getLocalAddress() error {
 			continue
 		}
 
-		addr, err := address.NewFromString(info.Addr)
-		if err != nil {
-			return xerrors.Errorf("invalid address %v", err)
-		}
-		addressService.SetAddressInfo(addr, &AddressInfo{
+		addressService.SetAddressInfo(info.Addr, &AddressInfo{
 			State:        info.State,
 			WalletId:     info.WalletID,
 			WalletClient: cli,
@@ -210,7 +206,7 @@ func (addressService *AddressService) ProcessWallet(ctx context.Context, walletI
 			continue
 		}
 		ta := &types.Address{
-			Addr:      addr.String(),
+			Addr:      addr,
 			Nonce:     nonce,
 			WalletID:  walletID,
 			UpdatedAt: time.Now(),
@@ -262,11 +258,7 @@ func (addressService *AddressService) checkAddressState() error {
 
 	for _, addr := range addrList {
 		if addr.State == types.Notfound {
-			addrT, err := address.NewFromString(addr.Addr)
-			if err != nil {
-				return xerrors.Errorf("invalid address %v", err)
-			}
-			addressService.amendAddr <- addrT
+			addressService.amendAddr <- addr.Addr
 		}
 	}
 

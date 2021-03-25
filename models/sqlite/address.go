@@ -32,12 +32,36 @@ func (s sqliteAddress) TableName() string {
 	return "addresses"
 }
 
-func FromAddress(address *types.Address) *sqliteAddress {
-	return automapper.MustMapper(address, TSqliteAddress).(*sqliteAddress)
+func FromAddress(addr *types.Address) *sqliteAddress {
+	return &sqliteAddress{
+		ID:        addr.ID,
+		Addr:      addr.Addr.String(),
+		Nonce:     addr.Nonce,
+		Weight:    addr.Weight,
+		WalletID:  addr.WalletID,
+		State:     addr.State,
+		IsDeleted: addr.IsDeleted,
+		CreatedAt: addr.CreatedAt,
+		UpdatedAt: addr.UpdatedAt,
+	}
 }
 
-func (s sqliteAddress) Address() *types.Address {
-	return automapper.MustMapper(&s, TAddress).(*types.Address)
+func (s sqliteAddress) Address() (*types.Address, error) {
+	addr, err := address.NewFromString(s.Addr)
+	if err != nil {
+		return nil, err
+	}
+	return &types.Address{
+		ID:        s.ID,
+		Addr:      addr,
+		Nonce:     s.Nonce,
+		Weight:    s.Weight,
+		WalletID:  s.WalletID,
+		State:     s.State,
+		IsDeleted: s.IsDeleted,
+		CreatedAt: s.CreatedAt,
+		UpdatedAt: s.UpdatedAt,
+	}, nil
 }
 
 type sqliteAddressRepo struct {
@@ -85,7 +109,7 @@ func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr address.Address)
 		return nil, err
 	}
 
-	return a.Address(), nil
+	return a.Address()
 }
 
 func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {

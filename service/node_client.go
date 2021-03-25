@@ -45,6 +45,7 @@ type NodeClient struct {
 	StateSearchMsgLimited  func(context.Context, cid.Cid, abi.ChainEpoch) (*chain.MsgLookup, error)
 
 	GasEstimateMessageGas func(context.Context, *types.UnsignedMessage, *types.MessageSendSpec, types.TipSetKey) (*types.UnsignedMessage, error)
+	//	BatchGasEstimateMessageGas func(ctx context.Context, estimateMessages []*types.EstimateMessage, tsk types.TipSetKey) ([]*types.UnsignedMessage, error)
 
 	MpoolPush      func(context.Context, *types.SignedMessage) (cid.Cid, error)
 	MpoolBatchPush func(context.Context, []*types.SignedMessage) ([]cid.Cid, error)

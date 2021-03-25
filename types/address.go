@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"github.com/filecoin-project/go-address"
+	"time"
+)
 
 type AddressState int
 
@@ -19,8 +22,8 @@ const (
 //
 
 type Address struct {
-	ID   UUID   `json:"id"`
-	Addr string `json:"addr"`
+	ID   UUID            `json:"id"`
+	Addr address.Address `json:"addr"`
 	//max for current, use nonce and +1
 	Nonce    uint64       `json:"nonce"`
 	Weight   int64        `json:"weight"`
