@@ -7,7 +7,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	types2 "github.com/filecoin-project/venus/pkg/types"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -18,7 +17,7 @@ import (
 
 type sqliteMessage struct {
 	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
-	Version uint64 `gorm:"column:version;unsigned bigint"`
+	Version uint64 `gorm:"column:version;type:unsigned bigint"`
 
 	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;"`
 	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
@@ -59,7 +58,7 @@ func (sqlMsg *sqliteMessage) TableName() string {
 func (sqlMsg *sqliteMessage) Message() *types.Message {
 	var destMsg = &types.Message{
 		ID: sqlMsg.ID,
-		UnsignedMessage: types2.UnsignedMessage{
+		UnsignedMessage: venustypes.UnsignedMessage{
 			Version:    sqlMsg.Version,
 			Nonce:      sqlMsg.Nonce,
 			Value:      big.NewFromGo(sqlMsg.Value.Int),
@@ -145,7 +144,7 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 
 type MsgMeta struct {
 	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;"`
-	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal;"`
+	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            types.Int      `gorm:"column:max_fee;type:varchar(256);"`
 	MaxFeeCap         types.Int      `gorm:"column:max_fee_cap;type:varchar(256);"`
 }
@@ -201,7 +200,7 @@ func (m *sqliteMessageRepo) GetMessageState(id string) (types.MessageState, erro
 	var result Result
 	err := m.DB.Table("messages").
 		Select("state").
-		Where("name = ?", "Antonio").
+		Where("id = ?", id).
 		Scan(&result).Error
 	if err != nil {
 		return types.UnKnown, err
@@ -324,7 +323,7 @@ func (m *sqliteMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Mes
 
 func (m *sqliteMessageRepo) GetSignedMessageByTime(start time.Time) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	if err := m.DB.Where("created_at >= ? and signed_data not null", start).Find(&sqlMsgs).Error; err != nil {
+	if err := m.DB.Where("created_at >= ? and signed_data is not null", start).Find(&sqlMsgs).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*types.Message, len(sqlMsgs))
@@ -337,7 +336,7 @@ func (m *sqliteMessageRepo) GetSignedMessageByTime(start time.Time) ([]*types.Me
 
 func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	if err := m.DB.Where("height >= ? and signed_data not null", uint64(height)).Find(&sqlMsgs).Error; err != nil {
+	if err := m.DB.Where("height >= ? and signed_data is not null", uint64(height)).Find(&sqlMsgs).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*types.Message, len(sqlMsgs))
@@ -388,7 +387,7 @@ func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 func (m *sqliteMessageRepo) ListSignedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Model((*sqliteMessage)(nil)).
-		Where("height=0 and signed_data not null").
+		Where("height=0 and signed_data is not null").
 		Find(&sqlMsgs).Error; err != nil {
 		return nil, err
 	}

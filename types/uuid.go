@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"database/sql/driver"
+	"golang.org/x/xerrors"
 
 	"github.com/google/uuid"
 )
@@ -45,7 +46,16 @@ func (uid UUID) Value() (driver.Value, error) {
 // and should not be retained. Their underlying memory is owned by the driver.
 // If retention is necessary, copy their values before the next call to Scan.
 func (uid *UUID) Scan(value interface{}) error {
-	id, err := uuid.Parse(value.(string))
+	var id uuid.UUID
+	var err error
+	switch value.(type) {
+	case string:
+		id, err = uuid.Parse(value.(string))
+	case []byte:
+		id, err = uuid.ParseBytes(value.([]byte))
+	default:
+		return xerrors.Errorf("unsupport %t type for uuid", value)
+	}
 	if err != nil {
 		return err
 	}

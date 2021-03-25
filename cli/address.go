@@ -53,34 +53,32 @@ var setAddrCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		var addr types.Address
+		var addrInfo types.Address
 
 		if uuidStr := ctx.String("uuid"); len(uuidStr) > 0 {
 			uuid, err := types.ParseUUID(uuidStr)
 			if err != nil {
 				return err
 			}
-			addr.ID = uuid
+			addrInfo.ID = uuid
 		} else {
-			addr.ID = types.NewUUID()
+			addrInfo.ID = types.NewUUID()
 		}
 
-		addr.Addr = ctx.String("address")
-		if len(addr.Addr) == 0 {
-			return xerrors.Errorf("Address cannot be empty")
-		}
-		addr.Nonce = ctx.Uint64("nonce")
-		addr.WalletID, err = types.ParseUUID(ctx.String("wallet_id"))
+		addrStr := ctx.String("address")
+		addr, err := address.NewFromString(addrStr)
 		if err != nil {
 			return err
 		}
-		addr.IsDeleted = -1
-
-		a, err := address.NewFromString(addr.Addr)
+		addrInfo.Addr = addr
+		addrInfo.Nonce = ctx.Uint64("nonce")
+		addrInfo.WalletID, err = types.ParseUUID(ctx.String("wallet_id"))
 		if err != nil {
 			return err
 		}
-		hasAddr, err := client.HasAddress(ctx.Context, a)
+		addrInfo.IsDeleted = -1
+
+		hasAddr, err := client.HasAddress(ctx.Context, addrInfo.Addr)
 		if err != nil {
 			return err
 		}
@@ -88,7 +86,7 @@ var setAddrCmd = &cli.Command{
 			return xerrors.Errorf("address exist")
 		}
 
-		_, err = client.SaveAddress(ctx.Context, &addr)
+		_, err = client.SaveAddress(ctx.Context, &addrInfo)
 		if err != nil {
 			return err
 		}

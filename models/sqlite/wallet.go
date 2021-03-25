@@ -12,7 +12,7 @@ import (
 )
 
 type sqliteWallet struct {
-	ID types.UUID `gorm:"column:id;primary_key;"` // 主键
+	ID types.UUID `gorm:"column:id;type:varchar(256);primary_key;"` // 主键
 
 	Name  string `gorm:"column:name;uniqueIndex;type:varchar(256);NOT NULL"`
 	Url   string `gorm:"column:url;type:varchar(256);NOT NULL"`

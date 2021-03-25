@@ -47,6 +47,7 @@ type MySqlConfig struct {
 	MaxOpenConn     int           `toml:"maxOpenConn"`
 	MaxIdleConn     int           `toml:"maxIdleConn"`
 	ConnMaxLifeTime time.Duration `toml:"connMaxLifeTime"`
+	Debug           bool          `toml:"debug"`
 }
 
 type JWTConfig struct {

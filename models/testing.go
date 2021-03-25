@@ -1,8 +1,14 @@
-package sqlite
+package models
 
 import (
 	"encoding/json"
+	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/ipfs-force-community/venus-messager/models/sqlite"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"testing"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -57,8 +63,9 @@ func NewMessage() *types.Message {
 }
 
 func NewUnsignedMessage() types2.UnsignedMessage {
-	from, _ := address.NewFromString("f01234")
-	to, _ := address.NewFromString("f01235")
+	rand.Seed(time.Now().Unix())
+	from, _ := address.NewIDAddress(rand.Uint64() / 2)
+	to, _ := address.NewIDAddress(rand.Uint64() / 2)
 	return types2.UnsignedMessage{
 		From:       from,
 		To:         to,
@@ -72,4 +79,24 @@ func NewUnsignedMessage() types2.UnsignedMessage {
 func ObjectToString(i interface{}) string {
 	res, _ := json.MarshalIndent(i, "", " ")
 	return string(res)
+}
+
+func setupRepo(t *testing.T) (repo.Repo, repo.Repo) {
+	sqliteRepo, err := sqlite.OpenSqlite(&config.SqliteConfig{Path: "./test_sqlite_db", Debug: true})
+	assert.NoError(t, err)
+
+	/*	mysqlRepo, err := mysql.OpenMysql(&config.MySqlConfig{
+		Addr:            "192.168.1.177:3306",
+		User:            "root",
+		Pass:            "12345678",
+		Name:            "messager",
+		MaxOpenConn:     1,
+		MaxIdleConn:     1,
+		ConnMaxLifeTime: time.Second * 1,
+		Debug:           true,
+	})*/
+	assert.NoError(t, err)
+	assert.NoError(t, sqliteRepo.AutoMigrate())
+	//assert.NoError(t, mysqlRepo.AutoMigrate())
+	return sqliteRepo, nil
 }

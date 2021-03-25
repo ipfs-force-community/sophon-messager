@@ -21,6 +21,7 @@ type Repo interface {
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
 }
+
 type TxRepo interface {
 	WalletRepo() WalletRepo
 	MessageRepo() MessageRepo

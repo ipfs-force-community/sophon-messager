@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-wallet/core"
 	"github.com/sirupsen/logrus"
@@ -84,24 +83,15 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	maxAllowPendingMessage := uint64(50)
 	var toPushMessage []*venusTypes.SignedMessage
 
-	addrT, err := address.NewFromString(addr.Addr)
-	if err != nil {
-		return nil, nil, nil, xerrors.Errorf("invalid address %v", addr.Addr)
-	}
-	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addrT)
+	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addr.Addr)
 	if !exit {
 		return nil, nil, nil, xerrors.Errorf("no wallet client of address %s", addr.Addr)
 	}
 
-	mAddr, err := address.NewFromString(addr.Addr)
-	if err != nil {
-		return nil, nil, nil, xerrors.Errorf("addr format error %s", addr.Addr)
-	}
-
 	//判断是否需要推送消息
-	actor, err := messageSelector.nodeClient.StateGetActor(ctx, mAddr, ts.Key())
+	actor, err := messageSelector.nodeClient.StateGetActor(ctx, addr.Addr, ts.Key())
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf("actor of address %s not found", mAddr)
+		return nil, nil, nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
 	}
 
 	if actor.Nonce > addr.Nonce {
@@ -114,7 +104,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 	}
 	//todo push signed but not onchain message, when to resend message
-	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(mAddr)
+	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
 	if err != nil {
 		messageSelector.log.Warnf("list filled message %v", err)
 	}
@@ -130,9 +120,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		return nil, nil, toPushMessage, nil
 	}
 	//消息排序
-	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(mAddr)
+	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr)
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf("list %s unpackage message error %v", mAddr, err)
+		return nil, nil, nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
 	}
 	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
 	sort.Slice(messages, func(i, j int) bool {
@@ -184,7 +174,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 			continue
 		}
-		sig, err := addrInfo.WalletClient.WalletSign(ctx, mAddr, unsignedCid.Bytes(), core.MsgMeta{
+		sig, err := addrInfo.WalletClient.WalletSign(ctx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		})
