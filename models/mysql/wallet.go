@@ -46,9 +46,8 @@ func newMysqlWalletRepo(db *gorm.DB) mysqlWalletRepo {
 	return mysqlWalletRepo{DB: db}
 }
 
-func (s mysqlWalletRepo) SaveWallet(wallet *types.Wallet) (types.UUID, error) {
-	err := s.DB.Save(FromWallet(*wallet)).Error
-	return wallet.ID, err
+func (s mysqlWalletRepo) SaveWallet(wallet *types.Wallet) error {
+	return s.DB.Save(FromWallet(*wallet)).Error
 }
 
 func (s mysqlWalletRepo) GetWalletByID(uuid types.UUID) (*types.Wallet, error) {

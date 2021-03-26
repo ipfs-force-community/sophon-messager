@@ -27,7 +27,6 @@ type IMessager interface {
 	UpdateAllFilledMessage(ctx context.Context) (int, error)
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
-	RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error)
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -46,10 +45,11 @@ type IMessager interface {
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)
-	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error)
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
 
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error)
+	RefreshSharedParams(ctx context.Context) (struct{}, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -70,7 +70,6 @@ type Message struct {
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
-		RefreshMsgMeta           func(ctx context.Context) (*types.MsgMeta, error)
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByID           func(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -81,18 +80,19 @@ type Message struct {
 		DeleteWallet            func(ctx context.Context, name string) (string, error)
 		UpdateWallet            func(ctx context.Context, wallet *types.Wallet) (string, error)
 
-		SaveAddress        func(ctx context.Context, address *types.Address) (string, error)
-		GetAddress         func(ctx context.Context, addr address.Address) (*types.Address, error)
-		HasAddress         func(ctx context.Context, addr address.Address) (bool, error)
-		ListAddress        func(ctx context.Context) ([]*types.Address, error)
-		UpdateNonce        func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-		DeleteAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
-		ForbiddenAddress   func(ctx context.Context, addr address.Address) (address.Address, error)
-		ActiveAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
-		UpdateSelectMsgNum func(ctx context.Context, addr address.Address, num int) (address.Address, error)
+		SaveAddress      func(ctx context.Context, address *types.Address) (string, error)
+		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
+		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
+		ListAddress      func(ctx context.Context) ([]*types.Address, error)
+		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
+		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
+		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		SetSelectMsgNum  func(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
 
-		GetSharedParams func(context.Context) (*types.SharedParams, error)
-		SetSharedParams func(context.Context, *types.SharedParams) (*types.SharedParams, error)
+		GetSharedParams     func(context.Context) (*types.SharedParams, error)
+		SetSharedParams     func(context.Context, *types.SharedParams) (*types.SharedParams, error)
+		RefreshSharedParams func(ctx context.Context) (struct{}, error)
 	}
 }
 
@@ -146,10 +146,6 @@ func (message *Message) UpdateFilledMessageByID(ctx context.Context, id string) 
 
 func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
-}
-
-func (message *Message) RefreshMsgMeta(ctx context.Context) (*types.MsgMeta, error) {
-	return message.Internal.RefreshMsgMeta(ctx)
 }
 
 ///////  wallet  ///////
@@ -220,9 +216,11 @@ func (message *Message) ActiveAddress(ctx context.Context, addr address.Address)
 	return message.Internal.ActiveAddress(ctx, addr)
 }
 
-func (message *Message) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
-	return message.Internal.UpdateSelectMsgNum(ctx, addr, num)
+func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+	return message.Internal.SetSelectMsgNum(ctx, addr, num)
 }
+
+/////// shared params ///////
 
 func (message *Message) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
 	return message.Internal.GetSharedParams(ctx)
@@ -230,6 +228,10 @@ func (message *Message) GetSharedParams(ctx context.Context) (*types.SharedParam
 
 func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) {
 	return message.Internal.SetSharedParams(ctx, params)
+}
+
+func (message *Message) RefreshSharedParams(ctx context.Context) (struct{}, error) {
+	return message.Internal.RefreshSharedParams(ctx)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

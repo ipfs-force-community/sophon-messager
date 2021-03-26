@@ -45,9 +45,8 @@ func newSqliteWalletRepo(db *gorm.DB) sqliteWalletRepo {
 	return sqliteWalletRepo{DB: db}
 }
 
-func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) (types.UUID, error) {
-	err := s.DB.Save(FromWallet(*wallet)).Error
-	return wallet.ID, err
+func (s sqliteWalletRepo) SaveWallet(wallet *types.Wallet) error {
+	return s.DB.Save(FromWallet(*wallet)).Error
 }
 
 func (s sqliteWalletRepo) GetWalletByID(uuid types.UUID) (*types.Wallet, error) {

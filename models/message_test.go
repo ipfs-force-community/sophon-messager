@@ -83,7 +83,7 @@ func TestUpdateMessageInfoByCid(t *testing.T) {
 
 		height := abi.ChainEpoch(10)
 		state := types.OnChainMsg
-		_, err = messageRepo.UpdateMessageInfoByCid(unsignedCid.String(), rec, height, state, tsKey)
+		err = messageRepo.UpdateMessageInfoByCid(unsignedCid.String(), rec, height, state, tsKey)
 		assert.NoError(t, err)
 
 		msg2, err := messageRepo.GetMessageByCid(*unsignedCid)
@@ -116,7 +116,7 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 		err := messageRepo.CreateMessage(msg)
 		assert.NoError(t, err)
 
-		_, err = messageRepo.UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
+		err = messageRepo.UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
 		assert.NoError(t, err)
 
 		msg2, err := messageRepo.GetMessageByUid(msg.ID)
@@ -174,7 +174,7 @@ func Test_sqliteMessageRepo_GetMessageState(t *testing.T) {
 
 		for _, state := range []types.MessageState{types.UnFillMsg, types.FillMsg, types.OnChainMsg, types.ExpireMsg} {
 			msg.State = state
-			_, err = messageRepo.SaveMessage(msg)
+			err = messageRepo.SaveMessage(msg)
 			assert.NoError(t, err)
 			state, err = messageRepo.GetMessageState(msg.ID)
 			assert.NoError(t, err)

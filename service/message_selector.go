@@ -23,10 +23,22 @@ type MessageSelector struct {
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	addressService *AddressService
+	sps            *SharedParamsService
 }
 
-func NewMessageSelector(repo repo.Repo, log *logrus.Logger, cfg *config.MessageServiceConfig, nodeClient *NodeClient, addressService *AddressService) *MessageSelector {
-	return &MessageSelector{repo: repo, log: log, cfg: cfg, nodeClient: nodeClient, addressService: addressService}
+func NewMessageSelector(repo repo.Repo,
+	log *logrus.Logger,
+	cfg *config.MessageServiceConfig,
+	nodeClient *NodeClient,
+	addressService *AddressService,
+	sps *SharedParamsService) *MessageSelector {
+	return &MessageSelector{repo: repo,
+		log:            log,
+		cfg:            cfg,
+		nodeClient:     nodeClient,
+		addressService: addressService,
+		sps:            sps,
+	}
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, []*types.Address, error) {
@@ -86,10 +98,13 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	if !exit {
 		return nil, nil, nil, xerrors.Errorf("no wallet client of address %s", addr.Addr)
 	}
-	// TODO: 全局每个地址选择数量
-	maxAllowPendingMessage := uint64(50)
+
+	var maxAllowPendingMessage uint64
+	if messageSelector.sps.GetParams().SharedParams != nil {
+		maxAllowPendingMessage = messageSelector.sps.GetParams().SelMsgNum
+	}
 	if addrInfo.SelectMsgNum != 0 {
-		maxAllowPendingMessage = uint64(addrInfo.SelectMsgNum)
+		maxAllowPendingMessage = addrInfo.SelectMsgNum
 	}
 
 	//判断是否需要推送消息
@@ -102,7 +117,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		messageSelector.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d, update to latest", addr.Addr, addr.Nonce, actor.Nonce)
 		addr.Nonce = actor.Nonce
 		addr.UpdatedAt = time.Now()
-		_, err := messageSelector.repo.AddressRepo().SaveAddress(ctx, addr)
+		err := messageSelector.repo.AddressRepo().SaveAddress(ctx, addr)
 		if err != nil {
 			return nil, nil, nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
 		}
@@ -149,7 +164,20 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 	var count = uint64(0)
 	var selectMsg []*types.Message
+	var failedCount uint64
+	var allowFailedNum uint64
+	if messageSelector.sps.GetParams().SharedParams != nil {
+		allowFailedNum = messageSelector.sps.GetParams().MaxEstFailNumOfMsg
+	}
 	for _, msg := range messages {
+		if count >= selectCount {
+			break
+		}
+		if failedCount >= allowFailedNum {
+			messageSelector.log.Warnf("the maximum number of failures has been reached %d", allowFailedNum)
+			break
+		}
+
 		//分配nonce
 		msg.Nonce = addr.Nonce
 
@@ -157,6 +185,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		//通过配置影响 maxfee
 		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
 		if err != nil {
+			failedCount++
 			if strings.Contains(err.Error(), "exit SysErrSenderStateInvalid(2)") {
 				// SysErrSenderStateInvalid(2))
 				messageSelector.log.Errorf("message %s estimate message fail %v break address %s", msg.ID, err, addr.Addr)
@@ -203,9 +232,6 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		selectMsg = append(selectMsg, msg)
 		addr.Nonce++
 		count++
-		if count >= selectCount {
-			break
-		}
 	}
 
 	messageSelector.log.Infof("address %s select message %d max nonce %d", addr.Addr, len(selectMsg), addr.Nonce)

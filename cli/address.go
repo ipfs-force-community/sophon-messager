@@ -23,7 +23,7 @@ var AddrCmds = &cli.Command{
 		updateNonceCmd,
 		forbiddenAddrCmd,
 		permitAddrCmd,
-		updateAddrMsgNumCmd,
+		setAddrSelMsgNumCmd,
 	},
 }
 
@@ -289,9 +289,9 @@ var permitAddrCmd = &cli.Command{
 	},
 }
 
-var updateAddrMsgNumCmd = &cli.Command{
-	Name:      "select_msg_num",
-	Usage:     "update the number of address selection messages",
+var setAddrSelMsgNumCmd = &cli.Command{
+	Name:      "set_sel_msg_num",
+	Usage:     "set the number of address selection messages",
 	ArgsUsage: "address",
 	Flags: []cli.Flag{
 		&cli.IntFlag{
@@ -312,7 +312,7 @@ var updateAddrMsgNumCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if _, err := client.UpdateSelectMsgNum(ctx.Context, addr, ctx.Int("num")); err != nil {
+		if _, err := client.SetSelectMsgNum(ctx.Context, addr, ctx.Uint64("num")); err != nil {
 			return err
 		}
 

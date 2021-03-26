@@ -19,7 +19,8 @@ import (
 )
 
 func main() {
-	cfg, err := config.ReadConfig("/Users/lijunlong/Desktop/workload/venus-messager/messager.toml")
+	//cfg, err := config.ReadConfig("/Users/lijunlong/Desktop/workload/venus-messager/messager.toml")
+	cfg, err := config.ReadConfig("./messager.toml")
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -33,8 +34,8 @@ func main() {
 	}
 
 	defer closer()
-	addr1, _ := address.NewFromString("t3v3wx6tbwlvzev7hxhbpdlfwvwq5mbdhfrgmy2i2ztfaqhwjwc6zkxo6to4x2ms2acicd3x57fabxhpszzwqq")
-	addr2, _ := address.NewFromString("t3ru4e5hrvhsjjvyxyzzxzmsoahrdmobsfz6ohmd7ftswxyf7dxvhnmkq63cu5ozdy4wnrcqxx4gkwa427grga")
+	addr1, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
+	addr2, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
 
 	addrs := []address.Address{addr1, addr2}
 	tm := time.NewTicker(time.Second * 1)

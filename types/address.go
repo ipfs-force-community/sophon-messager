@@ -32,7 +32,7 @@ type Address struct {
 	WalletID UUID         `json:"walletID"`
 	State    AddressState `json:"state"`
 	//number of address selection messages
-	SelectMsgNum int `json:"SelectMsgNum"`
+	SelectMsgNum uint64 `json:"SelectMsgNum"`
 
 	IsDeleted int       `json:"isDeleted"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `json:"createAt"`  // 创建时间

@@ -18,7 +18,7 @@ type mysqlAddress struct {
 	Weight       int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
 	WalletID     types.UUID         `gorm:"column:wallet_id;type:varchar(256)"`
 	State        types.AddressState `gorm:"column:state;type:int;index:addr_state;"`
-	SelectMsgNum int                `gorm:"column:select_msg_num;type:int;NOT NULL"`
+	SelectMsgNum uint64             `gorm:"column:select_msg_num;type:int;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -73,27 +73,27 @@ func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
 	return &mysqlAddressRepo{DB: db}
 }
 
-func (s mysqlAddressRepo) SaveAddress(ctx context.Context, addr *types.Address) (types.UUID, error) {
-	err := s.DB.Save(FromAddress(addr)).Error
-	if err != nil {
-		return types.UUID{}, err
-	}
-
-	return addr.ID, nil
+func (s mysqlAddressRepo) SaveAddress(ctx context.Context, addr *types.Address) error {
+	return s.DB.Save(FromAddress(addr)).Error
 }
 
 func (s mysqlAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address) error {
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.Addr).
-		Updates(map[string]interface{}{"nonce": addr.Nonce, "is_deleted": addr.IsDeleted, "state": addr.State, "wallet_id": addr.WalletID}).Error
+	updateColumns := map[string]interface{}{
+		"nonce":      addr.Nonce,
+		"is_deleted": addr.IsDeleted,
+		"state":      addr.State,
+		"wallet_id":  addr.WalletID,
+	}
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.Addr).Updates(updateColumns).Error
 }
 
-func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
-	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
+func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
 		UpdateColumn("nonce", nonce).Error
 }
 
-func (s mysqlAddressRepo) UpdateAddressState(ctx context.Context, addr address.Address, state types.AddressState) (address.Address, error) {
-	return addr, s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
+func (s mysqlAddressRepo) UpdateAddressState(ctx context.Context, addr address.Address, state types.AddressState) error {
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
 		UpdateColumn("state", state).Error
 }
 
@@ -126,7 +126,7 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 		return nil, err
 	}
 
-	var result []*types.Address
+	result := make([]*types.Address, len(list))
 	for index, r := range list {
 		addr, err := r.Address()
 		if err != nil {
@@ -138,7 +138,7 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 	return result, nil
 }
 
-func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) error {
+func (s mysqlAddressRepo) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
 	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ?", addr.String()).
 		UpdateColumn("select_msg_num", num).Error
 }

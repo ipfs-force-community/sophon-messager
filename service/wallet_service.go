@@ -20,7 +20,7 @@ type WalletService struct {
 	walletClients map[types.UUID]IWalletClient
 	delWalletChan chan types.UUID
 
-	l sync.Mutex
+	l sync.RWMutex
 }
 
 func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, error) {
@@ -51,15 +51,19 @@ func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, er
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	uuid, err := walletService.repo.WalletRepo().SaveWallet(wallet)
+	cli, _, err := newWalletClient(ctx, wallet.Url, wallet.Token)
 	if err != nil {
 		return types.UUID{}, err
 	}
-	if err := walletService.updateWalletClient(ctx, wallet); err != nil {
+	err = walletService.repo.WalletRepo().SaveWallet(wallet)
+	if err != nil {
+		return types.UUID{}, err
+	}
+	if err := walletService.addWalletClient(wallet.ID, &cli); err != nil {
 		return types.UUID{}, err
 	}
 
-	return uuid, nil
+	return wallet.ID, nil
 }
 
 func (walletService *WalletService) GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error) {
@@ -96,8 +100,7 @@ func (walletService *WalletService) DeleteWallet(ctx context.Context, name strin
 		return "", err
 	}
 
-	walletService.removeWalletClient(ctx, w.ID)
-
+	walletService.removeWalletClient(w.ID)
 	walletService.delWalletChan <- w.ID
 	walletService.log.Infof("delete wallet %s", name)
 
@@ -105,21 +108,38 @@ func (walletService *WalletService) DeleteWallet(ctx context.Context, name strin
 }
 
 /// wallet client ///
-func (walletService *WalletService) updateWalletClient(ctx context.Context, wallet *types.Wallet) error {
+func (walletService *WalletService) GetWalletClient(walletId types.UUID) (IWalletClient, bool) {
+	walletService.l.RLock()
+	defer walletService.l.RUnlock()
+	cli, ok := walletService.walletClients[walletId]
+
+	return cli, ok
+}
+
+func (walletService *WalletService) ListWalletClient() ([]types.UUID, []IWalletClient) {
+	walletService.l.RLock()
+	defer walletService.l.RUnlock()
+	clis := make([]IWalletClient, 0, len(walletService.walletClients))
+	ids := make([]types.UUID, 0, len(walletService.walletClients))
+	for id, cli := range walletService.walletClients {
+		clis = append(clis, cli)
+		ids = append(ids, id)
+	}
+
+	return ids, clis
+}
+
+func (walletService *WalletService) addWalletClient(walletID types.UUID, cli IWalletClient) error {
 	walletService.l.Lock()
 	defer walletService.l.Unlock()
-	if _, ok := walletService.walletClients[wallet.ID]; !ok {
-		cli, _, err := newWalletClient(ctx, wallet.Url, wallet.Token)
-		if err != nil {
-			return err
-		}
-		walletService.walletClients[wallet.ID] = &cli
+	if _, ok := walletService.walletClients[walletID]; !ok {
+		walletService.walletClients[walletID] = cli
 	}
 
 	return nil
 }
 
-func (walletService *WalletService) removeWalletClient(ctx context.Context, walletId types.UUID) {
+func (walletService *WalletService) removeWalletClient(walletId types.UUID) {
 	walletService.l.Lock()
 	defer walletService.l.Unlock()
 

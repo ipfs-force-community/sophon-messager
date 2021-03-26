@@ -274,7 +274,7 @@ func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([
 //todo better batch update
 func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		_, err := m.SaveMessage(msg)
+		err := m.SaveMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -290,11 +290,11 @@ func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 }
 
 // SaveMessage used to update message and create message with CreateMessage
-func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) (string, error) {
+func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) error {
 	sqlMsg := FromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 
-	return msg.ID, m.DB.Omit("created_at").Save(sqlMsg).Error
+	return m.DB.Omit("created_at").Save(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
@@ -404,7 +404,7 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	receipt *venustypes.MessageReceipt,
 	height abi.ChainEpoch,
 	state types.MessageState,
-	tsKey venustypes.TipSetKey) (string, error) {
+	tsKey venustypes.TipSetKey) error {
 	rcp := repo.FromMsgReceipt(receipt)
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),
@@ -414,18 +414,18 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		"state":                state,
 		"tipset_key":           tsKey.String(),
 	}
-	return unsignedCid, m.DB.Model(&sqliteMessage{}).
+	return m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
 		UpdateColumns(updateClause).Error
 }
 
-func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) (string, error) {
-	return cid, m.DB.Model(&sqliteMessage{}).
+func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	return m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
 }
 
-func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) (string, error) {
-	return id, m.DB.Debug().Model(&sqliteMessage{}).
+func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
+	return m.DB.Debug().Model(&sqliteMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
 

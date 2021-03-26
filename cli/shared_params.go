@@ -5,13 +5,24 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 var SharedParamsCmds = &cli.Command{
-	Name:      "share-params",
-	Usage:     `get or set current shared params commands, eg. set: venus-messager share-params "{\"expireEpoch\": 10000, \"gasOverEstimation\": 0, \"maxFee\": 100000, \"maxFeeCap\": 20000, \"selMsgNum\": 12, \"scanInterval\": 8000000000, \"maxEstFailNumOfMsg\": 5}"`,
+	Name:  "share-params",
+	Usage: "share params cmd",
+	Subcommands: []*cli.Command{
+		setSharedParamsCmd,
+		getSharedParamCmd,
+		refreshSharedParamCmd,
+	},
+}
+
+var setSharedParamsCmd = &cli.Command{
+	Name:      "set",
+	Usage:     `set current shared params commands, eg. set: venus-messager share-params set "{\"expireEpoch\": 10000, \"gasOverEstimation\": 0, \"maxFee\": 100000, \"maxFeeCap\": 20000, \"selMsgNum\": 12, \"scanInterval\": 8, \"maxEstFailNumOfMsg\": 5}"`,
 	ArgsUsage: "[params]",
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() > 1 {
@@ -25,31 +36,59 @@ var SharedParamsCmds = &cli.Command{
 		defer closer()
 
 		if ctx.Args().Len() == 0 {
-			sp, err := api.GetSharedParams(ctx.Context)
-			if err != nil {
-				return err
-			}
+			return xerrors.Errorf("must pass params")
+		}
 
-			bytes, err := json.Marshal(sp)
-			if err != nil {
-				return err
-			}
+		sp := new(types.SharedParams)
+		bytes := []byte(ctx.Args().Get(0))
 
-			fmt.Println(string(bytes))
-		} else {
-			sp := new(types.SharedParams)
-			bytes := []byte(ctx.Args().Get(0))
+		err = json.Unmarshal(bytes, sp)
+		if err != nil {
+			return err
+		}
 
-			err := json.Unmarshal(bytes, sp)
-			if err != nil {
-				return err
-			}
+		_, err = api.SetSharedParams(ctx.Context, sp)
+		if err != nil {
+			return err
+		}
+		fmt.Println("sp: ", *sp)
 
-			sp, err = api.SetSharedParams(ctx.Context, sp)
-			if err != nil {
-				return err
-			}
-			fmt.Println("sp:", *sp)
+		return nil
+	},
+}
+
+var getSharedParamCmd = &cli.Command{
+	Name:  "get",
+	Usage: "get shared params",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		_, err = client.GetSharedParams(ctx.Context)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var refreshSharedParamCmd = &cli.Command{
+	Name:  "refresh",
+	Usage: "refresh shared params from DB",
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		_, err = client.RefreshSharedParams(ctx.Context)
+		if err != nil {
+			return err
 		}
 
 		return nil

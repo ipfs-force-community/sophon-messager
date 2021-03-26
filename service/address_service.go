@@ -15,6 +15,8 @@ import (
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
+const defAddrSweepInterval = time.Second * 10
+
 type AddressService struct {
 	repo repo.Repo
 	log  *logrus.Logger
@@ -22,26 +24,33 @@ type AddressService struct {
 	walletService *WalletService
 	nodeClient    *NodeClient
 	cfg           *config.AddressConfig
+	sps           *SharedParamsService
 
 	addrInfo  map[address.Address]*AddressInfo
 	amendAddr chan address.Address
-	l         sync.Mutex
+	l         sync.RWMutex
 }
 
 type AddressInfo struct {
 	State        types.AddressState
 	WalletId     types.UUID
-	SelectMsgNum int
+	SelectMsgNum uint64
 	WalletClient IWalletClient
 }
 
-func NewAddressService(repo repo.Repo, logger *logrus.Logger, walletService *WalletService, nodeClient *NodeClient, cfg *config.AddressConfig) (*AddressService, error) {
+func NewAddressService(repo repo.Repo,
+	logger *logrus.Logger,
+	walletService *WalletService,
+	nodeClient *NodeClient,
+	cfg *config.AddressConfig,
+	sps *SharedParamsService) (*AddressService, error) {
 	addressService := &AddressService{
 		repo:          repo,
 		log:           logger,
 		walletService: walletService,
 		nodeClient:    nodeClient,
 		cfg:           cfg,
+		sps:           sps,
 		addrInfo:      make(map[address.Address]*AddressInfo),
 		amendAddr:     make(chan address.Address, 10),
 	}
@@ -60,7 +69,7 @@ func NewAddressService(repo repo.Repo, logger *logrus.Logger, walletService *Wal
 }
 
 func (addressService *AddressService) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
-	return addressService.repo.AddressRepo().SaveAddress(ctx, address)
+	return address.ID, addressService.repo.AddressRepo().SaveAddress(ctx, address)
 }
 
 func (addressService *AddressService) UpdateAddress(ctx context.Context, address *types.Address) error {
@@ -68,11 +77,11 @@ func (addressService *AddressService) UpdateAddress(ctx context.Context, address
 }
 
 func (addressService *AddressService) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
-	return addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
+	return addr, addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
 }
 
 func (addressService *AddressService) UpdateAddressState(ctx context.Context, addr address.Address, state types.AddressState) (address.Address, error) {
-	return addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, state)
+	return addr, addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, state)
 }
 
 func (addressService *AddressService) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
@@ -90,11 +99,13 @@ func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types
 // DeleteAddress first change the address status to frozen, confirm that all signed messages are on chain,
 // and then delete the address
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	_, err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Notfound)
+	err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Notfound)
 	if err != nil {
 		return address.Undef, err
 	}
-	addressService.setAddressState(addr, types.Notfound)
+	addressService.mutatorAddressInfo(addr, func(addressInfo *AddressInfo) {
+		addressInfo.State = types.Notfound
+	})
 
 	if err := addressService.repo.MessageRepo().UpdateUnFilledMessageStateByAddress(addr, types.NoWalletMsg); err != nil {
 		return address.Undef, err
@@ -109,31 +120,42 @@ func (addressService *AddressService) DeleteAddress(ctx context.Context, addr ad
 }
 
 func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	_, err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Forbiden)
+	err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Forbiden)
 	if err != nil {
 		return address.Undef, err
 	}
 
-	addressService.setAddressState(addr, types.Forbiden)
+	addressService.mutatorAddressInfo(addr, func(addressInfo *AddressInfo) {
+		addressInfo.State = types.Forbiden
+	})
 	addressService.log.Infof("forbidden address %v", addr.String())
 
-	return address.Undef, nil
+	return addr, nil
 }
 
 func (addressService *AddressService) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	_, err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Alive)
+	err := addressService.repo.AddressRepo().UpdateAddressState(ctx, addr, types.Alive)
 	if err != nil {
 		return address.Undef, err
 	}
 
-	addressService.setAddressState(addr, types.Alive)
+	addressService.mutatorAddressInfo(addr, func(addressInfo *AddressInfo) {
+		addressInfo.State = types.Alive
+	})
 	addressService.log.Infof("active address %v", addr.String())
 
-	return address.Undef, nil
+	return addr, nil
 }
 
-func (addressService *AddressService) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
-	return addr, addressService.repo.AddressRepo().UpdateSelectMsgNum(ctx, addr, num)
+func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+	if err := addressService.repo.AddressRepo().SetSelectMsgNum(ctx, addr, num); err != nil {
+		return address.Undef, err
+	}
+	addressService.mutatorAddressInfo(addr, func(addressInfo *AddressInfo) {
+		addressInfo.SelectMsgNum = num
+	})
+
+	return addr, nil
 }
 
 func (addressService *AddressService) getLocalAddress() error {
@@ -143,9 +165,9 @@ func (addressService *AddressService) getLocalAddress() error {
 	}
 
 	for _, info := range addrsInfo {
-		cli, ok := addressService.walletService.walletClients[info.WalletID]
+		cli, ok := addressService.walletService.GetWalletClient(info.WalletID)
 		if !ok {
-			addressService.log.Errorf("not found wallet client, uuid: %v", info.WalletID)
+			addressService.log.Errorf("not found wallet client %v", info.WalletID)
 			continue
 		}
 
@@ -165,15 +187,23 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 		return xerrors.Errorf("get local address and nonce failed: %v", err)
 	}
 	go func() {
-		ticker := time.NewTicker(time.Duration(addressService.cfg.RemoteWalletSweepInterval) * time.Second)
+		interval := defAddrSweepInterval
+		params := addressService.sps.GetParams()
+		if params.SharedParams != nil && params.ScanInterval != 0 {
+			interval = time.Duration(params.ScanInterval) * time.Second
+		}
+		ticker := time.NewTicker(interval)
 		for {
 			select {
 			case <-ticker.C:
-				for walletID, cli := range addressService.walletService.walletClients {
-					if err := addressService.ProcessWallet(ctx, walletID, cli); err != nil {
-						addressService.log.Errorf("process wallet failed name: %s, error: %v", walletID, err)
+				walletIDs, clis := addressService.walletService.ListWalletClient()
+				for i, cli := range clis {
+					if err := addressService.ProcessWallet(ctx, walletIDs[i], cli); err != nil {
+						addressService.log.Errorf("process wallet failed %v %v", walletIDs[i], err)
 					}
 				}
+			case i := <-addressService.sps.GetParams().ScanIntervalChan:
+				ticker.Reset(i)
 			case <-ctx.Done():
 				addressService.log.Warnf("context error: %v", ctx.Err())
 				return
@@ -187,7 +217,7 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 func (addressService *AddressService) ProcessWallet(ctx context.Context, walletID types.UUID, cli IWalletClient) error {
 	addrs, err := cli.WalletList(ctx)
 	if err != nil {
-		return xerrors.Errorf("get wallet list failed error: %v", err)
+		return err
 	}
 
 	walletAddrs := addressService.ListOneWalletAddress(walletID)
@@ -322,8 +352,8 @@ func (addressService *AddressService) SetAddressInfo(addr address.Address, info 
 }
 
 func (addressService *AddressService) GetAddressInfo(addr address.Address) (*AddressInfo, bool) {
-	addressService.l.Lock()
-	defer addressService.l.Unlock()
+	addressService.l.RLock()
+	defer addressService.l.RUnlock()
 	if info, ok := addressService.addrInfo[addr]; ok {
 		return info, ok
 	}
@@ -331,11 +361,11 @@ func (addressService *AddressService) GetAddressInfo(addr address.Address) (*Add
 	return nil, false
 }
 
-func (addressService *AddressService) setAddressState(addr address.Address, state types.AddressState) {
+func (addressService *AddressService) mutatorAddressInfo(addr address.Address, f func(*AddressInfo)) {
 	addressService.l.Lock()
 	defer addressService.l.Unlock()
 	if info, ok := addressService.addrInfo[addr]; ok {
-		info.State = state
+		f(info)
 	}
 }
 
@@ -347,8 +377,8 @@ func (addressService *AddressService) RemoveAddressInfo(addr address.Address) {
 }
 
 func (addressService *AddressService) ListAddressInfo() map[address.Address]AddressInfo {
-	addressService.l.Lock()
-	defer addressService.l.Unlock()
+	addressService.l.RLock()
+	defer addressService.l.RUnlock()
 	addrInfos := make(map[address.Address]AddressInfo, len(addressService.addrInfo))
 	for addr, info := range addressService.addrInfo {
 		addrInfos[addr] = *info
@@ -358,8 +388,8 @@ func (addressService *AddressService) ListAddressInfo() map[address.Address]Addr
 }
 
 func (addressService *AddressService) ListOneWalletAddress(walletId types.UUID) map[address.Address]struct{} {
-	addressService.l.Lock()
-	defer addressService.l.Unlock()
+	addressService.l.RLock()
+	defer addressService.l.RUnlock()
 	addrs := make(map[address.Address]struct{})
 	for addr, info := range addressService.addrInfo {
 		if info.WalletId == walletId {

@@ -36,17 +36,19 @@ func TestWallet(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		id, err := walletRepo.SaveWallet(w)
+		err := walletRepo.SaveWallet(w)
 		assert.NoError(t, err)
 
-		w.ID = types.NewUUID()
-		_, err = walletRepo.SaveWallet(w)
+		w3 := &types.Wallet{}
+		*w3 = *w
+		w3.ID = types.NewUUID()
+		err = walletRepo.SaveWallet(w3)
 		assert.Error(t, err)
 
-		id2, err := walletRepo.SaveWallet(w2)
+		err = walletRepo.SaveWallet(w2)
 		assert.NoError(t, err)
 
-		r, err := walletRepo.GetWalletByID(id)
+		r, err := walletRepo.GetWalletByID(w.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, w.Name, r.Name)
 		assert.Equal(t, w.Url, r.Url)
@@ -56,17 +58,17 @@ func TestWallet(t *testing.T) {
 		assert.Equal(t, w.Name, r2.Name)
 		assert.Equal(t, w.Url, r2.Url)
 
-		_, err = walletRepo.GetWalletByID(id2)
+		_, err = walletRepo.GetWalletByID(w2.ID)
 		assert.Error(t, err)
 
 		rs, err := walletRepo.ListWallet()
 		assert.NoError(t, err)
 		assert.LessOrEqual(t, 1, len(rs))
 
-		err = walletRepo.DelWallet(id)
+		err = walletRepo.DelWallet(w.ID)
 		assert.NoError(t, err)
 
-		_, err = walletRepo.GetWalletByID(id)
+		_, err = walletRepo.GetWalletByID(w.ID)
 		assert.Error(t, err)
 	}
 	t.Run("TestWallet", func(t *testing.T) {
@@ -94,7 +96,7 @@ func TestSqliteWalletRepo_HasWallet(t *testing.T) {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
-		_, err := walletRepo.SaveWallet(w)
+		err := walletRepo.SaveWallet(w)
 		assert.NoError(t, err)
 
 		has, err := walletRepo.HasWallet(w.Name)
@@ -132,7 +134,7 @@ func TestSqliteWalletRepo_GetWalletByID(t *testing.T) {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
-		_, err := walletRepo.SaveWallet(w)
+		err := walletRepo.SaveWallet(w)
 		assert.NoError(t, err)
 
 		_, err = walletRepo.GetWalletByID(w.ID)
@@ -168,7 +170,7 @@ func TestSqliteWalletRepo_GetWalletByName(t *testing.T) {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
-		_, err := walletRepo.SaveWallet(w)
+		err := walletRepo.SaveWallet(w)
 		assert.NoError(t, err)
 
 		_, err = walletRepo.GetWalletByName(w.Name)

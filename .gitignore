@@ -7,6 +7,7 @@
 *-shm
 *-wal
 *.txt
+tipset.json
 test_sqlite_db
 ./cmds/cfg_example/cfg_example
 venus-messager

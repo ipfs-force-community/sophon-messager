@@ -1,22 +1,19 @@
 package mysql
 
 import (
-	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/go-state-types/crypto"
-	"github.com/ipfs-force-community/venus-messager/utils"
 	"time"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/go-address"
-	"gorm.io/gorm"
-
 	"github.com/filecoin-project/go-state-types/abi"
-
+	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/go-state-types/crypto"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs/go-cid"
+	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/ipfs-force-community/venus-messager/utils"
 )
 
 type mysqlMessage struct {
@@ -278,7 +275,7 @@ func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]
 //todo better batch update
 func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		_, err := m.SaveMessage(msg)
+		err := m.SaveMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -293,13 +290,10 @@ func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
-func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) (string, error) {
+func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
 	sqlMsg := FromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
-	//todo check
-	err := m.DB.Omit("created_at").Save(sqlMsg).Error
-
-	return msg.ID, err
+	return m.DB.Omit("created_at").Save(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
@@ -409,7 +403,7 @@ func (m *mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	receipt *venustypes.MessageReceipt,
 	height abi.ChainEpoch,
 	state types.MessageState,
-	tsKey venustypes.TipSetKey) (string, error) {
+	tsKey venustypes.TipSetKey) error {
 	rcp := repo.FromMsgReceipt(receipt)
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),
@@ -419,18 +413,18 @@ func (m *mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		"state":                state,
 		"tipset_key":           tsKey.String(),
 	}
-	return unsignedCid, m.DB.Model(&mysqlMessage{}).
+	return m.DB.Model(&mysqlMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
 		UpdateColumns(updateClause).Error
 }
 
-func (m *mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) (string, error) {
-	return cid, m.DB.Model(&mysqlMessage{}).
+func (m *mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	return m.DB.Model(&mysqlMessage{}).
 		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
 }
 
-func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) (string, error) {
-	return id, m.DB.Debug().Model(&mysqlMessage{}).
+func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
+	return m.DB.Debug().Model(&mysqlMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
 
