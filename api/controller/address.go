@@ -45,3 +45,7 @@ func (a Address) ForbiddenAddress(ctx context.Context, addr address.Address) (ad
 func (a Address) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return a.AddressService.ActiveAddress(ctx, addr)
 }
+
+func (a Address) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
+	return a.AddressService.UpdateSelectMsgNum(ctx, addr, num)
+}

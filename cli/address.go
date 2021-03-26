@@ -23,6 +23,7 @@ var AddrCmds = &cli.Command{
 		updateNonceCmd,
 		forbiddenAddrCmd,
 		permitAddrCmd,
+		updateAddrMsgNumCmd,
 	},
 }
 
@@ -281,6 +282,37 @@ var permitAddrCmd = &cli.Command{
 
 		_, err = client.ActiveAddress(ctx.Context, addr)
 		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var updateAddrMsgNumCmd = &cli.Command{
+	Name:      "select_msg_num",
+	Usage:     "update the number of address selection messages",
+	ArgsUsage: "address",
+	Flags: []cli.Flag{
+		&cli.IntFlag{
+			Name: "num",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+		if _, err := client.UpdateSelectMsgNum(ctx.Context, addr, ctx.Int("num")); err != nil {
 			return err
 		}
 

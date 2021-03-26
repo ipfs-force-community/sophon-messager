@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"database/sql/driver"
+
 	"golang.org/x/xerrors"
 
 	"github.com/google/uuid"
@@ -48,11 +49,11 @@ func (uid UUID) Value() (driver.Value, error) {
 func (uid *UUID) Scan(value interface{}) error {
 	var id uuid.UUID
 	var err error
-	switch value.(type) {
+	switch value := value.(type) {
 	case string:
-		id, err = uuid.Parse(value.(string))
+		id, err = uuid.Parse(value)
 	case []byte:
-		id, err = uuid.ParseBytes(value.([]byte))
+		id, err = uuid.ParseBytes(value)
 	default:
 		return xerrors.Errorf("unsupport %t type for uuid", value)
 	}

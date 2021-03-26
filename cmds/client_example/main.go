@@ -42,40 +42,37 @@ func main() {
 		fmt.Println(rand.Intn(2))
 	}*/
 	//return
-	for {
-		select {
-		case <-tm.C:
-			for i := 0; i < 50; i++ {
-				from := addrs[rand.Intn(2)]
-				to := addrs[rand.Intn(2)]
-				fmt.Println(from)
-				msgMate := &types.MsgMeta{
-					ExpireEpoch:       abi.ChainEpoch(1000000 + i),
-					GasOverEstimation: 1.25,
-					MaxFee:            big.NewInt(10000000000000000),
-					MaxFeeCap:         big.NewInt(10000000000000000),
-				}
-				if i < 5 {
-					msgMate.ExpireEpoch = 0
-				}
-				uid, err := client.PushMessageWithId(context.Background(),
-					types.NewUUID().String(),
-					&venustypes.UnsignedMessage{
-						Version: 0,
-						To:      from,
-						From:    to,
-						Nonce:   1,
-						Value:   abi.NewTokenAmount(100),
-						Method:  0,
-					},
-					msgMate)
-				if err != nil {
-					log.Fatal(err)
-					return
-				}
-
-				fmt.Println("send message " + uid)
+	for range tm.C {
+		for i := 0; i < 50; i++ {
+			from := addrs[rand.Intn(2)]
+			to := addrs[rand.Intn(2)]
+			fmt.Println(from)
+			msgMate := &types.MsgMeta{
+				ExpireEpoch:       abi.ChainEpoch(1000000 + i),
+				GasOverEstimation: 1.25,
+				MaxFee:            big.NewInt(10000000000000000),
+				MaxFeeCap:         big.NewInt(10000000000000000),
 			}
+			if i < 5 {
+				msgMate.ExpireEpoch = 0
+			}
+			uid, err := client.PushMessageWithId(context.Background(),
+				types.NewUUID().String(),
+				&venustypes.UnsignedMessage{
+					Version: 0,
+					To:      from,
+					From:    to,
+					Nonce:   1,
+					Value:   abi.NewTokenAmount(100),
+					Method:  0,
+				},
+				msgMate)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+
+			fmt.Println("send message " + uid)
 		}
 	}
 

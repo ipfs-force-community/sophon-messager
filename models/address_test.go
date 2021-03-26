@@ -196,7 +196,7 @@ func TestSqliteAddressRepo_Delete(t *testing.T) {
 		err = addressRepo.DelAddress(context.TODO(), addr)
 		assert.NoError(t, err)
 
-		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
+		_, err = addressRepo.GetAddress(context.TODO(), addr)
 		assert.Error(t, err)
 		assert.Containsf(t, err.Error(), "record not found", "expect not found error")
 	}
@@ -246,6 +246,50 @@ func TestSqliteAddressRepo_HasAddress(t *testing.T) {
 	}
 
 	t.Run("HasAddress", func(t *testing.T) {
+		t.Run("sqlite", func(t *testing.T) {
+			addressRepoTest(t, sqliteRepo.AddressRepo())
+		})
+		t.Run("mysql", func(t *testing.T) {
+			t.SkipNow()
+			addressRepoTest(t, mysqlRepo.AddressRepo())
+		})
+	})
+}
+
+func TestUpdateSelectMsgNum(t *testing.T) {
+	sqliteRepo, mysqlRepo := setupRepo(t)
+
+	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
+		id, err := uuid.NewUUID()
+		assert.NoError(t, err)
+		addr, err := address.NewActorAddress(id[:])
+		assert.NoError(t, err)
+		addrInfo := &types.Address{
+			ID:           types.NewUUID(),
+			Addr:         addr,
+			Nonce:        3,
+			SelectMsgNum: 5,
+			IsDeleted:    -1,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+
+		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		assert.NoError(t, err)
+
+		_, err = addressRepo.GetAddress(context.TODO(), addr)
+		assert.NoError(t, err)
+		assert.Equal(t, 5, addrInfo.SelectMsgNum)
+
+		err = addressRepo.UpdateSelectMsgNum(context.TODO(), addr, 10)
+		assert.NoError(t, err)
+
+		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
+		assert.NoError(t, err)
+		assert.Equal(t, 10, addrInfo.SelectMsgNum)
+	}
+
+	t.Run("DeleteAddress", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
 			addressRepoTest(t, sqliteRepo.AddressRepo())
 		})

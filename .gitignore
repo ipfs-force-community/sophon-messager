@@ -4,11 +4,12 @@
 ./venus-messager
 ./*.log
 *.db
-*.db-shm
-*.db-wal
+*-shm
+*-wal
 *.txt
 *.db-shm
 *.db-wal
+test_sqlite_db
 ./cmds/cfg_example/cfg_example
 venus-messager
 *.log
