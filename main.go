@@ -30,7 +30,7 @@ func main() {
 				Usage:   "specify config file",
 			},
 		},
-		Commands: []*cli.Command{ccli.MsgCmds, ccli.AddrCmds, ccli.WalletCmds},
+		Commands: []*cli.Command{ccli.MsgCmds, ccli.AddrCmds, ccli.WalletCmds, ccli.SharedParamsCmds},
 	}
 	app.Setup()
 	app.Action = runAction

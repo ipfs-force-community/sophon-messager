@@ -20,6 +20,7 @@ type Repo interface {
 	WalletRepo() WalletRepo
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
+	SharedParamsRepo() SharedParamsRepo
 }
 
 type TxRepo interface {

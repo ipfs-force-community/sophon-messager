@@ -16,4 +16,7 @@ var TSqliteWallet = reflect.TypeOf(&sqliteWallet{})
 var TAddress = reflect.TypeOf(&types.Address{})
 var TSqliteAddress = reflect.TypeOf(&sqliteAddress{})
 
+var TSqliteSharedParams = reflect.TypeOf(&sqliteSharedParams{})
+var TSharedParams = reflect.TypeOf(&types.SharedParams{})
+
 var ERRUnspportedMappingType = fmt.Errorf("unsupported mapping type")

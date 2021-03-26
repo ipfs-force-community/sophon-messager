@@ -11,11 +11,12 @@ import (
 
 type ServiceMap map[reflect.Type]interface{}
 
-func MakeServiceMap(msgService *MessageService, walletService *WalletService, addressService *AddressService) ServiceMap {
+func MakeServiceMap(msgService *MessageService, walletService *WalletService, addressService *AddressService, sps *SharedParamsService) ServiceMap {
 	sMap := make(ServiceMap)
 	sMap[reflect.TypeOf(msgService)] = msgService
 	sMap[reflect.TypeOf(walletService)] = walletService
 	sMap[reflect.TypeOf(addressService)] = addressService
+	sMap[reflect.TypeOf(sps)] = sps
 	return sMap
 }
 
@@ -24,6 +25,7 @@ func MessagerService() fx.Option {
 		fx.Provide(NewMessageService),
 		fx.Provide(NewWalletService),
 		fx.Provide(NewAddressService),
+		fx.Provide(NewSharedParamsService),
 		fx.Provide(MakeServiceMap),
 	)
 }

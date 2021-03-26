@@ -28,6 +28,10 @@ func (d MysqlRepo) AddressRepo() repo.AddressRepo {
 	return newMysqlAddressRepo(d.DB)
 }
 
+func (d MysqlRepo) SharedParamsRepo() repo.SharedParamsRepo {
+	return newMysqlSharedParamsRepo(d.DB)
+}
+
 func (d MysqlRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(mysqlMessage{})
 	if err != nil {
@@ -35,6 +39,10 @@ func (d MysqlRepo) AutoMigrate() error {
 	}
 
 	if err := d.GetDb().AutoMigrate(mysqlAddress{}); err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(mysqlSharedParams{}); err != nil {
 		return err
 	}
 
