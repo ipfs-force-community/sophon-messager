@@ -25,6 +25,10 @@ func (d SqlLiteRepo) AddressRepo() repo.AddressRepo {
 	return newSqliteAddressRepo(d.DB)
 }
 
+func (d SqlLiteRepo) SharedParamsRepo() repo.SharedParamsRepo {
+	return newSqliteSharedParamsRepo(d.DB)
+}
+
 func (d SqlLiteRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(sqliteMessage{})
 	if err != nil {
@@ -32,6 +36,10 @@ func (d SqlLiteRepo) AutoMigrate() error {
 	}
 
 	if err := d.GetDb().AutoMigrate(sqliteAddress{}); err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(sqliteSharedParams{}); err != nil {
 		return err
 	}
 

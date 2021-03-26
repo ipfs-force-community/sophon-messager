@@ -45,6 +45,9 @@ type IMessager interface {
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
 	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)
+
+	GetSharedParams(ctx context.Context) (*types.SharedParams, error)
+	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -83,6 +86,9 @@ type Message struct {
 		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
 		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+
+		GetSharedParams func(context.Context) (*types.SharedParams, error)
+		SetSharedParams func(context.Context, *types.SharedParams) (*types.SharedParams, error)
 	}
 }
 
@@ -200,6 +206,14 @@ func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Addre
 
 func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return message.Internal.ActiveAddress(ctx, addr)
+}
+
+func (message *Message) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+	return message.Internal.GetSharedParams(ctx)
+}
+
+func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) {
+	return message.Internal.SetSharedParams(ctx, params)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
