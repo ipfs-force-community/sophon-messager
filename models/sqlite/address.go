@@ -2,14 +2,11 @@ package sqlite
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 
 	"gorm.io/gorm"
-
-	"github.com/hunjixin/automapper"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -132,12 +129,16 @@ func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, e
 		return nil, err
 	}
 
-	result, err := automapper.Mapper(list, reflect.TypeOf([]*types.Address{}))
-	if err != nil {
-		return nil, err
+	var result []*types.Address
+	for index, r := range list {
+		addr, err := r.Address()
+		if err != nil {
+			return nil, err
+		}
+		result[index] = addr
 	}
 
-	return result.([]*types.Address), nil
+	return result, nil
 }
 
 func (s sqliteAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) error {
