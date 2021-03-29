@@ -2,11 +2,9 @@ package mysql
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/hunjixin/automapper"
 	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
@@ -132,12 +130,16 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 		return nil, err
 	}
 
-	result, err := automapper.Mapper(list, reflect.TypeOf([]*types.Address{}))
-	if err != nil {
-		return nil, err
+	var result []*types.Address
+	for index, r := range list {
+		addr, err := r.Address()
+		if err != nil {
+			return nil, err
+		}
+		result[index] = addr
 	}
 
-	return result.([]*types.Address), nil
+	return result, nil
 }
 
 func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) error {
