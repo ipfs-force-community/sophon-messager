@@ -78,20 +78,20 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 				localMsg.Receipt = msg.receipt
 				localMsg.Height = int64(msg.height)
 				localMsg.TipSetKey = tsKeys[msg.height]
-				if _, err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
 				replaceMsg[localMsg.ID] = localMsg
 				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
 			} else {
-				if _, err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
+				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
 			}
 			delete(revertMsgs, msg.cid)
 		}
 		for cid := range revertMsgs {
-			if _, err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
+			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
 				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
 				return err
 			}
@@ -132,7 +132,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 	ms.tsCache.AddTs(tsList...)
 	if err := ms.storeTipset(); err != nil {
-		ms.log.Errorf("store tipset info failed %v", err)
+		ms.log.Errorf("store tipsetkey failed %v", err)
 	}
 
 	ms.log.Infof("process block %d, revert %d message apply %d message ", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs))
@@ -188,7 +188,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		for i := range receipts {
 			msg := msgs[i].Message
-			if _, ok := ms.addressService.addrInfo[msg.From]; ok {
+			if _, ok := ms.addressService.GetAddressInfo(msg.From); ok {
 				applyMsgs = append(applyMsgs, pendingMessage{
 					height:  height,
 					receipt: receipts[i],
@@ -230,7 +230,9 @@ type tipsetFormat struct {
 }
 
 func (ms *MessageService) storeTipset() error {
-	ms.tsCache.ReduceTs()
+	if len(ms.tsCache.Cache) > maxStoreTipsetCount {
+		ms.tsCache.ReduceTs()
+	}
 
 	return updateTipsetFile(ms.cfg.TipsetFilePath, ms.tsCache)
 }

@@ -18,8 +18,8 @@
     user = ""
 
   [db.sqlite]
-    path = "./message.db"
     debug = false
+    path = "./message.db"
 
 [jwt]
   expireDuration = "0s"
@@ -30,7 +30,7 @@
 
 [messageService]
   isProcessHead = true
-  tipsetFilePath = "./tipset.txt"
+  tipsetFilePath = "./tipset.json"
 
 [messageState]
   CleanupInterval = 86400
@@ -38,7 +38,7 @@
   backTime = 86400
 
 [node]
-    url = "/ip4/127.0.0.1/tcp/3453"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.8dSWe7S53eF1Ue6XfYUUN-vPSfUWL12xyWkOJv6DNks"
+  url = "/ip4/127.0.0.1/tcp/3453"
+#  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.8dSWe7S53eF1Ue6XfYUUN-vPSfUWL12xyWkOJv6DNks"
 #  url=   "/ip4/127.0.0.1/tcp/3453"
-#  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
+  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"

@@ -45,9 +45,9 @@ func TestAddress(t *testing.T) {
 
 		ctx := context.Background()
 
-		_, err = addressRepo.SaveAddress(ctx, addrInfo)
+		err = addressRepo.SaveAddress(ctx, addrInfo)
 		assert.NoError(t, err)
-		_, err = addressRepo.SaveAddress(ctx, addrInfo2)
+		err = addressRepo.SaveAddress(ctx, addrInfo2)
 		assert.NoError(t, err)
 
 		r, err := addressRepo.GetAddress(ctx, addr)
@@ -55,7 +55,7 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, addrInfo.Nonce, r.Nonce)
 
 		newNonce := uint64(5)
-		_, err = addressRepo.UpdateNonce(ctx, addr, newNonce)
+		err = addressRepo.UpdateNonce(ctx, addr, newNonce)
 		assert.NoError(t, err)
 		r2, err := addressRepo.GetAddress(ctx, addr)
 		assert.NoError(t, err)
@@ -100,14 +100,14 @@ func TestSqliteAddressRepo_UpdateAddressState(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
 		assert.NoError(t, err)
 
 		result, err := addressRepo.GetAddress(context.TODO(), addr)
 		assert.NoError(t, err)
 		assert.Equal(t, types.Alive, result.State)
 
-		_, err = addressRepo.UpdateAddressState(context.TODO(), addr, types.Notfound)
+		err = addressRepo.UpdateAddressState(context.TODO(), addr, types.Notfound)
 		assert.NoError(t, err)
 
 		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
@@ -144,14 +144,14 @@ func TestSqliteAddressRepo_UpdateAddressNonce(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
 		assert.NoError(t, err)
 
 		result, err := addressRepo.GetAddress(context.TODO(), addr)
 		assert.NoError(t, err)
 		assert.EqualValues(t, 3, result.Nonce)
 
-		_, err = addressRepo.UpdateNonce(context.TODO(), addr, 1000)
+		err = addressRepo.UpdateNonce(context.TODO(), addr, 1000)
 		assert.NoError(t, err)
 
 		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
@@ -187,7 +187,7 @@ func TestSqliteAddressRepo_Delete(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
 		assert.NoError(t, err)
 
 		_, err = addressRepo.GetAddress(context.TODO(), addr)
@@ -230,7 +230,7 @@ func TestSqliteAddressRepo_HasAddress(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
 		assert.NoError(t, err)
 
 		has, err := addressRepo.HasAddress(context.TODO(), addr)
@@ -274,19 +274,19 @@ func TestUpdateSelectMsgNum(t *testing.T) {
 			UpdatedAt:    time.Now(),
 		}
 
-		_, err = addressRepo.SaveAddress(context.TODO(), addrInfo)
+		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
 		assert.NoError(t, err)
 
 		_, err = addressRepo.GetAddress(context.TODO(), addr)
 		assert.NoError(t, err)
-		assert.Equal(t, 5, addrInfo.SelectMsgNum)
+		assert.Equal(t, uint64(5), addrInfo.SelectMsgNum)
 
-		err = addressRepo.UpdateSelectMsgNum(context.TODO(), addr, 10)
+		err = addressRepo.SetSelectMsgNum(context.TODO(), addr, 10)
 		assert.NoError(t, err)
 
 		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
 		assert.NoError(t, err)
-		assert.Equal(t, 10, addrInfo.SelectMsgNum)
+		assert.Equal(t, uint64(10), addrInfo.SelectMsgNum)
 	}
 
 	t.Run("DeleteAddress", func(t *testing.T) {

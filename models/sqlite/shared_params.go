@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"time"
 
 	"gorm.io/gorm"
 
@@ -24,7 +23,7 @@ type sqliteSharedParams struct {
 
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 
-	ScanInterval time.Duration `gorm:"column:scan_interval;NOT NULL"`
+	ScanInterval int `gorm:"column:scan_interval;NOT NULL"`
 
 	MaxEstFailNumOfMsg uint64 `gorm:"column:max_ext_fail_num_of_msg;type:UNSIGNED BIG INT;NOT NULL"`
 }
@@ -59,7 +58,7 @@ func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Sha
 	return ssp.SharedParams(), nil
 }
 
-func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) {
+func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
 	var ssp sqliteSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -67,11 +66,11 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 				params.ID = 1
 			}
 			if err := s.DB.Save(FromSharedParams(*params)).Error; err != nil {
-				return nil, err
+				return err
 			}
-			return params, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
 
 	ssp.ExpireEpoch = params.ExpireEpoch
@@ -86,8 +85,8 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 	ssp.MaxEstFailNumOfMsg = params.MaxEstFailNumOfMsg
 
 	if err := s.DB.Save(&ssp).Error; err != nil {
-		return nil, err
+		return err
 	}
 
-	return ssp.SharedParams(), nil
+	return nil
 }

@@ -46,6 +46,6 @@ func (a Address) ActiveAddress(ctx context.Context, addr address.Address) (addre
 	return a.AddressService.ActiveAddress(ctx, addr)
 }
 
-func (a Address) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num int) (address.Address, error) {
-	return a.AddressService.UpdateSelectMsgNum(ctx, addr, num)
+func (a Address) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+	return a.AddressService.SetSelectMsgNum(ctx, addr, num)
 }

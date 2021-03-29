@@ -16,7 +16,7 @@ type MessageRepo interface {
 	ExpireMessage(msg []*types.Message) error
 	BatchSaveMessage(msg []*types.Message) error
 	CreateMessage(msg *types.Message) error
-	SaveMessage(msg *types.Message) (string, error)
+	SaveMessage(msg *types.Message) error
 
 	GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error)
 	GetMessageByUid(id string) (*types.Message, error)
@@ -33,8 +33,8 @@ type MessageRepo interface {
 	ListSignedMsgs() ([]*types.Message, error)
 	ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error)
 
-	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) (string, error)
-	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) (string, error)
-	UpdateMessageStateByID(id string, state types.MessageState) (string, error)
+	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) error
+	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
+	UpdateMessageStateByID(id string, state types.MessageState) error
 	UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error
 }
