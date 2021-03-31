@@ -643,6 +643,29 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	return signedMsg.Cid(), err
 }
 
+func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+	msg, err := ms.GetMessageByUid(ctx, id)
+	if err != nil {
+		return struct{}{}, nil
+	}
+	if msg.State == types.OnChainMsg {
+		return struct{}{}, xerrors.Errorf("message already on chain")
+	}
+	if msg.State != types.FillMsg {
+		return struct{}{}, xerrors.Errorf("need FillMsg got %s", types.MsgStateToString(msg.State))
+	}
+	signedMsg := &venusTypes.SignedMessage{
+		Message:   msg.UnsignedMessage,
+		Signature: *msg.Signature,
+	}
+	if _, err := ms.nodeClient.MpoolPush(ctx, signedMsg); err != nil {
+		return struct{}{}, err
+	}
+	ms.multiNodeToPush(ctx, []*venusTypes.SignedMessage{signedMsg})
+
+	return struct{}{}, nil
+}
+
 func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.UnsignedMessage.Cid()
 	msg.UnsignedCid = &unsignedCid

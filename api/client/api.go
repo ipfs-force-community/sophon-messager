@@ -27,6 +27,7 @@ type IMessager interface {
 	UpdateAllFilledMessage(ctx context.Context) (int, error)
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+	RepublishMessage(Context context.Context, id string) (struct{}, error)
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -76,6 +77,7 @@ type Message struct {
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
+		RepublishMessage         func(Context context.Context, id string) (struct{}, error)
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByID           func(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
@@ -158,6 +160,10 @@ func (message *Message) UpdateFilledMessageByID(ctx context.Context, id string) 
 
 func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
+}
+
+func (message *Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+	return message.Internal.RepublishMessage(ctx, id)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

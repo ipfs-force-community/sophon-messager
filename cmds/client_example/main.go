@@ -75,6 +75,7 @@ func main() {
 	fmt.Println("Tipset:", msg.TipSetKey.String())
 }
 
+// nolint
 func loopPushMsgs(client client.IMessager) {
 	from, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
 	to, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")

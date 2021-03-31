@@ -23,7 +23,8 @@ var MsgCmds = &cli.Command{
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
 		replaceCmd,
-		waitMessagerCmds,
+		waitMessagerCmd,
+		republishCmd,
 	},
 }
 
@@ -94,7 +95,7 @@ var findCmd = &cli.Command{
 	},
 }
 
-var waitMessagerCmds = &cli.Command{
+var waitMessagerCmd = &cli.Command{
 	Name:  "wait",
 	Usage: "wait a messager msg id for result",
 	Action: func(cctx *cli.Context) error {
@@ -298,6 +299,30 @@ var replaceCmd = &cli.Command{
 		}
 
 		fmt.Println("new message cid: ", cid)
+		return nil
+	},
+}
+
+var republishCmd = &cli.Command{
+	Name:      "republish",
+	Usage:     "republish a message",
+	ArgsUsage: "id",
+	Action: func(cctx *cli.Context) error {
+		client, closer, err := getAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if cctx.NArg() == 0 {
+			return xerrors.New("must has id argument")
+		}
+
+		id := cctx.Args().Get(0)
+		_, err = client.RepublishMessage(cctx.Context, id)
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 }
