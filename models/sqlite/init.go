@@ -19,4 +19,7 @@ var TSqliteAddress = reflect.TypeOf(&sqliteAddress{})
 var TSqliteSharedParams = reflect.TypeOf(&sqliteSharedParams{})
 var TSharedParams = reflect.TypeOf(&types.SharedParams{})
 
+var TNode = reflect.TypeOf(&types.Node{})
+var TSqliteNode = reflect.TypeOf(&sqliteNode{})
+
 var ERRUnspportedMappingType = fmt.Errorf("unsupported mapping type")

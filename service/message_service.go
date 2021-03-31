@@ -47,7 +47,8 @@ type MessageService struct {
 
 	messageSelector *MessageSelector
 
-	sps *SharedParamsService
+	sps         *SharedParamsService
+	nodeService *NodeService
 }
 
 type headChan struct {
@@ -67,7 +68,8 @@ func NewMessageService(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
 	addressService *AddressService,
-	sps *SharedParamsService) (*MessageService, error) {
+	sps *SharedParamsService,
+	nodeService *NodeService) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps)
 	ms := &MessageService{
 		repo:            repo,
@@ -85,6 +87,7 @@ func NewMessageService(repo repo.Repo,
 		},
 		triggerPush: make(chan *venusTypes.TipSet, 20),
 		sps:         sps,
+		nodeService: nodeService,
 	}
 	ms.refreshMessageState(context.TODO())
 
@@ -447,6 +450,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	for _, msg := range toPushMessage {
 		_, err = ms.nodeClient.MpoolPush(ctx, msg)
 	}
+	go func() {
+		ms.multiNodeToPush(ctx, toPushMessage)
+	}()
 
 	if err != nil {
 		fmt.Println(toPushMessage[0].Cid().String(), toPushMessage[0].Message.Nonce)
@@ -459,6 +465,19 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		time.Since(tPush).Milliseconds(),
 	)
 	return err
+}
+
+func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusTypes.SignedMessage) {
+	if len(ms.nodeService.nodeInfos) == 0 {
+		return
+	}
+	for _, msg := range msgs {
+		for _, node := range ms.nodeService.nodeInfos {
+			if _, err := node.cli.MpoolPush(ctx, msg); err != nil {
+				ms.log.Errorf("push message to node %s %v", node.name, err)
+			}
+		}
+	}
 }
 
 func (ms *MessageService) StartPushMessage(ctx context.Context) {

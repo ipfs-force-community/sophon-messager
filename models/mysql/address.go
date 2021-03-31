@@ -84,7 +84,7 @@ func (s mysqlAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address
 		"state":      addr.State,
 		"wallet_id":  addr.WalletID,
 	}
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.Addr).Updates(updateColumns).Error
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.Addr.String()).Updates(updateColumns).Error
 }
 
 func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {

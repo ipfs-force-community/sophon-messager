@@ -50,6 +50,12 @@ type IMessager interface {
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error)
 	RefreshSharedParams(ctx context.Context) (struct{}, error)
+
+	SaveNode(ctx context.Context, node *types.Node) (struct{}, error)
+	GetNode(ctx context.Context, name string) (*types.Node, error)
+	HasNode(Context context.Context, name string) (bool, error)
+	ListNode(ctx context.Context) ([]*types.Node, error)
+	DeleteNode(ctx context.Context, name string) (struct{}, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -93,6 +99,12 @@ type Message struct {
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
 		SetSharedParams     func(context.Context, *types.SharedParams) (*types.SharedParams, error)
 		RefreshSharedParams func(ctx context.Context) (struct{}, error)
+
+		SaveNode   func(ctx context.Context, node *types.Node) (struct{}, error)
+		GetNode    func(ctx context.Context, name string) (*types.Node, error)
+		HasNode    func(Context context.Context, name string) (bool, error)
+		ListNode   func(ctx context.Context) ([]*types.Node, error)
+		DeleteNode func(ctx context.Context, name string) (struct{}, error)
 	}
 }
 
@@ -146,6 +158,33 @@ func (message *Message) UpdateFilledMessageByID(ctx context.Context, id string) 
 
 func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
+}
+
+func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
+	tm := time.NewTicker(time.Second * 30)
+	defer tm.Stop()
+
+	doneCh := make(chan struct{}, 1)
+	doneCh <- struct{}{}
+
+	for {
+		select {
+		case <-doneCh:
+			msg, err := message.Internal.GetMessageByUid(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+
+			if msg.State == types.OnChainMsg && msg.Confidence > int64(confidence) {
+				return msg, nil
+			}
+			continue
+		case <-tm.C:
+			doneCh <- struct{}{}
+		case <-ctx.Done():
+			return nil, xerrors.New("exit by client ")
+		}
+	}
 }
 
 ///////  wallet  ///////
@@ -234,29 +273,24 @@ func (message *Message) RefreshSharedParams(ctx context.Context) (struct{}, erro
 	return message.Internal.RefreshSharedParams(ctx)
 }
 
-func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
-	tm := time.NewTicker(time.Second * 30)
-	defer tm.Stop()
+/////// node info ///////
 
-	doneCh := make(chan struct{}, 1)
-	doneCh <- struct{}{}
+func (message *Message) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
+	return message.Internal.SaveNode(ctx, node)
+}
 
-	for {
-		select {
-		case <-doneCh:
-			msg, err := message.Internal.GetMessageByUid(ctx, id)
-			if err != nil {
-				return nil, err
-			}
+func (message *Message) GetNode(ctx context.Context, name string) (*types.Node, error) {
+	return message.Internal.GetNode(ctx, name)
+}
 
-			if msg.State == types.OnChainMsg && msg.Confidence > int64(confidence) {
-				return msg, nil
-			}
-			continue
-		case <-tm.C:
-			doneCh <- struct{}{}
-		case <-ctx.Done():
-			return nil, xerrors.New("exit by client ")
-		}
-	}
+func (message *Message) HasNode(ctx context.Context, name string) (bool, error) {
+	return message.Internal.HasNode(ctx, name)
+}
+
+func (message *Message) ListNode(ctx context.Context) ([]*types.Node, error) {
+	return message.Internal.ListNode(ctx)
+}
+
+func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, error) {
+	return message.Internal.DeleteNode(ctx, name)
 }

@@ -83,7 +83,7 @@ func (s sqliteAddressRepo) UpdateAddress(ctx context.Context, addr *types.Addres
 		"state":      addr.State,
 		"wallet_id":  addr.WalletID,
 	}
-	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ?", addr.Addr).Updates(updateColumns).Error
+	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ?", addr.Addr.String()).Updates(updateColumns).Error
 }
 
 func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {

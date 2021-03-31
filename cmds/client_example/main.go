@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -11,8 +14,6 @@ import (
 	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/types"
-	"log"
-	"net/http"
 )
 
 func main() {
@@ -28,8 +29,10 @@ func main() {
 		log.Fatal(err)
 		return
 	}
-
 	defer closer()
+
+	//loopPushMsgs(client)
+
 	from, _ := address.NewFromString("t3v3wx6tbwlvzev7hxhbpdlfwvwq5mbdhfrgmy2i2ztfaqhwjwc6zkxo6to4x2ms2acicd3x57fabxhpszzwqq")
 	to, _ := address.NewFromString("t3ru4e5hrvhsjjvyxyzzxzmsoahrdmobsfz6ohmd7ftswxyf7dxvhnmkq63cu5ozdy4wnrcqxx4gkwa427grga")
 
@@ -70,4 +73,38 @@ func main() {
 	fmt.Println("return_value:", msg.Receipt.ReturnValue)
 	fmt.Println("Height:", msg.Height)
 	fmt.Println("Tipset:", msg.TipSetKey.String())
+}
+
+func loopPushMsgs(client client.IMessager) {
+	from, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
+	to, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
+
+	ticker := time.NewTicker(time.Second)
+	for range ticker.C {
+		for i := 0; i < 50; i++ {
+			msgMate := &types.MsgMeta{
+				ExpireEpoch:       abi.ChainEpoch(1000000),
+				GasOverEstimation: 1.25,
+				MaxFee:            big.NewInt(10000000000000000),
+				MaxFeeCap:         big.NewInt(10000000000000000),
+			}
+			uid, err := client.PushMessageWithId(context.Background(),
+				types.NewUUID().String(),
+				&venustypes.UnsignedMessage{
+					Version: 0,
+					To:      from,
+					From:    to,
+					Nonce:   1,
+					Value:   abi.NewTokenAmount(100),
+					Method:  0,
+				},
+				msgMate)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+
+			fmt.Println("send message " + uid)
+		}
+	}
 }
