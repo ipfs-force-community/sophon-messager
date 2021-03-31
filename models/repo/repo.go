@@ -21,6 +21,7 @@ type Repo interface {
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
 	SharedParamsRepo() SharedParamsRepo
+	NodeRepo() NodeRepo
 }
 
 type TxRepo interface {
@@ -51,27 +52,12 @@ func (s *SqlSignature) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
-const ExitCodeToExec = exitcode.ExitCode(-1)
-
 type SqlMsgReceipt struct {
 	ExitCode    exitcode.ExitCode `gorm:"column:exit_code;default:-1"`
 	ReturnValue []byte            `gorm:"column:return_value;type:blob;"`
 	GasUsed     int64             `gorm:"column:gas_used;type:bigint;"`
 }
 
-/*
-func (s *SqlMsgReceipt) Scan(value interface{}) error {
-	sqlBin, isok := value.([]byte)
-	if !isok {
-		return fmt.Errorf("value must be []byte")
-	}
-	return json.Unmarshal(sqlBin, s)
-}
-
-func (s SqlMsgReceipt) Value() (driver.Value, error) {
-	return json.Marshal(s)
-}
-*/
 func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
 	if s == nil {
 		return nil

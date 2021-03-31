@@ -128,6 +128,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		messageSelector.log.Warnf("list filled message %v", err)
 	}
 	for _, msg := range filledMessage {
+		if actor.Nonce > msg.Nonce {
+			continue
+		}
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
 			Message:   msg.UnsignedMessage,
 			Signature: *msg.Signature,

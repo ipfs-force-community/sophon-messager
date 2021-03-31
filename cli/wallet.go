@@ -79,18 +79,9 @@ var addWalletCmd = &cli.Command{
 }
 
 var findWalletCmd = &cli.Command{
-	Name:  "find",
-	Usage: "find local wallet",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "uuid",
-			Usage: "Search wallet according to uuid",
-		},
-		&cli.StringFlag{
-			Name:  "name",
-			Usage: "Search wallet according to name",
-		},
-	},
+	Name:      "find",
+	Usage:     "find local wallet",
+	ArgsUsage: "name",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -98,24 +89,12 @@ var findWalletCmd = &cli.Command{
 		}
 		defer closer()
 
-		var wallet *types.Wallet
-		if uuidStr := ctx.String("uuid"); len(uuidStr) > 0 {
-			uuid, err := types.ParseUUID(uuidStr)
-			if err != nil {
-				return err
-			}
-			wallet, err = client.GetWalletByID(ctx.Context, uuid)
-			if err != nil {
-				return err
-			}
-		} else if name := ctx.String("name"); len(name) > 0 {
-			fmt.Println("name", name)
-			wallet, err = client.GetWalletByName(ctx.Context, name)
-			if err != nil {
-				return err
-			}
-		} else {
-			return xerrors.Errorf("value of query must be entered")
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass name")
+		}
+		wallet, err := client.GetWalletByName(ctx.Context, ctx.Args().First())
+		if err != nil {
+			return err
 		}
 
 		bytes, err := json.MarshalIndent(wallet, " ", "\t")
@@ -217,7 +196,6 @@ var deleteWalletCmd = &cli.Command{
 			return xerrors.Errorf("must pass name")
 		}
 		name := ctx.Args().First()
-		fmt.Println("name", name)
 
 		_, err = client.DeleteWallet(ctx.Context, name)
 		if err != nil {

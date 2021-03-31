@@ -86,3 +86,7 @@ func (message Message) UpdateFilledMessageByID(ctx context.Context, id string) (
 func (message Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	return message.MsgService.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
+
+func (message Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+	return message.MsgService.RepublishMessage(ctx, id)
+}

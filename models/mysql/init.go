@@ -17,3 +17,6 @@ var TMysqlSharedParams = reflect.TypeOf(&mysqlSharedParams{})
 
 var TAddress = reflect.TypeOf(&types.Address{})
 var TMysqlAddress = reflect.TypeOf(&mysqlAddress{})
+
+var TNode = reflect.TypeOf(&types.Node{})
+var TMysqlNode = reflect.TypeOf(&mysqlNode{})

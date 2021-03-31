@@ -62,3 +62,22 @@ type MsgMeta struct {
 	MaxFee            big.Int        `json:"maxFee,omitempty"`
 	MaxFeeCap         big.Int        `json:"maxFeeCap"`
 }
+
+func MsgStateToString(state MessageState) string {
+	switch state {
+	case UnFillMsg:
+		return "UnFillMsg"
+	case FillMsg:
+		return "FillMsg"
+	case OnChainMsg:
+		return "OnChainMsg"
+	case ExpireMsg:
+		return "ExpireMsg"
+	case ReplacedMsg:
+		return "ReplacedMsg"
+	case NoWalletMsg:
+		return "NoWalletMsg"
+	default:
+		return "UnKnown"
+	}
+}
