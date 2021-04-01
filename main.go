@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ipfs-force-community/venus-messager/api/jwt"
 	"net"
 	"os"
 
@@ -85,6 +86,10 @@ func runAction(ctx *cli.Context) error {
 		service.MessagerService(),
 		//api
 		fx.Provide(api.InitRouter),
+		//jwt
+		fx.Provide(jwt.NewJwtClient),
+		//middleware
+
 		fx.Provide(func() net.Listener {
 			return lst
 		}),

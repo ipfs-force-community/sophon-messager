@@ -2,6 +2,11 @@ build:
 	rm -rf venus-messager
 	go build -o venus-messager .
 
+gen:
+	go run ./gen/gen.go > ./api/controller/auth_map.go
+	gofmt -e -s -w ./api/controller/auth_map.go
+.PHONY: gen
+
 deps:
 	git submodule update --init
 	./extern/filecoin-ffi/install-filcrypto

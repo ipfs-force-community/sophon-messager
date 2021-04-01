@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -43,7 +44,7 @@ func SetupController(router *gin.Engine, sMap service.ServiceMap, log *logrus.Lo
 	return registerController(v1, sMap, log, ts)
 }
 
-type respError struct {
+type RespError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
@@ -51,7 +52,7 @@ type respError struct {
 type JsonRpcResponse struct {
 	ID     int64       `json:"id,omitempty"`
 	Result interface{} `json:"result,omitempty"`
-	Error  *respError  `json:"error,omitempty"`
+	Error  *RespError  `json:"error,omitempty"`
 }
 
 func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logrus.Logger, controllers []reflect.Type) error {
@@ -81,7 +82,8 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 					return
 				}
 
-				paramsDecoder := json.NewDecoder(c.Request.Body)
+				params := c.Request.Context().Value("arguments").(map[string]interface{})["params"].([]byte)
+				paramsDecoder := json.NewDecoder(bytes.NewReader(params))
 				_, err = paramsDecoder.Token()
 				if err != nil {
 					c.String(http.StatusServiceUnavailable, "body not a json array")
@@ -113,7 +115,7 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 					if err != nil {
 						c.JSON(http.StatusServiceUnavailable, JsonRpcResponse{
 							ID: id,
-							Error: &respError{
+							Error: &RespError{
 								Code:    serverError,
 								Message: fmt.Sprintf("expect type %t, but failed %v", argT, err),
 							},
@@ -134,7 +136,7 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 					err := out[1].Interface()
 					c.JSON(http.StatusServiceUnavailable, JsonRpcResponse{
 						ID: id,
-						Error: &respError{
+						Error: &RespError{
 							Code:    applicationError,
 							Message: err.(error).Error(),
 						},

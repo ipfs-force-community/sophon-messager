@@ -51,8 +51,7 @@ type MySqlConfig struct {
 }
 
 type JWTConfig struct {
-	Secret         string        `toml:"secret"`
-	ExpireDuration time.Duration `toml:"expireDuration"`
+	Url string `toml:"url"`
 }
 
 type AddressConfig struct {

@@ -10,10 +10,11 @@ require (
 	github.com/filecoin-project/venus v0.9.1
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
-	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/golangci/golangci-lint v1.39.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs-force-community/venus-auth v0.0.0-20210401093821-d73c83e45b94 // indirect
 	github.com/ipfs-force-community/venus-wallet v0.0.0-20210310055425-c7247d399ba3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/json-iterator/go v1.1.10 // indirect
@@ -23,21 +24,18 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/sirupsen/logrus v1.8.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/toorop/gin-logrus v0.0.0-20210225092905-2c785434f26f
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/fx v1.13.1
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
-	golang.org/x/sys v0.0.0-20210225134936-a50acf3fe073 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/mysql v1.0.4
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12
-	honnef.co/go/tools v0.1.2 // indirect
 )
 
 replace github.com/ipfs-force-community/venus-messager => ./
