@@ -10,6 +10,7 @@ require (
 	github.com/filecoin-project/venus v0.9.1
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/golangci/golangci-lint v1.39.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
@@ -23,7 +24,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/sirupsen/logrus v1.8.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/toorop/gin-logrus v0.0.0-20210225092905-2c785434f26f
 	github.com/ugorji/go v1.2.4 // indirect
@@ -35,7 +36,6 @@ require (
 	gorm.io/driver/mysql v1.0.4
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12
-	honnef.co/go/tools v0.1.2 // indirect
 )
 
 replace github.com/ipfs-force-community/venus-messager => ./

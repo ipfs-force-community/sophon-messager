@@ -55,7 +55,7 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 		if err != nil {
 			return 401, xerrors.Errorf("JWT Verification failed (originating from %s): %s", ip, err)
 		}
-		method := req.Context().Value("value").(map[string]interface{})["method"].(string)
+		method := req.Context().Value("arguments").(map[string]interface{})["method"].(string)
 
 		perms := core.AdaptOldStrategy(allow.Perm)
 		if !utils.Contains(perms, allow.Perm) {

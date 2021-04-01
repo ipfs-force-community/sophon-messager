@@ -82,7 +82,7 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 					return
 				}
 
-				params := c.Request.Context().Value("value").(map[string]interface{})["params"].([]byte)
+				params := c.Request.Context().Value("arguments").(map[string]interface{})["params"].([]byte)
 				paramsDecoder := json.NewDecoder(bytes.NewReader(params))
 				_, err = paramsDecoder.Token()
 				if err != nil {

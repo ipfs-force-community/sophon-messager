@@ -57,7 +57,7 @@ func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Re
 		req.RequestURI = newRequestUrl
 		params, _ := json.Marshal(jsonReq.Params)
 
-		ctx := context.WithValue(req.Context(), "value", map[string]interface{}{
+		ctx := context.WithValue(req.Context(), "arguments", map[string]interface{}{
 			"method": methodSeq[len(methodSeq)-1],
 			"params": params,
 			"id":     jsonReq.ID,
@@ -92,7 +92,7 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 		code, err = filter.PreRequest(writer, request)
 		if err != nil {
 			resp := controller.JsonRpcResponse{
-				ID: request.Context().Value("value").(map[string]interface{})["id"].(int64),
+				ID: request.Context().Value("arguments").(map[string]interface{})["id"].(int64),
 				Error: &controller.RespError{
 					Code:    code,
 					Message: err.Error(),
@@ -100,7 +100,7 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 			}
 			writer.WriteHeader(code)
 			data, _ := json.Marshal(resp)
-			writer.Write(data)
+			_, _ = writer.Write(data)
 			log.Errorf("cannot auth token verify")
 			return
 		}
