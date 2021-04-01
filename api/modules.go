@@ -1,10 +1,11 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
+	"github.com/ipfs-force-community/venus-messager/api/controller"
+	"github.com/ipfs-force-community/venus-messager/api/jwt"
+	"golang.org/x/xerrors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -29,62 +30,42 @@ type JsonRpcRequest struct {
 	Params []interface{} `json:"params,omitempty"`
 }
 
-var _ io.ReadCloser = (*CloserReader)(nil)
-
-type CloserReader struct {
-	reader io.Reader
-}
-
-func (c *CloserReader) Read(p []byte) (n int, err error) {
-	return c.reader.Read(p)
-}
-
-func (c *CloserReader) Close() error {
-	return nil
-}
-
 type RewriteJsonRpcToRestful struct {
 	*gin.Engine
 }
 
-func (r *RewriteJsonRpcToRestful) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Request) (int, error) {
 	if req.Method == http.MethodPost && req.URL.Path == "/rpc/v0" {
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			w.WriteHeader(503)
-			_, _ = w.Write([]byte("failed to read json rpc body"))
-			return
+			return 503, xerrors.New("failed to read json rpc body")
 		}
 
 		jsonReq := &JsonRpcRequest{}
 		err = json.Unmarshal(body, jsonReq)
 		if err != nil {
-			w.WriteHeader(503)
-			_, _ = w.Write([]byte("failed to unmarshal json rpc body"))
-			return
+			return 503, xerrors.New("failed to unmarshal json rpc body")
 		}
 		methodSeq := strings.Split(jsonReq.Method, ".")
 		//	methodPath := strings.Join(strings.Split(jsonReq.Method, "."), "/")
 		newRequestUrl := req.RequestURI + "/" + methodSeq[len(methodSeq)-1] + "/" + strconv.FormatInt(jsonReq.ID, 10)
 		newUrl, err := url.Parse(newRequestUrl)
 		if err != nil {
-			w.WriteHeader(503)
-			_, _ = w.Write([]byte("failed to parser new url"))
-			return
+			return 503, xerrors.New("failed to parser new url")
 		}
 		req.URL = newUrl
 		req.RequestURI = newRequestUrl
 		params, _ := json.Marshal(jsonReq.Params)
-		req.Body = &CloserReader{bytes.NewBuffer(params)}
+
+		ctx := context.WithValue(req.Context(), "value", map[string]interface{}{
+			"method": methodSeq[len(methodSeq)-1],
+			"params": params,
+			"id":     jsonReq.ID,
+		})
+		newReq := req.WithContext(ctx)
+		*req = *newReq
 	}
-
-	r.Engine.ServeHTTP(w, req)
-}
-
-func UseMiddleware(log *logrus.Logger, r *gin.Engine) error {
-
-	//r.Use(middleware.RewriteJsonRpcMiddleware)
-	return nil
+	return 0, nil
 }
 
 func InitRouter(log *logrus.Logger) *gin.Engine {
@@ -93,13 +74,40 @@ func InitRouter(log *logrus.Logger) *gin.Engine {
 	return g
 }
 
-func RunAPI(lc fx.Lifecycle, r *gin.Engine, lst net.Listener, log *logrus.Logger) error {
-	skipContextPathRouter := &RewriteJsonRpcToRestful{
+func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger) error {
+	rewriteJsonRpc := &RewriteJsonRpcToRestful{
 		Engine: r,
 	}
+	filter := controller.NewJWTFilter(jwtClient, log, r)
 
 	handler := http.NewServeMux()
-	handler.Handle("/", skipContextPathRouter)
+	handler.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		code, err := rewriteJsonRpc.PreRequest(writer, request)
+		if err != nil {
+			writer.WriteHeader(code)
+			log.Errorf("cannot transfser jsonrpc to rustful")
+			return
+		}
+
+		code, err = filter.PreRequest(writer, request)
+		if err != nil {
+			resp := controller.JsonRpcResponse{
+				ID: request.Context().Value("value").(map[string]interface{})["id"].(int64),
+				Error: &controller.RespError{
+					Code:    code,
+					Message: err.Error(),
+				},
+			}
+			writer.WriteHeader(code)
+			data, _ := json.Marshal(resp)
+			writer.Write(data)
+			log.Errorf("cannot auth token verify")
+			return
+		}
+
+		r.ServeHTTP(writer, request)
+	})
+
 	apiserv := &http.Server{
 		Handler: handler,
 	}

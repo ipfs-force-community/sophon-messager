@@ -13,44 +13,44 @@ import (
 )
 
 type IMessager interface {
-	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) //perm:read
 	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
-	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
-	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)
-	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
-	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
-	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
-	ListMessage(ctx context.Context) ([]*types.Message, error)
-	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
-	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)
-	UpdateAllFilledMessage(ctx context.Context) (int, error)
-	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
-	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
-	RepublishMessage(Context context.Context, id string) (struct{}, error)
+	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)                                                                        //perm:read
+	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)                                                                       //perm:read
+	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                                //perm:read
+	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                              //perm:read
+	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)                                      //perm:read
+	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
+	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)                                           //perm:admin
+	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
+	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
+	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)                                                                        //perm:admin
+	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) //perm:admin
+	RepublishMessage(Context context.Context, id string) (struct{}, error)                                                                         //perm:admin
 
-	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
-	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)
-	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)
-	HasWallet(Context context.Context, name string) (bool, error)
-	ListWallet(ctx context.Context) ([]*types.Wallet, error)
-	ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error)
-	DeleteWallet(ctx context.Context, name string) (string, error)
-	UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error)
+	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)                //perm:admin
+	GetWalletByID(ctx context.Context, uuid types.UUID) (*types.Wallet, error)               //perm:admin
+	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)                 //perm:admin
+	HasWallet(Context context.Context, name string) (bool, error)                            //perm:admin
+	ListWallet(ctx context.Context) ([]*types.Wallet, error)                                 //perm:admin
+	ListRemoteWalletAddress(ctx context.Context, uuid types.UUID) ([]address.Address, error) //perm:admin
+	DeleteWallet(ctx context.Context, name string) (string, error)                           //perm:admin
+	UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error)                  //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (string, error)
-	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)
-	HasAddress(ctx context.Context, addr address.Address) (bool, error)
-	ListAddress(ctx context.Context) ([]*types.Address, error)
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)
-	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)
-	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)
-	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
+	SaveAddress(ctx context.Context, address *types.Address) (string, error)                        //perm:admin
+	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                   //perm:admin
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)                             //perm:admin
+	ListAddress(ctx context.Context) ([]*types.Address, error)                                      //perm:admin
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)   //perm:admin
+	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
+	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)            //perm:admin
+	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) //perm:admin
 
-	GetSharedParams(ctx context.Context) (*types.SharedParams, error)
-	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error)
-	RefreshSharedParams(ctx context.Context) (struct{}, error)
+	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                             //perm:admin
+	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) //perm:admin
+	RefreshSharedParams(ctx context.Context) (struct{}, error)                                    //perm:admin
 
 	SaveNode(ctx context.Context, node *types.Node) (struct{}, error)
 	GetNode(ctx context.Context, name string) (*types.Node, error)

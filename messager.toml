@@ -3,7 +3,7 @@
   remoteWalletSweepInterval = 10
 
 [api]
-  Address = "127.0.0.1:39812"
+  Address = "0.0.0.0:39812"
 
 [db]
   type = "sqlite"
@@ -18,19 +18,18 @@
     user = ""
 
   [db.sqlite]
-    debug = false
     path = "./message.db"
+    debug = false
 
 [jwt]
-  expireDuration = "0s"
-  secret = ""
+    url= "http://127.0.0.1:8989"
 
 [log]
   path = "messager.log"
 
 [messageService]
   isProcessHead = true
-  tipsetFilePath = "./tipset.json"
+  tipsetFilePath = "./tipset.txt"
 
 [messageState]
   CleanupInterval = 86400
@@ -38,7 +37,5 @@
   backTime = 86400
 
 [node]
-  url = "/ip4/127.0.0.1/tcp/3453"
-#  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.8dSWe7S53eF1Ue6XfYUUN-vPSfUWL12xyWkOJv6DNks"
-#  url=   "/ip4/127.0.0.1/tcp/3453"
-  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
+    url = "/ip4/8.130.165.167/tcp/3453"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
