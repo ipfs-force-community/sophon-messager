@@ -15,7 +15,7 @@ var NodeCmds = &cli.Command{
 	Usage: "node commands",
 	Subcommands: []*cli.Command{
 		addNodeCmd,
-		findNodeCmd,
+		searchNodeCmd,
 		listNodeCmd,
 		deleteNodeCmd,
 	},
@@ -74,9 +74,9 @@ var addNodeCmd = &cli.Command{
 	},
 }
 
-var findNodeCmd = &cli.Command{
-	Name:      "find",
-	Usage:     "find node info",
+var searchNodeCmd = &cli.Command{
+	Name:      "search",
+	Usage:     "search node info by name",
 	ArgsUsage: "name",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -105,7 +105,7 @@ var findNodeCmd = &cli.Command{
 
 var listNodeCmd = &cli.Command{
 	Name:  "list",
-	Usage: "list node",
+	Usage: "list node info",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {

@@ -59,8 +59,9 @@ type AddressConfig struct {
 }
 
 type MessageServiceConfig struct {
-	TipsetFilePath string `toml:"tipsetFilePath"`
-	IsProcessHead  bool   `toml:"isProcessHead"`
+	TipsetFilePath  string `toml:"tipsetFilePath"`
+	SkipProcessHead bool   `toml:"skipProcessHead"`
+	SkipPushMessage bool   `toml:"skipPushMessage"`
 }
 
 type MessageStateConfig struct {
@@ -96,8 +97,9 @@ func DefaultConfig() *Config {
 			CleanupInterval:   3600 * 24,
 		},
 		MessageService: MessageServiceConfig{
-			TipsetFilePath: "./tipset.txt",
-			IsProcessHead:  true,
+			TipsetFilePath:  "./tipset.json",
+			SkipProcessHead: false,
+			SkipPushMessage: false,
 		},
 	}
 }

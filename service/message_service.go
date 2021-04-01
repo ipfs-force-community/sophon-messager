@@ -225,7 +225,7 @@ func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *ve
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
 	ms.log.Infof("receive new head from chain")
-	if !ms.cfg.IsProcessHead {
+	if ms.cfg.SkipProcessHead {
 		ms.log.Infof("skip process new head")
 		return nil
 	}

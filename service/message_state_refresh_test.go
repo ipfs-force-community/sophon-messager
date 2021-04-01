@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"sort"
 	"testing"
 
@@ -23,9 +24,9 @@ func TestReadAndWriteTipset(t *testing.T) {
 	}
 	tsCache.CurrHeight = 3
 
-	filePath := "./test_read_write_tipset.txt"
+	filePath := "./test_read_write_tipset.json"
 	defer func() {
-		//assert.NoError(t, os.Remove(filePath))
+		assert.NoError(t, os.Remove(filePath))
 	}()
 	err := updateTipsetFile(filePath, tsCache)
 	assert.NoError(t, err)

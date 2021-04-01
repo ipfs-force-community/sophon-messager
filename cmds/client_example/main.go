@@ -81,6 +81,8 @@ func loopPushMsgs(client client.IMessager) {
 	to, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
 
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	for range ticker.C {
 		for i := 0; i < 50; i++ {
 			msgMate := &types.MsgMeta{

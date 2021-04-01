@@ -193,6 +193,8 @@ func (addressService *AddressService) listenAddressChange(ctx context.Context) e
 			interval = time.Duration(params.ScanInterval) * time.Second
 		}
 		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:

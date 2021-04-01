@@ -113,6 +113,8 @@ func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) (struct
 func (sps *SharedParamsService) refreshParamsLoop() {
 	go func() {
 		ticker := time.NewTicker(referParamsInterval)
+		defer ticker.Stop()
+
 		for range ticker.C {
 			params, err := sps.GetSharedParams(context.TODO())
 			if err != nil {
