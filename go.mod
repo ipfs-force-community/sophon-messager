@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/venus-auth v0.0.0-20210401093821-d73c83e45b94 // indirect
+	github.com/ipfs-force-community/venus-auth v0.0.0-20210401093821-d73c83e45b94
 	github.com/ipfs-force-community/venus-wallet v0.0.0-20210310055425-c7247d399ba3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/json-iterator/go v1.1.10 // indirect

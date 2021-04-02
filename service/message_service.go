@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +24,8 @@ import (
 	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs-force-community/venus-messager/utils"
 )
+
+var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
 
 const (
 	MaxHeadChangeProcess = 5
@@ -450,14 +454,13 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	for _, msg := range toPushMessage {
 		_, err = ms.nodeClient.MpoolPush(ctx, msg)
 	}
-	go func() {
-		ms.multiNodeToPush(ctx, toPushMessage)
-	}()
-
 	if err != nil {
 		fmt.Println(toPushMessage[0].Cid().String(), toPushMessage[0].Message.Nonce)
 		fmt.Println(err)
 	}
+	go func() {
+		ms.multiNodeToPush(ctx, toPushMessage)
+	}()
 	ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
 		time.Since(tSelect).Milliseconds(),
 		time.Since(tSaveDb).Milliseconds(),
@@ -468,15 +471,24 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 }
 
 func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusTypes.SignedMessage) {
-	if len(ms.nodeService.nodeInfos) == 0 {
+	if len(ms.nodeService.nodeInfos) == 0 || len(msgs) == 0 {
 		return
 	}
+	msgLen := len(msgs)
+	for i := 0; i < msgLen; i++ {
+		j, m := rand.Intn(msgLen), rand.Intn(msgLen)
+		msgs[j], msgs[m] = msgs[m], msgs[j]
+	}
+
+	next := 0
+	nodeInfos := ms.nodeService.nodeInfos
+	nodeLen := len(nodeInfos)
 	for _, msg := range msgs {
-		for _, node := range ms.nodeService.nodeInfos {
-			if _, err := node.cli.MpoolPush(ctx, msg); err != nil {
-				ms.log.Errorf("push message to node %s %v", node.name, err)
-			}
+		if _, err := nodeInfos[next].cli.MpoolPush(ctx, msg); err != nil &&
+			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+			ms.log.Errorf("push message to node %s %v", nodeInfos[next].name, err)
 		}
+		next = (next + 1) % nodeLen
 	}
 }
 

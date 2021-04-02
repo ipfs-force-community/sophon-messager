@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/service"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 //-32700 ---> parse error. not well formed
@@ -82,7 +83,7 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 					return
 				}
 
-				params := c.Request.Context().Value("arguments").(map[string]interface{})["params"].([]byte)
+				params := c.Request.Context().Value(types.Arguments{}).(map[string]interface{})["params"].([]byte)
 				paramsDecoder := json.NewDecoder(bytes.NewReader(params))
 				_, err = paramsDecoder.Token()
 				if err != nil {

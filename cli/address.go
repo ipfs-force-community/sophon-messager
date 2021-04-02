@@ -27,6 +27,7 @@ var AddrCmds = &cli.Command{
 	},
 }
 
+// nolint
 var setAddrCmd = &cli.Command{
 	Name:  "set",
 	Usage: "set local address",
@@ -187,6 +188,7 @@ var updateNonceCmd = &cli.Command{
 	},
 }
 
+// nolint
 var deleteAddrCmd = &cli.Command{
 	Name:      "del",
 	Usage:     "delete local address",

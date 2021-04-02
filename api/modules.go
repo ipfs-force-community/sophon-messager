@@ -3,8 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/ipfs-force-community/venus-messager/api/controller"
-	"github.com/ipfs-force-community/venus-messager/api/jwt"
 	"golang.org/x/xerrors"
 	"io/ioutil"
 	"net"
@@ -17,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 	ginlogrus "github.com/toorop/gin-logrus"
 	"go.uber.org/fx"
+
+	"github.com/ipfs-force-community/venus-messager/api/controller"
+	"github.com/ipfs-force-community/venus-messager/api/jwt"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type JsonRpcRequest struct {
@@ -57,7 +59,7 @@ func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Re
 		req.RequestURI = newRequestUrl
 		params, _ := json.Marshal(jsonReq.Params)
 
-		ctx := context.WithValue(req.Context(), "arguments", map[string]interface{}{
+		ctx := context.WithValue(req.Context(), types.Arguments{}, map[string]interface{}{
 			"method": methodSeq[len(methodSeq)-1],
 			"params": params,
 			"id":     jsonReq.ID,
@@ -92,7 +94,7 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 		code, err = filter.PreRequest(writer, request)
 		if err != nil {
 			resp := controller.JsonRpcResponse{
-				ID: request.Context().Value("arguments").(map[string]interface{})["id"].(int64),
+				ID: request.Context().Value(types.Arguments{}).(map[string]interface{})["id"].(int64),
 				Error: &controller.RespError{
 					Code:    code,
 					Message: err.Error(),
