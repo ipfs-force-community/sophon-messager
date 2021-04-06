@@ -16,9 +16,9 @@ import (
 
 var MsgCmds = &cli.Command{
 	Name:  "msg",
-	Usage: "msg commands",
+	Usage: "message commands",
 	Subcommands: []*cli.Command{
-		findCmd,
+		searchCmd,
 		listCmd,
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
@@ -28,9 +28,9 @@ var MsgCmds = &cli.Command{
 	},
 }
 
-var findCmd = &cli.Command{
-	Name:  "find",
-	Usage: "find local msg test",
+var searchCmd = &cli.Command{
+	Name:  "search",
+	Usage: "search message",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "id",
@@ -127,7 +127,7 @@ var waitMessagerCmd = &cli.Command{
 
 var listCmd = &cli.Command{
 	Name:  "list",
-	Usage: "list local msg test",
+	Usage: "list messages",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "output-type",
@@ -201,7 +201,7 @@ var updateFilledMessageCmd = &cli.Command{
 		defer closer()
 
 		var id string
-		if id = ctx.String("uuid"); len(id) > 0 {
+		if id = ctx.String("id"); len(id) > 0 {
 
 		} else if signedCidStr := ctx.String("signed_cid"); len(signedCidStr) > 0 {
 			signedCid, err := cid.Decode(signedCidStr)
@@ -261,7 +261,7 @@ var replaceCmd = &cli.Command{
 			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
 		},
 	},
-	ArgsUsage: "<from nonce> | <message-uuid>",
+	ArgsUsage: "<from nonce> | <message-id>",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -305,7 +305,7 @@ var replaceCmd = &cli.Command{
 
 var republishCmd = &cli.Command{
 	Name:      "republish",
-	Usage:     "republish a message",
+	Usage:     "republish a message by id",
 	ArgsUsage: "id",
 	Action: func(cctx *cli.Context) error {
 		client, closer, err := getAPI(cctx)

@@ -16,17 +16,18 @@ var AddrCmds = &cli.Command{
 	Name:  "address",
 	Usage: "address commands",
 	Subcommands: []*cli.Command{
-		setAddrCmd,
-		findAddrCmd,
+		//setAddrCmd,
+		searchAddrCmd,
 		listAddrCmd,
-		deleteAddrCmd,
+		//deleteAddrCmd,
 		updateNonceCmd,
 		forbiddenAddrCmd,
-		permitAddrCmd,
+		activeAddrCmd,
 		setAddrSelMsgNumCmd,
 	},
 }
 
+// nolint
 var setAddrCmd = &cli.Command{
 	Name:  "set",
 	Usage: "set local address",
@@ -96,9 +97,9 @@ var setAddrCmd = &cli.Command{
 	},
 }
 
-var findAddrCmd = &cli.Command{
-	Name:      "find",
-	Usage:     "find local address",
+var searchAddrCmd = &cli.Command{
+	Name:      "search",
+	Usage:     "search address",
 	ArgsUsage: "address",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -130,7 +131,7 @@ var findAddrCmd = &cli.Command{
 
 var listAddrCmd = &cli.Command{
 	Name:  "list",
-	Usage: "list local address",
+	Usage: "list address",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -187,6 +188,7 @@ var updateNonceCmd = &cli.Command{
 	},
 }
 
+// nolint
 var deleteAddrCmd = &cli.Command{
 	Name:      "del",
 	Usage:     "delete local address",
@@ -252,9 +254,9 @@ var forbiddenAddrCmd = &cli.Command{
 	},
 }
 
-var permitAddrCmd = &cli.Command{
-	Name:      "permit",
-	Usage:     "permit address",
+var activeAddrCmd = &cli.Command{
+	Name:      "active",
+	Usage:     "activate a frozen address",
 	ArgsUsage: "address",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)

@@ -11,6 +11,7 @@
   [db.mysql]
     addr = ""
     connMaxLifeTime = "0s"
+    debug = false
     maxIdleConn = 0
     maxOpenConn = 0
     name = ""
@@ -28,8 +29,9 @@
   path = "messager.log"
 
 [messageService]
-  isProcessHead = true
-  tipsetFilePath = "./tipset.txt"
+  skipProcessHead = false
+  skipPushMessage = false
+  tipsetFilePath = "./tipset.json"
 
 [messageState]
   CleanupInterval = 86400
@@ -37,5 +39,7 @@
   backTime = 86400
 
 [node]
-    url = "/ip4/8.130.165.167/tcp/3453"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
+  url = "/ip4/8.130.165.167/tcp/3453"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
+  #url = "/ip4/127.0.0.1/tcp/3453"
+  #token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"

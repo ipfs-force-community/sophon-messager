@@ -16,7 +16,7 @@ var WalletCmds = &cli.Command{
 	Usage: "wallet commands",
 	Subcommands: []*cli.Command{
 		addWalletCmd,
-		findWalletCmd,
+		searchWalletCmd,
 		listWalletCmd,
 		listRemoteWalletAddrCmd,
 		deleteWalletCmd,
@@ -78,9 +78,9 @@ var addWalletCmd = &cli.Command{
 	},
 }
 
-var findWalletCmd = &cli.Command{
-	Name:      "find",
-	Usage:     "find local wallet",
+var searchWalletCmd = &cli.Command{
+	Name:      "search",
+	Usage:     "search wallet by name",
 	ArgsUsage: "name",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -108,7 +108,7 @@ var findWalletCmd = &cli.Command{
 
 var listWalletCmd = &cli.Command{
 	Name:  "list",
-	Usage: "list local wallet",
+	Usage: "list wallet",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -132,7 +132,7 @@ var listWalletCmd = &cli.Command{
 
 var listRemoteWalletAddrCmd = &cli.Command{
 	Name:  "list-addr",
-	Usage: "list remote wallet address by uuid",
+	Usage: "list remote wallet address",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "uuid",

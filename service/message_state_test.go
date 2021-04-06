@@ -18,6 +18,8 @@ func TestMessageStateCache(t *testing.T) {
 	assert.NoError(t, err)
 	defer func() {
 		assert.NoError(t, os.Remove("message_state.db"))
+		assert.NoError(t, os.Remove("message_state.db-shm"))
+		assert.NoError(t, os.Remove("message_state.db-wal"))
 	}()
 	assert.NoError(t, db.AutoMigrate())
 

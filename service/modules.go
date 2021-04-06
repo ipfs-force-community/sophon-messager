@@ -45,7 +45,11 @@ func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageSer
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			go msgService.StartPushMessage(ctx)
+			if !msgService.cfg.SkipPushMessage {
+				go msgService.StartPushMessage(ctx)
+			} else {
+				msgService.log.Infof("skip push message")
+			}
 			go func() {
 				for {
 					if err := nd.listenHeadChangesOnce(ctx); err != nil {

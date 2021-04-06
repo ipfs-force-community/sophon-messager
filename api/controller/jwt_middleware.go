@@ -1,15 +1,18 @@
 package controller
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
+
 	"github.com/ipfs-force-community/venus-auth/core"
 	"github.com/ipfs-force-community/venus-auth/util"
 	"github.com/ipfs-force-community/venus-messager/api/jwt"
+	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs-force-community/venus-messager/utils"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
-	"net/http"
-	"strings"
 )
 
 type JWTFilter struct {
@@ -55,7 +58,7 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 		if err != nil {
 			return 401, xerrors.Errorf("JWT Verification failed (originating from %s): %s", ip, err)
 		}
-		method := req.Context().Value("arguments").(map[string]interface{})["method"].(string)
+		method := req.Context().Value(types.Arguments{}).(map[string]interface{})["method"].(string)
 
 		perms := core.AdaptOldStrategy(allow.Perm)
 		if !utils.Contains(perms, allow.Perm) {
