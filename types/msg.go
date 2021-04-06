@@ -47,6 +47,8 @@ type Message struct {
 
 	Meta *MsgMeta
 
+	WalletName string
+
 	State MessageState
 }
 

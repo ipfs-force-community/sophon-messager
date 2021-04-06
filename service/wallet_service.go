@@ -23,6 +23,11 @@ type WalletService struct {
 	l sync.RWMutex
 }
 
+type WalletInfo struct {
+	walletCli map[types.UUID]IWalletClient
+	addresses map[address.Address]*AddressInfo
+}
+
 func NewWalletService(repo repo.Repo, logger *logrus.Logger) (*WalletService, error) {
 	ws := &WalletService{
 		repo:          repo,

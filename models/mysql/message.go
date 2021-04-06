@@ -45,6 +45,8 @@ type mysqlMessage struct {
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
+	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
@@ -69,11 +71,12 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
-		Height:    sqlMsg.Height,
-		Receipt:   sqlMsg.Receipt.MsgReceipt(),
-		Signature: (*crypto.Signature)(sqlMsg.Signature),
-		Meta:      sqlMsg.Meta.Meta(),
-		State:     sqlMsg.State,
+		Height:     sqlMsg.Height,
+		Receipt:    sqlMsg.Receipt.MsgReceipt(),
+		Signature:  (*crypto.Signature)(sqlMsg.Signature),
+		Meta:       sqlMsg.Meta.Meta(),
+		WalletName: sqlMsg.WalletName,
+		State:      sqlMsg.State,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -94,26 +97,21 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 
 func FromMessage(srcMsg *types.Message) *mysqlMessage {
 	destMsg := &mysqlMessage{
-		ID:      srcMsg.ID,
-		Version: srcMsg.Version,
-		To:      srcMsg.To.String(),
-		From:    srcMsg.From.String(),
-		Nonce:   srcMsg.Nonce,
-		//Value:      types.NewFromGo(srcMsg.Value.Int),
-		GasLimit: srcMsg.GasLimit,
-		//GasFeeCap:  toDeicimal(srcMsg.GasFeeCap),
-		//GasPremium: toDeicimal(srcMsg.GasPremium),
-		Method:    int(srcMsg.Method),
-		Params:    srcMsg.Params,
-		Signature: (*repo.SqlSignature)(srcMsg.Signature),
-		//UnsignedCid: srcMsg.UnsignedMessage.Cid().String(),
-		//SignedCid: srcMsg.SignedCid().String(),
-		//	ExitCode:   repo.ExitCodeToExec,
-		Height:    srcMsg.Height,
-		Receipt:   repo.FromMsgReceipt(srcMsg.Receipt),
-		Meta:      FromMeta(srcMsg.Meta),
-		State:     srcMsg.State,
-		IsDeleted: -1,
+		ID:         srcMsg.ID,
+		Version:    srcMsg.Version,
+		To:         srcMsg.To.String(),
+		From:       srcMsg.From.String(),
+		Nonce:      srcMsg.Nonce,
+		GasLimit:   srcMsg.GasLimit,
+		Method:     int(srcMsg.Method),
+		Params:     srcMsg.Params,
+		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
+		Height:     srcMsg.Height,
+		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
+		Meta:       FromMeta(srcMsg.Meta),
+		WalletName: srcMsg.WalletName,
+		State:      srcMsg.State,
+		IsDeleted:  -1,
 	}
 
 	if srcMsg.UnsignedCid != nil {
