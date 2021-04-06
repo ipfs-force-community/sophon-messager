@@ -16,26 +16,26 @@ type Message struct {
 	MsgService *service.MessageService
 }
 
-func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
 	newId := types.NewUUID()
 	err := message.MsgService.PushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
+		WalletName:      walletName,
 	})
-	if err != nil {
-		return "", nil
-	}
-	return newId.String(), nil
+
+	return newId.String(), err
 }
 
-func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
 	return id, message.MsgService.PushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
+		WalletName:      walletName,
 	})
 }
 

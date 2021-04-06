@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 
 	"github.com/stretchr/testify/assert"
@@ -39,12 +41,6 @@ func TestWallet(t *testing.T) {
 		err := walletRepo.SaveWallet(w)
 		assert.NoError(t, err)
 
-		w3 := &types.Wallet{}
-		*w3 = *w
-		w3.ID = types.NewUUID()
-		err = walletRepo.SaveWallet(w3)
-		assert.Error(t, err)
-
 		err = walletRepo.SaveWallet(w2)
 		assert.NoError(t, err)
 
@@ -65,11 +61,11 @@ func TestWallet(t *testing.T) {
 		assert.NoError(t, err)
 		assert.LessOrEqual(t, 1, len(rs))
 
-		err = walletRepo.DelWallet(w.ID)
+		err = walletRepo.DelWallet(w.Name)
 		assert.NoError(t, err)
 
 		_, err = walletRepo.GetWalletByID(w.ID)
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	}
 	t.Run("TestWallet", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
@@ -103,7 +99,7 @@ func TestSqliteWalletRepo_HasWallet(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, has)
 
-		assert.NoError(t, walletRepo.DelWallet(w.ID))
+		assert.NoError(t, walletRepo.DelWallet(w.Name))
 
 		has, err = walletRepo.HasWallet(w.Name)
 		assert.NoError(t, err)
@@ -140,7 +136,7 @@ func TestSqliteWalletRepo_GetWalletByID(t *testing.T) {
 		_, err = walletRepo.GetWalletByID(w.ID)
 		assert.NoError(t, err)
 
-		assert.NoError(t, walletRepo.DelWallet(w.ID))
+		assert.NoError(t, walletRepo.DelWallet(w.Name))
 
 		_, err = walletRepo.GetWalletByID(w.ID)
 		assert.Containsf(t, err.Error(), "record not found", "expect not found error")
@@ -176,7 +172,7 @@ func TestSqliteWalletRepo_GetWalletByName(t *testing.T) {
 		_, err = walletRepo.GetWalletByName(w.Name)
 		assert.NoError(t, err)
 
-		assert.NoError(t, walletRepo.DelWallet(w.ID))
+		assert.NoError(t, walletRepo.DelWallet(w.Name))
 
 		_, err = walletRepo.GetWalletByName(w.Name)
 		assert.Containsf(t, err.Error(), "record not found", "expect not found error")

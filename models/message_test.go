@@ -161,7 +161,7 @@ func TestExpireMessage(t *testing.T) {
 	})
 }
 
-func Test_sqliteMessageRepo_GetMessageState(t *testing.T) {
+func TestGetMessageState(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -192,7 +192,7 @@ func Test_sqliteMessageRepo_GetMessageState(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
+func TestGetSignedMessageByTime(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -221,7 +221,7 @@ func TestSqliteMessageRepo_GetSignedMessageByTime(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
+func TestGetSignedMessageByHeight(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -251,7 +251,7 @@ func TestSqliteMessageRepo_GetSignedMessageByHeight(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_GetMessageByFromAndNonce(t *testing.T) {
+func TestGetMessageByFromAndNonce(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -275,7 +275,7 @@ func TestSqliteMessageRepo_GetMessageByFromAndNonce(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_ListFilledMessageByHeight(t *testing.T) {
+func TestListFilledMessageByHeight(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -302,7 +302,7 @@ func TestSqliteMessageRepo_ListFilledMessageByHeight(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
+func TestListFilledMessageByAddress(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -341,7 +341,7 @@ func TestSqliteMessageRepo_ListFilledMessageByAddress(t *testing.T) {
 	})
 }
 
-func TestSqliteMessageRepo_UpdateUnFilledMessageStateByAddress(t *testing.T) {
+func TestUpdateUnFilledMessageState(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
@@ -353,13 +353,13 @@ func TestSqliteMessageRepo_UpdateUnFilledMessageStateByAddress(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		assert.NoError(t, messageRepo.UpdateUnFilledMessageStateByAddress(msgs[0].From, types.NoWalletMsg))
+		assert.NoError(t, messageRepo.UpdateUnFilledMessageState(msgs[0].WalletName, msgs[0].From, types.NoWalletMsg))
 
 		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 		assert.NoError(t, err)
 		assert.Equal(t, types.NoWalletMsg, msg.State)
 	}
-	t.Run("UpdateUnFilledMessageStateByAddress", func(t *testing.T) {
+	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
 			messageRepoTest(t, sqliteRepo.MessageRepo())
 		})

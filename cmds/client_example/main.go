@@ -53,7 +53,9 @@ func main() {
 			Value:   abi.NewTokenAmount(100),
 			Method:  0,
 		},
-		msgMate)
+		msgMate,
+		"venus_wallet",
+	)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -101,7 +103,9 @@ func loopPushMsgs(client client.IMessager) {
 					Value:   abi.NewTokenAmount(100),
 					Method:  0,
 				},
-				msgMate)
+				msgMate,
+				"venus_wallet",
+			)
 			if err != nil {
 				log.Fatal(err)
 				return

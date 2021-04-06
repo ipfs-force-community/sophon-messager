@@ -231,6 +231,19 @@ func (m *mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*
 	return result, nil
 }
 
+func (m *mysqlMessageRepo) ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*mysqlMessage
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? and wallet_name = ?", addr.String(), types.FillMsg, walletName).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
 func (m *mysqlMessageRepo) ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? AND nonce <", addr.String(), types.FillMsg, nonce).Error
@@ -426,7 +439,7 @@ func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.Message
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
 
-func (m *mysqlMessageRepo) UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error {
-	return m.DB.Debug().Model(&mysqlMessage{}).Where("from_addr = ? and state = ?", addr.String(), types.UnFillMsg).
+func (m *mysqlMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
+	return m.DB.Debug().Model(&mysqlMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
 		UpdateColumn("state", state).Error
 }

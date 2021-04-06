@@ -48,9 +48,11 @@ var addWalletCmd = &cli.Command{
 		defer closer()
 
 		var w types.Wallet
-		w.Name = ctx.String("name")
 		w.CreatedAt = time.Now()
 		w.ID = types.NewUUID()
+		w.State = types.Alive
+		w.IsDeleted = -1
+		w.Name = ctx.String("name")
 		w.Url = ctx.String("url")
 		if len(w.Url) == 0 {
 			return xerrors.Errorf("url cannot be empty")
@@ -60,20 +62,11 @@ var addWalletCmd = &cli.Command{
 			return xerrors.Errorf("token cannot be empty")
 		}
 
-		has, err := client.HasWallet(ctx.Context, w.Name)
-		if err != nil {
-			return err
-		}
-		if has {
-			return xerrors.Errorf("wallet exist")
-
-		}
-
 		_, err = client.SaveWallet(ctx.Context, &w)
 		if err != nil {
 			return err
 		}
-		fmt.Println(w)
+
 		return nil
 	},
 }
@@ -131,18 +124,10 @@ var listWalletCmd = &cli.Command{
 }
 
 var listRemoteWalletAddrCmd = &cli.Command{
-	Name:  "list-addr",
-	Usage: "list remote wallet address",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "uuid",
-			Usage: "Search data according to uuid",
-		},
-		&cli.StringFlag{
-			Name:  "name",
-			Usage: "Search data according to name",
-		},
-	},
+	Name:      "list-addr",
+	Usage:     "list remote wallet address",
+	ArgsUsage: "wallet_name",
+	Aliases:   []string{"name"},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -150,24 +135,11 @@ var listRemoteWalletAddrCmd = &cli.Command{
 		}
 		defer closer()
 
-		var uuid types.UUID
-		uuidStr := ctx.String("uuid")
-		if len(uuidStr) > 0 {
-			uuid, err = types.ParseUUID(uuidStr)
-			if err != nil {
-				return err
-			}
-		} else if name := ctx.String("name"); len(name) > 0 {
-			w, err := client.GetWalletByName(ctx.Context, name)
-			if err != nil {
-				return err
-			}
-			uuid = w.ID
-		} else {
-			return xerrors.Errorf("value of query must be entered")
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass name")
 		}
 
-		addrs, err := client.ListRemoteWalletAddress(ctx.Context, uuid)
+		addrs, err := client.ListRemoteWalletAddress(ctx.Context, ctx.Args().First())
 		if err != nil {
 			return err
 		}

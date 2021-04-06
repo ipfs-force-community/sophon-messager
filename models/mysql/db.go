@@ -16,6 +16,10 @@ type MysqlRepo struct {
 	*gorm.DB
 }
 
+func (d MysqlRepo) WalletAddressRepo() repo.WalletAddressRepo {
+	return newMysqlWalletAddressRepo(d.DB)
+}
+
 func (d MysqlRepo) MessageRepo() repo.MessageRepo {
 	return newMysqlMessageRepo(d.DB)
 }
@@ -54,6 +58,10 @@ func (d MysqlRepo) AutoMigrate() error {
 		return err
 	}
 
+	if err := d.GetDb().AutoMigrate(mysqlWalletAddress{}); err != nil {
+		return err
+	}
+
 	return d.GetDb().AutoMigrate(mysqlWallet{})
 }
 
@@ -78,6 +86,10 @@ var _ repo.TxRepo = (*TxMysqlRepo)(nil)
 
 type TxMysqlRepo struct {
 	*gorm.DB
+}
+
+func (t *TxMysqlRepo) WalletAddressRepo() repo.WalletAddressRepo {
+	return newMysqlWalletAddressRepo(t.DB)
 }
 
 func (t *TxMysqlRepo) WalletRepo() repo.WalletRepo {

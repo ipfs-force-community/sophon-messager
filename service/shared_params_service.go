@@ -39,10 +39,8 @@ func NewSharedParamsService(repo repo.Repo, logger *logrus.Logger) (*SharedParam
 		},
 	}
 	params, err := sps.GetSharedParams(context.TODO())
-	if err != nil {
-		if !xerrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err
-		}
+	if err != nil && !xerrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
 	}
 
 	if params != nil {
@@ -118,7 +116,7 @@ func (sps *SharedParamsService) refreshParamsLoop() {
 		for range ticker.C {
 			params, err := sps.GetSharedParams(context.TODO())
 			if err != nil {
-				sps.log.Errorf("get shared params %v", err)
+				sps.log.Warnf("get shared params %v", err)
 				continue
 			}
 			if !reflect.DeepEqual(sps.params.SharedParams, params) {

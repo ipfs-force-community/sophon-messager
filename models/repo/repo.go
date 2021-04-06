@@ -22,12 +22,14 @@ type Repo interface {
 	AddressRepo() AddressRepo
 	SharedParamsRepo() SharedParamsRepo
 	NodeRepo() NodeRepo
+	WalletAddressRepo() WalletAddressRepo
 }
 
 type TxRepo interface {
 	WalletRepo() WalletRepo
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
+	WalletAddressRepo() WalletAddressRepo
 }
 
 type ISqlField interface {

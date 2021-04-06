@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/ipfs-force-community/venus-messager/api/jwt"
 	"net"
 	"os"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/ipfs-force-community/venus-messager/api"
 	"github.com/ipfs-force-community/venus-messager/api/controller"
+	"github.com/ipfs-force-community/venus-messager/api/jwt"
 	ccli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models"
@@ -31,7 +31,13 @@ func main() {
 				Usage:   "specify config file",
 			},
 		},
-		Commands: []*cli.Command{ccli.MsgCmds, ccli.AddrCmds, ccli.WalletCmds, ccli.SharedParamsCmds, ccli.NodeCmds},
+		Commands: []*cli.Command{ccli.MsgCmds,
+			ccli.AddrCmds,
+			ccli.WalletCmds,
+			ccli.SharedParamsCmds,
+			ccli.NodeCmds,
+			ccli.WalletAddrCmds,
+		},
 	}
 	app.Setup()
 	app.Action = runAction
@@ -74,7 +80,7 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.Address, &cfg.MessageService, &cfg.MessageState),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply((ShutdownChan)(shutdownChan)),
