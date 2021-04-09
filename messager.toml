@@ -24,6 +24,7 @@
 
 [log]
   path = "messager.log"
+  level = "info"  # log level: trace debug info warn|warning error fatal panic
 
 [messageService]
   skipProcessHead = false
