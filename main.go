@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/ipfs-force-community/venus-messager/log"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
@@ -60,7 +62,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	log, err := SetLogger(&cfg.Log)
+	log, err := log.SetLogger(&cfg.Log)
 	if err != nil {
 		return err
 	}

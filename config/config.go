@@ -21,7 +21,8 @@ type NodeConfig struct {
 }
 
 type LogConfig struct {
-	Path string `toml:"path"`
+	Path  string `toml:"path"`
+	Level string `toml:"level"`
 }
 
 type APIConfig struct {
@@ -81,7 +82,8 @@ func DefaultConfig() *Config {
 			Url: "http://127.0.0.1:8989",
 		},
 		Log: LogConfig{
-			Path: "messager.log",
+			Path:  "messager.log",
+			Level: "info",
 		},
 		API: APIConfig{
 			Address: "0.0.0.0:39812",

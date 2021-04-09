@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"golang.org/x/xerrors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -13,11 +12,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	ginlogrus "github.com/toorop/gin-logrus"
 	"go.uber.org/fx"
+	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-messager/api/controller"
 	"github.com/ipfs-force-community/venus-messager/api/jwt"
+	"github.com/ipfs-force-community/venus-messager/log"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -70,9 +70,9 @@ func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Re
 	return 0, nil
 }
 
-func InitRouter(log *logrus.Logger) *gin.Engine {
+func InitRouter(logger *logrus.Logger) *gin.Engine {
 	g := gin.New()
-	g.Use(ginlogrus.Logger(log), gin.Recovery())
+	g.Use(log.GinLogrus(logger), gin.Recovery())
 	return g
 }
 
