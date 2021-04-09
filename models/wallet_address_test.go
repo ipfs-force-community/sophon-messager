@@ -1,11 +1,8 @@
 package models
 
 import (
-	"math/rand"
 	"testing"
-	"time"
 
-	"github.com/filecoin-project/go-address"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
 	"github.com/stretchr/testify/assert"
@@ -15,15 +12,10 @@ func TestWalletAddress(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	walletAddrRepoTest := func(t *testing.T, waRepo repo.WalletAddressRepo) {
-		rand.Seed(time.Now().Unix())
-		addr, err := address.NewIDAddress(rand.Uint64() / 2)
-		assert.NoError(t, err)
-		addr2, err := address.NewIDAddress(rand.Uint64() / 2)
-		assert.NoError(t, err)
 		wa := &types.WalletAddress{
 			ID:           types.NewUUID(),
-			WalletName:   "venus_wallet",
-			Addr:         addr,
+			WalletID:     types.NewUUID(),
+			AddrID:       types.NewUUID(),
 			AddressState: types.Alive,
 			SelMsgNum:    10,
 			IsDeleted:    -1,
@@ -31,18 +23,18 @@ func TestWalletAddress(t *testing.T) {
 
 		wa2 := &types.WalletAddress{
 			ID:           types.NewUUID(),
-			WalletName:   "venus_wallet",
-			Addr:         addr2,
+			WalletID:     types.NewUUID(),
+			AddrID:       types.NewUUID(),
 			AddressState: types.Alive,
 			SelMsgNum:    10,
 			IsDeleted:    -1,
 		}
 
-		err = waRepo.SaveWalletAddress(wa)
+		err := waRepo.SaveWalletAddress(wa)
 		assert.NoError(t, err)
 		err = waRepo.SaveWalletAddress(wa2)
 		assert.NoError(t, err)
-		r, err := waRepo.GetWalletAddress(wa.WalletName, wa.Addr)
+		r, err := waRepo.GetWalletAddress(wa.WalletID, wa.AddrID)
 		assert.NoError(t, err)
 		assert.Equal(t, wa.AddressState, r.AddressState)
 		assert.Equal(t, wa.SelMsgNum, r.SelMsgNum)
@@ -50,22 +42,22 @@ func TestWalletAddress(t *testing.T) {
 		assert.Equal(t, wa.ID, r.ID)
 
 		newState := types.Removing
-		err = waRepo.UpdateAddressState(wa.WalletName, wa.Addr, newState)
+		err = waRepo.UpdateAddressState(wa.WalletID, wa.AddrID, newState)
 		assert.NoError(t, err)
-		r2, err := waRepo.GetWalletAddress(wa.WalletName, wa.Addr)
+		r2, err := waRepo.GetWalletAddress(wa.WalletID, wa.AddrID)
 		assert.NoError(t, err)
 		assert.Equal(t, newState, r2.AddressState)
 
 		selMsgNum := uint64(50)
-		err = waRepo.UpdateSelectMsgNum(wa.WalletName, wa.Addr, selMsgNum)
+		err = waRepo.UpdateSelectMsgNum(wa.WalletID, wa.AddrID, selMsgNum)
 		assert.NoError(t, err)
-		r3, err := waRepo.GetWalletAddress(wa.WalletName, wa.Addr)
+		r3, err := waRepo.GetWalletAddress(wa.WalletID, wa.AddrID)
 		assert.NoError(t, err)
 		assert.Equal(t, selMsgNum, r3.SelMsgNum)
 
-		err = waRepo.DelWalletAddress(wa.WalletName, wa.Addr)
+		err = waRepo.DelWalletAddress(wa.WalletID, wa.AddrID)
 		assert.NoError(t, err)
-		r, err = waRepo.GetWalletAddress(wa.WalletName, wa.Addr)
+		r, err = waRepo.GetWalletAddress(wa.WalletID, wa.AddrID)
 		assert.Error(t, err)
 		assert.Nil(t, r)
 

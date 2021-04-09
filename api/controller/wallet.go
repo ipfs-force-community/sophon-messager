@@ -22,6 +22,10 @@ func (walletController WalletController) GetWalletByName(ctx context.Context, na
 	return walletController.WalletService.GetWalletByName(ctx, name)
 }
 
+func (walletController WalletController) GetWalletByID(ctx context.Context, id types.UUID) (*types.Wallet, error) {
+	return walletController.WalletService.GetWalletByID(ctx, id)
+}
+
 func (walletController WalletController) HasWallet(ctx context.Context, name string) (bool, error) {
 	return walletController.WalletService.HasWallet(ctx, name)
 }

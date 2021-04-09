@@ -1,57 +1,34 @@
 package mysql
 
 import (
+	"reflect"
 	"time"
 
-	"github.com/filecoin-project/go-address"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/hunjixin/automapper"
 	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 type mysqlWalletAddress struct {
 	ID           types.UUID  `gorm:"column:id;type:varchar(256);primary_key"`
-	WalletName   string      `gorm:"column:wallet_name;type:varchar(256)"`
-	Addr         string      `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
+	WalletID     types.UUID  `gorm:"column:wallet_id;type:varchar(256);NOT NULL"`
+	AddrID       types.UUID  `gorm:"column:addr_id;type:varchar(256);NOT NULL"`
 	AddressState types.State `gorm:"column:addr_state;type:int;index:wallet_addr_state;"`
-	SelectMsgNum uint64      `gorm:"column:select_msg_num;type:int;NOT NULL"`
+	SelMsgNum    uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
 	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
-func FromWalletAddress(wa types.WalletAddress) *mysqlWalletAddress {
-	mysqlWalletAddress := &mysqlWalletAddress{
-		ID:           wa.ID,
-		WalletName:   wa.WalletName,
-		Addr:         wa.Addr.String(),
-		AddressState: wa.AddressState,
-		SelectMsgNum: wa.SelMsgNum,
-		IsDeleted:    wa.IsDeleted,
-		CreatedAt:    wa.CreatedAt,
-		UpdatedAt:    wa.UpdatedAt,
-	}
-	return mysqlWalletAddress
+func FromWalletAddress(walletAddr types.WalletAddress) *mysqlWalletAddress {
+	return automapper.MustMapper(&walletAddr, TMysqlWalletAddress).(*mysqlWalletAddress)
 }
 
-func (mysqlWalletAddress mysqlWalletAddress) WalletAddress() (*types.WalletAddress, error) {
-	wa := &types.WalletAddress{
-		ID:           mysqlWalletAddress.ID,
-		WalletName:   mysqlWalletAddress.WalletName,
-		AddressState: mysqlWalletAddress.AddressState,
-		SelMsgNum:    mysqlWalletAddress.SelectMsgNum,
-		IsDeleted:    mysqlWalletAddress.IsDeleted,
-		CreatedAt:    mysqlWalletAddress.CreatedAt,
-		UpdatedAt:    mysqlWalletAddress.UpdatedAt,
-	}
-	var err error
-	wa.Addr, err = address.NewFromString(mysqlWalletAddress.Addr)
-	if err != nil {
-		return nil, err
-	}
-	return wa, nil
+func (mysqlWalletAddress mysqlWalletAddress) WalletAddress() *types.WalletAddress {
+	return automapper.MustMapper(&mysqlWalletAddress, TWalletAddress).(*types.WalletAddress)
 }
 
 func (mysqlWalletAddress mysqlWalletAddress) TableName() string {
@@ -74,26 +51,40 @@ func (s mysqlWalletAddressRepo) SaveWalletAddress(wa *types.WalletAddress) error
 	return s.DB.Save(mysqlWalletAddress).Error
 }
 
-func (s mysqlWalletAddressRepo) GetWalletAddress(walletName string, addr address.Address) (*types.WalletAddress, error) {
+func (s mysqlWalletAddressRepo) GetWalletAddress(walletID, addrID types.UUID) (*types.WalletAddress, error) {
 	var wa mysqlWalletAddress
-	if err := s.DB.Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
+	if err := s.DB.Where("wallet_id = ? and addr_id = ? and is_deleted = -1", walletID, addrID).
 		First(&wa).Error; err != nil {
 		return nil, err
 	}
-	return wa.WalletAddress()
+	return wa.WalletAddress(), nil
 }
 
-func (s mysqlWalletAddressRepo) GetOneRecord(walletName string, addr address.Address) (*types.WalletAddress, error) {
+func (s mysqlWalletAddressRepo) GetOneRecord(walletID, addrID types.UUID) (*types.WalletAddress, error) {
 	var wa mysqlWalletAddress
-	if err := s.DB.Where("wallet_name = ? and addr = ?", walletName, addr.String()).First(&wa).Error; err != nil {
+	if err := s.DB.Where("wallet_id = ? and addr_id = ?", walletID, addrID).First(&wa).Error; err != nil {
 		return nil, err
 	}
-	return wa.WalletAddress()
+	return wa.WalletAddress(), nil
 }
 
-func (s mysqlWalletAddressRepo) HasWalletAddress(walletName string, addr address.Address) (bool, error) {
+func (s mysqlWalletAddressRepo) GetWalletAddressByWalletID(walletID types.UUID) ([]*types.WalletAddress, error) {
+	var internalWalletAddress []*mysqlWalletAddress
+	if err := s.DB.Find(&internalWalletAddress, "wallet_id = ? and is_deleted = ?", walletID, -1).Error; err != nil {
+		return nil, err
+	}
+
+	result, err := automapper.Mapper(internalWalletAddress, reflect.TypeOf([]*types.WalletAddress{}))
+	if err != nil {
+		return nil, err
+	}
+
+	return result.([]*types.WalletAddress), nil
+}
+
+func (s mysqlWalletAddressRepo) HasWalletAddress(walletID, addrID types.UUID) (bool, error) {
 	var count int64
-	if err := s.DB.Model(&mysqlWalletAddress{}).Where("wallet_name = ? and addr = ?", walletName, addr.String()).
+	if err := s.DB.Model(&mysqlWalletAddress{}).Where("wallet_id = ? and addr_id = ?", walletID, addrID).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -106,29 +97,27 @@ func (s mysqlWalletAddressRepo) ListWalletAddress() ([]*types.WalletAddress, err
 		return nil, err
 	}
 
-	var err error
-	result := make([]*types.WalletAddress, len(internalWalletAddress))
-	for i, wa := range internalWalletAddress {
-		if result[i], err = wa.WalletAddress(); err != nil {
-			return nil, err
-		}
+	result, err := automapper.Mapper(internalWalletAddress, reflect.TypeOf([]*types.WalletAddress{}))
+	if err != nil {
+		return nil, err
 	}
-	return result, nil
+
+	return result.([]*types.WalletAddress), nil
 }
 
-func (s mysqlWalletAddressRepo) UpdateAddressState(walletName string, addr address.Address, state types.State) error {
-	return s.DB.Model((*mysqlWalletAddress)(nil)).Where("wallet_name = ? and addr = ?", walletName, addr.String()).
+func (s mysqlWalletAddressRepo) UpdateAddressState(walletID, addrID types.UUID, state types.State) error {
+	return s.DB.Model((*mysqlWalletAddress)(nil)).Where("wallet_id = ? and addr_id = ?", walletID, addrID).
 		UpdateColumn("addr_state", state).Error
 }
 
-func (s mysqlWalletAddressRepo) UpdateSelectMsgNum(walletName string, addr address.Address, selMsgNum uint64) error {
-	return s.DB.Model((*mysqlWalletAddress)(nil)).Where("wallet_name = ? and addr = ?", walletName, addr.String()).
-		UpdateColumn("select_msg_num", selMsgNum).Error
+func (s mysqlWalletAddressRepo) UpdateSelectMsgNum(walletID, addrID types.UUID, selMsgNum uint64) error {
+	return s.DB.Model((*mysqlWalletAddress)(nil)).Where("wallet_id = ? and addr_id = ?", walletID, addrID).
+		UpdateColumn("sel_msg_num", selMsgNum).Error
 }
 
-func (s mysqlWalletAddressRepo) DelWalletAddress(walletName string, addr address.Address) error {
+func (s mysqlWalletAddressRepo) DelWalletAddress(walletID, addrID types.UUID) error {
 	var wa mysqlWalletAddress
-	if err := s.DB.Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
+	if err := s.DB.Where("wallet_id = ? and addr_id = ? and is_deleted = -1", walletID, addrID).
 		First(&wa).Error; err != nil {
 		return err
 	}

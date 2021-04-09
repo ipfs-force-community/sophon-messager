@@ -3,8 +3,6 @@ package types
 import (
 	"fmt"
 	"time"
-
-	"github.com/filecoin-project/go-address"
 )
 
 type State int
@@ -37,10 +35,10 @@ type Wallet struct {
 }
 
 type WalletAddress struct {
-	ID           UUID            `json:"id"` // 主键
-	WalletName   string          `json:"walletName"`
-	Addr         address.Address `json:"addr"`
-	AddressState State           `json:"addressState"`
+	ID           UUID  `json:"id"` // 主键
+	WalletID     UUID  `json:"walletID"`
+	AddrID       UUID  `json:"addrID"`
+	AddressState State `json:"addressState"`
 	// number of address selection messages
 	SelMsgNum uint64 `json:"selMsgNum"`
 

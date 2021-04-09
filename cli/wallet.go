@@ -72,9 +72,18 @@ var addWalletCmd = &cli.Command{
 }
 
 var searchWalletCmd = &cli.Command{
-	Name:      "search",
-	Usage:     "search wallet by name",
-	ArgsUsage: "name",
+	Name:  "search",
+	Usage: "search wallet by wallet id or wallet name",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "id",
+			Usage: "Search data according to wallet id",
+		},
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "Search data according to wallet name",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -82,12 +91,22 @@ var searchWalletCmd = &cli.Command{
 		}
 		defer closer()
 
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass name")
-		}
-		wallet, err := client.GetWalletByName(ctx.Context, ctx.Args().First())
-		if err != nil {
-			return err
+		var uuid types.UUID
+		var wallet *types.Wallet
+		uuidStr := ctx.String("id")
+		if len(uuidStr) > 0 {
+			if uuid, err = types.ParseUUID(uuidStr); err != nil {
+				return err
+			}
+			if wallet, err = client.GetWalletByID(ctx.Context, uuid); err != nil {
+				return err
+			}
+		} else if name := ctx.String("name"); len(name) > 0 {
+			if wallet, err = client.GetWalletByName(ctx.Context, name); err != nil {
+				return err
+			}
+		} else {
+			return xerrors.Errorf("must pass id or name")
 		}
 
 		bytes, err := json.MarshalIndent(wallet, " ", "\t")

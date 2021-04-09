@@ -31,6 +31,7 @@ type IMessager interface {
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)            //perm:admin
 	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)             //perm:admin
+	GetWalletByID(Context context.Context, id types.UUID) (*types.Wallet, error)         //perm:admin
 	HasWallet(Context context.Context, name string) (bool, error)                        //perm:admin
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)                             //perm:admin
 	ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) //perm:admin
@@ -59,7 +60,7 @@ type IMessager interface {
 	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
 	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
 	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:admin
-	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                             //perm:admin
+	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)
 }
 
 var _ IMessager = (*Message)(nil)
@@ -84,6 +85,7 @@ type Message struct {
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByName         func(ctx context.Context, name string) (*types.Wallet, error)
+		GetWalletByID           func(Context context.Context, id types.UUID) (*types.Wallet, error)
 		HasWallet               func(ctx context.Context, name string) (bool, error)
 		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
 		ListRemoteWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
@@ -207,6 +209,10 @@ func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (t
 
 func (message *Message) GetWalletByName(ctx context.Context, name string) (*types.Wallet, error) {
 	return message.Internal.GetWalletByName(ctx, name)
+}
+
+func (message *Message) GetWalletByID(ctx context.Context, id types.UUID) (*types.Wallet, error) {
+	return message.Internal.GetWalletByID(ctx, id)
 }
 
 func (message *Message) HasWallet(ctx context.Context, name string) (bool, error) {

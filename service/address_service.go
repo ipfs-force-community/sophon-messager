@@ -41,11 +41,13 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 			if err != nil {
 				return err
 			}
+			address.ID = srcAddr.ID
+			address.CreatedAt = srcAddr.CreatedAt
+			address.Weight = srcAddr.Weight
+
 			if srcAddr.IsDeleted == -1 {
 				return ErrRecordExist
 			}
-			address.ID = srcAddr.ID
-			address.CreatedAt = srcAddr.CreatedAt
 		}
 		return txRepo.AddressRepo().SaveAddress(ctx, address)
 	})
