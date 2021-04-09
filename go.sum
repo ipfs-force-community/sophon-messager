@@ -565,6 +565,8 @@ github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod
 github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839/go.mod h1:xaLFMmpvUxqXtVkUJfg9QmT88cDaCJ3ZKgdZ78oO8Qo=
 github.com/ipfs-force-community/venus-auth v0.0.0-20210401093821-d73c83e45b94 h1:oXI1WZsNJu45TFCDuI/h7zvpPqiH0s64mbnTBa6xmMM=
 github.com/ipfs-force-community/venus-auth v0.0.0-20210401093821-d73c83e45b94/go.mod h1:wNe4D6oTBXMu1LnjNpKb9Qi9TleDNzixD07x5mIa2nc=
+github.com/ipfs-force-community/venus-auth v0.0.0-20210409095239-6767c8e7ac9f h1:eQdfGUHRzrOfLolUTAdP5xz2wtbociHoU117AFxu8Ig=
+github.com/ipfs-force-community/venus-auth v0.0.0-20210409095239-6767c8e7ac9f/go.mod h1:1jzX/6nT1UiBC0p2BuA1ujKFnZwPndZhmOB89Nemd+w=
 github.com/ipfs-force-community/venus-wallet v0.0.0-20210222095647-d0fab90dc77f/go.mod h1:7pzkUzgqrHOQQSewIwvCuDzahMFJgaqx3pkLt/5yyI8=
 github.com/ipfs-force-community/venus-wallet v0.0.0-20210310055425-c7247d399ba3 h1:ooFUZv8iKyK8he5SOFxFXi6AuPrJC9/R02y7MkDwUn0=
 github.com/ipfs-force-community/venus-wallet v0.0.0-20210310055425-c7247d399ba3/go.mod h1:o6dAgS1F3+TvAKAQyQf3fgdzQonFr9BVUMrcPubgPJE=
