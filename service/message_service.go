@@ -120,7 +120,6 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 		return xerrors.Errorf("address is %s", types.StateToString(addrInfo.State))
 	}
 
-	ms.replaceMessageMeta(msg.Meta)
 	msg.Nonce = 0
 	err := ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
@@ -128,23 +127,6 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	}
 
 	return err
-}
-
-func (ms *MessageService) replaceMessageMeta(meta *types.MsgMeta) {
-	globalMeta := ms.sps.GetParams().GetMsgMeta()
-	if meta == nil {
-		meta = globalMeta // nolint: staticcheck
-	} else {
-		if meta.GasOverEstimation == 0 {
-			meta.GasOverEstimation = globalMeta.GasOverEstimation
-		}
-		if meta.MaxFee.NilOrZero() {
-			meta.MaxFee = globalMeta.MaxFee
-		}
-		if meta.MaxFeeCap.NilOrZero() {
-			meta.MaxFeeCap = globalMeta.MaxFeeCap
-		}
-	}
 }
 
 func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {

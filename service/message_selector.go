@@ -195,9 +195,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		//分配nonce
 		msg.Nonce = addr.Nonce
 
+		// global msg meta
+		newMsgMeta := messageSelector.messageMeta(msg.Meta)
+
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
-		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: msg.Meta.MaxFee}, ts.Key())
+		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: newMsgMeta.MaxFee}, ts.Key())
 		if err != nil {
 			failedCount++
 			if strings.Contains(err.Error(), "exit SysErrSenderStateInvalid(2)") {
@@ -266,4 +269,25 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 		result = append(result, msg)
 	}
 	return result, expireMsg
+}
+
+func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta) *types.MsgMeta {
+	newMsgMeta := &types.MsgMeta{}
+	*newMsgMeta = *meta
+	globalMeta := messageSelector.sps.GetParams().GetMsgMeta()
+	if globalMeta == nil {
+		return newMsgMeta
+	}
+
+	if meta.GasOverEstimation == 0 {
+		newMsgMeta.GasOverEstimation = globalMeta.GasOverEstimation
+	}
+	if meta.MaxFee.NilOrZero() {
+		newMsgMeta.MaxFee = globalMeta.MaxFee
+	}
+	if meta.MaxFeeCap.NilOrZero() {
+		newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
+	}
+
+	return newMsgMeta
 }
