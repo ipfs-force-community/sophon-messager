@@ -23,6 +23,7 @@ type MessageSelector struct {
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	addressService *AddressService
+	walletService  *WalletService
 	sps            *SharedParamsService
 }
 
@@ -31,12 +32,14 @@ func NewMessageSelector(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	nodeClient *NodeClient,
 	addressService *AddressService,
+	walletService *WalletService,
 	sps *SharedParamsService) *MessageSelector {
 	return &MessageSelector{repo: repo,
 		log:            log,
 		cfg:            cfg,
 		nodeClient:     nodeClient,
 		addressService: addressService,
+		walletService:  walletService,
 		sps:            sps,
 	}
 }
@@ -94,17 +97,20 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
-	addrInfo, exit := messageSelector.addressService.GetAddressInfo(addr.Addr)
+	addrsInfo, exit := messageSelector.walletService.GetAddressesInfo(addr.Addr)
 	if !exit {
-		return nil, nil, nil, xerrors.Errorf("no wallet client of address %s", addr.Addr)
+		return nil, nil, nil, xerrors.Errorf("no wallet client")
 	}
 
 	var maxAllowPendingMessage uint64
 	if messageSelector.sps.GetParams().SharedParams != nil {
 		maxAllowPendingMessage = messageSelector.sps.GetParams().SelMsgNum
 	}
-	if addrInfo.SelectMsgNum != 0 {
-		maxAllowPendingMessage = addrInfo.SelectMsgNum
+	for _, addrInfo := range addrsInfo {
+		if addrInfo.SelectMsgNum != 0 {
+			maxAllowPendingMessage = addrInfo.SelectMsgNum
+			break
+		}
 	}
 
 	//判断是否需要推送消息
@@ -137,10 +143,6 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		})
 	}
 
-	if addrInfo.State == types.Notfound {
-		messageSelector.log.Infof("%s state is %d, skip select unchain message", addr.Addr, addrInfo.State)
-		return nil, nil, toPushMessage, nil
-	}
 	//消息排序
 	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr)
 	if err != nil {
@@ -179,6 +181,15 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		if failedCount >= allowFailedNum {
 			messageSelector.log.Warnf("the maximum number of failures has been reached %d", allowFailedNum)
 			break
+		}
+		addrInfo, ok := messageSelector.walletService.GetAddressInfo(msg.WalletName, msg.From)
+		if !ok {
+			messageSelector.log.Warnf("not found wallet client %s", msg.WalletName)
+			continue
+		}
+		if addrInfo.State != types.Alive && addrInfo.State != types.Forbiden {
+			messageSelector.log.Infof("wallet %s address %v state is %s, skip select unchain message", msg.WalletName, addr.Addr, types.StateToString(addrInfo.State))
+			continue
 		}
 
 		//分配nonce

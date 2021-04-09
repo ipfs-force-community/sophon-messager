@@ -1,7 +1,4 @@
 
-[address]
-  remoteWalletSweepInterval = 10
-
 [api]
   Address = "0.0.0.0:39812"
 
@@ -19,11 +16,11 @@
     user = ""
 
   [db.sqlite]
-    path = "./message.db"
     debug = false
+    path = "./message.db"
 
 [jwt]
-    url= "http://127.0.0.1:8989"
+  url = "http://127.0.0.1:8989"
 
 [log]
   path = "messager.log"
@@ -39,7 +36,10 @@
   backTime = 86400
 
 [node]
-  url = "/ip4/8.130.165.167/tcp/3453"
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
-  #url = "/ip4/127.0.0.1/tcp/3453"
-  #token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
+#  url = "/ip4/8.130.165.167/tcp/3453"
+#  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
+  url = "/ip4/127.0.0.1/tcp/3453"
+  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
+
+[wallet]
+  scanInterval = 10

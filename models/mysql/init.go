@@ -20,3 +20,6 @@ var TMysqlAddress = reflect.TypeOf(&mysqlAddress{})
 
 var TNode = reflect.TypeOf(&types.Node{})
 var TMysqlNode = reflect.TypeOf(&mysqlNode{})
+
+var TWalletAddress = reflect.TypeOf(&types.WalletAddress{})
+var TMysqlWalletAddress = reflect.TypeOf(&mysqlWalletAddress{})

@@ -37,15 +37,3 @@ func (a Address) UpdateNonce(ctx context.Context, addr address.Address, nonce ui
 func (a Address) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return a.AddressService.DeleteAddress(ctx, addr)
 }
-
-func (a Address) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return a.AddressService.ForbiddenAddress(ctx, addr)
-}
-
-func (a Address) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return a.AddressService.ActiveAddress(ctx, addr)
-}
-
-func (a Address) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
-	return a.AddressService.SetSelectMsgNum(ctx, addr, num)
-}

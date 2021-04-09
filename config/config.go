@@ -12,7 +12,7 @@ type Config struct {
 	Node           NodeConfig           `toml:"node"`
 	MessageService MessageServiceConfig `toml:"messageService"`
 	MessageState   MessageStateConfig   `toml:"messageState"`
-	Address        AddressConfig        `toml:"address"`
+	Wallet         WalletConfig         `toml:"wallet"`
 }
 
 type NodeConfig struct {
@@ -54,8 +54,8 @@ type JWTConfig struct {
 	Url string `toml:"url"`
 }
 
-type AddressConfig struct {
-	RemoteWalletSweepInterval int `toml:"remoteWalletSweepInterval"` // second
+type WalletConfig struct {
+	ScanInterval int `toml:"scanInterval"` // second
 }
 
 type MessageServiceConfig struct {
@@ -77,19 +77,21 @@ func DefaultConfig() *Config {
 			MySql:  MySqlConfig{},
 			Sqlite: SqliteConfig{Path: "./message.db"},
 		},
-		JWT: JWTConfig{},
+		JWT: JWTConfig{
+			Url: "http://127.0.0.1:8989",
+		},
 		Log: LogConfig{
 			Path: "messager.log",
 		},
 		API: APIConfig{
-			Address: "127.0.0.1:39812",
+			Address: "0.0.0.0:39812",
 		},
 		Node: NodeConfig{
 			Url:   "",
 			Token: "",
 		},
-		Address: AddressConfig{
-			RemoteWalletSweepInterval: 10,
+		Wallet: WalletConfig{
+			ScanInterval: 10,
 		},
 		MessageState: MessageStateConfig{
 			BackTime:          3600 * 24,

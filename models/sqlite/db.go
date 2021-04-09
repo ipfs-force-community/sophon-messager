@@ -33,6 +33,10 @@ func (d SqlLiteRepo) NodeRepo() repo.NodeRepo {
 	return newSqliteNodeRepo(d.DB)
 }
 
+func (d SqlLiteRepo) WalletAddressRepo() repo.WalletAddressRepo {
+	return newSqliteWalletAddressRepo(d.DB)
+}
+
 func (d SqlLiteRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(sqliteMessage{})
 	if err != nil {
@@ -48,6 +52,10 @@ func (d SqlLiteRepo) AutoMigrate() error {
 	}
 
 	if err := d.GetDb().AutoMigrate(sqliteNode{}); err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(sqliteWalletAddress{}); err != nil {
 		return err
 	}
 
@@ -69,6 +77,10 @@ var _ repo.TxRepo = (*TxSqlliteRepo)(nil)
 
 type TxSqlliteRepo struct {
 	*gorm.DB
+}
+
+func (t *TxSqlliteRepo) WalletAddressRepo() repo.WalletAddressRepo {
+	return newSqliteWalletAddressRepo(t.DB)
 }
 
 func (t *TxSqlliteRepo) WalletRepo() repo.WalletRepo {

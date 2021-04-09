@@ -21,9 +21,6 @@ var AddrCmds = &cli.Command{
 		listAddrCmd,
 		//deleteAddrCmd,
 		updateNonceCmd,
-		forbiddenAddrCmd,
-		activeAddrCmd,
-		setAddrSelMsgNumCmd,
 	},
 }
 
@@ -39,10 +36,6 @@ var setAddrCmd = &cli.Command{
 			Name:    "address",
 			Usage:   "address",
 			Aliases: []string{"a"},
-		},
-		&cli.StringFlag{
-			Name:  "wallet_id",
-			Usage: "bind ID of remote Wallet",
 		},
 		&cli.Uint64Flag{
 			Name:  "nonce",
@@ -74,7 +67,6 @@ var setAddrCmd = &cli.Command{
 		}
 		addrInfo.Addr = addr
 		addrInfo.Nonce = ctx.Uint64("nonce")
-		addrInfo.WalletID, err = types.ParseUUID(ctx.String("wallet_id"))
 		if err != nil {
 			return err
 		}
@@ -210,111 +202,6 @@ var deleteAddrCmd = &cli.Command{
 		}
 		_, err = client.DeleteAddress(ctx.Context, addr)
 		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var forbiddenAddrCmd = &cli.Command{
-	Name:      "forbidden",
-	Usage:     "forbidden address",
-	ArgsUsage: "address",
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
-		}
-
-		addr, err := address.NewFromString(ctx.Args().First())
-		if err != nil {
-			return err
-		}
-
-		hasAddr, err := client.HasAddress(ctx.Context, addr)
-		if err != nil {
-			return err
-		}
-		if !hasAddr {
-			return xerrors.Errorf("address not exist")
-		}
-
-		_, err = client.ForbiddenAddress(ctx.Context, addr)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var activeAddrCmd = &cli.Command{
-	Name:      "active",
-	Usage:     "activate a frozen address",
-	ArgsUsage: "address",
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
-		}
-
-		addr, err := address.NewFromString(ctx.Args().First())
-		if err != nil {
-			return err
-		}
-
-		hasAddr, err := client.HasAddress(ctx.Context, addr)
-		if err != nil {
-			return err
-		}
-		if !hasAddr {
-			return xerrors.Errorf("address not exist")
-		}
-
-		_, err = client.ActiveAddress(ctx.Context, addr)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var setAddrSelMsgNumCmd = &cli.Command{
-	Name:      "set_sel_msg_num",
-	Usage:     "set the number of address selection messages",
-	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		&cli.IntFlag{
-			Name: "num",
-		},
-	},
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
-		}
-		addr, err := address.NewFromString(ctx.Args().First())
-		if err != nil {
-			return err
-		}
-		if _, err := client.SetSelectMsgNum(ctx.Context, addr, ctx.Uint64("num")); err != nil {
 			return err
 		}
 

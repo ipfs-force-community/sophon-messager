@@ -28,6 +28,7 @@ type MessageRepo interface {
 	ListMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
+	ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
@@ -36,5 +37,5 @@ type MessageRepo interface {
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) error
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageStateByID(id string, state types.MessageState) error
-	UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error
+	UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error
 }

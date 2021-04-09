@@ -36,12 +36,12 @@ const (
 )
 
 type MessageService struct {
-	repo           repo.Repo
-	log            *logrus.Logger
-	cfg            *config.MessageServiceConfig
-	nodeClient     *NodeClient
-	messageState   *MessageState
-	addressService *AddressService
+	repo          repo.Repo
+	log           *logrus.Logger
+	cfg           *config.MessageServiceConfig
+	nodeClient    *NodeClient
+	messageState  *MessageState
+	walletService *WalletService
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -72,9 +72,10 @@ func NewMessageService(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
 	addressService *AddressService,
+	walletService *WalletService,
 	sps *SharedParamsService,
 	nodeService *NodeService) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps)
+	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, walletService, sps)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,
@@ -83,8 +84,8 @@ func NewMessageService(repo repo.Repo,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
-		messageState:   messageState,
-		addressService: addressService,
+		messageState:  messageState,
+		walletService: walletService,
 		tsCache: &TipsetCache{
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
@@ -113,10 +114,10 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	if addrInfo, ok := ms.addressService.GetAddressInfo(msg.From); !ok {
+	if addrInfo, ok := ms.walletService.GetAddressInfo(msg.WalletName, msg.From); !ok {
 		return xerrors.Errorf("address %s not in wallet", msg.From)
 	} else if addrInfo.State != types.Alive {
-		return xerrors.Errorf("address not available, state %s", types.AddrStateToString(addrInfo.State))
+		return xerrors.Errorf("address is %s", types.StateToString(addrInfo.State))
 	}
 
 	ms.replaceMessageMeta(msg.Meta)
@@ -452,7 +453,10 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	//广播推送
 	//todo 多点推送
 	for _, msg := range toPushMessage {
-		_, err = ms.nodeClient.MpoolPush(ctx, msg)
+		if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil &&
+			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+			err = pushErr
+		}
 	}
 	if err != nil {
 		fmt.Println(toPushMessage[0].Cid().String(), toPushMessage[0].Message.Nonce)
@@ -524,7 +528,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
-	for addr := range ms.addressService.ListAddressInfo() {
+	for addr := range ms.walletService.AllAddresses() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)
@@ -624,9 +628,9 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	addrInfo, exist := ms.addressService.GetAddressInfo(msg.From)
+	addrInfo, exist := ms.walletService.GetAddressInfo(msg.WalletName, msg.From)
 	if !exist {
-		return cid.Undef, xerrors.Errorf("address not found %s", msg.From.String())
+		return cid.Undef, xerrors.Errorf("not found %s", msg.From.String())
 	}
 
 	signedMsg, err := ToSignedMsg(ctx, addrInfo.WalletClient, msg)

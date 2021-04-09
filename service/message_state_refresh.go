@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
-	"os"
 	"time"
+
+	"github.com/ipfs-force-community/venus-messager/utils"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
@@ -149,8 +149,9 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			return nil, xerrors.Errorf("found message at height %d error %v", ts.Height(), err)
 		}
 
+		addrs := ms.walletService.AllAddresses()
 		for _, msg := range msgs {
-			if _, ok := ms.addressService.GetAddressInfo(msg.From); ok && msg.UnsignedCid != nil {
+			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
 			}
 
@@ -169,6 +170,7 @@ type pendingMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, error) {
 	var applyMsgs []pendingMessage
+	addrs := ms.walletService.AllAddresses()
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
 		height := ts.Height()
@@ -188,7 +190,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		for i := range receipts {
 			msg := msgs[i].Message
-			if _, ok := ms.addressService.GetAddressInfo(msg.From); ok {
+			if _, ok := addrs[msg.From]; ok {
 				applyMsgs = append(applyMsgs, pendingMessage{
 					height:  height,
 					receipt: receipts[i],
@@ -199,29 +201,6 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 		}
 	}
 	return applyMsgs, nil
-}
-
-// nolint
-func (ms *MessageService) correctAddrMessagesState() {
-	for addr := range ms.addressService.ListAddressInfo() {
-		actor, err := ms.nodeClient.StateGetActor(context.TODO(), addr, venustypes.EmptyTSK)
-		if err != nil {
-			ms.log.Errorf("get %s's actor %v", addr, err)
-			continue
-		}
-		// <actor.nonce
-		msgs, err := ms.repo.MessageRepo().ListFilledMessageBelowNonce(addr, actor.Nonce)
-		if err != nil {
-			ms.log.Errorf("get filled message %v", err)
-		} else {
-			for _, msg := range msgs {
-				if err := ms.updateFilledMessage(context.TODO(), msg); err != nil {
-					ms.log.Errorf("update signed message %v", err)
-					continue
-				}
-			}
-		}
-	}
 }
 
 type tipsetFormat struct {
@@ -252,12 +231,7 @@ func (tl tipsetList) Less(i, j int) bool {
 }
 
 func readTipsetFile(filePath string) (*TipsetCache, error) {
-	file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := ioutil.ReadAll(file)
+	b, err := utils.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -277,17 +251,5 @@ func readTipsetFile(filePath string) (*TipsetCache, error) {
 
 // original data will be cleared
 func updateTipsetFile(filePath string, tsCache *TipsetCache) error {
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	b, err := json.MarshalIndent(tsCache, " ", "\t")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write(b)
-
-	return err
+	return utils.WriteFile(filePath, tsCache)
 }

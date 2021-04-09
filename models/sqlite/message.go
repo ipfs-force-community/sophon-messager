@@ -44,6 +44,8 @@ type sqliteMessage struct {
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
+	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
@@ -68,11 +70,12 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
-		Height:    sqlMsg.Height,
-		Receipt:   sqlMsg.Receipt.MsgReceipt(),
-		Signature: (*crypto.Signature)(sqlMsg.Signature),
-		Meta:      sqlMsg.Meta.Meta(),
-		State:     sqlMsg.State,
+		Height:     sqlMsg.Height,
+		Receipt:    sqlMsg.Receipt.MsgReceipt(),
+		Signature:  (*crypto.Signature)(sqlMsg.Signature),
+		Meta:       sqlMsg.Meta.Meta(),
+		State:      sqlMsg.State,
+		WalletName: sqlMsg.WalletName,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -93,26 +96,21 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 
 func FromMessage(srcMsg *types.Message) *sqliteMessage {
 	destMsg := &sqliteMessage{
-		ID:      srcMsg.ID,
-		Version: srcMsg.Version,
-		To:      srcMsg.To.String(),
-		From:    srcMsg.From.String(),
-		Nonce:   srcMsg.Nonce,
-		//Value:      types.NewFromGo(srcMsg.Value.Int),
-		GasLimit: srcMsg.GasLimit,
-		//GasFeeCap:  toDeicimal(srcMsg.GasFeeCap),
-		//GasPremium: toDeicimal(srcMsg.GasPremium),
-		Method:    int(srcMsg.Method),
-		Params:    srcMsg.Params,
-		Signature: (*repo.SqlSignature)(srcMsg.Signature),
-		//UnsignedCid: srcMsg.UnsignedMessage.Cid().String(),
-		//SignedCid: srcMsg.SignedCid().String(),
-		//	ExitCode:   repo.ExitCodeToExec,
-		Height:    srcMsg.Height,
-		Receipt:   repo.FromMsgReceipt(srcMsg.Receipt),
-		Meta:      FromMeta(srcMsg.Meta),
-		State:     srcMsg.State,
-		IsDeleted: -1,
+		ID:         srcMsg.ID,
+		Version:    srcMsg.Version,
+		To:         srcMsg.To.String(),
+		From:       srcMsg.From.String(),
+		Nonce:      srcMsg.Nonce,
+		GasLimit:   srcMsg.GasLimit,
+		Method:     int(srcMsg.Method),
+		Params:     srcMsg.Params,
+		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
+		Height:     srcMsg.Height,
+		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
+		Meta:       FromMeta(srcMsg.Meta),
+		WalletName: srcMsg.WalletName,
+		State:      srcMsg.State,
+		IsDeleted:  -1,
 	}
 
 	if srcMsg.UnsignedCid != nil {
@@ -222,6 +220,19 @@ func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 func (m *sqliteMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.FillMsg).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
+func (m *sqliteMessageRepo) ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? and wallet_name = ?", addr.String(), types.FillMsg, walletName).Error
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +440,7 @@ func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.Messag
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
 
-func (m *sqliteMessageRepo) UpdateUnFilledMessageStateByAddress(addr address.Address, state types.MessageState) error {
-	return m.DB.Debug().Model(&sqliteMessage{}).Where("from_addr = ? and state = ?", addr.String(), types.UnFillMsg).
+func (m *sqliteMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
+	return m.DB.Debug().Model(&sqliteMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
 		UpdateColumn("state", state).Error
 }

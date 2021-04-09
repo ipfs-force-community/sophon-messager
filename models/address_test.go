@@ -84,49 +84,7 @@ func TestAddress(t *testing.T) {
 	})
 }
 
-func TestSqliteAddressRepo_UpdateAddressState(t *testing.T) {
-	sqliteRepo, mysqlRepo := setupRepo(t)
-
-	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
-		addr, err := address.NewIDAddress(rand.Uint64() / 2)
-		assert.NoError(t, err)
-
-		addrInfo := &types.Address{
-			ID:        types.NewUUID(),
-			Addr:      addr,
-			Nonce:     3,
-			IsDeleted: -1,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-
-		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
-		assert.NoError(t, err)
-
-		result, err := addressRepo.GetAddress(context.TODO(), addr)
-		assert.NoError(t, err)
-		assert.Equal(t, types.Alive, result.State)
-
-		err = addressRepo.UpdateAddressState(context.TODO(), addr, types.Notfound)
-		assert.NoError(t, err)
-
-		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
-		assert.NoError(t, err)
-		assert.Equal(t, types.Notfound, addrInfo.State)
-	}
-
-	t.Run("UpdateAddressState", func(t *testing.T) {
-		t.Run("sqlite", func(t *testing.T) {
-			addressRepoTest(t, sqliteRepo.AddressRepo())
-		})
-		t.Run("mysql", func(t *testing.T) {
-			t.SkipNow()
-			addressRepoTest(t, mysqlRepo.AddressRepo())
-		})
-	})
-}
-
-func TestSqliteAddressRepo_UpdateAddressNonce(t *testing.T) {
+func TestUpdateAddressNonce(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 
 	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
@@ -246,50 +204,6 @@ func TestSqliteAddressRepo_HasAddress(t *testing.T) {
 	}
 
 	t.Run("HasAddress", func(t *testing.T) {
-		t.Run("sqlite", func(t *testing.T) {
-			addressRepoTest(t, sqliteRepo.AddressRepo())
-		})
-		t.Run("mysql", func(t *testing.T) {
-			t.SkipNow()
-			addressRepoTest(t, mysqlRepo.AddressRepo())
-		})
-	})
-}
-
-func TestUpdateSelectMsgNum(t *testing.T) {
-	sqliteRepo, mysqlRepo := setupRepo(t)
-
-	addressRepoTest := func(t *testing.T, addressRepo repo.AddressRepo) {
-		id, err := uuid.NewUUID()
-		assert.NoError(t, err)
-		addr, err := address.NewActorAddress(id[:])
-		assert.NoError(t, err)
-		addrInfo := &types.Address{
-			ID:           types.NewUUID(),
-			Addr:         addr,
-			Nonce:        3,
-			SelectMsgNum: 5,
-			IsDeleted:    -1,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-
-		err = addressRepo.SaveAddress(context.TODO(), addrInfo)
-		assert.NoError(t, err)
-
-		_, err = addressRepo.GetAddress(context.TODO(), addr)
-		assert.NoError(t, err)
-		assert.Equal(t, uint64(5), addrInfo.SelectMsgNum)
-
-		err = addressRepo.SetSelectMsgNum(context.TODO(), addr, 10)
-		assert.NoError(t, err)
-
-		addrInfo, err = addressRepo.GetAddress(context.TODO(), addr)
-		assert.NoError(t, err)
-		assert.Equal(t, uint64(10), addrInfo.SelectMsgNum)
-	}
-
-	t.Run("DeleteAddress", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
 			addressRepoTest(t, sqliteRepo.AddressRepo())
 		})

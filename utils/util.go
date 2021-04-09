@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net"
+	"os"
 	"strings"
 
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
@@ -66,4 +69,32 @@ func Contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func ReadFile(filePath string) ([]byte, error) {
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := ioutil.ReadAll(file)
+
+	return b, err
+}
+
+// original data will be cleared
+func WriteFile(filePath string, obj interface{}) error {
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	b, err := json.MarshalIndent(obj, " ", "\t")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(b)
+
+	return err
 }
