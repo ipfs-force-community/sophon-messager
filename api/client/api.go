@@ -61,7 +61,7 @@ type IMessager interface {
 	ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)            //perm:admin
 	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
 	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
-	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:admin
+	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:read
 	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)
 }
 

@@ -39,7 +39,7 @@ var authMap = map[string]string{
 	"SaveAddress":              "admin",
 	"ListAddress":              "admin",
 	"SaveNode":                 "admin",
-	"HasWalletAddress":         "admin",
+	"HasWalletAddress":         "read",
 	"GetMessageByCid":          "read",
 	"SaveWallet":               "admin",
 	"GetAddress":               "admin",
