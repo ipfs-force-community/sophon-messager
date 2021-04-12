@@ -71,12 +71,12 @@ func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.Sha
 	return sps.repo.SharedParamsRepo().GetSharedParams(ctx)
 }
 
-// TODO: check set params?
 func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
-	err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
+	id, err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
 	if err != nil {
 		return struct{}{}, err
 	}
+	params.ID = id
 	sps.SetParams(params)
 
 	return struct{}{}, err

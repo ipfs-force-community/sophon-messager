@@ -58,7 +58,7 @@ func (s mysqlSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Shar
 	return ssp.SharedParams(), nil
 }
 
-func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
+func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) (uint, error) {
 	var ssp mysqlSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -66,11 +66,11 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 				params.ID = 1
 			}
 			if err := s.DB.Save(FromSharedParams(*params)).Error; err != nil {
-				return err
+				return 0, err
 			}
-			return nil
+			return params.ID, nil
 		}
-		return err
+		return 0, err
 	}
 
 	ssp.ExpireEpoch = params.ExpireEpoch
@@ -85,8 +85,8 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 	ssp.MaxEstFailNumOfMsg = params.MaxEstFailNumOfMsg
 
 	if err := s.DB.Save(&ssp).Error; err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return params.ID, nil
 }

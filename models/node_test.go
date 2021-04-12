@@ -75,7 +75,7 @@ func TestGetNode(t *testing.T) {
 	})
 
 	t.Run("mysql", func(t *testing.T) {
-		t.Skip()
+		t.SkipNow()
 		nodeRepoTest(t, mysqlRepo.NodeRepo())
 	})
 }
