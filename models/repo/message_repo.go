@@ -26,6 +26,7 @@ type MessageRepo interface {
 	GetSignedMessageByTime(start time.Time) ([]*types.Message, error)
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
+	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error)
@@ -38,4 +39,6 @@ type MessageRepo interface {
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageStateByID(id string, state types.MessageState) error
 	UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error
+	MarkBadMessage(id string) (struct{}, error)
+	UpdateReturnValue(id string, returnVal string) error
 }

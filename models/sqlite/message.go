@@ -209,7 +209,7 @@ func (m *sqliteMessageRepo) GetMessageState(id string) (types.MessageState, erro
 
 func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.ExpireMsg).Error
+		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.FailedMsg).Error
 		if err != nil {
 			return err
 		}
@@ -379,6 +379,19 @@ func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
 	return result, nil
 }
 
+func (m *sqliteMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	if err := m.DB.Find(&sqlMsgs, "from_addr=?", addr.String()).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+	return result, nil
+}
+
 func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Model((*sqliteMessage)(nil)).
@@ -436,11 +449,19 @@ func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.Mess
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
-	return m.DB.Debug().Model(&sqliteMessage{}).
+	return m.DB.Model(&sqliteMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
 }
 
 func (m *sqliteMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
-	return m.DB.Debug().Model(&sqliteMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
+	return m.DB.Model(&sqliteMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
 		UpdateColumn("state", state).Error
+}
+
+func (m *sqliteMessageRepo) MarkBadMessage(id string) (struct{}, error) {
+	return struct{}{}, m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumn("state", types.FailedMsg).Error
+}
+
+func (m *sqliteMessageRepo) UpdateReturnValue(id string, returnVal string) error {
+	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumn("receipt_return_value", returnVal).Error
 }

@@ -210,7 +210,7 @@ func (m *mysqlMessageRepo) GetMessageState(id string) (types.MessageState, error
 
 func (m *mysqlMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.ExpireMsg).Error
+		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.FailedMsg).Error
 		if err != nil {
 			return err
 		}
@@ -378,6 +378,19 @@ func (m *mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	return result, nil
 }
 
+func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*mysqlMessage
+	if err := m.DB.Find(&sqlMsgs, "from_addr=?", addr.String()).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+	return result, nil
+}
+
 func (m *mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	if err := m.DB.Model((*mysqlMessage)(nil)).
@@ -442,4 +455,12 @@ func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.Message
 func (m *mysqlMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
 	return m.DB.Debug().Model(&mysqlMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
 		UpdateColumn("state", state).Error
+}
+
+func (m *mysqlMessageRepo) MarkBadMessage(id string) (struct{}, error) {
+	return struct{}{}, m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumn("state", types.FailedMsg).Error
+}
+
+func (m *mysqlMessageRepo) UpdateReturnValue(id string, returnVal string) error {
+	return m.DB.Model((*mysqlMessage)(nil)).Where("id = ?", id).UpdateColumn("receipt_return_value", returnVal).Error
 }

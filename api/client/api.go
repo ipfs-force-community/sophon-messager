@@ -22,17 +22,19 @@ type IMessager interface {
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                              //perm:read
 	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)                                      //perm:read
 	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
+	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
 	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)                                           //perm:admin
 	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)                                                                        //perm:admin
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) //perm:admin
-	RepublishMessage(Context context.Context, id string) (struct{}, error)                                                                         //perm:admin
+	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
+	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //admin
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)            //perm:admin
 	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)             //perm:admin
-	GetWalletByID(Context context.Context, id types.UUID) (*types.Wallet, error)         //perm:admin
-	HasWallet(Context context.Context, name string) (bool, error)                        //perm:admin
+	GetWalletByID(ctx context.Context, id types.UUID) (*types.Wallet, error)             //perm:admin
+	HasWallet(ctx context.Context, name string) (bool, error)                            //perm:admin
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)                             //perm:admin
 	ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) //perm:admin
 	DeleteWallet(ctx context.Context, name string) (string, error)                       //perm:admin
@@ -51,11 +53,11 @@ type IMessager interface {
 
 	SaveNode(ctx context.Context, node *types.Node) (struct{}, error) //perm:admin
 	GetNode(ctx context.Context, name string) (*types.Node, error)    //perm:admin
-	HasNode(Context context.Context, name string) (bool, error)       //perm:admin
+	HasNode(ctx context.Context, name string) (bool, error)           //perm:admin
 	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
 	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
 
-	GetWalletAddress(Context context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)   //perm:admin
+	GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)       //perm:admin
 	ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)            //perm:admin
 	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
 	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
@@ -76,16 +78,18 @@ type Message struct {
 		GetMessageByUnsignedCid  func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
+		ListMessageByAddress     func(ctx context.Context, addr address.Address) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
-		RepublishMessage         func(Context context.Context, id string) (struct{}, error)
+		RepublishMessage         func(ctx context.Context, id string) (struct{}, error)
+		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
 
 		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
 		GetWalletByName         func(ctx context.Context, name string) (*types.Wallet, error)
-		GetWalletByID           func(Context context.Context, id types.UUID) (*types.Wallet, error)
+		GetWalletByID           func(ctx context.Context, id types.UUID) (*types.Wallet, error)
 		HasWallet               func(ctx context.Context, name string) (bool, error)
 		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
 		ListRemoteWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
@@ -105,11 +109,11 @@ type Message struct {
 
 		SaveNode   func(ctx context.Context, node *types.Node) (struct{}, error)
 		GetNode    func(ctx context.Context, name string) (*types.Node, error)
-		HasNode    func(Context context.Context, name string) (bool, error)
+		HasNode    func(ctx context.Context, name string) (bool, error)
 		ListNode   func(ctx context.Context) ([]*types.Node, error)
 		DeleteNode func(ctx context.Context, name string) (struct{}, error)
 
-		GetWalletAddress  func(Context context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)
+		GetWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)
 		ForbiddenAddress  func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
 		ActiveAddress     func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
 		SetSelectMsgNum   func(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error)
@@ -150,6 +154,10 @@ func (message *Message) ListMessage(ctx context.Context) ([]*types.Message, erro
 	return message.Internal.ListMessage(ctx)
 }
 
+func (message *Message) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return message.Internal.ListMessageByAddress(ctx, addr)
+}
+
 func (message *Message) UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error) {
 	return message.Internal.UpdateMessageStateByCid(ctx, cid, state)
 }
@@ -172,6 +180,10 @@ func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool
 
 func (message *Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
 	return message.Internal.RepublishMessage(ctx, id)
+}
+
+func (message *Message) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+	return message.Internal.MarkBadMessage(ctx, id)
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

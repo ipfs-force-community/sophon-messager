@@ -193,6 +193,24 @@ func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, er
 	return msgs, nil
 }
 
+func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := ms.repo.MessageRepo().ListMessageByAddress(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, msg := range msgs {
+		if msg.State == types.OnChainMsg {
+			msg.Confidence = int64(ts.Height()) - msg.Height
+		}
+	}
+	return msgs, nil
+}
+
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
@@ -376,7 +394,7 @@ func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*ve
 func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.TipSet) error {
 	// select message
 	tSelect := time.Now()
-	selectMsg, expireMsgs, toPushMessage, modifyAddrs, err := ms.messageSelector.SelectMessage(ctx, ts)
+	selectMsg, expireMsgs, toPushMessage, modifyAddrs, gasEstimateFailedMsgs, err := ms.messageSelector.SelectMessage(ctx, ts)
 	if err != nil {
 		return err
 	}
@@ -396,6 +414,13 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 		for _, addr := range modifyAddrs {
 			err = txRepo.AddressRepo().SaveAddress(ctx, addr)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, m := range gasEstimateFailedMsgs {
+			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err.Error())
 			if err != nil {
 				return err
 			}
@@ -639,6 +664,10 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	_, err = ms.nodeClient.MpoolBatchPush(ctx, []*venusTypes.SignedMessage{&signedMsg})
 
 	return signedMsg.Cid(), err
+}
+
+func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+	return ms.repo.MessageRepo().MarkBadMessage(id)
 }
 
 func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
