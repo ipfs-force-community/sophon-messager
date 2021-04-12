@@ -31,7 +31,7 @@ func main() {
 	}
 	defer closer()
 
-	//loopPushMsgs(client)
+	loopPushMsgs(client)
 
 	from, _ := address.NewFromString("t3v3wx6tbwlvzev7hxhbpdlfwvwq5mbdhfrgmy2i2ztfaqhwjwc6zkxo6to4x2ms2acicd3x57fabxhpszzwqq")
 	to, _ := address.NewFromString("t3ru4e5hrvhsjjvyxyzzxzmsoahrdmobsfz6ohmd7ftswxyf7dxvhnmkq63cu5ozdy4wnrcqxx4gkwa427grga")
@@ -97,8 +97,8 @@ func loopPushMsgs(client client.IMessager) {
 				types.NewUUID().String(),
 				&venustypes.UnsignedMessage{
 					Version: 0,
-					To:      from,
-					From:    to,
+					To:      to,
+					From:    from,
 					Nonce:   1,
 					Value:   abi.NewTokenAmount(100),
 					Method:  0,

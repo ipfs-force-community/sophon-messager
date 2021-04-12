@@ -15,12 +15,12 @@ const (
 	UnFillMsg
 	FillMsg
 	OnChainMsg
-	ExpireMsg
+	FailedMsg
 	ReplacedMsg
 	NoWalletMsg
 )
 
-//						---> ExpireMsg <------
+//						---> FailedMsg <------
 //					    |					 |
 // 				UnFillMsg ---------------> FillMsg --------> OnChainMsg
 //						|					 |
@@ -73,8 +73,8 @@ func MsgStateToString(state MessageState) string {
 		return "FillMsg"
 	case OnChainMsg:
 		return "OnChainMsg"
-	case ExpireMsg:
-		return "ExpireMsg"
+	case FailedMsg:
+		return "Failed"
 	case ReplacedMsg:
 		return "ReplacedMsg"
 	case NoWalletMsg:

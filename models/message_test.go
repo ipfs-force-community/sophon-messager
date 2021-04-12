@@ -148,7 +148,7 @@ func TestExpireMessage(t *testing.T) {
 
 		msg2, err := messageRepo.GetMessageByUid(msg.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, types.ExpireMsg, msg2.State)
+		assert.Equal(t, types.FailedMsg, msg2.State)
 	}
 	t.Run("ExpireMessage", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
@@ -172,7 +172,7 @@ func TestGetMessageState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, state, types.UnKnown)
 
-		for _, state := range []types.MessageState{types.UnFillMsg, types.FillMsg, types.OnChainMsg, types.ExpireMsg} {
+		for _, state := range []types.MessageState{types.UnFillMsg, types.FillMsg, types.OnChainMsg, types.FailedMsg} {
 			msg.State = state
 			err = messageRepo.SaveMessage(msg)
 			assert.NoError(t, err)
@@ -358,6 +358,65 @@ func TestUpdateUnFilledMessageState(t *testing.T) {
 		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 		assert.NoError(t, err)
 		assert.Equal(t, types.NoWalletMsg, msg.State)
+	}
+	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
+		t.Run("sqlite", func(t *testing.T) {
+			messageRepoTest(t, sqliteRepo.MessageRepo())
+		})
+		t.Run("mysql", func(t *testing.T) {
+			t.SkipNow()
+			messageRepoTest(t, mysqlRepo.MessageRepo())
+		})
+	})
+}
+
+func TestMarkBadMessage(t *testing.T) {
+	sqliteRepo, mysqlRepo := setupRepo(t)
+
+	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
+
+		msgs := NewMessages(1)
+		for _, msg := range msgs {
+			msg.State = types.UnFillMsg
+			err := messageRepo.CreateMessage(msg)
+			assert.NoError(t, err)
+		}
+
+		_, err := messageRepo.MarkBadMessage(msgs[0].ID)
+		assert.NoError(t, err)
+
+		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
+		assert.NoError(t, err)
+		assert.Equal(t, types.FailedMsg, msg.State)
+	}
+	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
+		t.Run("sqlite", func(t *testing.T) {
+			messageRepoTest(t, sqliteRepo.MessageRepo())
+		})
+		t.Run("mysql", func(t *testing.T) {
+			t.SkipNow()
+			messageRepoTest(t, mysqlRepo.MessageRepo())
+		})
+	})
+}
+
+func TestUpdateReturnValue(t *testing.T) {
+	sqliteRepo, mysqlRepo := setupRepo(t)
+
+	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
+
+		msgs := NewMessages(2)
+		for _, msg := range msgs {
+			msg.State = types.UnFillMsg
+			err := messageRepo.CreateMessage(msg)
+			assert.NoError(t, err)
+		}
+		failedInfo := "gas estimate failed"
+		err := messageRepo.UpdateReturnValue(msgs[0].ID, failedInfo)
+		assert.NoError(t, err)
+		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
+		assert.NoError(t, err)
+		assert.Equal(t, failedInfo, string(msg.Receipt.ReturnValue))
 	}
 	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {

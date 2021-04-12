@@ -67,6 +67,10 @@ func (message Message) ListMessage(ctx context.Context) ([]*types.Message, error
 	return message.MsgService.ListMessage(ctx)
 }
 
+func (message Message) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return message.MsgService.ListMessageByAddress(ctx, addr)
+}
+
 func (message Message) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
 	return message.MsgService.UpdateMessageStateByCid(ctx, cid, state)
 }
@@ -89,4 +93,8 @@ func (message Message) ReplaceMessage(ctx context.Context, id string, auto bool,
 
 func (message Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
 	return message.MsgService.RepublishMessage(ctx, id)
+}
+
+func (message Message) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+	return message.MsgService.MarkBadMessage(ctx, id)
 }

@@ -25,6 +25,7 @@ var MsgCmds = &cli.Command{
 		replaceCmd,
 		waitMessagerCmd,
 		republishCmd,
+		markBadCmd,
 	},
 }
 
@@ -133,6 +134,10 @@ var listCmd = &cli.Command{
 			Name:  "output-type",
 			Usage: "output type support json and table",
 		},
+		&cli.StringFlag{
+			Name:  "addr",
+			Usage: "list message by address",
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -141,11 +146,24 @@ var listCmd = &cli.Command{
 		}
 		defer closer()
 
-		msg, err := client.ListMessage(ctx.Context)
-		if err != nil {
-			return err
+		var msgs []*types.Message
+		if addrStr := ctx.String("addr"); len(addrStr) > 0 {
+			addr, err := address.NewFromString(addrStr)
+			if err != nil {
+				return err
+			}
+			msgs, err = client.ListMessageByAddress(ctx.Context, addr)
+			if err != nil {
+				return err
+			}
+		} else {
+			msgs, err = client.ListMessage(ctx.Context)
+			if err != nil {
+				return err
+			}
 		}
-		bytes, err := json.MarshalIndent(msg, " ", "\t")
+
+		bytes, err := json.MarshalIndent(msgs, " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -320,6 +338,30 @@ var republishCmd = &cli.Command{
 
 		id := cctx.Args().Get(0)
 		_, err = client.RepublishMessage(cctx.Context, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+var markBadCmd = &cli.Command{
+	Name:      "mark-bad",
+	Usage:     "mark bad message",
+	ArgsUsage: "id",
+	Action: func(cctx *cli.Context) error {
+		client, closer, err := getAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if cctx.NArg() == 0 {
+			return xerrors.New("must has id argument")
+		}
+
+		id := cctx.Args().Get(0)
+		_, err = client.MarkBadMessage(cctx.Context, id)
 		if err != nil {
 			return err
 		}
