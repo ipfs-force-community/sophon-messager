@@ -16,6 +16,17 @@ import (
 
 const referParamsInterval = time.Second * 10
 
+var defParams = &types.SharedParams{
+	ID:                 0,
+	ExpireEpoch:        0,
+	GasOverEstimation:  0,
+	MaxFee:             100000,
+	MaxFeeCap:          20000,
+	SelMsgNum:          20,
+	ScanInterval:       10,
+	MaxEstFailNumOfMsg: 5,
+}
+
 type SharedParamsService struct {
 	repo repo.Repo
 	log  *logrus.Logger
@@ -38,25 +49,26 @@ func NewSharedParamsService(repo repo.Repo, logger *logrus.Logger) (*SharedParam
 			ScanIntervalChan: make(chan time.Duration, 5),
 		},
 	}
-	params, err := sps.GetSharedParams(context.TODO())
-	if err != nil && !xerrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+	ctx := context.TODO()
+	params, err := sps.GetSharedParams(ctx)
+	if err != nil {
+		if !xerrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		if _, err = sps.SetSharedParams(ctx, defParams); err != nil {
+			return nil, err
+		}
+		params = defParams
 	}
 
-	if params != nil {
-		sps.params.SharedParams = params
-	}
+	sps.params.SharedParams = params
 	sps.refreshParamsLoop()
 
 	return sps, nil
 }
 
 func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
-	sp, err := sps.repo.SharedParamsRepo().GetSharedParams(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return sp, nil
+	return sps.repo.SharedParamsRepo().GetSharedParams(ctx)
 }
 
 // TODO: check set params?
