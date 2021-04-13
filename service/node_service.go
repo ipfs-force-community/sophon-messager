@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-
-	"golang.org/x/xerrors"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
+	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs-force-community/venus-messager/models/repo"
@@ -34,6 +35,7 @@ func NewNodeService(repo repo.Repo, logger *logrus.Logger) (*NodeService, error)
 	if err != nil {
 		return nil, err
 	}
+	go ns.refreshNodeLoop()
 
 	return ns, nil
 }
@@ -117,9 +119,43 @@ func (ns *NodeService) removeNode(name string) {
 	newNodeInfos := make([]*NodeInfo, 0, len(ns.nodeInfos)-1)
 	for _, node := range ns.nodeInfos {
 		if node.name == name {
+			ns.log.Infof("delete node %s", name)
 			continue
 		}
 		newNodeInfos = append(newNodeInfos, node)
 	}
 	ns.nodeInfos = newNodeInfos
+}
+
+func (ns *NodeService) refreshNodeLoop() {
+	ticker := time.NewTicker(time.Second * 20)
+	defer ticker.Stop()
+	for range ticker.C {
+		nodes, err := ns.ListNode(context.TODO())
+		if err != nil && !xerrors.Is(err, gorm.ErrRecordNotFound) {
+			ns.log.Errorf("list node %v ", err)
+			continue
+		}
+		nodeTmp := make(map[string]struct{}, len(ns.nodeInfos))
+		for _, n := range ns.nodeInfos {
+			nodeTmp[n.name] = struct{}{}
+		}
+		for _, node := range nodes {
+			delete(nodeTmp, node.Name)
+			if err := ns.checkNode(node); err != nil {
+				continue
+			}
+			cli, _, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
+			if err != nil {
+				ns.log.Warnf("create node client %v ", err)
+				continue
+			}
+			ns.nodeInfos = append(ns.nodeInfos, &NodeInfo{name: node.Name, url: node.URL, token: node.Token, cli: cli})
+			ns.log.Infof("add node %s %s %s", node.Name, node.URL, node.Token)
+		}
+		// delete the corresponding node in the cache when db delete node
+		for name := range nodeTmp {
+			ns.removeNode(name)
+		}
+	}
 }

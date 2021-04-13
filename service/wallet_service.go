@@ -91,9 +91,9 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 			if w.IsDeleted == -1 && w.State == types.Alive {
 				return ErrRecordExist
 			}
-			if w.Token != wallet.Token || w.Url != wallet.Url {
-				return xerrors.Errorf("invalid token or url")
-			}
+			//if w.Token != wallet.Token || w.Url != wallet.Url {
+			//	return xerrors.Errorf("invalid token or url")
+			//}
 			wallet.ID = w.ID
 		}
 		return txRepo.WalletRepo().SaveWallet(wallet)

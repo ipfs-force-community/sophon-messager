@@ -73,7 +73,7 @@ var addWalletCmd = &cli.Command{
 
 var searchWalletCmd = &cli.Command{
 	Name:  "search",
-	Usage: "search wallet by wallet id or wallet name",
+	Usage: "search wallet by wallet id or wallet name, eg. venus-messager wallet search --name=xxxxx or --id=xxxx",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "id",

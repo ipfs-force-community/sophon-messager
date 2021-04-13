@@ -135,7 +135,7 @@ var listCmd = &cli.Command{
 			Usage: "output type support json and table",
 		},
 		&cli.StringFlag{
-			Name:  "addr",
+			Name:  "from",
 			Usage: "list message by address",
 		},
 	},
@@ -147,7 +147,7 @@ var listCmd = &cli.Command{
 		defer closer()
 
 		var msgs []*types.Message
-		if addrStr := ctx.String("addr"); len(addrStr) > 0 {
+		if addrStr := ctx.String("from"); len(addrStr) > 0 {
 			addr, err := address.NewFromString(addrStr)
 			if err != nil {
 				return err
@@ -279,7 +279,7 @@ var replaceCmd = &cli.Command{
 			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
 		},
 	},
-	ArgsUsage: "<from nonce> | <message-id>",
+	ArgsUsage: "<from nonce> | <id>",
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {

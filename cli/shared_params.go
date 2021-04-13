@@ -67,10 +67,15 @@ var getSharedParamCmd = &cli.Command{
 		}
 		defer closer()
 
-		_, err = client.GetSharedParams(ctx.Context)
+		params, err := client.GetSharedParams(ctx.Context)
 		if err != nil {
 			return err
 		}
+		paramsByte, err := json.MarshalIndent(params, "", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(paramsByte))
 
 		return nil
 	},
