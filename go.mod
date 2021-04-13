@@ -7,7 +7,7 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
-	github.com/filecoin-project/venus v0.9.2-0.20210413094204-10b975afeb6c // indirect
+	github.com/filecoin-project/venus v0.9.2-0.20210412114010-77af348f2bb2 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/google/uuid v1.1.2
@@ -44,6 +44,7 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.3
 	honnef.co/go/tools v0.1.3 // indirect
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace github.com/ipfs-force-community/venus-messager => ./
