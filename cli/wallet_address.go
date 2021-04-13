@@ -3,6 +3,9 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/ipfs-force-community/venus-messager/types"
 
 	"github.com/filecoin-project/go-address"
 	"golang.org/x/xerrors"
@@ -47,12 +50,12 @@ var searchWalletAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		addrs, err := client.GetWalletAddress(ctx.Context, ctx.String("wallet_name"), addr)
+		wa, err := client.GetWalletAddress(ctx.Context, ctx.String("wallet_name"), addr)
 		if err != nil {
 			return err
 		}
 
-		bytes, err := json.MarshalIndent(addrs, " ", "\t")
+		bytes, err := json.MarshalIndent(transformWalletAddress(wa), " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -71,12 +74,16 @@ var listWalletAddrCmd = &cli.Command{
 		}
 		defer closer()
 
-		addrs, err := client.ListWalletAddress(ctx.Context)
+		walletAddrs, err := client.ListWalletAddress(ctx.Context)
 		if err != nil {
 			return err
 		}
+		waFmt := make([]*walletAddressFormat, len(walletAddrs))
+		for i, wa := range walletAddrs {
+			waFmt[i] = transformWalletAddress(wa)
+		}
 
-		bytes, err := json.MarshalIndent(addrs, " ", "\t")
+		bytes, err := json.MarshalIndent(waFmt, " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -214,4 +221,33 @@ var setAddrSelMsgNumCmd = &cli.Command{
 
 		return nil
 	},
+}
+
+type walletAddressFormat struct {
+	ID           types.UUID
+	WalletID     types.UUID
+	AddrID       types.UUID
+	AddressState string
+	SelMsgNum    uint64
+
+	IsDeleted int
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func transformWalletAddress(wa *types.WalletAddress) *walletAddressFormat {
+	if wa == nil {
+		return nil
+	}
+
+	return &walletAddressFormat{
+		ID:           wa.ID,
+		WalletID:     wa.WalletID,
+		AddrID:       wa.AddrID,
+		AddressState: types.StateToString(wa.AddressState),
+		SelMsgNum:    wa.SelMsgNum,
+		IsDeleted:    wa.IsDeleted,
+		CreatedAt:    wa.CreatedAt,
+		UpdatedAt:    wa.UpdatedAt,
+	}
 }

@@ -111,7 +111,7 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 		Meta:       FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
 		State:      srcMsg.State,
-		IsDeleted:  -1,
+		IsDeleted:  repo.NotDeleted,
 	}
 
 	if srcMsg.UnsignedCid != nil {

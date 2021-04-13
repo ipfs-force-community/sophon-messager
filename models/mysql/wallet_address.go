@@ -121,7 +121,7 @@ func (s mysqlWalletAddressRepo) DelWalletAddress(walletID, addrID types.UUID) er
 		First(&wa).Error; err != nil {
 		return err
 	}
-	wa.IsDeleted = 1
+	wa.IsDeleted = repo.Deleted
 	wa.AddressState = types.Removed
 
 	return s.DB.Save(&wa).Error

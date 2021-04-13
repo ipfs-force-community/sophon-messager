@@ -4,9 +4,8 @@ import (
 	"reflect"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/hunjixin/automapper"
+	"gorm.io/gorm"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -97,7 +96,7 @@ func (s mysqlWalletRepo) ListWallet() ([]*types.Wallet, error) {
 }
 
 func (s mysqlWalletRepo) UpdateState(name string, state types.State) error {
-	return s.DB.Model((*mysqlWallet)(nil)).Where("name = ?", name).
+	return s.DB.Model((*mysqlWallet)(nil)).Where("name = ? and is_deleted = -1", name).
 		UpdateColumn("state", state).Error
 }
 
@@ -106,7 +105,7 @@ func (s mysqlWalletRepo) DelWallet(name string) error {
 	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&wallet).Error; err != nil {
 		return err
 	}
-	wallet.IsDeleted = 1
+	wallet.IsDeleted = repo.Deleted
 	wallet.State = types.Removed
 
 	return s.DB.Save(&wallet).Error

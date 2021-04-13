@@ -93,7 +93,7 @@ func (s mysqlNodeRepo) DelNode(name string) error {
 	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&node).Error; err != nil {
 		return err
 	}
-	node.IsDeleted = 1
+	node.IsDeleted = repo.Deleted
 
 	return s.DB.Save(&node).Error
 }
