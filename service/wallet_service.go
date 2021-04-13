@@ -389,8 +389,9 @@ func (walletService *WalletService) checkWalletState() {
 		}
 	}
 	for walletName := range walletService.walletDelChan {
+		checkAgain := true
 		if walletInfo, ok := walletService.getWalletInfo(walletName); !ok || walletInfo.walletState == types.Alive {
-			continue
+			checkAgain = false
 		}
 
 		addrs := walletService.listOneWalletAddress(walletName)
@@ -400,13 +401,15 @@ func (walletService *WalletService) checkWalletState() {
 			} else {
 				walletService.removeWallet(walletName)
 				walletService.log.Infof("deleted wallet %s", walletName)
-				continue
+				checkAgain = false
 			}
 		}
-		go func() {
-			time.Sleep(time.Second * 30)
-			walletService.walletDelChan <- walletName
-		}()
+		if checkAgain {
+			go func() {
+				time.Sleep(time.Second * 30)
+				walletService.walletDelChan <- walletName
+			}()
+		}
 	}
 }
 
