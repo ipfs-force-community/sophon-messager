@@ -201,10 +201,33 @@ func (message *Message) WaitMessage(ctx context.Context, id string, confidence u
 				return nil, err
 			}
 
-			if msg.State == types.OnChainMsg && msg.Confidence > int64(confidence) {
-				return msg, nil
+			switch msg.State {
+			//OffChain
+			case types.FillMsg:
+				fallthrough
+			case types.UnFillMsg:
+				fallthrough
+			case types.UnKnown:
+				continue
+			//OnChain
+			case types.ReplacedMsg:
+				fallthrough
+			case types.OnChainMsg:
+				if msg.Confidence > int64(confidence) {
+					return msg, nil
+				}
+				continue
+			//Error
+			case types.FailedMsg:
+				var reason string
+				if msg.Receipt != nil {
+					reason = string(msg.Receipt.ReturnValue)
+				}
+				return nil, xerrors.Errorf("msg failed due to %s", reason)
+			case types.NoWalletMsg:
+				return nil, xerrors.New("msg failed due to wallet disappear")
 			}
-			continue
+
 		case <-tm.C:
 			doneCh <- struct{}{}
 		case <-ctx.Done():
