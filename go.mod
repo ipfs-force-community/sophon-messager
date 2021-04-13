@@ -5,10 +5,9 @@ go 1.15
 require (
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
-	github.com/filecoin-project/go-fil-markets v1.1.9 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
-	github.com/filecoin-project/venus v0.9.1
+	github.com/filecoin-project/venus v0.9.2-0.20210413094204-10b975afeb6c // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/google/uuid v1.1.2
@@ -16,8 +15,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/venus-auth v0.0.0-20210409095239-6767c8e7ac9f
-	github.com/ipfs-force-community/venus-wallet v0.0.0-20210310055425-c7247d399ba3
+	github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79
+	github.com/ipfs-force-community/venus-wallet v0.0.0-20210331090924-7e6c4e807cd1
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
