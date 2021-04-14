@@ -38,7 +38,7 @@ type Message struct {
 	UnsignedCid *cid.Cid
 	SignedCid   *cid.Cid
 	venusTypes.UnsignedMessage
-	*crypto.Signature
+	Signature *crypto.Signature
 
 	Height     int64
 	Confidence int64
