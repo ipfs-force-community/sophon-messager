@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ipfs-force-community/venus-messager/models/repo"
+
 	"github.com/filecoin-project/go-address"
 
 	"github.com/urfave/cli/v2"
@@ -70,7 +72,7 @@ var setAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		addrInfo.IsDeleted = -1
+		addrInfo.IsDeleted = repo.NotDeleted
 
 		hasAddr, err := client.HasAddress(ctx.Context, addrInfo.Addr)
 		if err != nil {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ipfs-force-community/venus-messager/models/repo"
+
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
@@ -51,7 +53,7 @@ var addWalletCmd = &cli.Command{
 		w.CreatedAt = time.Now()
 		w.ID = types.NewUUID()
 		w.State = types.Alive
-		w.IsDeleted = -1
+		w.IsDeleted = repo.NotDeleted
 		w.Name = ctx.String("name")
 		w.Url = ctx.String("url")
 		if len(w.Url) == 0 {
@@ -109,7 +111,7 @@ var searchWalletCmd = &cli.Command{
 			return xerrors.Errorf("must pass id or name")
 		}
 
-		bytes, err := json.MarshalIndent(wallet, " ", "\t")
+		bytes, err := json.MarshalIndent(transformWallet(wallet), " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -128,12 +130,16 @@ var listWalletCmd = &cli.Command{
 		}
 		defer closer()
 
-		w, err := client.ListWallet(ctx.Context)
+		wallets, err := client.ListWallet(ctx.Context)
 		if err != nil {
 			return err
 		}
+		ws := make([]*walletFormat, len(wallets))
+		for i, w := range wallets {
+			ws[i] = transformWallet(w)
+		}
 
-		bytes, err := json.MarshalIndent(w, " ", "\t")
+		bytes, err := json.MarshalIndent(ws, " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -195,4 +201,33 @@ var deleteWalletCmd = &cli.Command{
 
 		return nil
 	},
+}
+
+type walletFormat struct {
+	ID    types.UUID
+	Name  string
+	Url   string
+	Token string
+	State string
+
+	IsDeleted int
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func transformWallet(w *types.Wallet) *walletFormat {
+	if w == nil {
+		return nil
+	}
+
+	return &walletFormat{
+		ID:        w.ID,
+		Name:      w.Name,
+		Url:       w.Url,
+		Token:     w.Token,
+		State:     types.StateToString(w.State),
+		IsDeleted: w.IsDeleted,
+		CreatedAt: w.CreatedAt,
+		UpdatedAt: w.UpdatedAt,
+	}
 }

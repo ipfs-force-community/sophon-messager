@@ -97,7 +97,8 @@ func (s sqliteWalletRepo) ListWallet() ([]*types.Wallet, error) {
 }
 
 func (s sqliteWalletRepo) UpdateState(name string, state types.State) error {
-	return s.DB.Model((*sqliteWallet)(nil)).Where("name = ?", name).UpdateColumn("state", state).Error
+	return s.DB.Model((*sqliteWallet)(nil)).Where("name = ? and is_deleted = -1", name).
+		UpdateColumn("state", state).Error
 }
 
 func (s sqliteWalletRepo) DelWallet(name string) error {
@@ -105,7 +106,7 @@ func (s sqliteWalletRepo) DelWallet(name string) error {
 	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&wallet).Error; err != nil {
 		return err
 	}
-	wallet.IsDeleted = 1
+	wallet.IsDeleted = repo.Deleted
 	wallet.State = types.Removed
 
 	return s.DB.Save(&wallet).Error

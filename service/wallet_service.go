@@ -88,12 +88,9 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 			if err != nil {
 				return err
 			}
-			if w.IsDeleted == -1 && w.State == types.Alive {
+			if w.IsDeleted == repo.NotDeleted && w.State == types.Alive {
 				return ErrRecordExist
 			}
-			//if w.Token != wallet.Token || w.Url != wallet.Url {
-			//	return xerrors.Errorf("invalid token or url")
-			//}
 			wallet.ID = w.ID
 		}
 		return txRepo.WalletRepo().SaveWallet(wallet)
@@ -106,6 +103,7 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 		addressInfos: make(map[address.Address]*AddressInfo),
 	})
 	walletService.setWallets(wallet.Name, wallet.ID)
+	walletService.log.Infof("save wallet %v", wallet)
 
 	return wallet.ID, nil
 }
@@ -284,6 +282,7 @@ func (walletService *WalletService) ProcessWallet(ctx context.Context, walletNam
 			walletService.log.Errorf("save wallet address %v", err)
 			continue
 		}
+		walletService.log.Infof("wallet %s add address %s", walletName, addr.String())
 	}
 
 	// address to handle remote wallet deletion
@@ -390,8 +389,9 @@ func (walletService *WalletService) checkWalletState() {
 		}
 	}
 	for walletName := range walletService.walletDelChan {
+		checkAgain := true
 		if walletInfo, ok := walletService.getWalletInfo(walletName); !ok || walletInfo.walletState == types.Alive {
-			continue
+			checkAgain = false
 		}
 
 		addrs := walletService.listOneWalletAddress(walletName)
@@ -400,20 +400,13 @@ func (walletService *WalletService) checkWalletState() {
 				walletService.log.Errorf("deleted wallet %v", err)
 			} else {
 				walletService.removeWallet(walletName)
-				continue
-			}
-		}
-
-		checkAgain := true
-		for addr := range addrs {
-			if addrInfo, ok := walletService.GetAddressInfo(walletName, addr); ok && addrInfo.State == types.Alive {
+				walletService.log.Infof("deleted wallet %s", walletName)
 				checkAgain = false
-				break
 			}
 		}
 		if checkAgain {
 			go func() {
-				time.Sleep(time.Second * 60)
+				time.Sleep(time.Second * 30)
 				walletService.walletDelChan <- walletName
 			}()
 		}
@@ -461,7 +454,7 @@ func (walletService *WalletService) checkAddressState() {
 		}
 		if !isDeleted {
 			go func() {
-				time.Sleep(time.Second * 60)
+				time.Sleep(time.Second * 30)
 				walletService.pendingAddrChan <- target
 			}()
 		}

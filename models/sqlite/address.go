@@ -109,7 +109,7 @@ func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr address.Addres
 
 func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
 	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		Updates(map[string]interface{}{"is_deleted": 1}).Error
+		Updates(map[string]interface{}{"is_deleted": repo.Deleted}).Error
 }
 
 func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {

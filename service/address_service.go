@@ -45,7 +45,7 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 			address.CreatedAt = srcAddr.CreatedAt
 			address.Weight = srcAddr.Weight
 
-			if srcAddr.IsDeleted == -1 {
+			if srcAddr.IsDeleted == repo.NotDeleted {
 				return ErrRecordExist
 			}
 		}

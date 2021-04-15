@@ -138,6 +138,22 @@ var listCmd = &cli.Command{
 			Name:  "from",
 			Usage: "list message by address",
 		},
+		&cli.IntFlag{
+			Name:  "count",
+			Usage: "number of messages output",
+		},
+		&cli.IntFlag{
+			Name: "state",
+			Usage: `filter by message state,
+state:
+  1:  UnFillMsg
+  2:  FillMsg
+  3:  OnChainMsg
+  4:  FailedMsg
+  5:  ReplacedMsg
+  6:  NoWalletMsg
+`,
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -161,6 +177,20 @@ var listCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
+		}
+		state := types.MessageState(ctx.Int("state"))
+		if state > types.UnKnown && state <= types.NoWalletMsg {
+			tmpMsgs := make([]*types.Message, 0, len(msgs))
+			for _, msg := range msgs {
+				if msg.State == state {
+					tmpMsgs = append(tmpMsgs, msg)
+				}
+			}
+			msgs = tmpMsgs
+		}
+		count := ctx.Int("count")
+		if count > 0 && len(msgs) > count {
+			msgs = msgs[:count]
 		}
 
 		bytes, err := json.MarshalIndent(msgs, " ", "\t")
