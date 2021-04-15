@@ -20,6 +20,7 @@ type MessageRepo interface {
 
 	GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error)
 	GetMessageByUid(id string) (*types.Message, error)
+	HasMessageByUid(id string) (bool, error)
 	GetMessageState(id string) (types.MessageState, error)
 	GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error)
 	GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error)

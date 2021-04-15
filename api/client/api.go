@@ -13,9 +13,10 @@ import (
 )
 
 type IMessager interface {
-	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) //perm:read
-	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
-	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
+	HasMessageByUid(ctx context.Context, id string) (bool, error)                                                                                  //perm:read
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)                                                         //perm:read
+	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)                      //perm:write
+	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)     //perm:write
 	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)                                                                        //perm:read
 	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)                                                                       //perm:read
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                                //perm:read
@@ -29,7 +30,7 @@ type IMessager interface {
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)                                                                        //perm:admin
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) //perm:admin
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
-	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //admin
+	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
 
 	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)            //perm:admin
 	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)             //perm:admin
@@ -62,13 +63,14 @@ type IMessager interface {
 	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
 	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
 	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:read
-	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)
+	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                             //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
 
 type Message struct {
 	Internal struct {
+		HasMessageByUid          func(ctx context.Context, id string) (bool, error)
 		WaitMessage              func(ctx context.Context, id string, confidence uint64) (*types.Message, error)
 		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
 		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
@@ -120,6 +122,10 @@ type Message struct {
 		HasWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
 	}
+}
+
+func (message *Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {
+	return message.Internal.HasMessageByUid(ctx, id)
 }
 
 func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta, walletName string) (string, error) {

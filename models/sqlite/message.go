@@ -207,6 +207,15 @@ func (m *sqliteMessageRepo) GetMessageState(id string) (types.MessageState, erro
 	return types.MessageState(result.State), nil
 }
 
+func (m *sqliteMessageRepo) HasMessageByUid(id string) (bool, error) {
+	var count int64
+	err := m.DB.Table("messages").Where("id=?", id).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
 		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.FailedMsg).Error
