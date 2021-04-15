@@ -144,6 +144,10 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 	return msg, nil
 }
 
+func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
+	return ms.repo.MessageRepo().HasMessageByUid(id)
+}
+
 func (ms *MessageService) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {

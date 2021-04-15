@@ -39,6 +39,10 @@ func (message Message) PushMessageWithId(ctx context.Context, id string, msg *ve
 	})
 }
 
+func (message Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {
+	return message.MsgService.HasMessageByUid(ctx, id)
+}
+
 func (message Message) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
 	return message.MsgService.GetMessageByUid(ctx, id)
 }

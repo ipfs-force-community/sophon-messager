@@ -13,6 +13,7 @@ import (
 )
 
 type IMessager interface {
+	HasMessageByUid(ctx context.Context, id string) (bool, error)                          //perm:read
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) //perm:read
 	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)

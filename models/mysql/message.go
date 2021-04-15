@@ -187,6 +187,15 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m *mysqlMessageRepo) HasMessageByUid(id string) (bool, error) {
+	var count int64
+	err := m.DB.Table("messages").Where("id=?", id).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func newMysqlMessageRepo(db *gorm.DB) *mysqlMessageRepo {
 	return &mysqlMessageRepo{DB: db}
 }
