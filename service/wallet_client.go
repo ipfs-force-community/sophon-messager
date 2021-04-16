@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
-	"github.com/filecoin-project/venus/pkg/crypto"
-	"github.com/ipfs-force-community/venus-wallet/core"
 	"net/http"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/venus/pkg/crypto"
+	"github.com/ipfs-force-community/venus-wallet/api/remotecli/httpparse"
+	"github.com/ipfs-force-community/venus-wallet/core"
 )
 
 type IWalletClient interface {
@@ -41,7 +42,11 @@ func (walletClient *WalletClient) WalletSign(ctx context.Context, signer address
 func newWalletClient(ctx context.Context, url, token string) (WalletClient, jsonrpc.ClientCloser, error) {
 	headers := http.Header{}
 	if len(token) != 0 {
-		headers.Add("Authorization", "Bearer "+token)
+		ai, err := httpparse.ParseApiInfo(token + ":" + url)
+		if err != nil {
+			return WalletClient{}, nil, err
+		}
+		headers = ai.AuthHeader()
 	}
 	addr, err := DialArgs(url)
 	if err != nil {

@@ -125,7 +125,7 @@ func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wa
 }
 
 func (walletService *WalletService) ListRemoteWalletAddress(ctx context.Context, walletName string) ([]address.Address, error) {
-	info, ok := walletService.walletInfos[walletName]
+	info, ok := walletService.getWalletInfo(walletName)
 	if !ok {
 		return nil, xerrors.Errorf("wallet %s not exit", walletName)
 	}
