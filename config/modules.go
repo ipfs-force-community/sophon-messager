@@ -34,7 +34,7 @@ func WriteConfig(path string, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, cfgBytes, 0666)
+	return ioutil.WriteFile(path, cfgBytes, 0666)
 }
 
 func CheckFile(cfg *Config) error {
