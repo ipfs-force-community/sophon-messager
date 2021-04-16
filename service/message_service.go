@@ -215,6 +215,10 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	return msgs, nil
 }
 
+func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListFailedMessage()
+}
+
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }

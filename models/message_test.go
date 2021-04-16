@@ -417,6 +417,10 @@ func TestUpdateReturnValue(t *testing.T) {
 		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 		assert.NoError(t, err)
 		assert.Equal(t, failedInfo, string(msg.Receipt.ReturnValue))
+
+		failedMsgs, err := messageRepo.ListFailedMessage()
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, len(failedMsgs), 1)
 	}
 	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {

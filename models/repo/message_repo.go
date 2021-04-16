@@ -28,6 +28,7 @@ type MessageRepo interface {
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
+	ListFailedMessage() ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error)

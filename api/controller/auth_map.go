@@ -47,4 +47,5 @@ var authMap = map[string]string{
 	"GetWalletAddress":         "admin",
 	"ForbiddenAddress":         "admin",
 	"GetMessageByCid":          "read",
+	"ListFailedMessage":        "admin",
 }

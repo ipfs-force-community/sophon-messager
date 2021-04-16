@@ -56,6 +56,13 @@ var runCmd = &cli.Command{
 	Usage: "run messager",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
+			Name:    "config",
+			Aliases: []string{"c"},
+			Value:   "./messager.toml",
+			Usage:   "specify config file",
+		},
+
+		&cli.StringFlag{
 			Name:     "auth-url",
 			Usage:    "url for auth server",
 			Required: true,
@@ -82,7 +89,7 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "sqlite-path",
 			Usage: "sqlite db path",
-			Value: "./messager.toml",
+			Value: "./message.db",
 		},
 		&cli.StringFlag{
 			Name:  "mysql-dsn",
@@ -106,6 +113,9 @@ func runAction(ctx *cli.Context) error {
 
 	if !exit {
 		cfg := config.DefaultConfig()
+		if authUrl := ctx.String("auth-url"); len(authUrl) != 0 {
+			cfg.JWT.Url = authUrl
+		}
 		cfg.Node.Url = ctx.String("node-url")
 		cfg.Node.Token = ctx.String("node-token")
 		cfg.DB.Type = ctx.String("db-type")
