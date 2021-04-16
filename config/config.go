@@ -41,14 +41,11 @@ type SqliteConfig struct {
 }
 
 type MySqlConfig struct {
-	Addr            string        `toml:"addr"`
-	User            string        `toml:"user"`
-	Pass            string        `toml:"pass"`
-	Name            string        `toml:"name"`
-	MaxOpenConn     int           `toml:"maxOpenConn"`
-	MaxIdleConn     int           `toml:"maxIdleConn"`
-	ConnMaxLifeTime time.Duration `toml:"connMaxLifeTime"`
-	Debug           bool          `toml:"debug"`
+	ConnectionString string        `toml:"connectionString"`
+	MaxOpenConn      int           `toml:"maxOpenConn"`
+	MaxIdleConn      int           `toml:"maxIdleConn"`
+	ConnMaxLifeTime  time.Duration `toml:"connMaxLifeTime"`
+	Debug            bool          `toml:"debug"`
 }
 
 type JWTConfig struct {
@@ -74,8 +71,14 @@ type MessageStateConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		DB: DbConfig{
-			Type:   "sqlite",
-			MySql:  MySqlConfig{},
+			Type: "sqlite",
+			MySql: MySqlConfig{
+				ConnectionString: "",
+				MaxOpenConn:      10,
+				MaxIdleConn:      10,
+				ConnMaxLifeTime:  time.Second * 60,
+				Debug:            false,
+			},
 			Sqlite: SqliteConfig{Path: "./message.db"},
 		},
 		JWT: JWTConfig{

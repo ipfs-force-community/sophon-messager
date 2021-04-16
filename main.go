@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/ipfs-force-community/venus-messager/log"
 
@@ -39,10 +40,10 @@ func main() {
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
 			ccli.WalletAddrCmds,
+			runCmd,
 		},
 	}
 	app.Setup()
-	app.Action = runAction
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)
 		return
@@ -50,8 +51,77 @@ func main() {
 
 }
 
+var runCmd = &cli.Command{
+	Name:  "run",
+	Usage: "run messager",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:     "auth-url",
+			Usage:    "url for auth server",
+			Required: true,
+		},
+
+		//node
+		&cli.StringFlag{
+			Name:     "node-url",
+			Usage:    "url for connection lotus/venus",
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:     "node-token",
+			Usage:    "token auth for lotus/venus",
+			Required: true,
+		},
+
+		//database
+		&cli.StringFlag{
+			Name:  "db-type",
+			Usage: "which db to use. sqlite/mysql",
+			Value: "sqlite",
+		},
+		&cli.StringFlag{
+			Name:  "sqlite-path",
+			Usage: "sqlite db path",
+			Value: "./messager.toml",
+		},
+		&cli.StringFlag{
+			Name:  "mysql-dsn",
+			Usage: "mysql connection string",
+		},
+	},
+	Action: runAction,
+}
+
 func runAction(ctx *cli.Context) error {
 	path := ctx.String("config")
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+
+	exit, err := config.ConfigExit(path)
+	if err != nil {
+		return err
+	}
+
+	if !exit {
+		cfg := config.DefaultConfig()
+		cfg.Node.Url = ctx.String("node-url")
+		cfg.Node.Token = ctx.String("node-token")
+		cfg.DB.Type = ctx.String("db-type")
+		switch cfg.DB.Type {
+		case "sqlite":
+			cfg.DB.Sqlite.Path = ctx.String("sqlite-path")
+		case "mysql":
+			cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
+		default:
+			return xerrors.New("unsupport db type")
+		}
+		err = config.WriteConfig(path, cfg)
+		if err != nil {
+			return err
+		}
+	}
 
 	cfg, err := config.ReadConfig(path)
 	if err != nil {

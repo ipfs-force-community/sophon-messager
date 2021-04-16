@@ -1,3 +1,3 @@
 package types
 
-type Arguments struct {}
+type Arguments struct{}

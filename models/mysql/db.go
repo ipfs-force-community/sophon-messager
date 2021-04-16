@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"fmt"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -105,20 +104,12 @@ func (t *TxMysqlRepo) AddressRepo() repo.AddressRepo {
 }
 
 func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=%t&loc=%s",
-		cfg.User,
-		cfg.Pass,
-		cfg.Addr,
-		cfg.Name,
-		true,
-		"Local")
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(cfg.ConnectionString), &gorm.Config{
 		//Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 
 	if err != nil {
-		return nil, xerrors.Errorf("[db connection failed] Database name: %s %w", cfg.Name, err)
+		return nil, xerrors.Errorf("[db connection failed] Database name: %s %w", cfg.ConnectionString, err)
 	}
 
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")

@@ -7,6 +7,16 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+func ConfigExit(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if !os.IsExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
 func ReadConfig(path string) (*Config, error) {
 	configBytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -17,6 +27,14 @@ func ReadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func WriteConfig(path string, cfg *Config) error {
+	cfgBytes, err := toml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, cfgBytes, 0666)
 }
 
 func CheckFile(cfg *Config) error {
