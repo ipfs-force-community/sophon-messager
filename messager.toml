@@ -3,17 +3,14 @@
   Address = "0.0.0.0:39812"
 
 [db]
-  type = "sqlite"
+  type = "mysql"
 
   [db.mysql]
-    addr = ""
-    connMaxLifeTime = "0s"
+    connMaxLifeTime = "1m0s"
+    connectionString = "xxxxx"
     debug = false
-    maxIdleConn = 0
-    maxOpenConn = 0
-    name = ""
-    pass = ""
-    user = ""
+    maxIdleConn = 10
+    maxOpenConn = 10
 
   [db.sqlite]
     debug = false
@@ -23,8 +20,8 @@
   url = "http://127.0.0.1:8989"
 
 [log]
+  level = "info"
   path = "messager.log"
-  level = "info"  # log level: trace debug info warn|warning error fatal panic
 
 [messageService]
   skipProcessHead = false
@@ -37,10 +34,8 @@
   backTime = 86400
 
 [node]
-#  url = "/ip4/8.130.165.167/tcp/3453"
-#  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.R6UZS9i6Y9vqAF-O4Z6y74uDK_8jT0M7OzqrrbNQ3II"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
   url = "/ip4/127.0.0.1/tcp/3453"
-  token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
 
 [wallet]
   scanInterval = 10

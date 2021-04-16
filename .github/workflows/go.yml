@@ -25,7 +25,7 @@ jobs:
         ./extern/filecoin-ffi/install-filcrypto
 
     - name: Build
-      run: go build -v ./...
+      run: go build
 
     - name: Test
       run: go test -v -race ./...
