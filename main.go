@@ -63,21 +63,18 @@ var runCmd = &cli.Command{
 		},
 
 		&cli.StringFlag{
-			Name:     "auth-url",
-			Usage:    "url for auth server",
-			Required: true,
+			Name:  "auth-url",
+			Usage: "url for auth server",
 		},
 
 		//node
 		&cli.StringFlag{
-			Name:     "node-url",
-			Usage:    "url for connection lotus/venus",
-			Required: true,
+			Name:  "node-url",
+			Usage: "url for connection lotus/venus",
 		},
 		&cli.StringFlag{
-			Name:     "node-token",
-			Usage:    "token auth for lotus/venus",
-			Required: true,
+			Name:  "node-token",
+			Usage: "token auth for lotus/venus",
 		},
 
 		//database

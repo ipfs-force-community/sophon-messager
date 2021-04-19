@@ -7,7 +7,7 @@
 
   [db.mysql]
     connMaxLifeTime = "1m0s"
-    connectionString = "xxxxx"
+    connectionString = "root:Root1234@(127.0.0.1:3306)/messager?parseTime=true&loc=Local"
     debug = false
     maxIdleConn = 10
     maxOpenConn = 10
@@ -34,7 +34,7 @@
   backTime = 86400
 
 [node]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
   url = "/ip4/127.0.0.1/tcp/3453"
 
 [wallet]

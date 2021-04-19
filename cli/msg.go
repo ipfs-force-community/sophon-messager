@@ -148,6 +148,11 @@ var listCmd = &cli.Command{
 			Name:  "count",
 			Usage: "number of messages output",
 		},
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "verbose",
+			Value: false,
+		},
 		&cli.IntFlag{
 			Name: "state",
 			Usage: `filter by message state,
@@ -200,7 +205,7 @@ state:
 		}
 
 		if ctx.String("output-type") == "table" {
-			return outputWithTable(msgs)
+			return outputWithTable(msgs, ctx.Bool("verbose"))
 		}
 		msgT := make([]*message, 0, len(msgs))
 		for _, msg := range msgs {
@@ -228,6 +233,11 @@ var listFailedCmd = &cli.Command{
 			Name:  "from",
 			Usage: "list message by address",
 		},
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "verbose",
+			Value: false,
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -254,7 +264,7 @@ var listFailedCmd = &cli.Command{
 		}
 
 		if ctx.String("output-type") == "table" {
-			return outputWithTable(msgs)
+			return outputWithTable(msgs, ctx.Bool("verbose"))
 		}
 		msgT := make([]*message, 0, len(msgs))
 		for _, msg := range msgs {
@@ -272,7 +282,6 @@ var listFailedCmd = &cli.Command{
 
 var tw = tablewriter.New(
 	tablewriter.Col("ID"),
-	tablewriter.Col("Cid"),
 	tablewriter.Col("To"),
 	tablewriter.Col("From"),
 	tablewriter.Col("Nonce"),
@@ -281,16 +290,13 @@ var tw = tablewriter.New(
 	tablewriter.Col("GasFeeCap"),
 	tablewriter.Col("GasPremium"),
 	tablewriter.Col("Method"),
-	tablewriter.Col("WalletName"),
 	tablewriter.Col("State"),
-	tablewriter.Col("Receipt"),
+	tablewriter.Col("ExitCode"),
+	tablewriter.Col("Return"),
 	tablewriter.Col("Height"),
-	//tablewriter.Col("TipSetKey"),
-	tablewriter.Col("Confidence"),
-	tablewriter.Col("MsgMeta"),
 )
 
-func outputWithTable(msgs []*types.Message) error {
+func outputWithTable(msgs []*types.Message, verbose bool) error {
 	for _, msgT := range msgs {
 		msg := transformMessage(msgT)
 		row := map[string]interface{}{
@@ -298,24 +304,25 @@ func outputWithTable(msgs []*types.Message) error {
 			"To":         msg.UnsignedMessage.To,
 			"From":       msg.UnsignedMessage.From,
 			"Nonce":      msg.UnsignedMessage.Nonce,
-			"Value":      msg.UnsignedMessage.Value,
+			"Value":      venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String()),
 			"GasLimit":   msg.UnsignedMessage.GasLimit,
 			"GasFeeCap":  msg.UnsignedMessage.GasFeeCap,
 			"GasPremium": msg.UnsignedMessage.GasPremium,
 			"Method":     msg.UnsignedMessage.Method,
 			"Height":     msg.Height,
-			"Confidence": msg.Confidence,
-			"WalletName": msg.WalletName,
-			//"TipSetKey":  msg.TipSetKey,
-			"State": msg.State,
+			"State":      msg.State,
+		}
+		if !verbose {
+			if from := msg.UnsignedMessage.From.String(); len(from) > 9 {
+				row["From"] = from[:9] + "..."
+			}
+			if to := msg.UnsignedMessage.To.String(); len(to) > 9 {
+				row["To"] = to[:9] + "..."
+			}
 		}
 		if msg.Receipt != nil {
-			row["Receipt"] = fmt.Sprintf("ExitCode: %d, ReturnValue: %s, GasUsed: %d", msg.Receipt.ExitCode,
-				string(msg.Receipt.ReturnValue), msg.Receipt.GasUsed)
-		}
-		if msg.Meta != nil {
-			row["MsgMeta"] = fmt.Sprintf("ExpireEpoch: %d, MaxFee: %d, MaxFeeCap: %d", msg.Meta.ExpireEpoch,
-				msg.Meta.MaxFee, msg.Meta.MaxFeeCap)
+			row["ExitCode"] = msg.Receipt.ExitCode
+			row["Return"] = msg.Receipt.ReturnValue
 		}
 		tw.Write(row)
 	}
