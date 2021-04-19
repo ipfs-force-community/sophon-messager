@@ -1,16 +1,21 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/venus/pkg/constants"
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
+	"github.com/ipfs-force-community/venus-messager/cli/tablewriter"
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
@@ -20,6 +25,7 @@ var MsgCmds = &cli.Command{
 	Subcommands: []*cli.Command{
 		searchCmd,
 		listCmd,
+		listFailedCmd,
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
 		replaceCmd,
@@ -87,7 +93,7 @@ var searchCmd = &cli.Command{
 			return xerrors.Errorf("value of query must be entered")
 		}
 
-		bytes, err := json.MarshalIndent(msg, " ", "\t")
+		bytes, err := json.MarshalIndent(transformMessage(msg), " ", "\t")
 		if err != nil {
 			return err
 		}
@@ -121,7 +127,7 @@ var waitMessagerCmd = &cli.Command{
 		fmt.Println("Tipset:", msg.TipSetKey.String())
 		fmt.Println("exitcode:", msg.Receipt.ExitCode)
 		fmt.Println("gas_used:", msg.Receipt.GasUsed)
-		fmt.Println("return_value:", msg.Receipt.ReturnValue)
+		fmt.Println("return_value:", string(msg.Receipt.ReturnValue))
 		return nil
 	},
 }
@@ -141,6 +147,11 @@ var listCmd = &cli.Command{
 		&cli.IntFlag{
 			Name:  "count",
 			Usage: "number of messages output",
+		},
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "verbose",
+			Value: false,
 		},
 		&cli.IntFlag{
 			Name: "state",
@@ -193,13 +204,135 @@ state:
 			msgs = msgs[:count]
 		}
 
-		bytes, err := json.MarshalIndent(msgs, " ", "\t")
+		if ctx.String("output-type") == "table" {
+			return outputWithTable(msgs, ctx.Bool("verbose"))
+		}
+		msgT := make([]*message, 0, len(msgs))
+		for _, msg := range msgs {
+			msgT = append(msgT, transformMessage(msg))
+		}
+		bytes, err := json.MarshalIndent(msgT, " ", "\t")
 		if err != nil {
 			return err
 		}
 		fmt.Println(string(bytes))
+
 		return nil
 	},
+}
+
+var listFailedCmd = &cli.Command{
+	Name:  "list-fail",
+	Usage: "list failed messages",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "output-type",
+			Usage: "output type support json and table",
+		},
+		&cli.StringFlag{
+			Name:  "from",
+			Usage: "list message by address",
+		},
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "verbose",
+			Value: false,
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		var msgs []*types.Message
+
+		msgs, err = client.ListFailedMessage(ctx.Context)
+		if err != nil {
+			return err
+		}
+
+		if addrStr := ctx.String("from"); len(addrStr) > 0 {
+			newMsgs := make([]*types.Message, 0, len(msgs))
+			for _, msg := range msgs {
+				if msg.From.String() == addrStr {
+					newMsgs = append(newMsgs, msg)
+				}
+			}
+			msgs = newMsgs
+		}
+
+		if ctx.String("output-type") == "table" {
+			return outputWithTable(msgs, ctx.Bool("verbose"))
+		}
+		msgT := make([]*message, 0, len(msgs))
+		for _, msg := range msgs {
+			msgT = append(msgT, transformMessage(msg))
+		}
+		bytes, err := json.MarshalIndent(msgT, " ", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(bytes))
+
+		return nil
+	},
+}
+
+var tw = tablewriter.New(
+	tablewriter.Col("ID"),
+	tablewriter.Col("To"),
+	tablewriter.Col("From"),
+	tablewriter.Col("Nonce"),
+	tablewriter.Col("Value"),
+	tablewriter.Col("GasLimit"),
+	tablewriter.Col("GasFeeCap"),
+	tablewriter.Col("GasPremium"),
+	tablewriter.Col("Method"),
+	tablewriter.Col("State"),
+	tablewriter.Col("ExitCode"),
+	tablewriter.Col("Return"),
+	tablewriter.Col("Height"),
+)
+
+func outputWithTable(msgs []*types.Message, verbose bool) error {
+	for _, msgT := range msgs {
+		msg := transformMessage(msgT)
+		row := map[string]interface{}{
+			"ID":         msg.ID,
+			"To":         msg.UnsignedMessage.To,
+			"From":       msg.UnsignedMessage.From,
+			"Nonce":      msg.UnsignedMessage.Nonce,
+			"Value":      venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String()),
+			"GasLimit":   msg.UnsignedMessage.GasLimit,
+			"GasFeeCap":  msg.UnsignedMessage.GasFeeCap,
+			"GasPremium": msg.UnsignedMessage.GasPremium,
+			"Method":     msg.UnsignedMessage.Method,
+			"Height":     msg.Height,
+			"State":      msg.State,
+		}
+		if !verbose {
+			if from := msg.UnsignedMessage.From.String(); len(from) > 9 {
+				row["From"] = from[:9] + "..."
+			}
+			if to := msg.UnsignedMessage.To.String(); len(to) > 9 {
+				row["To"] = to[:9] + "..."
+			}
+		}
+		if msg.Receipt != nil {
+			row["ExitCode"] = msg.Receipt.ExitCode
+			row["Return"] = msg.Receipt.ReturnValue
+		}
+		tw.Write(row)
+	}
+
+	buf := new(bytes.Buffer)
+	if err := tw.Flush(buf); err != nil {
+		return err
+	}
+	fmt.Println(buf)
+	return nil
 }
 
 var updateAllFilledMessageCmd = &cli.Command{
@@ -397,4 +530,59 @@ var markBadCmd = &cli.Command{
 		}
 		return nil
 	},
+}
+
+type message struct {
+	ID string
+
+	UnsignedCid *cid.Cid
+	SignedCid   *cid.Cid
+	venusTypes.UnsignedMessage
+	Signature *crypto.Signature
+
+	Height     int64
+	Confidence int64
+	Receipt    *receipt
+	TipSetKey  venusTypes.TipSetKey
+
+	Meta *types.MsgMeta
+
+	WalletName string
+
+	State string
+}
+
+type receipt struct {
+	ExitCode    exitcode.ExitCode
+	ReturnValue string
+	GasUsed     int64
+}
+
+func transformMessage(msg *types.Message) *message {
+	if msg == nil {
+		return nil
+	}
+
+	m := &message{
+		ID:              msg.ID,
+		UnsignedCid:     msg.UnsignedCid,
+		SignedCid:       msg.SignedCid,
+		UnsignedMessage: msg.UnsignedMessage,
+		Signature:       msg.Signature,
+		Height:          msg.Height,
+		Confidence:      msg.Confidence,
+		TipSetKey:       msg.TipSetKey,
+		Meta:            msg.Meta,
+		WalletName:      msg.WalletName,
+		State:           types.MsgStateToString(msg.State),
+	}
+	if msg.Receipt != nil {
+		m.Receipt = &receipt{
+			ExitCode:    msg.Receipt.ExitCode,
+			ReturnValue: string(msg.Receipt.ReturnValue),
+			GasUsed:     msg.Receipt.GasUsed,
+		}
+	}
+
+	return m
 }

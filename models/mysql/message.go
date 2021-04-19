@@ -400,6 +400,19 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 	return result, nil
 }
 
+func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
+	var sqlMsgs []*mysqlMessage
+	err := m.DB.Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
 func (m *mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	if err := m.DB.Model((*mysqlMessage)(nil)).

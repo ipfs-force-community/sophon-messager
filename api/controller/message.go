@@ -75,6 +75,10 @@ func (message Message) ListMessageByAddress(ctx context.Context, addr address.Ad
 	return message.MsgService.ListMessageByAddress(ctx, addr)
 }
 
+func (message Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
+	return message.MsgService.ListFailedMessage(ctx)
+}
+
 func (message Message) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
 	return message.MsgService.UpdateMessageStateByCid(ctx, cid, state)
 }

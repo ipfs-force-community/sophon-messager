@@ -24,6 +24,7 @@ type IMessager interface {
 	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)                                      //perm:read
 	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
+	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                               //perm:admin
 	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)                                           //perm:admin
 	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
@@ -81,6 +82,7 @@ type Message struct {
 		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		ListMessageByAddress     func(ctx context.Context, addr address.Address) ([]*types.Message, error)
+		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
@@ -162,6 +164,10 @@ func (message *Message) ListMessage(ctx context.Context) ([]*types.Message, erro
 
 func (message *Message) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
 	return message.Internal.ListMessageByAddress(ctx, addr)
+}
+
+func (message *Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
+	return message.Internal.ListFailedMessage(ctx)
 }
 
 func (message *Message) UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error) {

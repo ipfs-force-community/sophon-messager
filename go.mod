@@ -3,6 +3,8 @@ module github.com/ipfs-force-community/venus-messager
 go 1.15
 
 require (
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
+	github.com/fatih/color v1.9.0
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
@@ -15,7 +17,7 @@ require (
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79
-	github.com/ipfs-force-community/venus-wallet v0.0.0-20210415062557-1d12cc1d66d8
+	github.com/ipfs-force-community/venus-wallet v1.0.1-0.20210419073418-59aad02d1552
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
