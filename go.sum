@@ -575,8 +575,8 @@ github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79 h1
 github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79/go.mod h1:1jzX/6nT1UiBC0p2BuA1ujKFnZwPndZhmOB89Nemd+w=
 github.com/ipfs-force-community/venus-wallet v0.0.0-20210331090924-7e6c4e807cd1 h1:u5vERtaTiYbdoxdMtKJh1Eax57KTNKKc8W+YsEAFbt0=
 github.com/ipfs-force-community/venus-wallet v0.0.0-20210331090924-7e6c4e807cd1/go.mod h1:gtg18xHEeqHfOmTKRxMlFSufYV19Sss1zkzF5DW9FEY=
-github.com/ipfs-force-community/venus-wallet v0.0.0-20210415062557-1d12cc1d66d8 h1:/77Qb8xiNgIiHy4DfDCKhLaC58ihnMCTOjJb651Etm0=
-github.com/ipfs-force-community/venus-wallet v0.0.0-20210415062557-1d12cc1d66d8/go.mod h1:gtg18xHEeqHfOmTKRxMlFSufYV19Sss1zkzF5DW9FEY=
+github.com/ipfs-force-community/venus-wallet v1.0.1-0.20210419073418-59aad02d1552 h1:Nr3//bTYsN/AnEKT0Hwrl+B398xZlOehpRuTI8T7eGA=
+github.com/ipfs-force-community/venus-wallet v1.0.1-0.20210419073418-59aad02d1552/go.mod h1:gtg18xHEeqHfOmTKRxMlFSufYV19Sss1zkzF5DW9FEY=
 github.com/ipfs/bbloom v0.0.1/go.mod h1:oqo8CVWsJFMOZqTglBG4wydCE4IQA/G2/SEofB0rjUI=
 github.com/ipfs/bbloom v0.0.4 h1:Gi+8EGJ2y5qiD5FbsbpX/TMNcJw8gSqr7eyjHa4Fhvs=
 github.com/ipfs/bbloom v0.0.4/go.mod h1:cS9YprKXpoZ9lT0n/Mw/a6/aFV6DTjTLYHeA+gyqMG0=

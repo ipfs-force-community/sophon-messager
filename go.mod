@@ -17,7 +17,7 @@ require (
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79
-	github.com/ipfs-force-community/venus-wallet v0.0.0-20210415062557-1d12cc1d66d8
+	github.com/ipfs-force-community/venus-wallet v1.0.1-0.20210419073418-59aad02d1552
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
