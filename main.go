@@ -108,31 +108,26 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	var cfg *config.Config
 	if !exit {
-		cfg := config.DefaultConfig()
-		if authUrl := ctx.String("auth-url"); len(authUrl) != 0 {
-			cfg.JWT.Url = authUrl
-		}
-		cfg.Node.Url = ctx.String("node-url")
-		cfg.Node.Token = ctx.String("node-token")
-		cfg.DB.Type = ctx.String("db-type")
-		switch cfg.DB.Type {
-		case "sqlite":
-			cfg.DB.Sqlite.Path = ctx.String("sqlite-path")
-		case "mysql":
-			cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
-		default:
-			return xerrors.New("unsupport db type")
+		cfg = config.DefaultConfig()
+		err = updateFlag(cfg, ctx)
+		if err != nil {
+			return err
 		}
 		err = config.WriteConfig(path, cfg)
 		if err != nil {
 			return err
 		}
-	}
-
-	cfg, err := config.ReadConfig(path)
-	if err != nil {
-		return err
+	} else {
+		cfg, err = config.ReadConfig(path)
+		if err != nil {
+			return err
+		}
+		err = updateFlag(cfg, ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := config.CheckFile(cfg); err != nil {
@@ -205,6 +200,37 @@ func runAction(ctx *cli.Context) error {
 	}()
 
 	<-app.Done()
+	return nil
+}
+
+func updateFlag(cfg *config.Config, ctx *cli.Context) error {
+	if ctx.IsSet("auth-url") {
+		cfg.JWT.Url = ctx.String("auth-url")
+	}
+
+	if ctx.IsSet("node-url") {
+		cfg.Node.Url = ctx.String("node-url")
+	}
+
+	if ctx.IsSet("node-token") {
+		cfg.Node.Token = ctx.String("node-token")
+	}
+
+	if ctx.IsSet("db-type") {
+		cfg.DB.Type = ctx.String("db-type")
+		switch cfg.DB.Type {
+		case "sqlite":
+			if ctx.IsSet("sqlite-path") {
+				cfg.DB.Sqlite.Path = ctx.String("sqlite-path")
+			}
+		case "mysql":
+			if ctx.IsSet("mysql-dsn") {
+				cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
+			}
+		default:
+			return xerrors.New("unsupport db type")
+		}
+	}
 	return nil
 }
 
