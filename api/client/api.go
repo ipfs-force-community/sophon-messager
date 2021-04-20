@@ -231,11 +231,7 @@ func (message *Message) WaitMessage(ctx context.Context, id string, confidence u
 				continue
 			//Error
 			case types.FailedMsg:
-				var reason string
-				if msg.Receipt != nil {
-					reason = string(msg.Receipt.ReturnValue)
-				}
-				return nil, xerrors.Errorf("msg failed due to %s", reason)
+				return msg, nil
 			case types.NoWalletMsg:
 				return nil, xerrors.New("msg failed due to wallet disappear")
 			}
