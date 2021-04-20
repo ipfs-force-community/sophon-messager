@@ -41,6 +41,7 @@ func main() {
 			ccli.NodeCmds,
 			ccli.WalletAddrCmds,
 			runCmd,
+			ccli.VersionCmd,
 		},
 	}
 	app.Setup()
