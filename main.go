@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ipfs-force-community/venus-messager/log"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
@@ -18,8 +16,10 @@ import (
 	"github.com/ipfs-force-community/venus-messager/api/jwt"
 	ccli "github.com/ipfs-force-community/venus-messager/cli"
 	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/ipfs-force-community/venus-messager/log"
 	"github.com/ipfs-force-community/venus-messager/models"
 	"github.com/ipfs-force-community/venus-messager/service"
+	"github.com/ipfs-force-community/venus-messager/version"
 )
 
 func main() {
@@ -41,9 +41,9 @@ func main() {
 			ccli.NodeCmds,
 			ccli.WalletAddrCmds,
 			runCmd,
-			ccli.VersionCmd,
 		},
 	}
+	app.Version = version.Version + "--" + version.GitCommit
 	app.Setup()
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)
