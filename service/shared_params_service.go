@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"time"
 
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/ipfs-force-community/venus-messager/models/repo"
 	"github.com/ipfs-force-community/venus-messager/types"
@@ -16,12 +16,14 @@ import (
 
 const referParamsInterval = time.Second * 10
 
+var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
+
 var defParams = &types.SharedParams{
 	ID:                 0,
 	ExpireEpoch:        0,
-	GasOverEstimation:  0,
-	MaxFee:             100000,
-	MaxFeeCap:          20000,
+	GasOverEstimation:  1.25,
+	MaxFee:             DefaultMaxFee.Int64(),
+	MaxFeeCap:          0,
 	SelMsgNum:          20,
 	ScanInterval:       10,
 	MaxEstFailNumOfMsg: 5,

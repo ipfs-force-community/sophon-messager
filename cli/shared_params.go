@@ -22,7 +22,7 @@ var SharedParamsCmds = &cli.Command{
 
 var setSharedParamsCmd = &cli.Command{
 	Name:      "set",
-	Usage:     `set current shared params commands, eg. set: venus-messager share-params set "{\"expireEpoch\": 0, \"gasOverEstimation\": 0, \"maxFee\": 100000, \"maxFeeCap\": 20000, \"selMsgNum\": 20, \"scanInterval\": 10, \"maxEstFailNumOfMsg\": 5}"`,
+	Usage:     `set current shared params commands, eg. set: venus-messager share-params set "{\"expireEpoch\": 0, \"gasOverEstimation\": 1.25, \"maxFee\": 7000000000000000, \"maxFeeCap\": 0, \"selMsgNum\": 20, \"scanInterval\": 10, \"maxEstFailNumOfMsg\": 5}"`,
 	ArgsUsage: "[params]",
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() > 1 {
