@@ -25,6 +25,7 @@ type IMessager interface {
 	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
 	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                               //perm:admin
+	ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)                                       //perm:admin                                            //perm:admin
 	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)                                           //perm:admin
 	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
@@ -83,6 +84,7 @@ type Message struct {
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		ListMessageByAddress     func(ctx context.Context, addr address.Address) ([]*types.Message, error)
 		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
+		ListBlockedMessage       func(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
@@ -168,6 +170,10 @@ func (message *Message) ListMessageByAddress(ctx context.Context, addr address.A
 
 func (message *Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
 	return message.Internal.ListFailedMessage(ctx)
+}
+
+func (message *Message) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
+	return message.Internal.ListBlockedMessage(ctx, addr, d)
 }
 
 func (message *Message) UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error) {

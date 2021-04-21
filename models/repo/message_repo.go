@@ -29,6 +29,7 @@ type MessageRepo interface {
 	ListMessage() ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFailedMessage() ([]*types.Message, error)
+	ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error)

@@ -48,4 +48,5 @@ var authMap = map[string]string{
 	"ForbiddenAddress":         "admin",
 	"GetMessageByCid":          "read",
 	"ListFailedMessage":        "admin",
+	"ListBlockedMessage":       "admin",
 }

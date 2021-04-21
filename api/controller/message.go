@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
@@ -77,6 +78,10 @@ func (message Message) ListMessageByAddress(ctx context.Context, addr address.Ad
 
 func (message Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
 	return message.MsgService.ListFailedMessage(ctx)
+}
+
+func (message Message) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
+	return message.MsgService.ListBlockedMessage(ctx, addr, d)
 }
 
 func (message Message) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {

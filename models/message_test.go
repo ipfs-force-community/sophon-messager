@@ -30,6 +30,8 @@ func TestSaveAndGetMessage(t *testing.T) {
 		result, err := messageRepo.GetMessageByUid(msg.ID)
 		assert.NoError(t, err)
 
+		msg.UpdatedAt = result.UpdatedAt
+		msg.CreatedAt = result.CreatedAt
 		beforeSave := ObjectToString(msg)
 		afterSave := ObjectToString(result)
 		assert.Equal(t, beforeSave, afterSave)
@@ -262,7 +264,7 @@ func TestGetMessageByFromAndNonce(t *testing.T) {
 		result, err := messageRepo.GetMessageByFromAndNonce(msg.From, msg.Nonce)
 		assert.NoError(t, err)
 
-		assert.Equal(t, ObjectToString(msg), ObjectToString(result))
+		assert.Equal(t, msg.ID, result.ID)
 	}
 	t.Run("GetMessageByFromAndNonce", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
@@ -423,6 +425,38 @@ func TestUpdateReturnValue(t *testing.T) {
 		assert.GreaterOrEqual(t, len(failedMsgs), 1)
 	}
 	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
+		t.Run("sqlite", func(t *testing.T) {
+			messageRepoTest(t, sqliteRepo.MessageRepo())
+		})
+		t.Run("mysql", func(t *testing.T) {
+			t.SkipNow()
+			messageRepoTest(t, mysqlRepo.MessageRepo())
+		})
+	})
+}
+
+func TestListBlockedMessage(t *testing.T) {
+	sqliteRepo, mysqlRepo := setupRepo(t)
+
+	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
+
+		msgs := NewMessages(3)
+		msgs[0].State = types.UnFillMsg
+		msgs[1].State = types.FillMsg
+		assert.NoError(t, messageRepo.CreateMessage(msgs[0]))
+		assert.NoError(t, messageRepo.CreateMessage(msgs[1]))
+
+		time.Sleep(5 * time.Second)
+
+		msgList, err := messageRepo.ListBlockedMessage(msgs[0].From, time.Second*2)
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(msgList))
+
+		msgList, err = messageRepo.ListBlockedMessage(msgs[1].From, time.Second*2)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(msgList))
+	}
+	t.Run("ListBlockedMessage", func(t *testing.T) {
 		t.Run("sqlite", func(t *testing.T) {
 			messageRepoTest(t, sqliteRepo.MessageRepo())
 		})
