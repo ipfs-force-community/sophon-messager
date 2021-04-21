@@ -17,6 +17,11 @@ import (
 	"github.com/ipfs-force-community/venus-messager/types"
 )
 
+const (
+	gasEstimate = "gas estimate: "
+	signMsg     = "sign msg: "
+)
+
 type MessageSelector struct {
 	repo           repo.Repo
 	log            *logrus.Logger
@@ -27,10 +32,9 @@ type MessageSelector struct {
 	sps            *SharedParamsService
 }
 
-// TODO 消息预估失败后控制再次预估的时间?
-type gasEstimateFailedMessage struct {
+type msgErrInfo struct {
 	id  string
-	err error
+	err string
 }
 
 func NewMessageSelector(repo repo.Repo,
@@ -51,7 +55,7 @@ func NewMessageSelector(repo repo.Repo,
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) ([]*types.Message,
-	[]*types.Message, []*venusTypes.SignedMessage, []*types.Address, []gasEstimateFailedMessage, error) {
+	[]*types.Message, []*venusTypes.SignedMessage, []*types.Address, []msgErrInfo, error) {
 	addrList, err := messageSelector.addressService.ListAddress(ctx)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
@@ -66,7 +70,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	var expireMsgs []*types.Message
 	var toPushMessage []*venusTypes.SignedMessage
 	var modifyAddrs []*types.Address
-	var gasEstimateFailedMsgs []gasEstimateFailedMessage
+	var msgsErrInfo []msgErrInfo
 
 	var lk sync.Mutex
 	var wg sync.WaitGroup
@@ -80,7 +84,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				<-sem
 			}()
 
-			addrSelectMsg, addrExpireMsgs, addrToPushMessage, addrGasEstimateFailedMsgs, err := messageSelector.selectAddrMessage(ctx, addr, ts)
+			addrSelectMsg, addrExpireMsgs, addrToPushMessage, msgsErr, err := messageSelector.selectAddrMessage(ctx, addr, ts)
 			if err != nil {
 				messageSelector.log.Errorf("select message of %s fail %v", addr.Addr, err)
 				return
@@ -94,16 +98,16 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				selectMsg = append(selectMsg, addrSelectMsg...)
 				modifyAddrs = append(modifyAddrs, addr)
 			}
-			gasEstimateFailedMsgs = append(gasEstimateFailedMsgs, addrGasEstimateFailedMsgs...)
+			msgsErrInfo = append(msgsErrInfo, msgsErr...)
 		}(addr)
 	}
 
 	wg.Wait()
 
-	return selectMsg, expireMsgs, toPushMessage, modifyAddrs, gasEstimateFailedMsgs, nil
+	return selectMsg, expireMsgs, toPushMessage, modifyAddrs, msgsErrInfo, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, []gasEstimateFailedMessage, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, []msgErrInfo, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	addrsInfo, exit := messageSelector.walletService.GetAddressesInfo(addr.Addr)
@@ -180,7 +184,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var selectMsg []*types.Message
 	var failedCount uint64
 	var allowFailedNum uint64
-	var gasEstimateFailedMsgs []gasEstimateFailedMessage
+	var msgsErrInfo []msgErrInfo
 	if messageSelector.sps.GetParams().SharedParams != nil {
 		allowFailedNum = messageSelector.sps.GetParams().MaxEstFailNumOfMsg
 	}
@@ -213,7 +217,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: newMsgMeta.MaxFee}, ts.Key())
 		if err != nil {
 			failedCount++
-			gasEstimateFailedMsgs = append(gasEstimateFailedMsgs, gasEstimateFailedMessage{id: msg.ID, err: err})
+			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
 			if strings.Contains(err.Error(), "exit SysErrSenderStateInvalid(2)") {
 				// SysErrSenderStateInvalid(2))
 				messageSelector.log.Errorf("message %s estimate message fail %v break address %s", msg.ID, err, addr.Addr)
@@ -241,6 +245,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		})
 		if err != nil {
 			//todo client net crash?
+			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: signMsg + err.Error()})
 			messageSelector.log.Errorf("wallet sign failed %s fail %v", msg.ID, err)
 			continue
 		}
@@ -263,7 +268,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	messageSelector.log.Infof("address %s select message %d max nonce %d", addr.Addr, len(selectMsg), addr.Nonce)
-	return selectMsg, expireMsgs, toPushMessage, gasEstimateFailedMsgs, nil
+	return selectMsg, expireMsgs, toPushMessage, msgsErrInfo, nil
 }
 
 func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msgs []*types.Message) ([]*types.Message, []*types.Message) {

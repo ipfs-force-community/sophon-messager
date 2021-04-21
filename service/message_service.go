@@ -402,7 +402,7 @@ func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*ve
 func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.TipSet) error {
 	// select message
 	tSelect := time.Now()
-	selectMsg, expireMsgs, toPushMessage, modifyAddrs, gasEstimateFailedMsgs, err := ms.messageSelector.SelectMessage(ctx, ts)
+	selectMsg, expireMsgs, toPushMessage, modifyAddrs, msgsErrInfo, err := ms.messageSelector.SelectMessage(ctx, ts)
 	if err != nil {
 		return err
 	}
@@ -427,8 +427,8 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			}
 		}
 
-		for _, m := range gasEstimateFailedMsgs {
-			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err.Error())
+		for _, m := range msgsErrInfo {
+			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
 			}
