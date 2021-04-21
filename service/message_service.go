@@ -106,7 +106,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 
 	//replace address
 	if msg.From.Protocol() == address.ID {
-		fromA, err := ms.nodeClient.ResolveToKeyAddr(ctx, msg.From, nil)
+		fromA, err := ms.nodeClient.StateAccountKey(ctx, msg.From, venusTypes.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting key address: %w", err)
 		}
