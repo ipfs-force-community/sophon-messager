@@ -37,7 +37,7 @@ type NodeClient struct {
 	GetFullBlock           func(context.Context, cid.Cid) (*types.FullBlock, error)
 	GetEntry               func(context.Context, abi.ChainEpoch, uint64) (*types.BeaconEntry, error)
 	MessageWait            func(context.Context, cid.Cid, abi.ChainEpoch, abi.ChainEpoch) (*chain.ChainMessage, error)
-	ResolveToKeyAddr       func(context.Context, address.Address, *types.TipSet) (address.Address, error)
+	StateAccountKey        func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
 	StateNetworkName       func(context.Context) (chain2.NetworkName, error)
 	StateSearchMsg         func(context.Context, cid.Cid) (*chain.MsgLookup, error)
 	StateNetworkVersion    func(context.Context, types.TipSetKey) (network.Version, error)
