@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
 	"sort"
 	"strings"
 	"sync"
@@ -214,7 +216,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
-		newMsg, err := messageSelector.nodeClient.GasEstimateMessageGas(ctx, msg.VMMessage(), &venusTypes.MessageSendSpec{MaxFee: newMsgMeta.MaxFee}, ts.Key())
+		newMsg, err := messageSelector.GasEstimateMessageGas(ctx, msg.VMMessage(), newMsgMeta, ts.Key())
 		if err != nil {
 			failedCount++
 			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
@@ -306,4 +308,51 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta) *types.
 	}
 
 	return newMsgMeta
+}
+
+func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
+	if msg.GasLimit == 0 {
+		gasLimit, err := messageSelector.nodeClient.GasEstimateGasLimit(ctx, msg, tsk)
+		if err != nil {
+			return nil, xerrors.Errorf("estimating gas used: %w", err)
+		}
+		//GasOverEstimation default value should be 1.25
+		msg.GasLimit = int64(float64(gasLimit) * meta.GasOverEstimation)
+	}
+
+	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
+		gasPremium, err := messageSelector.nodeClient.GasEstimateGasPremium(ctx, 10, msg.From, msg.GasLimit, tsk)
+		if err != nil {
+			return nil, xerrors.Errorf("estimating gas price: %w", err)
+		}
+		msg.GasPremium = gasPremium
+	}
+
+	if msg.GasFeeCap == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasFeeCap, venusTypes.NewInt(0)) == 0 {
+		feeCap, err := messageSelector.nodeClient.GasEstimateFeeCap(ctx, msg, 20, venusTypes.EmptyTSK)
+		if err != nil {
+			return nil, xerrors.Errorf("estimating fee cap: %w", err)
+		}
+		msg.GasFeeCap = feeCap
+	}
+
+	CapGasFee(msg, meta.MaxFee)
+
+	return msg, nil
+}
+
+func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {
+	if maxFee.NilOrZero() {
+		return
+	}
+
+	gl := venusTypes.NewInt(uint64(msg.GasLimit))
+	totalFee := venusTypes.BigMul(msg.GasFeeCap, gl)
+
+	if totalFee.LessThanEqual(maxFee) {
+		return
+	}
+
+	msg.GasFeeCap = big.Div(maxFee, gl)
+	msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium) // cap premium at FeeCap
 }

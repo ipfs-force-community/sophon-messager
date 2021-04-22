@@ -74,7 +74,7 @@ func NewWalletService(repo repo.Repo,
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	cli, _, err := newWalletClient(ctx, wallet.Url, wallet.Token)
+	cli, _, err := NewWalletClient(ctx, wallet.Url, wallet.Token)
 	if err != nil {
 		return types.UUID{}, err
 	}
@@ -190,7 +190,7 @@ func (walletService *WalletService) start() error {
 		return err
 	}
 	for _, w := range walletList {
-		cli, _, err := newWalletClient(context.Background(), w.Url, w.Token)
+		cli, _, err := NewWalletClient(context.Background(), w.Url, w.Token)
 		if err != nil {
 			return err
 		}
