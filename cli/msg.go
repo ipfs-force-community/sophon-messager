@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -26,6 +27,7 @@ var MsgCmds = &cli.Command{
 		searchCmd,
 		listCmd,
 		listFailedCmd,
+		ListBlockedMessageCmd,
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
 		replaceCmd,
@@ -33,6 +35,23 @@ var MsgCmds = &cli.Command{
 		republishCmd,
 		markBadCmd,
 	},
+}
+
+var outputTypeFlag = &cli.StringFlag{
+	Name:  "output-type",
+	Usage: "output type support json and table (default table)",
+	Value: "table",
+}
+
+var FromFlag = &cli.StringFlag{
+	Name:  "from",
+	Usage: "address to send message",
+}
+
+var verboseFlag = &cli.BoolFlag{
+	Name:  "verbose",
+	Usage: "verbose address",
+	Value: false,
 }
 
 var searchCmd = &cli.Command{
@@ -52,10 +71,6 @@ var searchCmd = &cli.Command{
 			Name:    "unsigned_cid",
 			Aliases: []string{"u_cid"},
 			Usage:   "message unsigned cid",
-		},
-		&cli.StringFlag{
-			Name:  "output-type",
-			Usage: "output type support json and table",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -136,22 +151,9 @@ var listCmd = &cli.Command{
 	Name:  "list",
 	Usage: "list messages",
 	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "output-type",
-			Usage: "output type support json and table",
-		},
-		&cli.StringFlag{
-			Name:  "from",
-			Usage: "list message by address",
-		},
 		&cli.IntFlag{
 			Name:  "count",
 			Usage: "number of messages output",
-		},
-		&cli.BoolFlag{
-			Name:  "verbose",
-			Usage: "verbose",
-			Value: false,
 		},
 		&cli.IntFlag{
 			Name: "state",
@@ -165,6 +167,9 @@ state:
   6:  NoWalletMsg
 `,
 		},
+		FromFlag,
+		outputTypeFlag,
+		verboseFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -225,19 +230,9 @@ var listFailedCmd = &cli.Command{
 	Name:  "list-fail",
 	Usage: "list failed messages",
 	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "output-type",
-			Usage: "output type support json and table",
-		},
-		&cli.StringFlag{
-			Name:  "from",
-			Usage: "list message by address",
-		},
-		&cli.BoolFlag{
-			Name:  "verbose",
-			Usage: "verbose",
-			Value: false,
-		},
+		FromFlag,
+		outputTypeFlag,
+		verboseFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -261,6 +256,63 @@ var listFailedCmd = &cli.Command{
 				}
 			}
 			msgs = newMsgs
+		}
+
+		if ctx.String("output-type") == "table" {
+			return outputWithTable(msgs, ctx.Bool("verbose"))
+		}
+		msgT := make([]*message, 0, len(msgs))
+		for _, msg := range msgs {
+			msgT = append(msgT, transformMessage(msg))
+		}
+		bytes, err := json.MarshalIndent(msgT, " ", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(bytes))
+
+		return nil
+	},
+}
+
+var ListBlockedMessageCmd = &cli.Command{
+	Name:  "list-blocked",
+	Usage: "Lists messages that have not been chained for a period of time",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "time",
+			Usage:   "exceeding residence time, eg. 3s,3m,3h (default 3h)",
+			Aliases: []string{"t"},
+			Value:   "3h",
+		},
+		FromFlag,
+		outputTypeFlag,
+		verboseFlag,
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		var msgs []*types.Message
+		var addr address.Address
+
+		t, err := time.ParseDuration(ctx.String("time"))
+		if err != nil {
+			return err
+		}
+		if ctx.IsSet("from") {
+			addr, err = address.NewFromString(ctx.String("from"))
+			if err != nil {
+				return err
+			}
+		}
+
+		msgs, err = client.ListBlockedMessage(ctx.Context, addr, t)
+		if err != nil {
+			return err
 		}
 
 		if ctx.String("output-type") == "table" {
@@ -550,6 +602,9 @@ type message struct {
 	WalletName string
 
 	State string
+
+	UpdatedAt time.Time
+	CreatedAt time.Time
 }
 
 type receipt struct {
@@ -575,6 +630,8 @@ func transformMessage(msg *types.Message) *message {
 		Meta:            msg.Meta,
 		WalletName:      msg.WalletName,
 		State:           types.MsgStateToString(msg.State),
+		UpdatedAt:       msg.UpdatedAt,
+		CreatedAt:       msg.CreatedAt,
 	}
 	if msg.Receipt != nil {
 		m.Receipt = &receipt{

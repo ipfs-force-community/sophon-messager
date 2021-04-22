@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -44,12 +46,13 @@ type Message struct {
 	Confidence int64
 	Receipt    *venusTypes.MessageReceipt
 	TipSetKey  venusTypes.TipSetKey
-
-	Meta *MsgMeta
-
+	Meta       *MsgMeta
 	WalletName string
 
 	State MessageState
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func FromUnsignedMessage(unsignedMsg venusTypes.UnsignedMessage) *Message {

@@ -1,3 +1,7 @@
 package version
 
-var GitCommit string
+var (
+	GitCommit string
+
+	Version = "1.0.0"
+)

@@ -76,6 +76,8 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 		Meta:       sqlMsg.Meta.Meta(),
 		State:      sqlMsg.State,
 		WalletName: sqlMsg.WalletName,
+		UpdatedAt:  sqlMsg.UpdatedAt,
+		CreatedAt:  sqlMsg.CreatedAt,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -404,6 +406,20 @@ func (m *sqliteMessageRepo) ListMessageByAddress(addr address.Address) ([]*types
 func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, nil
+}
+
+func (m *sqliteMessageRepo) ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	t := time.Now().Add(-d)
+	err := m.DB.Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
 	if err != nil {
 		return nil, err
 	}
