@@ -63,14 +63,9 @@ var searchCmd = &cli.Command{
 			Usage: "message id",
 		},
 		&cli.StringFlag{
-			Name:    "signed_cid",
-			Aliases: []string{"s_cid"},
-			Usage:   "message signed cid",
-		},
-		&cli.StringFlag{
-			Name:    "unsigned_cid",
-			Aliases: []string{"u_cid"},
-			Usage:   "message unsigned cid",
+			Name:    "cid",
+			Aliases: []string{"cid"},
+			Usage:   "message cid",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -86,21 +81,12 @@ var searchCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-		} else if cidStr := ctx.String("signed_cid"); len(cidStr) > 0 {
+		} else if cidStr := ctx.String("cid"); len(cidStr) > 0 {
 			c, err := cid.Decode(cidStr)
 			if err != nil {
 				return err
 			}
 			msg, err = client.GetMessageBySignedCid(ctx.Context, c)
-			if err != nil {
-				return err
-			}
-		} else if cidStr := ctx.String("unsigned_cid"); len(cidStr) > 0 {
-			c, err := cid.Decode(cidStr)
-			if err != nil {
-				return err
-			}
-			msg, err = client.GetMessageByUnsignedCid(ctx.Context, c)
 			if err != nil {
 				return err
 			}
@@ -563,7 +549,7 @@ var republishCmd = &cli.Command{
 var markBadCmd = &cli.Command{
 	Name:      "mark-bad",
 	Usage:     "mark bad message",
-	ArgsUsage: "id",
+	ArgsUsage: "id slice",
 	Action: func(cctx *cli.Context) error {
 		client, closer, err := getAPI(cctx)
 		if err != nil {
@@ -575,10 +561,12 @@ var markBadCmd = &cli.Command{
 			return xerrors.New("must has id argument")
 		}
 
-		id := cctx.Args().Get(0)
-		_, err = client.MarkBadMessage(cctx.Context, id)
-		if err != nil {
-			return err
+		for _, id := range cctx.Args().Slice() {
+			_, err = client.MarkBadMessage(cctx.Context, id)
+			if err != nil {
+				fmt.Printf("mark msg %s as bad fail %v\n", id, err)
+				continue
+			}
 		}
 		return nil
 	},

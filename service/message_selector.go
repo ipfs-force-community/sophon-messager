@@ -32,6 +32,14 @@ type MessageSelector struct {
 	sps            *SharedParamsService
 }
 
+type MsgSelectResult struct {
+	SelectMsg     []*types.Message
+	ExpireMsg     []*types.Message
+	ToPushMsg     []*venusTypes.SignedMessage
+	ModifyAddress []*types.Address
+	ErrMsg        []msgErrInfo
+}
+
 type msgErrInfo struct {
 	id  string
 	err string
@@ -54,11 +62,10 @@ func NewMessageSelector(repo repo.Repo,
 	}
 }
 
-func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) ([]*types.Message,
-	[]*types.Message, []*venusTypes.SignedMessage, []*types.Address, []msgErrInfo, error) {
+func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
 	addrList, err := messageSelector.addressService.ListAddress(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, err
 	}
 
 	//sort by addr weight
@@ -66,12 +73,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 		return addrList[i].Weight < addrList[j].Weight
 	})
 
-	var selectMsg []*types.Message
-	var expireMsgs []*types.Message
-	var toPushMessage []*venusTypes.SignedMessage
-	var modifyAddrs []*types.Address
-	var msgsErrInfo []msgErrInfo
-
+	selectResult := &MsgSelectResult{}
 	var lk sync.Mutex
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 10)
@@ -84,7 +86,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				<-sem
 			}()
 
-			addrSelectMsg, addrExpireMsgs, addrToPushMessage, msgsErr, err := messageSelector.selectAddrMessage(ctx, addr, ts)
+			selectResult, err := messageSelector.selectAddrMessage(ctx, addr, ts)
 			if err != nil {
 				messageSelector.log.Errorf("select message of %s fail %v", addr.Addr, err)
 				return
@@ -92,27 +94,27 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 			lk.Lock()
 			defer lk.Unlock()
 
-			expireMsgs = append(expireMsgs, addrExpireMsgs...)
-			toPushMessage = append(toPushMessage, addrToPushMessage...)
-			if len(addrSelectMsg) > 0 {
-				selectMsg = append(selectMsg, addrSelectMsg...)
-				modifyAddrs = append(modifyAddrs, addr)
+			selectResult.ExpireMsg = append(selectResult.ExpireMsg, selectResult.ExpireMsg...)
+			selectResult.ToPushMsg = append(selectResult.ToPushMsg, selectResult.ToPushMsg...)
+			if len(selectResult.SelectMsg) > 0 {
+				selectResult.SelectMsg = append(selectResult.SelectMsg, selectResult.SelectMsg...)
+				selectResult.ModifyAddress = append(selectResult.ModifyAddress, addr)
 			}
-			msgsErrInfo = append(msgsErrInfo, msgsErr...)
+			selectResult.ErrMsg = append(selectResult.ErrMsg, selectResult.ErrMsg...)
 		}(addr)
 	}
 
 	wg.Wait()
 
-	return selectMsg, expireMsgs, toPushMessage, modifyAddrs, msgsErrInfo, nil
+	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) ([]*types.Message, []*types.Message, []*venusTypes.SignedMessage, []msgErrInfo, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	addrsInfo, exit := messageSelector.walletService.GetAddressesInfo(addr.Addr)
 	if !exit {
-		return nil, nil, nil, nil, xerrors.Errorf("no wallet client")
+		return nil, xerrors.Errorf("no wallet client")
 	}
 
 	var maxAllowPendingMessage uint64
@@ -129,7 +131,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	//判断是否需要推送消息
 	actor, err := messageSelector.nodeClient.StateGetActor(ctx, addr.Addr, ts.Key())
 	if err != nil {
-		return nil, nil, nil, nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
+		return nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
 	}
 
 	if actor.Nonce > addr.Nonce {
@@ -138,7 +140,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		addr.UpdatedAt = time.Now()
 		err := messageSelector.repo.AddressRepo().SaveAddress(ctx, addr)
 		if err != nil {
-			return nil, nil, nil, nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
+			return nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
 		}
 	}
 	//todo push signed but not onchain message, when to resend message
@@ -159,7 +161,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	//消息排序
 	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr)
 	if err != nil {
-		return nil, nil, nil, nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
+		return nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
 	}
 	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
 	sort.Slice(messages, func(i, j int) bool {
@@ -170,14 +172,20 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	nonceGap := addr.Nonce - actor.Nonce
 	if nonceGap > maxAllowPendingMessage {
 		messageSelector.log.Infof("%s there are %d message not to be package ", addr.Addr, nonceGap)
-		return nil, expireMsgs, toPushMessage, nil, nil
+		return &MsgSelectResult{
+			ExpireMsg: expireMsgs,
+			ToPushMsg: toPushMessage,
+		}, nil
 	}
 	selectCount := maxAllowPendingMessage - nonceGap
 
 	//todo 如何筛选
 	if len(messages) == 0 {
 		messageSelector.log.Infof("%s have no message", addr.Addr)
-		return nil, expireMsgs, toPushMessage, nil, nil
+		return &MsgSelectResult{
+			ExpireMsg: expireMsgs,
+			ToPushMsg: toPushMessage,
+		}, nil
 	}
 
 	var count = uint64(0)
@@ -269,6 +277,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 	messageSelector.log.Infof("address %s select message %d max nonce %d", addr.Addr, len(selectMsg), addr.Nonce)
 	return selectMsg, expireMsgs, toPushMessage, msgsErrInfo, nil
+	return &MsgSelectResult{
+		SelectMsg: selectMsg,
+		ExpireMsg: expireMsgs,
+		ToPushMsg: toPushMessage,
+		ErrMsg:    msgsErrInfo,
+	}, nil
 }
 
 func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msgs []*types.Message) ([]*types.Message, []*types.Message) {
