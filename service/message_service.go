@@ -512,7 +512,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		for _, msg := range selectResult.ToPushMsg {
 			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil &&
 				!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-				ms.log.Error("push to message %s from: %s, nonce: %d, error  %w", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
+				ms.log.Errorf("push to message %s from: %s, nonce: %d, error  %v", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
 			}
 		}
 		ms.multiNodeToPush(ctx, selectResult.ToPushMsg)
