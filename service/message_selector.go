@@ -276,7 +276,6 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	messageSelector.log.Infof("address %s select message %d max nonce %d", addr.Addr, len(selectMsg), addr.Nonce)
-	return selectMsg, expireMsgs, toPushMessage, msgsErrInfo, nil
 	return &MsgSelectResult{
 		SelectMsg: selectMsg,
 		ExpireMsg: expireMsgs,
