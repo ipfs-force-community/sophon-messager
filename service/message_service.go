@@ -441,7 +441,7 @@ func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*ve
 func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.TipSet) error {
 	// select message
 	tSelect := time.Now()
-	selectMsg, expireMsgs, toPushMessage, modifyAddrs, msgsErrInfo, err := ms.messageSelector.SelectMessage(ctx, ts)
+	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
 	if err != nil {
 		return err
 	}
@@ -449,24 +449,24 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	//save to db
 	if err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		//保存消息
-		err = txRepo.MessageRepo().ExpireMessage(expireMsgs)
+		err = txRepo.MessageRepo().ExpireMessage(selectResult.ExpireMsg)
 		if err != nil {
 			return err
 		}
 
-		err = txRepo.MessageRepo().BatchSaveMessage(selectMsg)
+		err = txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg)
 		if err != nil {
 			return err
 		}
 
-		for _, addr := range modifyAddrs {
+		for _, addr := range selectResult.ModifyAddress {
 			err = txRepo.AddressRepo().SaveAddress(ctx, addr)
 			if err != nil {
 				return err
 			}
 		}
 
-		for _, m := range msgsErrInfo {
+		for _, m := range selectResult.ErrMsg {
 			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
@@ -483,8 +483,8 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 	tCacheUpdate := time.Now()
 	//update cache
-	for _, msg := range selectMsg {
-		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
+	for _, msg := range selectResult.SelectMsg {
+		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
 			Message:   msg.UnsignedMessage,
 			Signature: *msg.Signature,
 		})
@@ -496,6 +496,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			message.State = msg.State
 			message.Signature = msg.Signature
 			message.Nonce = msg.Nonce
+			if message.Receipt != nil {
+				message.Receipt.ReturnValue = nil //cover data for err before
+			}
 			return nil
 		})
 		if err != nil {
@@ -503,28 +506,24 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 	}
 
-	tPush := time.Now()
-	//广播推送
-	//todo 多点推送
-	for _, msg := range toPushMessage {
-		if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil &&
-			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-			err = pushErr
-		}
-	}
-	if err != nil {
-		fmt.Println(toPushMessage[0].Cid().String(), toPushMessage[0].Message.Nonce)
-		fmt.Println(err)
-	}
+	//broad cast  push to node in config ,push to multi node in db config
 	go func() {
-		ms.multiNodeToPush(ctx, toPushMessage)
+		tPush := time.Now()
+		for _, msg := range selectResult.ToPushMsg {
+			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil &&
+				!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+				ms.log.Errorf("push to message %s from: %s, nonce: %d, error  %v", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
+			}
+		}
+		ms.multiNodeToPush(ctx, selectResult.ToPushMsg)
+
+		ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
+			time.Since(tSelect).Milliseconds(),
+			time.Since(tSaveDb).Milliseconds(),
+			time.Since(tCacheUpdate).Milliseconds(),
+			time.Since(tPush).Milliseconds(),
+		)
 	}()
-	ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
-		time.Since(tSelect).Milliseconds(),
-		time.Since(tSaveDb).Milliseconds(),
-		time.Since(tCacheUpdate).Milliseconds(),
-		time.Since(tPush).Milliseconds(),
-	)
 	return err
 }
 
@@ -532,11 +531,10 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 	if len(ms.nodeService.nodeInfos) == 0 || len(msgs) == 0 {
 		return
 	}
-	msgLen := len(msgs)
-	for i := 0; i < msgLen; i++ {
-		j, m := rand.Intn(msgLen), rand.Intn(msgLen)
-		msgs[j], msgs[m] = msgs[m], msgs[j]
-	}
+
+	rand.Shuffle(len(msgs), func(i, j int) {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	})
 
 	next := 0
 	nodeInfos := ms.nodeService.nodeInfos
