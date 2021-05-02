@@ -9,15 +9,15 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/app/submodule/network"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs-force-community/venus-messager/config"
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-
-	"github.com/ipfs-force-community/venus-messager/config"
 )
 
 type NodeClient struct {
@@ -45,6 +45,9 @@ type NodeClient struct {
 	StateSearchMsgLimited  func(context.Context, cid.Cid, abi.ChainEpoch) (*chain.MsgLookup, error)
 
 	GasEstimateMessageGas func(context.Context, *types.UnsignedMessage, *types.MessageSendSpec, types.TipSetKey) (*types.UnsignedMessage, error)
+	GasEstimateFeeCap     func(context.Context, *types.UnsignedMessage, int64, types.TipSetKey) (big.Int, error)
+	GasEstimateGasPremium func(context.Context, uint64, address.Address, int64, types.TipSetKey) (big.Int, error)
+	GasEstimateGasLimit   func(ctx context.Context, msgIn *types.UnsignedMessage, tsk types.TipSetKey) (int64, error)
 	//	BatchGasEstimateMessageGas func(ctx context.Context, estimateMessages []*types.EstimateMessage, tsk types.TipSetKey) ([]*types.UnsignedMessage, error)
 
 	MpoolPush      func(context.Context, *types.SignedMessage) (cid.Cid, error)

@@ -39,7 +39,7 @@ func (walletClient *WalletClient) WalletSign(ctx context.Context, signer address
 	return walletClient.Internal.WalletSign(ctx, signer, toSign, meta)
 }
 
-func newWalletClient(ctx context.Context, url, token string) (WalletClient, jsonrpc.ClientCloser, error) {
+func NewWalletClient(ctx context.Context, url, token string) (WalletClient, jsonrpc.ClientCloser, error) {
 	headers := http.Header{}
 	if len(token) != 0 {
 		ai, err := httpparse.ParseApiInfo(token + ":" + url)
