@@ -63,9 +63,8 @@ var searchCmd = &cli.Command{
 			Usage: "message id",
 		},
 		&cli.StringFlag{
-			Name:    "cid",
-			Aliases: []string{"cid"},
-			Usage:   "message cid",
+			Name:  "cid",
+			Usage: "message cid",
 		},
 	},
 	Action: func(ctx *cli.Context) error {
