@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"sort"
 	"strings"
 	"sync"
@@ -28,6 +27,7 @@ import (
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
+var errMinimumNonce = "minimum expected nonce"
 
 const (
 	MaxHeadChangeProcess = 5
@@ -59,6 +59,7 @@ type MessageService struct {
 
 type headChan struct {
 	apply, revert []*venusTypes.TipSet
+	done          chan error
 }
 
 type TipsetCache struct {
@@ -181,6 +182,10 @@ func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from add
 	return ms.repo.MessageRepo().GetMessageByFromAndNonce(from, nonce)
 }
 
+func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListMessageByFromState(from, state, pageIndex, pageSize)
+}
+
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
@@ -294,22 +299,28 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 	smallestTs := apply[len(apply)-1]
 
 	if ts == nil || smallestTs.Parents().String() == ts[0].Key {
+		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
+		done := make(chan error)
 		ms.headChans <- &headChan{
 			apply:  apply,
 			revert: nil,
+			done:   done,
 		}
+		return <-done
 	} else {
-		gapTipset, revertTipset, err := ms.lookAncestors(ctx, ts, smallestTs)
+		apply, revertTipset, err := ms.lookAncestors(ctx, ts, smallestTs)
 		if err != nil {
 			ms.log.Errorf("look ancestor error from %s and %s", smallestTs, ts[0].Key)
 			return nil
 		}
 
-		apply = append(apply, gapTipset...)
+		done := make(chan error)
 		ms.headChans <- &headChan{
 			apply:  apply,
 			revert: revertTipset,
+			done:   done,
 		}
+		return <-done
 	}
 
 	ms.log.Infof("%d head wait to process", len(ms.headChans))
@@ -354,12 +365,14 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		return err
 	}
 
+	done := make(chan error)
 	ms.headChans <- &headChan{
 		apply:  gapTipset,
 		revert: revertTipset,
+		done:   done,
 	}
 
-	return nil
+	return <-done
 }
 
 func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetList, head *venusTypes.TipSet) ([]*venusTypes.TipSet, []*venusTypes.TipSet, error) {
@@ -447,7 +460,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	if err != nil {
 		return err
 	}
+	ms.log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
 	tSaveDb := time.Now()
+	ms.log.Infof("start to save to database")
 	//save to db
 	if err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		//保存消息
@@ -469,6 +484,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 
 		for _, m := range selectResult.ErrMsg {
+			ms.log.Info("update err message %s", m.id)
 			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
@@ -484,6 +500,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	ms.log.Infof("success to save to database")
 
 	tCacheUpdate := time.Now()
+	ms.log.Infof("success to update memory cache")
 	//update cache
 	for _, msg := range selectResult.SelectMsg {
 		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
@@ -508,15 +525,32 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 	}
 
+	for _, m := range selectResult.ErrMsg {
+		err := ms.messageState.MutatorMessage(m.id, func(message *types.Message) error {
+			if message.Receipt != nil {
+				message.Receipt.ReturnValue = []byte(m.err)
+			} else {
+				message.Receipt = &venusTypes.MessageReceipt{ReturnValue: []byte(m.err)}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	//broad cast  push to node in config ,push to multi node in db config
 	go func() {
 		tPush := time.Now()
+		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for _, msg := range selectResult.ToPushMsg {
-			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil &&
-				!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-				ms.log.Errorf("push to message %s from: %s, nonce: %d, error  %v", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
+			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil {
+				if !(strings.Contains(err.Error(), errMinimumNonce) || strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+					ms.log.Errorf("push to message %s from: %s, nonce: %d, error  %v", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
+				}
 			}
 		}
+
 		ms.multiNodeToPush(ctx, selectResult.ToPushMsg)
 
 		ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
@@ -537,6 +571,7 @@ type nodeClient struct {
 
 func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusTypes.SignedMessage) {
 	if len(msgs) == 0 {
+		ms.log.Warnf("no broadcast node config")
 		return
 	}
 
@@ -545,6 +580,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		ms.log.Errorf("list node %v", err)
 		return
 	}
+
 	nc := make([]nodeClient, 0, len(nodeList))
 	for _, node := range nodeList {
 		cli, closer, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
@@ -555,25 +591,19 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		nc = append(nc, nodeClient{name: node.Name, cli: cli, close: closer})
 	}
 	if len(nc) == 0 {
+		ms.log.Warnf("no available broadcast node config")
 		return
 	}
 
-	rand.Shuffle(len(msgs), func(i, j int) {
-		msgs[i], msgs[j] = msgs[j], msgs[i]
-	})
-
-	next := 0
-	nodeLen := len(nc)
-	for _, msg := range msgs {
-		if _, err := nc[next].cli.MpoolPush(ctx, msg); err != nil &&
-			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-			ms.log.Errorf("push message to node %s %v", nc[next].name, err)
+	for _, node := range nc {
+		for _, msg := range msgs {
+			if _, err := node.cli.MpoolPush(ctx, msg); err != nil {
+				//skip error
+				if !(strings.Contains(err.Error(), errMinimumNonce) || strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+					ms.log.Errorf("push message to node %s %v", node.name, err)
+				}
+			}
 		}
-		next = (next + 1) % nodeLen
-	}
-
-	for _, n := range nc {
-		n.close()
 	}
 }
 

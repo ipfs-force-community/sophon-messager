@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"net"
-	"os"
-	"path/filepath"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
+	"net"
+	_ "net/http/pprof"
+	"os"
+	"path/filepath"
 
 	"github.com/ipfs-force-community/venus-messager/api"
 	"github.com/ipfs-force-community/venus-messager/api/controller"

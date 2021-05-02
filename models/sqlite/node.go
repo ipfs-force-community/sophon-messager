@@ -61,7 +61,7 @@ func (s sqliteNodeRepo) SaveNode(node *types.Node) error {
 
 func (s sqliteNodeRepo) GetNode(name string) (*types.Node, error) {
 	var node sqliteNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&node).Error; err != nil {
+	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
 		return nil, err
 	}
 	return node.Node(), nil
@@ -90,7 +90,7 @@ func (s sqliteNodeRepo) ListNode() ([]*types.Node, error) {
 
 func (s sqliteNodeRepo) DelNode(name string) error {
 	var node sqliteNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&node).Error; err != nil {
+	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
 		return err
 	}
 	node.IsDeleted = repo.Deleted

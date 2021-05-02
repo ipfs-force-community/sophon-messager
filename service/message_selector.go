@@ -70,11 +70,16 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 		return nil, err
 	}
 
+	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
+	if err != nil {
+		return nil, err
+	}
 	//sort by addr weight
 	sort.Slice(addrList, func(i, j int) bool {
 		return addrList[i].Weight < addrList[j].Weight
 	})
 
+	messageSelector.log.Infof("%d address wait to process", len(addrList))
 	selectResult := &MsgSelectResult{}
 	var lk sync.Mutex
 	var wg sync.WaitGroup
@@ -88,7 +93,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				<-sem
 			}()
 
-			selectResult, err := messageSelector.selectAddrMessage(ctx, addr, ts)
+			addrSelResult, err := messageSelector.selectAddrMessage(ctx, appliedNonce, addr, ts)
 			if err != nil {
 				messageSelector.log.Errorf("select message of %s fail %v", addr.Addr, err)
 				return
@@ -96,13 +101,13 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 			lk.Lock()
 			defer lk.Unlock()
 
-			selectResult.ExpireMsg = append(selectResult.ExpireMsg, selectResult.ExpireMsg...)
-			selectResult.ToPushMsg = append(selectResult.ToPushMsg, selectResult.ToPushMsg...)
-			if len(selectResult.SelectMsg) > 0 {
-				selectResult.SelectMsg = append(selectResult.SelectMsg, selectResult.SelectMsg...)
+			selectResult.ExpireMsg = append(selectResult.ExpireMsg, addrSelResult.ExpireMsg...)
+			selectResult.ToPushMsg = append(selectResult.ToPushMsg, addrSelResult.ToPushMsg...)
+			if len(addrSelResult.SelectMsg) > 0 {
+				selectResult.SelectMsg = append(selectResult.SelectMsg, addrSelResult.SelectMsg...)
 				selectResult.ModifyAddress = append(selectResult.ModifyAddress, addr)
 			}
-			selectResult.ErrMsg = append(selectResult.ErrMsg, selectResult.ErrMsg...)
+			selectResult.ErrMsg = append(selectResult.ErrMsg, addrSelResult.ErrMsg...)
 		}(addr)
 	}
 
@@ -111,7 +116,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, addr *types.Address, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	addrsInfo, exit := messageSelector.walletService.GetAddressesInfo(addr.Addr)
@@ -131,14 +136,18 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	//判断是否需要推送消息
-	actor, err := messageSelector.nodeClient.StateGetActor(ctx, addr.Addr, ts.Key())
+	timeOutCtx, _ := context.WithTimeout(ctx, time.Second)
+	actor, err := messageSelector.nodeClient.StateGetActor(timeOutCtx, addr.Addr, ts.Key())
 	if err != nil {
 		return nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
 	}
-
-	if actor.Nonce > addr.Nonce {
-		messageSelector.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d, update to latest", addr.Addr, addr.Nonce, actor.Nonce)
-		addr.Nonce = actor.Nonce
+	nonceInLatestTs := actor.Nonce
+	if nonceInTs, ok := appliedNonce.Get(addr.Addr); ok {
+		nonceInLatestTs = nonceInTs
+	}
+	if nonceInLatestTs > addr.Nonce {
+		messageSelector.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d, update to latest", addr.Addr, addr.Nonce, nonceInLatestTs)
+		addr.Nonce = nonceInLatestTs
 		addr.UpdatedAt = time.Now()
 		err := messageSelector.repo.AddressRepo().SaveAddress(ctx, addr)
 		if err != nil {
@@ -151,7 +160,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		messageSelector.log.Warnf("list filled message %v", err)
 	}
 	for _, msg := range filledMessage {
-		if actor.Nonce > msg.Nonce {
+		if nonceInLatestTs > msg.Nonce {
 			continue
 		}
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
@@ -160,26 +169,27 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		})
 	}
 
-	//消息排序
-	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr)
-	if err != nil {
-		return nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
-	}
-	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
-	sort.Slice(messages, func(i, j int) bool {
-		return messages[i].Meta.ExpireEpoch < messages[j].Meta.ExpireEpoch
-	})
-
-	//sign new message
-	nonceGap := addr.Nonce - actor.Nonce
-	if nonceGap > maxAllowPendingMessage {
+	//calc the message needed
+	nonceGap := addr.Nonce - nonceInLatestTs
+	if nonceGap >= maxAllowPendingMessage {
 		messageSelector.log.Infof("%s there are %d message not to be package ", addr.Addr, nonceGap)
 		return &MsgSelectResult{
-			ExpireMsg: expireMsgs,
 			ToPushMsg: toPushMessage,
 		}, nil
 	}
 	selectCount := maxAllowPendingMessage - nonceGap
+	messageSelector.log.Infof("address %s pre state actor nonce %d, latest nonce %d, assigned nonce %d, nonce gap %d, want %d", addr.Addr, actor.Nonce, nonceInLatestTs, addr.Nonce, nonceGap, selectCount)
+
+	//消息排序
+	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr, int(selectCount))
+	if err != nil {
+		return nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
+	}
+
+	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].Meta.ExpireEpoch < messages[j].Meta.ExpireEpoch
+	})
 
 	//todo 如何筛选
 	if len(messages) == 0 {
@@ -224,7 +234,8 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
-		newMsg, err := messageSelector.GasEstimateMessageGas(ctx, msg.VMMessage(), newMsgMeta, ts.Key())
+		timeOutCtx, _ = context.WithTimeout(ctx, time.Second)
+		newMsg, err := messageSelector.GasEstimateMessageGas(timeOutCtx, msg.VMMessage(), newMsgMeta, ts.Key())
 		if err != nil {
 			failedCount++
 			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
@@ -234,9 +245,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 				break
 			}
 			messageSelector.log.Errorf("message %s estimate message fail %v, try to next message", msg.ID, err)
-
 			continue
 		}
+
 		msg.GasFeeCap = newMsg.GasFeeCap
 		msg.GasPremium = newMsg.GasPremium
 		msg.GasLimit = newMsg.GasLimit
@@ -249,7 +260,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 			continue
 		}
-		sig, err := addrInfo.WalletClient.WalletSign(ctx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
+
+		timeOutCtx, _ = context.WithTimeout(ctx, time.Second)
+		sig, err := addrInfo.WalletClient.WalletSign(timeOutCtx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		})
@@ -277,7 +290,8 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		count++
 	}
 
-	messageSelector.log.Infof("address %s select message %d max nonce %d", addr.Addr, len(selectMsg), addr.Nonce)
+	messageSelector.log.Infof("address %s select message %d ExpireMsgs %d ToPushMsgs %d ErrMsgs %d max nonce %d",
+		addr.Addr, len(selectMsg), len(expireMsgs), len(toPushMessage), len(msgsErrInfo), addr.Nonce)
 	return &MsgSelectResult{
 		SelectMsg: selectMsg,
 		ExpireMsg: expireMsgs,
@@ -323,6 +337,48 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta) *types.
 	return newMsgMeta
 }
 
+func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*types.NonceMap, error) {
+	applied := types.NewNonceMap()
+	//todo change with venus/lotus message for tipset
+	selectMsg := func(m *venusTypes.Message) error {
+		// The first match for a sender is guaranteed to have correct nonce -- the block isn't valid otherwise
+		if _, ok := applied.Get(m.From); !ok {
+			applied.Add(m.From, m.Nonce)
+		}
+
+		val, _ := applied.Get(m.From)
+		if val != m.Nonce {
+			return nil
+		}
+		val++
+		applied.Add(m.From, val)
+		return nil
+	}
+
+	for _, b := range ts.Blocks() {
+		fullBlk, err := messageSelector.nodeClient.ChainGetBlockMessages(ctx, b.Cid())
+		if err != nil {
+			return nil, xerrors.Errorf("failed to get messages for block: %w", err)
+		}
+
+		for _, bmsg := range fullBlk.BlsMessages {
+			err := selectMsg(bmsg.VMMessage())
+			if err != nil {
+				return nil, xerrors.Errorf("failed to decide whether to select message for block: %w", err)
+			}
+
+		}
+
+		for _, smsg := range fullBlk.SecpkMessages {
+			err := selectMsg(smsg.VMMessage())
+			if err != nil {
+				return nil, xerrors.Errorf("failed to decide whether to select message for block: %w", err)
+			}
+		}
+	}
+
+	return applied, nil
+}
 func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
 	if msg.GasLimit == 0 {
 		gasLimit, err := messageSelector.nodeClient.GasEstimateGasLimit(ctx, msg, tsk)
