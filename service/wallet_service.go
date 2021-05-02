@@ -251,7 +251,7 @@ func (walletService *WalletService) listenWalletChange(ctx context.Context) {
 			for _, w := range walletList {
 				// maybe add a new wallet
 				if _, ok := walletClis[w.Name]; !ok {
-					cliT, _, err := newWalletClient(ctx, w.Url, w.Token)
+					cliT, _, err := NewWalletClient(ctx, w.Url, w.Token)
 					if err != nil {
 						walletService.log.Errorf("new wallet client %v", err)
 						continue
