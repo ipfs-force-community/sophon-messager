@@ -288,7 +288,24 @@ func (walletService *WalletService) listenWalletChange(ctx context.Context) {
 func (walletService *WalletService) ProcessWallet(ctx context.Context, walletName string, cli IWalletClient) error {
 	addrList, err := cli.WalletList(ctx)
 	if err != nil {
-		return err
+		return xerrors.Errorf("remote wallet: wallet list %v", err)
+	}
+
+	was, err := walletService.repo.WalletAddressRepo().GetWalletAddressByWalletID(walletService.getWalletID(walletName))
+	if err != nil {
+		return xerrors.Errorf("get wallet(%s) address %v", walletName, err)
+	}
+	// update the corresponding address info in the cache when db update
+	updateAddrInfo := func(addr address.Address, addrInfo AddressInfo) {
+		for _, wa := range was {
+			if addr == walletService.getAddressByAddrID(wa.AddrID) {
+				if addrInfo.SelectMsgNum != wa.SelMsgNum {
+					walletService.mutatorAddressInfo(walletName, addr, func(addressInfo *AddressInfo) {
+						addressInfo.SelectMsgNum = wa.SelMsgNum
+					})
+				}
+			}
+		}
 	}
 
 	walletAddrs := walletService.listOneWalletAddress(walletName)
@@ -297,6 +314,7 @@ func (walletService *WalletService) ProcessWallet(ctx context.Context, walletNam
 
 		if addrInfo, ok := walletService.GetAddressInfo(walletName, addr); ok &&
 			(addrInfo.State == types.Alive || addrInfo.State == types.Forbiden) {
+			updateAddrInfo(addr, addrInfo)
 			continue
 		}
 		// store address
