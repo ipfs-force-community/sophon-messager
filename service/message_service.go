@@ -26,6 +26,7 @@ import (
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
+var errConnectionClosed = xerrors.Errorf("connection closed")
 
 const (
 	MaxHeadChangeProcess = 5
@@ -536,15 +537,23 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	})
 
+	invalidNode := make(map[string]struct{})
 	next := 0
 	nodeInfos := ms.nodeService.nodeInfos
 	nodeLen := len(nodeInfos)
 	for _, msg := range msgs {
 		if _, err := nodeInfos[next].cli.MpoolPush(ctx, msg); err != nil &&
 			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+			if strings.Contains(err.Error(), errConnectionClosed.Error()) {
+				invalidNode[nodeInfos[next].name] = struct{}{}
+			}
 			ms.log.Errorf("push message to node %s %v", nodeInfos[next].name, err)
 		}
 		next = (next + 1) % nodeLen
+	}
+
+	for name := range invalidNode {
+		ms.nodeService.RemoveNode(name)
 	}
 }
 

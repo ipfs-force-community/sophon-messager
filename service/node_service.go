@@ -54,12 +54,13 @@ func (ns *NodeService) loadNodeFromDB(ctx context.Context) ([]*NodeInfo, error) 
 		}
 		cli, _, err := NewNodeClient(ctx, &config.NodeConfig{Token: node.Token, Url: node.URL})
 		if err != nil {
-			return nil, err
+			ns.log.Infof("connect node(%s) %v", node.Name, err)
+			continue
 		}
 		nodeInfos[i].cli = cli
 	}
 
-	return nodeInfos, err
+	return nodeInfos, nil
 }
 
 func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
@@ -74,7 +75,7 @@ func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) (struct{}
 		return struct{}{}, err
 	}
 	ns.nodeInfos = append(ns.nodeInfos, &NodeInfo{name: node.Name, url: node.URL, token: node.Token, cli: cli})
-	ns.log.Infof("add node %s %s %s", node.Name, node.URL, node.Token)
+	ns.log.Infof("add node %s", node.Name)
 
 	return struct{}{}, nil
 }
@@ -109,13 +110,13 @@ func (ns *NodeService) DeleteNode(ctx context.Context, name string) (struct{}, e
 	if err := ns.repo.NodeRepo().DelNode(name); err != nil {
 		return struct{}{}, err
 	}
-	ns.removeNode(name)
-	ns.log.Infof("remove node %s", name)
+	ns.RemoveNode(name)
+	ns.log.Infof("delete node %s", name)
 
 	return struct{}{}, nil
 }
 
-func (ns *NodeService) removeNode(name string) {
+func (ns *NodeService) RemoveNode(name string) {
 	newNodeInfos := make([]*NodeInfo, 0, len(ns.nodeInfos)-1)
 	for _, node := range ns.nodeInfos {
 		if node.name == name {
@@ -147,15 +148,15 @@ func (ns *NodeService) refreshNodeLoop() {
 			}
 			cli, _, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
 			if err != nil {
-				ns.log.Warnf("create node client %v ", err)
+				ns.log.Infof("connect node(%s) %v", node.Name, err)
 				continue
 			}
 			ns.nodeInfos = append(ns.nodeInfos, &NodeInfo{name: node.Name, url: node.URL, token: node.Token, cli: cli})
-			ns.log.Infof("add node %s %s %s", node.Name, node.URL, node.Token)
+			ns.log.Infof("add node %s", node.Name)
 		}
 		// delete the corresponding node in the cache when db delete node
 		for name := range nodeTmp {
-			ns.removeNode(name)
+			ns.RemoveNode(name)
 		}
 	}
 }
