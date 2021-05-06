@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/go-jsonrpc"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -527,8 +529,32 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	return err
 }
 
+type nodeClient struct {
+	name  string
+	cli   *NodeClient
+	close jsonrpc.ClientCloser
+}
+
 func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusTypes.SignedMessage) {
-	if len(ms.nodeService.nodeInfos) == 0 || len(msgs) == 0 {
+	if len(msgs) == 0 {
+		return
+	}
+
+	nodeList, err := ms.nodeService.ListNode(context.TODO())
+	if err != nil {
+		ms.log.Errorf("list node %v", err)
+		return
+	}
+	nc := make([]nodeClient, 0, len(nodeList))
+	for _, node := range nodeList {
+		cli, closer, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
+		if err != nil {
+			ms.log.Warnf("connect node(%s) %v", node.Name, err)
+			continue
+		}
+		nc = append(nc, nodeClient{name: node.Name, cli: cli, close: closer})
+	}
+	if len(nc) == 0 {
 		return
 	}
 
@@ -537,14 +563,17 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 	})
 
 	next := 0
-	nodeInfos := ms.nodeService.nodeInfos
-	nodeLen := len(nodeInfos)
+	nodeLen := len(nc)
 	for _, msg := range msgs {
-		if _, err := nodeInfos[next].cli.MpoolPush(ctx, msg); err != nil &&
+		if _, err := nc[next].cli.MpoolPush(ctx, msg); err != nil &&
 			!strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-			ms.log.Errorf("push message to node %s %v", nodeInfos[next].name, err)
+			ms.log.Errorf("push message to node %s %v", nc[next].name, err)
 		}
 		next = (next + 1) % nodeLen
+	}
+
+	for _, n := range nc {
+		n.close()
 	}
 }
 
