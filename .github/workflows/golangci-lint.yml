@@ -11,10 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Deps
+        run: |
+          sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
+          git submodule update --init
+          ./extern/filecoin-ffi/install-filcrypto
+
       - name: golangci-lint
-        env:
-          GOPROXY: "https://goproxy.io,direct"
-          GO111MODULE: "on"
         uses: golangci/golangci-lint-action@v2
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
