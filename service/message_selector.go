@@ -136,8 +136,10 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	//判断是否需要推送消息
-	timeOutCtx, _ := context.WithTimeout(ctx, time.Second)
+	timeOutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 	actor, err := messageSelector.nodeClient.StateGetActor(timeOutCtx, addr.Addr, ts.Key())
+
 	if err != nil {
 		return nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
 	}
@@ -234,8 +236,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
-		timeOutCtx, _ = context.WithTimeout(ctx, time.Second)
+		timeOutCtx, cancel := context.WithTimeout(ctx, time.Second)
 		newMsg, err := messageSelector.GasEstimateMessageGas(timeOutCtx, msg.VMMessage(), newMsgMeta, ts.Key())
+		cancel()
 		if err != nil {
 			failedCount++
 			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
@@ -261,11 +264,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 
-		timeOutCtx, _ = context.WithTimeout(ctx, time.Second)
+		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
 		sig, err := addrInfo.WalletClient.WalletSign(timeOutCtx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		})
+		cancel()
 		if err != nil {
 			//todo client net crash?
 			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: signMsg + err.Error()})

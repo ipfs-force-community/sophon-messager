@@ -573,6 +573,9 @@ var markBadCmd = &cli.Command{
 				return err
 			}
 			msgs, err := client.ListMessageByAddress(cctx.Context, fromAddr)
+			if err != nil {
+				return err
+			}
 			for _, msg := range msgs {
 				if msg.State == types.UnFillMsg {
 					_, err = client.MarkBadMessage(cctx.Context, msg.ID)

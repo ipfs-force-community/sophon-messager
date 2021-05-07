@@ -298,6 +298,8 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 	sort.Sort(ts)
 	smallestTs := apply[len(apply)-1]
 
+	defer ms.log.Infof("%d head wait to process", len(ms.headChans))
+
 	if ts == nil || smallestTs.Parents().String() == ts[0].Key {
 		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
@@ -322,9 +324,6 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		}
 		return <-done
 	}
-
-	ms.log.Infof("%d head wait to process", len(ms.headChans))
-	return nil
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
