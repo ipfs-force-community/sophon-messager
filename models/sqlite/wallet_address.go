@@ -84,9 +84,32 @@ func (s sqliteWalletAddressRepo) GetWalletAddressByWalletID(walletID types.UUID)
 	return result.([]*types.WalletAddress), nil
 }
 
+func (s sqliteWalletAddressRepo) GetWalletAddressByAddrID(addrID types.UUID) ([]*types.WalletAddress, error) {
+	var internalWalletAddress []*sqliteWalletAddress
+	if err := s.DB.Find(&internalWalletAddress, "addr_id = ? and is_deleted = ?", addrID, -1).Error; err != nil {
+		return nil, err
+	}
+
+	result, err := automapper.Mapper(internalWalletAddress, reflect.TypeOf([]*types.WalletAddress{}))
+	if err != nil {
+		return nil, err
+	}
+
+	return result.([]*types.WalletAddress), nil
+}
+
 func (s sqliteWalletAddressRepo) HasWalletAddress(walletID, addrID types.UUID) (bool, error) {
 	var count int64
 	if err := s.DB.Model(&sqliteWalletAddress{}).Where("wallet_id = ? and addr_id = ?", walletID, addrID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s sqliteWalletAddressRepo) HasAddress(addrID types.UUID) (bool, error) {
+	var count int64
+	if err := s.DB.Model(&sqliteWalletAddress{}).Where("is_deleted = -1 and addr_id = ?", addrID).
 		Count(&count).Error; err != nil {
 		return false, err
 	}

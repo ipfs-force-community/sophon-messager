@@ -117,10 +117,10 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	if addrInfo, ok := ms.walletService.GetAddressInfo(msg.WalletName, msg.From); !ok {
-		return xerrors.Errorf("address %s not in wallet", msg.From)
-	} else if addrInfo.State != types.Alive {
-		return xerrors.Errorf("address is %s", types.StateToString(addrInfo.State))
+	if wa, err := ms.walletService.GetWalletAddress(ctx, msg.WalletName, msg.From); err != nil {
+		return xerrors.Errorf("found address %s %v", msg.From.String(), err)
+	} else if wa.AddressState != types.Alive {
+		return xerrors.Errorf("address state is %s", types.StateToString(wa.AddressState))
 	}
 
 	msg.Nonce = 0
@@ -638,6 +638,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
+
 	for addr := range ms.walletService.AllAddresses() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
@@ -738,12 +739,13 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	addrInfo, exist := ms.walletService.GetAddressInfo(msg.WalletName, msg.From)
-	if !exist {
-		return cid.Undef, xerrors.Errorf("not found %s", msg.From.String())
+	cli, close, err := ms.walletService.GetWalletClient(ctx, msg.WalletName)
+	if err != nil {
+		return cid.Undef, xerrors.Errorf("got wallet client %v", err)
 	}
+	defer close()
 
-	signedMsg, err := ToSignedMsg(ctx, addrInfo.WalletClient, msg)
+	signedMsg, err := ToSignedMsg(ctx, &cli, msg)
 	if err != nil {
 		return cid.Undef, err
 	}

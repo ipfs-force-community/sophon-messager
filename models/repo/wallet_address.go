@@ -9,7 +9,9 @@ type WalletAddressRepo interface {
 	GetWalletAddress(walletID, addrID types.UUID) (*types.WalletAddress, error)
 	GetOneRecord(walletID, addrID types.UUID) (*types.WalletAddress, error)
 	GetWalletAddressByWalletID(walletID types.UUID) ([]*types.WalletAddress, error)
+	GetWalletAddressByAddrID(walletID types.UUID) ([]*types.WalletAddress, error)
 	HasWalletAddress(walletID, addrID types.UUID) (bool, error)
+	HasAddress(addrID types.UUID) (bool, error)
 	ListWalletAddress() ([]*types.WalletAddress, error)
 	UpdateAddressState(walletID, addrID types.UUID, state types.State) error
 	UpdateSelectMsgNum(walletID, addrID types.UUID, selMsgNum uint64) error
