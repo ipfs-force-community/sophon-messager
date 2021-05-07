@@ -148,7 +148,8 @@ var listCmd = &cli.Command{
 			Value: 100,
 		},
 		&cli.IntFlag{
-			Name: "state",
+			Name:  "state",
+			Value: int(types.UnFillMsg),
 			Usage: `filter by message state,
 state:
   1:  UnFillMsg
