@@ -11,7 +11,7 @@ require (
 	github.com/filecoin-project/go-state-types v0.1.0
 	github.com/filecoin-project/venus v0.9.2-0.20210413100211-57a27da696c3
 	github.com/filecoin-project/venus-auth v1.0.2-0.20210507023017-76ce8b64e6db
-	github.com/filecoin-project/venus-wallet v1.0.1-0.20210507062236-b94c303c7104 // indirect
+	github.com/filecoin-project/venus-wallet v1.0.1-0.20210507062236-b94c303c7104
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0 // indirect
