@@ -408,8 +408,6 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 
 	if from != address.Undef {
 		query = query.Where("from_addr=?", from)
-	} else {
-		query = query.Where("from_addr!=''")
 	}
 
 	query = query.Where("state=?", state)

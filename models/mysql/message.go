@@ -194,8 +194,6 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 
 	if from != address.Undef {
 		query = query.Where("from_addr=?", from.String())
-	} else {
-		query = query.Where("from_addr!=''")
 	}
 
 	query = query.Where("state=?", state)
