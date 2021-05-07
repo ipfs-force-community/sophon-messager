@@ -92,7 +92,7 @@ func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) 
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.Where("addr = ? and is_deleted = -1", addr.String()).First(&a).Error; err != nil {
+	if err := s.DB.Take(&a, "addr = ? and is_deleted = -1", addr.String()).Error; err != nil {
 		return nil, err
 	}
 
@@ -101,7 +101,7 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) 
 
 func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.Where("addr = ?", addr.String()).First(&a).Error; err != nil {
+	if err := s.DB.Take(&a, "addr = ?", addr.String()).Error; err != nil {
 		return nil, err
 	}
 

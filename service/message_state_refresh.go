@@ -21,11 +21,20 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 		for {
 			select {
 			case h := <-ms.headChans:
-				ms.log.Info("start refresh message state")
+				//跳过这个检查可以更精准的推送，但是会增加系统负担
+				/*	if len(h.apply) == 1 && len(h.revert) == 1 {
+					ms.tsCache.AddTs(&tipsetFormat{Key: h.apply[0].Key().String(), Height: int64(h.apply[0].Height())})
+					ms.log.Warnf("revert at same height %d just update cache and skip process %s", h.apply[0].Height(), h.apply[0].String())
+					ms.triggerPush <- h.apply[0]
+					continue
+				}*/
+				ms.log.Infof("start refresh message state apply %d, revert apply %d", len(h.apply), len(h.revert))
 				now := time.Now()
 				if err := ms.doRefreshMessageState(ctx, h); err != nil {
+					h.done <- err
 					ms.log.Errorf("doRefreshMessageState occurs unexpected err:\n%v\n", err)
 				}
+				h.done <- nil
 				ms.log.Infof("end refresh message state, cost %d 'ms' ", time.Since(now).Milliseconds())
 			case <-ctx.Done():
 				ms.log.Warnf("context error: %v", ctx.Err())

@@ -23,6 +23,7 @@ type IMessager interface {
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                              //perm:read
 	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)                                      //perm:read
 	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
+	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) //perm:admin
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
 	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                               //perm:admin
 	ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)                                       //perm:admin                                            //perm:admin
@@ -83,6 +84,7 @@ type Message struct {
 		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		ListMessageByAddress     func(ctx context.Context, addr address.Address) ([]*types.Message, error)
+		ListMessageByFromState   func(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error)
 		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
 		ListBlockedMessage       func(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)
 		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
@@ -162,6 +164,10 @@ func (message *Message) GetMessageByFromAndNonce(ctx context.Context, from addre
 
 func (message *Message) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return message.Internal.ListMessage(ctx)
+}
+
+func (message *Message) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
+	return message.Internal.ListMessageByFromState(ctx, from, state, pageIndex, pageSize)
 }
 
 func (message *Message) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {

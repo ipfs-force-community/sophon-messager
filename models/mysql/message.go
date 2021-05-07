@@ -20,7 +20,7 @@ type mysqlMessage struct {
 	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
 	Version uint64 `gorm:"column:version;type:bigint unsigned"`
 
-	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;"`
+	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 	Nonce uint64 `gorm:"column:nonce;type:bigint unsigned;index:msg_nonce;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
@@ -47,11 +47,11 @@ type mysqlMessage struct {
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
 
-	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
+	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
-	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
-	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
+	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"`                                   // 是否删除 1:是  -1:否
+	CreatedAt time.Time `gorm:"column:created_at;index;index:idx_messages_create_at_state_from_addr;NOT NULL"` // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`                                              // 更新时间
 }
 
 func (sqlMsg *mysqlMessage) TableName() string {
@@ -189,6 +189,28 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
+	query := m.DB.Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
+
+	if from != address.Undef {
+		query = query.Where("from_addr=?", from.String())
+	}
+
+	query = query.Where("state=?", state)
+
+	var sqlMsgs []*mysqlMessage
+	err := query.Find(&sqlMsgs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, err
+}
+
 func (m *mysqlMessageRepo) HasMessageByUid(id string) (bool, error) {
 	var count int64
 	err := m.DB.Table("messages").Where("id=?", id).Count(&count).Error
@@ -281,9 +303,9 @@ func (m *mysqlMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*
 	return result, nil
 }
 
-func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
+func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Error
+	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +342,7 @@ func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("id = ?", id).First(&msg).Error; err != nil {
+	if err := m.DB.Where("id = ?", id).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -328,7 +350,7 @@ func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 
 func (m *mysqlMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).First(&msg).Error; err != nil {
+	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -336,7 +358,7 @@ func (m *mysqlMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message,
 
 func (m *mysqlMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("signed_cid = ?", signedCid.String()).First(&msg).Error; err != nil {
+	if err := m.DB.Where("signed_cid = ?", signedCid.String()).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -370,7 +392,7 @@ func (m *mysqlMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*t
 
 func (m *mysqlMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).First(&msg).Error; err != nil {
+	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil

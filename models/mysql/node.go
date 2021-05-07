@@ -61,7 +61,7 @@ func (s mysqlNodeRepo) SaveNode(node *types.Node) error {
 
 func (s mysqlNodeRepo) GetNode(name string) (*types.Node, error) {
 	var node mysqlNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&node).Error; err != nil {
+	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
 		return nil, err
 	}
 	return node.Node(), nil
@@ -90,7 +90,7 @@ func (s mysqlNodeRepo) ListNode() ([]*types.Node, error) {
 
 func (s mysqlNodeRepo) DelNode(name string) error {
 	var node mysqlNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).First(&node).Error; err != nil {
+	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
 		return err
 	}
 	node.IsDeleted = repo.Deleted

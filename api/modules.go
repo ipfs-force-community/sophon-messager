@@ -83,6 +83,8 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 	filter := controller.NewJWTFilter(jwtClient, log, r)
 
 	handler := http.NewServeMux()
+	handler.Handle("/debug/pprof/", http.DefaultServeMux)
+
 	handler.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		code, err := rewriteJsonRpc.PreRequest(writer, request)
 		if err != nil {

@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -137,11 +138,18 @@ var listCmd = &cli.Command{
 	Usage: "list messages",
 	Flags: []cli.Flag{
 		&cli.IntFlag{
-			Name:  "count",
-			Usage: "number of messages output",
+			Name:  "page-index",
+			Usage: "pagination index, start from 1",
+			Value: 1,
 		},
 		&cli.IntFlag{
-			Name: "state",
+			Name:  "page-size",
+			Usage: "pagination size, default tob 100",
+			Value: 100,
+		},
+		&cli.IntFlag{
+			Name:  "state",
+			Value: int(types.UnFillMsg),
 			Usage: `filter by message state,
 state:
   1:  UnFillMsg
@@ -162,36 +170,22 @@ state:
 			return err
 		}
 		defer closer()
-
-		var msgs []*types.Message
+		var from address.Address
 		if addrStr := ctx.String("from"); len(addrStr) > 0 {
-			addr, err := address.NewFromString(addrStr)
-			if err != nil {
-				return err
-			}
-			msgs, err = client.ListMessageByAddress(ctx.Context, addr)
-			if err != nil {
-				return err
-			}
-		} else {
-			msgs, err = client.ListMessage(ctx.Context)
+			from, err = address.NewFromString(addrStr)
 			if err != nil {
 				return err
 			}
 		}
+
 		state := types.MessageState(ctx.Int("state"))
-		if state > types.UnKnown && state <= types.NoWalletMsg {
-			tmpMsgs := make([]*types.Message, 0, len(msgs))
-			for _, msg := range msgs {
-				if msg.State == state {
-					tmpMsgs = append(tmpMsgs, msg)
-				}
-			}
-			msgs = tmpMsgs
-		}
-		count := ctx.Int("count")
-		if count > 0 && len(msgs) > count {
-			msgs = msgs[:count]
+
+		pageIndex := ctx.Int("page-index")
+		pageSize := ctx.Int("page-size")
+
+		msgs, err := client.ListMessageByFromState(ctx.Context, from, state, pageIndex, pageSize)
+		if err != nil {
+			return err
 		}
 
 		if ctx.String("output-type") == "table" {
@@ -341,7 +335,7 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 			"To":         msg.UnsignedMessage.To,
 			"From":       msg.UnsignedMessage.From,
 			"Nonce":      msg.UnsignedMessage.Nonce,
-			"Value":      venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String()),
+			"Value":      venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String() + "attofil"),
 			"GasLimit":   msg.UnsignedMessage.GasLimit,
 			"GasFeeCap":  msg.UnsignedMessage.GasFeeCap,
 			"GasPremium": msg.UnsignedMessage.GasPremium,
@@ -546,8 +540,18 @@ var republishCmd = &cli.Command{
 }
 
 var markBadCmd = &cli.Command{
-	Name:      "mark-bad",
-	Usage:     "mark bad message",
+	Name:  "mark-bad",
+	Usage: "mark bad message",
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "really-do-it",
+			Usage: "specify this flag to confirm mark-bad",
+		},
+		&cli.StringFlag{
+			Name:  "from",
+			Usage: "mark unfill message as bad message if specify this flag",
+		},
+	},
 	ArgsUsage: "id slice",
 	Action: func(cctx *cli.Context) error {
 		client, closer, err := getAPI(cctx)
@@ -556,17 +560,41 @@ var markBadCmd = &cli.Command{
 		}
 		defer closer()
 
+		if !cctx.Bool("really-do-it") {
+			return errors.New("confirm to exec this command, specify --really-do-it")
+		}
+
 		if cctx.NArg() == 0 {
 			return xerrors.New("must has id argument")
 		}
-
-		for _, id := range cctx.Args().Slice() {
-			_, err = client.MarkBadMessage(cctx.Context, id)
+		if cctx.IsSet("from") {
+			fromAddr, err := address.NewFromString(cctx.String("from"))
 			if err != nil {
-				fmt.Printf("mark msg %s as bad fail %v\n", id, err)
-				continue
+				return err
+			}
+			msgs, err := client.ListMessageByAddress(cctx.Context, fromAddr)
+			if err != nil {
+				return err
+			}
+			for _, msg := range msgs {
+				if msg.State == types.UnFillMsg {
+					_, err = client.MarkBadMessage(cctx.Context, msg.ID)
+					if err != nil {
+						fmt.Printf("mark msg %s as bad fail %v\n", msg.ID, err)
+						continue
+					}
+				}
+			}
+		} else {
+			for _, id := range cctx.Args().Slice() {
+				_, err = client.MarkBadMessage(cctx.Context, id)
+				if err != nil {
+					fmt.Printf("mark msg %s as bad fail %v\n", id, err)
+					continue
+				}
 			}
 		}
+
 		return nil
 	},
 }

@@ -280,9 +280,9 @@ func (m *sqliteMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Error
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Limit(topN).Error
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) error {
 
 func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("id = ?", id).First(&msg).Error; err != nil {
+	if err := m.DB.Where("id = ?", id).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -329,7 +329,7 @@ func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 
 func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).First(&msg).Error; err != nil {
+	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -337,7 +337,7 @@ func (m *sqliteMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message
 
 func (m *sqliteMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("signed_cid = ?", signedCid.String()).First(&msg).Error; err != nil {
+	if err := m.DB.Where("signed_cid = ?", signedCid.String()).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -371,7 +371,7 @@ func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*
 
 func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).First(&msg).Error; err != nil {
+	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Find(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -401,6 +401,28 @@ func (m *sqliteMessageRepo) ListMessageByAddress(addr address.Address) ([]*types
 		result[idx] = msg.Message()
 	}
 	return result, nil
+}
+
+func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
+	query := m.DB.Debug().Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
+
+	if from != address.Undef {
+		query = query.Where("from_addr=?", from)
+	}
+
+	query = query.Where("state=?", state)
+
+	var sqlMsgs []*sqliteMessage
+	err := query.Find(&sqlMsgs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Message, len(sqlMsgs))
+	for index, sqlMsg := range sqlMsgs {
+		result[index] = sqlMsg.Message()
+	}
+	return result, err
 }
 
 func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {

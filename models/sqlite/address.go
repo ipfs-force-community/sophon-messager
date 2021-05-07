@@ -91,7 +91,7 @@ func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address)
 
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Where("addr = ? and is_deleted = -1", addr.String()).First(&a).Error; err != nil {
+	if err := s.DB.Take(&a, "addr = ? and is_deleted = -1", addr.String()).Error; err != nil {
 		return nil, err
 	}
 
@@ -100,7 +100,7 @@ func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr address.Address)
 
 func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Where("addr = ?", addr.String()).First(&a).Error; err != nil {
+	if err := s.DB.Take(&a, "addr = ?", addr.String()).Error; err != nil {
 		return nil, err
 	}
 
