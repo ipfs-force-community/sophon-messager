@@ -6,8 +6,8 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/sirupsen/logrus"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type AddressService struct {

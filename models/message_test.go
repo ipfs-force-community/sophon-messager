@@ -13,9 +13,9 @@ import (
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func TestSaveAndGetMessage(t *testing.T) {

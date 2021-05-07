@@ -6,8 +6,8 @@ import (
 
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/crypto"
-	"github.com/ipfs-force-community/venus-wallet/core"
 	"golang.org/x/xerrors"
 )
 

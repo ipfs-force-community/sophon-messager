@@ -7,8 +7,8 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/models/repo"
 )
 
 type MysqlRepo struct {

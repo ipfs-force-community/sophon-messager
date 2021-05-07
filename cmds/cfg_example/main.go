@@ -5,7 +5,7 @@ import (
 
 	"github.com/pelletier/go-toml"
 
-	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/config"
 )
 
 func main() {

@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/models/repo"
 
 	"github.com/filecoin-project/go-address"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 var AddrCmds = &cli.Command{

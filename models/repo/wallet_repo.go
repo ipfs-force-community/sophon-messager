@@ -1,7 +1,7 @@
 package repo
 
 import (
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type WalletRepo interface {

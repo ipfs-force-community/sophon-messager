@@ -11,9 +11,9 @@ import (
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type mysqlMessage struct {

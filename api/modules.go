@@ -15,10 +15,10 @@ import (
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/api/controller"
-	"github.com/ipfs-force-community/venus-messager/api/jwt"
-	"github.com/ipfs-force-community/venus-messager/log"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/api/controller"
+	"github.com/filecoin-project/venus-messager/api/jwt"
+	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type JsonRpcRequest struct {
