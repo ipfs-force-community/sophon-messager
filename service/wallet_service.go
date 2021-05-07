@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/go-jsonrpc"
+
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/go-address"
@@ -39,6 +41,7 @@ type WalletService struct {
 
 type WalletInfo struct {
 	walletCli    IWalletClient
+	cliClose     jsonrpc.ClientCloser
 	walletState  types.State
 	addressInfos map[address.Address]*AddressInfo
 }
@@ -74,7 +77,7 @@ func NewWalletService(repo repo.Repo,
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	cli, _, err := NewWalletClient(ctx, wallet.Url, wallet.Token)
+	cli, close, err := NewWalletClient(ctx, wallet.Url, wallet.Token)
 	if err != nil {
 		return types.UUID{}, err
 	}
@@ -99,6 +102,7 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 	}
 	walletService.addWallet(wallet.Name, &WalletInfo{
 		walletCli:    &cli,
+		cliClose:     close,
 		walletState:  wallet.State,
 		addressInfos: make(map[address.Address]*AddressInfo),
 	})
@@ -190,7 +194,7 @@ func (walletService *WalletService) start() error {
 		return err
 	}
 	for _, w := range walletList {
-		cli, _, err := NewWalletClient(context.Background(), w.Url, w.Token)
+		cli, close, err := NewWalletClient(context.Background(), w.Url, w.Token)
 		if err != nil {
 			return err
 		}
@@ -209,6 +213,7 @@ func (walletService *WalletService) start() error {
 		}
 		walletService.addWallet(w.Name, &WalletInfo{
 			walletCli:    &cli,
+			cliClose:     close,
 			walletState:  w.State,
 			addressInfos: addressInfos,
 		})
@@ -619,6 +624,10 @@ func (walletService *WalletService) deleteWallet(walletName string) {
 func (walletService *WalletService) removeWallet(walletName string) {
 	walletService.l.Lock()
 	defer walletService.l.Unlock()
+	// close client
+	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
+		walletInfo.cliClose()
+	}
 	delete(walletService.walletInfos, walletName)
 }
 
