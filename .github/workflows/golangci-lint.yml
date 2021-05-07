@@ -14,7 +14,7 @@ jobs:
       - name: Deps
         env:
           GOPROXY: "https://goproxy.io,direct"
-          GO111MODULE: "on"
+
         run: |
           sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
           git submodule update --init
@@ -23,7 +23,6 @@ jobs:
       - name: golangci-lint
         env:
           GOPROXY: "https://goproxy.io,direct"
-          GO111MODULE: "on"
 
         uses: golangci/golangci-lint-action@v2
         with:
