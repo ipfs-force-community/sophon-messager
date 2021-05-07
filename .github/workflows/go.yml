@@ -25,9 +25,10 @@ jobs:
         ./extern/filecoin-ffi/install-filcrypto
 
     - name: Build
-      run: go build
       env:
         GOPROXY: "https://goproxy.io,direct"
         GO111MODULE: "on"
+      run: go build
+
     - name: Test
       run: go test -v ./...
