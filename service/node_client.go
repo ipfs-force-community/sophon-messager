@@ -36,6 +36,10 @@ type NodeClient struct {
 
 	MpoolPush      func(context.Context, *types.SignedMessage) (cid.Cid, error)
 	MpoolBatchPush func(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
+
+	//broadcast interface
+	MpoolPublishByAddr  func(ctx context.Context, addr address.Address) error
+	MpoolPublishMessage func(ctx context.Context, smsg *types.SignedMessage) error
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {

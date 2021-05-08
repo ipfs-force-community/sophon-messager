@@ -589,9 +589,17 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		}
 		nc = append(nc, nodeClient{name: node.Name, cli: cli, close: closer})
 	}
+
 	if len(nc) == 0 {
 		ms.log.Warnf("no available broadcast node config")
 		return
+	}
+
+	fromMap := make(map[address.Address]struct{})
+	for _, msg := range msgs {
+		if _, ok := fromMap[msg.Message.From]; !ok {
+			fromMap[msg.Message.From] = struct{}{}
+		}
 	}
 
 	for _, node := range nc {
@@ -601,6 +609,12 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 				if !(strings.Contains(err.Error(), errMinimumNonce) || strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
 					ms.log.Errorf("push message to node %s %v", node.name, err)
 				}
+			}
+		}
+		ms.log.Infof("start to broadcast message of address")
+		for fromAddr, _ := range fromMap {
+			if err := node.cli.MpoolPublishByAddr(ctx, fromAddr); err != nil {
+				ms.log.Errorf("publish message of address %s to node %s fail %v", fromAddr, node.name, err)
 			}
 		}
 	}
