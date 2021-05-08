@@ -17,8 +17,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/cli/tablewriter"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/cli/tablewriter"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 var MsgCmds = &cli.Command{

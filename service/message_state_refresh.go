@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {

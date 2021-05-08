@@ -1,8 +1,8 @@
 package jwt
 
 import (
-	"github.com/ipfs-force-community/venus-auth/cmd/jwtclient"
-	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/filecoin-project/venus-messager/config"
 )
 
 func NewJwtClient(jwtCfg *config.JWTConfig) IJwtClient {

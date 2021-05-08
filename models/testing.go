@@ -15,10 +15,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/models/repo"
-	"github.com/ipfs-force-community/venus-messager/models/sqlite"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/models/sqlite"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 func NewSignedMessages(count int) []*types.Message {

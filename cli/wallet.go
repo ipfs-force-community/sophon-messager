@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/models/repo"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 var WalletCmds = &cli.Command{

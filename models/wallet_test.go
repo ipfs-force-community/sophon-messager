@@ -6,11 +6,11 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/ipfs-force-community/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/models/repo"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 func TestWallet(t *testing.T) {

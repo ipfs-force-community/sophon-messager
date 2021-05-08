@@ -6,8 +6,8 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/urfave/cli/v2"
 
-	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/api/client"
+	"github.com/filecoin-project/venus-messager/config"
 )
 
 func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {

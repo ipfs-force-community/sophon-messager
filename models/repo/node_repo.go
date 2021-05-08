@@ -1,6 +1,6 @@
 package repo
 
-import "github.com/ipfs-force-community/venus-messager/types"
+import "github.com/filecoin-project/venus-messager/types"
 
 type NodeRepo interface {
 	CreateNode(node *types.Node) error

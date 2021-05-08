@@ -1,4 +1,4 @@
-module github.com/ipfs-force-community/venus-messager
+module github.com/filecoin-project/venus-messager
 
 go 1.15
 
@@ -10,14 +10,14 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
 	github.com/filecoin-project/venus v0.9.2-0.20210413100211-57a27da696c3
+	github.com/filecoin-project/venus-auth v1.0.2-0.20210507023017-76ce8b64e6db
+	github.com/filecoin-project/venus-wallet v1.0.1-0.20210507062236-b94c303c7104
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/venus-auth v0.0.0-20210409103353-0d08847b2a79
-	github.com/ipfs-force-community/venus-wallet v1.0.1-0.20210419073418-59aad02d1552
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -43,7 +43,5 @@ require (
 	gorm.io/gorm v1.21.3
 	honnef.co/go/tools v0.1.3 // indirect
 )
-
-replace github.com/ipfs-force-community/venus-messager => ./
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi

@@ -8,8 +8,8 @@ import (
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 
-	"github.com/ipfs-force-community/venus-messager/service"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type Message struct {

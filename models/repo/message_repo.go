@@ -9,7 +9,7 @@ import (
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type MessageRepo interface {

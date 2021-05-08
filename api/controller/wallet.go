@@ -5,8 +5,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 
-	"github.com/ipfs-force-community/venus-messager/service"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 type WalletController struct {

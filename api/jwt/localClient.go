@@ -1,6 +1,6 @@
 package jwt
 
-import "github.com/ipfs-force-community/venus-auth/auth"
+import "github.com/filecoin-project/venus-auth/auth"
 
 type LocalClient struct {
 }

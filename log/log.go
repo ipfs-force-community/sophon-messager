@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/config"
 )
 
 func SetLogger(logCfg *config.LogConfig) (*logrus.Logger, error) {

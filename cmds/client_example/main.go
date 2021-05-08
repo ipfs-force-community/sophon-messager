@@ -10,10 +10,10 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus-messager/api/client"
+	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/types"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/types"
 )
 
 func main() {

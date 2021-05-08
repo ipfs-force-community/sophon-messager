@@ -1,16 +1,16 @@
 package service
 
 import (
-	"github.com/ipfs-force-community/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/models"
 	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/models/sqlite"
-	"github.com/ipfs-force-community/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/models/sqlite"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 func TestMessageStateCache(t *testing.T) {

@@ -11,15 +11,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ipfs-force-community/venus-messager/api"
-	"github.com/ipfs-force-community/venus-messager/api/controller"
-	"github.com/ipfs-force-community/venus-messager/api/jwt"
-	ccli "github.com/ipfs-force-community/venus-messager/cli"
-	"github.com/ipfs-force-community/venus-messager/config"
-	"github.com/ipfs-force-community/venus-messager/log"
-	"github.com/ipfs-force-community/venus-messager/models"
-	"github.com/ipfs-force-community/venus-messager/service"
-	"github.com/ipfs-force-community/venus-messager/version"
+	"github.com/filecoin-project/venus-messager/api"
+	"github.com/filecoin-project/venus-messager/api/controller"
+	"github.com/filecoin-project/venus-messager/api/jwt"
+	ccli "github.com/filecoin-project/venus-messager/cli"
+	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/version"
 )
 
 func main() {

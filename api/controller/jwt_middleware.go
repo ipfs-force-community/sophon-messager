@@ -8,11 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
-	"github.com/ipfs-force-community/venus-auth/core"
-	"github.com/ipfs-force-community/venus-auth/util"
-	"github.com/ipfs-force-community/venus-messager/api/jwt"
-	"github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs-force-community/venus-messager/utils"
+	"github.com/filecoin-project/venus-auth/core"
+	"github.com/filecoin-project/venus-auth/util"
+	"github.com/filecoin-project/venus-messager/api/jwt"
+	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type JWTFilter struct {
