@@ -342,7 +342,7 @@ func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("id = ?", id).Find(&msg).Error; err != nil {
+	if err := m.DB.Where("id = ?", id).Take(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -350,7 +350,7 @@ func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
 
 func (m *mysqlMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).Find(&msg).Error; err != nil {
+	if err := m.DB.Where("unsigned_cid = ?", unsignedCid.String()).Take(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -358,7 +358,7 @@ func (m *mysqlMessageRepo) GetMessageByCid(unsignedCid cid.Cid) (*types.Message,
 
 func (m *mysqlMessageRepo) GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("signed_cid = ?", signedCid.String()).Find(&msg).Error; err != nil {
+	if err := m.DB.Where("signed_cid = ?", signedCid.String()).Take(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
@@ -392,7 +392,7 @@ func (m *mysqlMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*t
 
 func (m *mysqlMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg mysqlMessage
-	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Find(&msg).Error; err != nil {
+	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Take(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil
