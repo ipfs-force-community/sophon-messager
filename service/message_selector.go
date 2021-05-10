@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/big"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-wallet/core"
+
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
+
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
@@ -32,6 +36,21 @@ type MessageSelector struct {
 	addressService *AddressService
 	walletService  *WalletService
 	sps            *SharedParamsService
+
+	addrInfos *addrInfos
+}
+
+type addrInfos struct {
+	addrInfos map[string]addrInfo
+
+	l sync.Mutex
+}
+
+type addrInfo struct {
+	walletCli IWalletClient
+	close     jsonrpc.ClientCloser
+	state     types.State
+	err       error
 }
 
 type MsgSelectResult struct {
@@ -69,6 +88,10 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	if err != nil {
 		return nil, err
 	}
+	messageSelector.addrInfos = &addrInfos{
+		addrInfos: make(map[string]addrInfo),
+	}
+	defer messageSelector.clearAddrInfos()
 
 	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
 	if err != nil {
@@ -119,8 +142,11 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
-	addrsInfo, exit := messageSelector.walletService.GetAddressesInfo(addr.Addr)
-	if !exit {
+	addrsInfo, err := messageSelector.repo.WalletAddressRepo().GetWalletAddressByAddrID(addr.ID)
+	if err != nil {
+		return nil, xerrors.Errorf("got wallet address by addr id %v", err)
+	}
+	if len(addrsInfo) == 0 {
 		return nil, xerrors.Errorf("no wallet client")
 	}
 
@@ -129,8 +155,8 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		maxAllowPendingMessage = messageSelector.sps.GetParams().SelMsgNum
 	}
 	for _, addrInfo := range addrsInfo {
-		if addrInfo.SelectMsgNum != 0 {
-			maxAllowPendingMessage = addrInfo.SelectMsgNum
+		if addrInfo.SelMsgNum != 0 {
+			maxAllowPendingMessage = addrInfo.SelMsgNum
 			break
 		}
 	}
@@ -218,13 +244,13 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Warnf("the maximum number of failures has been reached %d", allowFailedNum)
 			break
 		}
-		addrInfo, ok := messageSelector.walletService.GetAddressInfo(msg.WalletName, msg.From)
+		addrInfo, ok := messageSelector.getAddrInfo(msg.WalletName, msg.From)
 		if !ok {
 			messageSelector.log.Warnf("not found wallet client %s", msg.WalletName)
 			continue
 		}
-		if addrInfo.State != types.Alive && addrInfo.State != types.Forbiden {
-			messageSelector.log.Infof("wallet %s address %v state is %s, skip select unchain message", msg.WalletName, addr.Addr, types.StateToString(addrInfo.State))
+		if addrInfo.state != types.Alive && addrInfo.state != types.Forbiden {
+			messageSelector.log.Infof("wallet %s address %v state is %s, skip select unchain message", msg.WalletName, addr.Addr, types.StateToString(addrInfo.state))
 			continue
 		}
 
@@ -265,7 +291,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sig, err := addrInfo.WalletClient.WalletSign(timeOutCtx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
+		sig, err := addrInfo.walletCli.WalletSign(timeOutCtx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		})
@@ -412,6 +438,48 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	CapGasFee(msg, meta.MaxFee)
 
 	return msg, nil
+}
+
+func (messageSelector *MessageSelector) clearAddrInfos() {
+	for _, addrInfo := range messageSelector.addrInfos.addrInfos {
+		if addrInfo.close != nil {
+			addrInfo.close()
+		}
+	}
+}
+
+func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr address.Address) (addrInfo, bool) {
+	messageSelector.addrInfos.l.Lock()
+	defer messageSelector.addrInfos.l.Unlock()
+
+	key := walletName + ":" + addr.String()
+	if info, ok := messageSelector.addrInfos.addrInfos[key]; ok {
+		if info.err != nil {
+			return addrInfo{}, false
+		}
+		return info, true
+	}
+
+	wa, err := messageSelector.walletService.GetWalletAddress(context.TODO(), walletName, addr)
+	if err != nil {
+		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
+		return addrInfo{}, false
+	}
+	cli, close, err := messageSelector.walletService.GetWalletClient(context.TODO(), walletName)
+	if err != nil {
+		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
+		return addrInfo{}, false
+	}
+
+	info := addrInfo{
+		walletCli: &cli,
+		close:     close,
+		state:     wa.AddressState,
+		err:       nil,
+	}
+	messageSelector.addrInfos.addrInfos[key] = info
+
+	return info, true
 }
 
 func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {

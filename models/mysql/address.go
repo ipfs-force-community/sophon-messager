@@ -99,6 +99,15 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) 
 	return a.Address()
 }
 
+func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id types.UUID) (*types.Address, error) {
+	var a mysqlAddress
+	if err := s.DB.Where("id = ? and is_deleted = -1", id).First(&a).Error; err != nil {
+		return nil, err
+	}
+
+	return a.Address()
+}
+
 func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
 	if err := s.DB.Take(&a, "addr = ?", addr.String()).Error; err != nil {

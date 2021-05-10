@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/filecoin-project/go-jsonrpc"
@@ -28,27 +27,21 @@ type WalletService struct {
 	sps            *SharedParamsService
 	nodeClient     *NodeClient
 	addressService *AddressService
-	walletInfos    map[string]*WalletInfo
 
-	pendingAddrChan chan pendingAddr
-	walletDelChan   chan string
-
-	wallets   map[string]types.UUID
-	addresses map[address.Address]types.UUID
-
-	l sync.RWMutex
+	pendingAddrChan   chan pendingAddr
+	pendingWalletChan chan pendingWallet
 }
 
-type WalletInfo struct {
-	walletCli    IWalletClient
-	cliClose     jsonrpc.ClientCloser
-	walletState  types.State
-	addressInfos map[address.Address]*AddressInfo
+type pendingWallet struct {
+	walletName string
+	walletID   types.UUID
 }
 
 type pendingAddr struct {
 	walletName string
 	addr       address.Address
+
+	walletID, addrID types.UUID
 }
 
 func NewWalletService(repo repo.Repo,
@@ -56,7 +49,7 @@ func NewWalletService(repo repo.Repo,
 	nodeClient *NodeClient,
 	addressService *AddressService,
 	cfg *config.WalletConfig,
-	sps *SharedParamsService) (*WalletService, error) {
+	sps *SharedParamsService) *WalletService {
 	ws := &WalletService{
 		repo:           repo,
 		log:            logger,
@@ -65,22 +58,23 @@ func NewWalletService(repo repo.Repo,
 		cfg:            cfg,
 		sps:            sps,
 
-		walletDelChan:   make(chan string, 10),
-		pendingAddrChan: make(chan pendingAddr, 10),
-		walletInfos:     make(map[string]*WalletInfo),
-		wallets:         make(map[string]types.UUID),
-		addresses:       make(map[address.Address]types.UUID),
+		pendingWalletChan: make(chan pendingWallet, 10),
+		pendingAddrChan:   make(chan pendingAddr, 10),
 	}
-	err := ws.start()
+	go ws.listenWalletChange(context.TODO())
+	go ws.checkWalletState()
+	go ws.checkAddressState()
 
-	return ws, err
+	return ws
 }
 
 func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	cli, close, err := NewWalletClient(ctx, wallet.Url, wallet.Token)
+	// try connect wallet
+	_, close, err := NewWalletClient(ctx, wallet.Url, wallet.Token)
 	if err != nil {
 		return types.UUID{}, err
 	}
+	close()
 	if err := walletService.repo.Transaction(func(txRepo repo.TxRepo) error {
 		has, err := txRepo.WalletRepo().HasWallet(wallet.Name)
 		if err != nil {
@@ -100,13 +94,6 @@ func (walletService *WalletService) SaveWallet(ctx context.Context, wallet *type
 	}); err != nil {
 		return types.UUID{}, err
 	}
-	walletService.addWallet(wallet.Name, &WalletInfo{
-		walletCli:    &cli,
-		cliClose:     close,
-		walletState:  wallet.State,
-		addressInfos: make(map[address.Address]*AddressInfo),
-	})
-	walletService.setWallets(wallet.Name, wallet.ID)
 	walletService.log.Infof("save wallet %v", wallet)
 
 	return wallet.ID, nil
@@ -128,44 +115,84 @@ func (walletService *WalletService) ListWallet(ctx context.Context) ([]*types.Wa
 	return walletService.repo.WalletRepo().ListWallet()
 }
 
-func (walletService *WalletService) ListRemoteWalletAddress(ctx context.Context, walletName string) ([]address.Address, error) {
-	info, ok := walletService.getWalletInfo(walletName)
-	if !ok {
-		return nil, xerrors.Errorf("wallet %s not exit", walletName)
+func (walletService *WalletService) GetWalletClient(ctx context.Context, walletName string) (WalletClient, jsonrpc.ClientCloser, error) {
+	wallet, err := walletService.GetWalletByName(ctx, walletName)
+	if err != nil {
+		return WalletClient{}, nil, err
 	}
-
-	return info.walletCli.WalletList(ctx)
+	return NewWalletClient(ctx, wallet.Url, wallet.Token)
 }
 
-func (walletService *WalletService) DeleteWallet(ctx context.Context, name string) (string, error) {
-	w, err := walletService.GetWalletByName(ctx, name)
+func (walletService *WalletService) ListRemoteWalletAddress(ctx context.Context, walletName string) ([]address.Address, error) {
+	cli, close, err := walletService.GetWalletClient(ctx, walletName)
+	if err != nil {
+		return nil, err
+	}
+	defer close()
+
+	return cli.WalletList(ctx)
+}
+
+func (walletService *WalletService) DeleteWallet(ctx context.Context, walletName string) (string, error) {
+	w, err := walletService.GetWalletByName(ctx, walletName)
 	if err != nil {
 		return "", err
 	}
 
-	if err := walletService.repo.WalletRepo().UpdateState(name, types.Removing); err != nil {
+	if err := walletService.repo.WalletRepo().UpdateState(walletName, types.Removing); err != nil {
 		return "", err
 	}
 
-	walletService.deleteWallet(w.Name)
-	walletService.log.Infof("delete wallet %s", name)
+	was, err := walletService.repo.WalletAddressRepo().GetWalletAddressByWalletID(w.ID)
+	if err != nil {
+		return "", err
+	}
 
-	return name, nil
+	for _, wa := range was {
+		addr, err := walletService.repo.AddressRepo().GetAddressByID(ctx, wa.AddrID)
+		if err != nil {
+			walletService.log.Infof("found address(%s) %v", wa.AddrID, err)
+			continue
+		}
+		walletService.delAddress(pendingAddr{walletName: walletName, addr: addr.Addr, walletID: wa.WalletID, addrID: wa.AddrID})
+	}
+	walletService.pendingWalletChan <- pendingWallet{walletName: walletName, walletID: w.ID}
+	walletService.log.Infof("delete wallet %s", walletName)
+
+	return walletName, nil
 }
 
 //// wallet address ////
 
 func (walletService *WalletService) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
-	return walletService.repo.WalletAddressRepo().HasWalletAddress(walletService.getWalletID(walletName), walletService.getAddressID(addr))
+	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
+	if err != nil {
+		return false, err
+	}
+	return walletService.repo.WalletAddressRepo().HasWalletAddress(walletID, addID)
+}
+
+func (walletService *WalletService) getWalletIDAndAddrID(ctx context.Context, walletName string, addr address.Address) (types.UUID, types.UUID, error) {
+	wallet, err := walletService.repo.WalletRepo().GetWalletByName(walletName)
+	if err != nil {
+		return types.UUID{}, types.UUID{}, xerrors.Errorf("got wallet %v", err)
+	}
+	addrInfo, err := walletService.repo.AddressRepo().GetAddress(ctx, addr)
+	if err != nil {
+		return types.UUID{}, types.UUID{}, err
+	}
+
+	return wallet.ID, addrInfo.ID, nil
 }
 
 func (walletService *WalletService) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
-	if err := walletService.repo.WalletAddressRepo().UpdateSelectMsgNum(walletService.getWalletID(walletName), walletService.getAddressID(addr), num); err != nil {
+	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
+	if err != nil {
 		return addr, err
 	}
-	walletService.mutatorAddressInfo(walletName, addr, func(addressInfo *AddressInfo) {
-		addressInfo.SelectMsgNum = num
-	})
+	if err := walletService.repo.WalletAddressRepo().UpdateSelectMsgNum(walletID, addID, num); err != nil {
+		return addr, err
+	}
 
 	return addr, nil
 }
@@ -175,20 +202,14 @@ func (walletService *WalletService) ListWalletAddress(ctx context.Context) ([]*t
 }
 
 func (walletService *WalletService) GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) {
-	return walletService.repo.WalletAddressRepo().GetWalletAddress(walletService.getWalletID(walletName), walletService.getAddressID(addr))
+	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
+	if err != nil {
+		return nil, err
+	}
+	return walletService.repo.WalletAddressRepo().GetWalletAddress(walletID, addID)
 }
 
-func (walletService *WalletService) start() error {
-	// load local address
-	addrList, err := walletService.repo.AddressRepo().ListAddress(context.TODO())
-	if err != nil {
-		return err
-	}
-	for _, addr := range addrList {
-		walletService.setAddresses(addr.Addr, addr.ID)
-	}
-
-	// load local wallet
+func (walletService *WalletService) processWallet() error {
 	walletList, err := walletService.ListWallet(context.TODO())
 	if err != nil {
 		return err
@@ -196,41 +217,14 @@ func (walletService *WalletService) start() error {
 	for _, w := range walletList {
 		cli, close, err := NewWalletClient(context.Background(), w.Url, w.Token)
 		if err != nil {
-			return err
+			walletService.log.Errorf("connect wallet(%s) %v", w.Name, err)
+			continue
 		}
-		addressInfos := make(map[address.Address]*AddressInfo)
-		if waList, err := walletService.repo.WalletAddressRepo().GetWalletAddressByWalletID(w.ID); err == nil {
-			for _, wa := range waList {
-				if wa.AddressState == types.Removing { // maybe need push signed message to mpool
-					addr := walletService.getAddressByAddrID(wa.AddrID)
-					addressInfos[addr] = &AddressInfo{
-						State:        wa.AddressState,
-						SelectMsgNum: wa.SelMsgNum,
-						WalletClient: &cli,
-					}
-				}
-			}
+		if err := walletService.syncWalletAddress(context.TODO(), w.Name, w.ID, &cli); err != nil {
+			walletService.log.Errorf("process wallet failed %v %v", w.Name, err)
 		}
-		walletService.addWallet(w.Name, &WalletInfo{
-			walletCli:    &cli,
-			cliClose:     close,
-			walletState:  w.State,
-			addressInfos: addressInfos,
-		})
-		walletService.setWallets(w.Name, w.ID)
+		close()
 	}
-
-	// scan remote address
-	walletNames, clis := walletService.ListWalletClient()
-	for i, cli := range clis {
-		if err := walletService.ProcessWallet(context.TODO(), walletNames[i], cli); err != nil {
-			walletService.log.Errorf("process wallet failed %v %v", walletNames[i], err)
-		}
-	}
-
-	go walletService.listenWalletChange(context.TODO())
-	go walletService.checkWalletState()
-	go walletService.checkAddressState()
 
 	return nil
 }
@@ -247,11 +241,8 @@ func (walletService *WalletService) listenWalletChange(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			walletNames, clis := walletService.ListWalletClient()
-			for i, cli := range clis {
-				if err := walletService.ProcessWallet(ctx, walletNames[i], cli); err != nil {
-					walletService.log.Errorf("process wallet failed %v %v", walletNames[i], err)
-				}
+			if err := walletService.processWallet(); err != nil {
+				walletService.log.Errorf("process wallet %v", err)
 			}
 		case i := <-walletService.sps.GetParams().ScanIntervalChan:
 			ticker.Reset(i)
@@ -263,27 +254,41 @@ func (walletService *WalletService) listenWalletChange(ctx context.Context) {
 
 }
 
-func (walletService *WalletService) ProcessWallet(ctx context.Context, walletName string, cli IWalletClient) error {
+func (walletService *WalletService) syncWalletAddress(ctx context.Context, walletName string, walletID types.UUID, cli IWalletClient) error {
 	addrList, err := cli.WalletList(ctx)
 	if err != nil {
 		return err
 	}
 
-	walletAddrs := walletService.listOneWalletAddress(walletName)
-	for _, addr := range addrList {
-		delete(walletAddrs, addr)
-
-		if addrInfo, ok := walletService.GetAddressInfo(walletName, addr); ok &&
-			(addrInfo.State == types.Alive || addrInfo.State == types.Forbiden) {
+	was, err := walletService.repo.WalletAddressRepo().GetWalletAddressByWalletID(walletID)
+	if err != nil {
+		return xerrors.Errorf("got wallet address by wallet id(%s) %v", walletID, err)
+	}
+	addrMap := make(map[address.Address]types.UUID, len(was))
+	for _, wa := range was {
+		addr, err := walletService.repo.AddressRepo().GetAddressByID(context.TODO(), wa.AddrID)
+		if err != nil {
+			walletService.log.Errorf("got address %v", err)
 			continue
 		}
+		addrMap[addr.Addr] = wa.AddrID
+	}
+	for _, addr := range addrList {
+		if addrID, ok := addrMap[addr]; ok {
+			delete(addrMap, addr)
+			if wa, err := walletService.repo.WalletAddressRepo().GetWalletAddress(walletID, addrID); err == nil &&
+				(wa.AddressState == types.Alive || wa.AddressState == types.Forbiden) {
+				continue
+			}
+		}
 		// store address
-		if err := walletService.saveAddress(ctx, addr); err != nil {
+		addrID, err := walletService.saveAddress(ctx, addr)
+		if err != nil {
 			walletService.log.Errorf("save address %v", err)
 			continue
 		}
 
-		if err := walletService.updateWalletAddress(ctx, cli, walletName, addr); err != nil {
+		if err := walletService.updateWalletAddress(ctx, cli, walletID, addrID); err != nil {
 			walletService.log.Errorf("save wallet address %v", err)
 			continue
 		}
@@ -291,19 +296,19 @@ func (walletService *WalletService) ProcessWallet(ctx context.Context, walletNam
 	}
 
 	// address to handle remote wallet deletion
-	for addr := range walletAddrs {
-		addrInfo, ok := walletService.GetAddressInfo(walletName, addr)
-		if !ok || addrInfo.State == types.Removing {
+	for addr, addrID := range addrMap {
+		wa, err := walletService.repo.WalletAddressRepo().GetWalletAddress(walletID, addrID)
+		if err == nil && wa.AddressState == types.Removing {
 			continue
 		}
-		walletService.delAddress(walletName, addr)
+		walletService.delAddress(pendingAddr{walletName: walletName, addr: addr, walletID: walletID, addrID: addrID})
 	}
 
 	return nil
 }
 
 // update address table
-func (walletService *WalletService) saveAddress(ctx context.Context, addr address.Address) error {
+func (walletService *WalletService) saveAddress(ctx context.Context, addr address.Address) (types.UUID, error) {
 	var nonce uint64
 	actor, err := walletService.nodeClient.StateGetActor(context.Background(), addr, venustypes.EmptyTSK)
 	if err != nil {
@@ -322,17 +327,14 @@ func (walletService *WalletService) saveAddress(ctx context.Context, addr addres
 	}
 	addrID, err := walletService.addressService.SaveAddress(ctx, addrTmp)
 	if err != nil && !xerrors.Is(err, ErrRecordExist) {
-		return err
+		return addrID, err
 	}
-	walletService.setAddresses(addr, addrID)
-	return nil
+
+	return addrID, nil
 }
 
 // update wallet address table
-func (walletService *WalletService) updateWalletAddress(ctx context.Context, cli IWalletClient, walletName string, addr address.Address) error {
-	walletID := walletService.getWalletID(walletName)
-	addrID := walletService.getAddressID(addr)
-
+func (walletService *WalletService) updateWalletAddress(ctx context.Context, cli IWalletClient, walletID, addrID types.UUID) error {
 	wa := &types.WalletAddress{
 		ID:           types.NewUUID(),
 		WalletID:     walletID,
@@ -342,8 +344,6 @@ func (walletService *WalletService) updateWalletAddress(ctx context.Context, cli
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	var selMsgNum uint64
-	state := types.Alive
 
 	if err := walletService.repo.Transaction(func(txRepo repo.TxRepo) error {
 		has, err := txRepo.WalletAddressRepo().HasWalletAddress(walletID, addrID)
@@ -357,28 +357,17 @@ func (walletService *WalletService) updateWalletAddress(ctx context.Context, cli
 			}
 			if walletAddress.SelMsgNum != 0 { // inherit SelMsgNum
 				wa.SelMsgNum = walletAddress.SelMsgNum
-				selMsgNum = walletAddress.SelMsgNum
 			}
 			wa.CreatedAt = walletAddress.CreatedAt
 			wa.ID = walletAddress.ID
 			if walletAddress.AddressState == types.Forbiden { // keep Forbiden status
 				wa.AddressState = walletAddress.AddressState
-				state = walletAddress.AddressState
 			}
 		}
 		return txRepo.WalletAddressRepo().SaveWalletAddress(wa)
 	}); err != nil {
 		return err
 	}
-
-	// update cache
-	walletService.mutatorAddressInfo(walletName, addr, func(addressInfo *AddressInfo) {
-		*addressInfo = AddressInfo{
-			State:        state,
-			SelectMsgNum: selMsgNum,
-			WalletClient: cli,
-		}
-	})
 
 	return nil
 }
@@ -390,29 +379,30 @@ func (walletService *WalletService) checkWalletState() {
 	}
 	for _, w := range walletList {
 		if w.State == types.Removing {
-			walletService.walletDelChan <- w.Name
+			walletService.pendingWalletChan <- pendingWallet{walletName: w.Name, walletID: w.ID}
 		}
 	}
-	for walletName := range walletService.walletDelChan {
+	for pw := range walletService.pendingWalletChan {
 		checkAgain := true
-		if walletInfo, ok := walletService.getWalletInfo(walletName); !ok || walletInfo.walletState == types.Alive {
+		if wallet, err := walletService.repo.WalletRepo().GetWalletByName(pw.walletName); err == nil && wallet.State == types.Alive {
 			checkAgain = false
 		}
 
-		addrs := walletService.listOneWalletAddress(walletName)
-		if len(addrs) == 0 {
-			if err := walletService.repo.WalletRepo().DelWallet(walletName); err != nil {
+		was, err := walletService.repo.WalletAddressRepo().GetWalletAddressByWalletID(pw.walletID)
+		if err != nil {
+			walletService.log.Errorf("got wallet address by wallet id %v", err)
+		} else if len(was) == 0 { // All addresses of a wallet have been deleted, then delete wallet
+			if err := walletService.repo.WalletRepo().DelWallet(pw.walletName); err != nil {
 				walletService.log.Errorf("deleted wallet %v", err)
 			} else {
-				walletService.removeWallet(walletName)
-				walletService.log.Infof("deleted wallet %s", walletName)
+				walletService.log.Infof("deleted wallet %s", pw.walletName)
 				checkAgain = false
 			}
 		}
 		if checkAgain {
 			go func() {
 				time.Sleep(time.Second * 30)
-				walletService.walletDelChan <- walletName
+				walletService.pendingWalletChan <- pw
 			}()
 		}
 	}
@@ -426,32 +416,40 @@ func (walletService *WalletService) checkAddressState() {
 
 	for _, wa := range walletAddrList {
 		if wa.AddressState == types.Removing {
-			walletService.pendingAddrChan <- pendingAddr{walletName: walletService.getWalletName(wa.WalletID),
-				addr: walletService.getAddressByAddrID(wa.AddrID)}
+			addrInfo, err := walletService.repo.AddressRepo().GetAddressByID(context.TODO(), wa.AddrID)
+			if err != nil {
+				walletService.log.Errorf("found address(%s) %v", wa.AddrID, err)
+				continue
+			}
+			walletInfo, err := walletService.repo.WalletRepo().GetWalletByID(wa.WalletID)
+			if err != nil {
+				walletService.log.Errorf("found wallet(%s) %v", wa.WalletID, err)
+				continue
+			}
+			walletService.pendingAddrChan <- pendingAddr{walletName: walletInfo.Name, addr: addrInfo.Addr, walletID: wa.WalletID, addrID: wa.AddrID}
 		}
 	}
 
-	for target := range walletService.pendingAddrChan {
+	for pa := range walletService.pendingAddrChan {
 		var isDeleted bool
-		msgs, err := walletService.repo.MessageRepo().ListFilledMessageByWallet(target.walletName, target.addr)
+		msgs, err := walletService.repo.MessageRepo().ListFilledMessageByWallet(pa.walletName, pa.addr)
 		if err != nil {
 			walletService.log.Errorf("got filled message %v", err)
 		} else if len(msgs) == 0 {
 			// add address again
-			if addrInfo, ok := walletService.GetAddressInfo(target.walletName, target.addr); ok && addrInfo.State == types.Alive {
+			if wa, err := walletService.repo.WalletAddressRepo().GetWalletAddress(pa.walletID, pa.addrID); err == nil && wa.AddressState == types.Alive {
 				isDeleted = true
 			} else {
-				if err := walletService.repo.WalletAddressRepo().DelWalletAddress(walletService.getWalletID(target.walletName),
-					walletService.getAddressID(target.addr)); err != nil {
+				if err := walletService.repo.WalletAddressRepo().DelWalletAddress(pa.walletID, pa.addrID); err != nil {
 					walletService.log.Errorf("update address state %v", err)
+					continue
 				}
-				walletService.removeAddressInfo(target.walletName, target.addr)
-				walletService.log.Infof("deleted address %v", target.addr.String())
+				walletService.log.Infof("deleted address %v", pa.addr.String())
 
 				// not using address, delete it
-				if _, ok := walletService.AllAddresses()[target.addr]; !ok {
-					if _, err = walletService.addressService.DeleteAddress(context.TODO(), target.addr); err != nil {
-						walletService.log.Errorf("delete address %v", err)
+				if has, err := walletService.repo.WalletAddressRepo().HasAddress(pa.addrID); err == nil && !has {
+					if _, err = walletService.addressService.DeleteAddress(context.TODO(), pa.addr); err != nil {
+						walletService.log.Errorf("delete address(%s) %v", pa.addr.String(), err)
 					}
 				}
 				isDeleted = true
@@ -460,262 +458,63 @@ func (walletService *WalletService) checkAddressState() {
 		if !isDeleted {
 			go func() {
 				time.Sleep(time.Second * 30)
-				walletService.pendingAddrChan <- target
+				walletService.pendingAddrChan <- pa
 			}()
 		}
 	}
 }
 
 func (walletService *WalletService) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletService.getWalletID(walletName),
-		walletService.getAddressID(addr), types.Forbiden); err != nil {
+	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
+	if err != nil {
+		return address.Undef, err
+	}
+	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletID, addID, types.Forbiden); err != nil {
 		return address.Undef, err
 	}
 
-	walletService.mutatorAddressInfo(walletName, addr, func(addressInfo *AddressInfo) {
-		addressInfo.State = types.Forbiden
-	})
 	walletService.log.Infof("forbidden address %v", addr.String())
 
 	return addr, nil
 }
 
 func (walletService *WalletService) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletService.getWalletID(walletName),
-		walletService.getAddressID(addr), types.Alive); err != nil {
+	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
+	if err != nil {
+		return address.Undef, err
+	}
+	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletID, addID, types.Alive); err != nil {
 		return address.Undef, err
 	}
 
-	walletService.mutatorAddressInfo(walletName, addr, func(addressInfo *AddressInfo) {
-		addressInfo.State = types.Alive
-	})
 	walletService.log.Infof("active address %v", addr.String())
 
 	return addr, nil
 }
 
-/// wallet info ///
-
-func (walletService *WalletService) addWallet(walletName string, walletInfo *WalletInfo) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	walletService.walletInfos[walletName] = walletInfo
-}
-
-func (walletService *WalletService) getWalletInfo(walletName string) (*WalletInfo, bool) {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	walletInfo, ok := walletService.walletInfos[walletName]
-
-	return walletInfo, ok
-}
-
-func (walletService *WalletService) GetAddressInfo(walletName string, addr address.Address) (AddressInfo, bool) {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		if addrInfo, ok := walletInfo.addressInfos[addr]; ok && addrInfo != nil {
-			return *addrInfo, ok
-		}
-	}
-
-	return AddressInfo{}, false
-}
-
-func (walletService *WalletService) GetAddressesInfo(addr address.Address) (map[string]AddressInfo, bool) {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	addrsInfo := make(map[string]AddressInfo)
-	for walletName, walletInfo := range walletService.walletInfos {
-		if addrInfo, ok := walletInfo.addressInfos[addr]; ok && addrInfo != nil {
-			addrsInfo[walletName] = *addrInfo
-		}
-	}
-
-	return addrsInfo, len(addrsInfo) > 0
-}
-
-func (walletService *WalletService) HasAddress(walletName string, addr address.Address) bool {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		if addrInfo, ok := walletInfo.addressInfos[addr]; ok && addrInfo.State == types.Alive {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (walletService *WalletService) ListWalletClient() ([]string, []IWalletClient) {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	clis := make([]IWalletClient, 0, len(walletService.walletInfos))
-	walletNames := make([]string, 0, len(walletService.walletInfos))
-	for walletName, info := range walletService.walletInfos {
-		if info.walletState != types.Alive {
-			continue
-		}
-		clis = append(clis, info.walletCli)
-		walletNames = append(walletNames, walletName)
-	}
-
-	return walletNames, clis
-}
-
-func (walletService *WalletService) listOneWalletAddress(walletName string) map[address.Address]struct{} {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
-	var addrs map[address.Address]struct{}
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		addrs = make(map[address.Address]struct{}, len(walletInfo.addressInfos))
-		for addr := range walletInfo.addressInfos {
-			addrs[addr] = struct{}{}
-		}
-	}
-
-	return addrs
-}
-
 func (walletService *WalletService) AllAddresses() map[address.Address]struct{} {
-	walletService.l.RLock()
-	defer walletService.l.RUnlock()
 	addrs := make(map[address.Address]struct{})
-	for _, walletInfo := range walletService.walletInfos {
-		for addr := range walletInfo.addressInfos {
-			addrs[addr] = struct{}{}
-		}
+	addrList, err := walletService.repo.AddressRepo().ListAddress(context.TODO())
+	if err != nil {
+		return addrs
+	}
+
+	for _, addr := range addrList {
+		addrs[addr.Addr] = struct{}{}
 	}
 
 	return addrs
 }
 
-func (walletService *WalletService) mutatorAddressInfo(walletName string, addr address.Address, f func(addressInfo *AddressInfo)) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		if addrInfo, ok := walletInfo.addressInfos[addr]; ok {
-			f(addrInfo)
-		} else {
-			walletInfo.addressInfos[addr] = &AddressInfo{}
-			f(walletInfo.addressInfos[addr])
-		}
+func (walletService *WalletService) delAddress(pa pendingAddr) {
+	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(pa.walletID, pa.addrID, types.Removing); err != nil {
+		walletService.log.Errorf("update wallet address state %v", err)
 	}
-}
-
-func (walletService *WalletService) deleteWallet(walletName string) {
-	walletService.l.Lock()
-	var addrs []address.Address
-	if info, ok := walletService.walletInfos[walletName]; ok {
-		info.walletState = types.Removing
-		walletService.walletDelChan <- walletName
-		for addr := range info.addressInfos {
-			addrs = append(addrs, addr)
-		}
+	if err := walletService.repo.MessageRepo().UpdateUnFilledMessageState(pa.walletName, pa.addr, types.NoWalletMsg); err != nil {
+		walletService.log.Errorf("update unfilled message state %v", err)
 	}
-	walletService.l.Unlock()
-
-	for _, addr := range addrs {
-		walletService.delAddress(walletName, addr)
-	}
-}
-
-func (walletService *WalletService) removeWallet(walletName string) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	// close client
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		walletInfo.cliClose()
-	}
-	delete(walletService.walletInfos, walletName)
-}
-
-func (walletService *WalletService) delAddress(walletName string, addr address.Address) {
-	walletID := walletService.getWalletID(walletName)
-	addrID := walletService.getAddressID(addr)
-
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	walletInfo, ok := walletService.walletInfos[walletName]
-	if !ok {
-		return
-	}
-	if addrInfo, ok := walletInfo.addressInfos[addr]; ok {
-		addrInfo.State = types.Removing
-		if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletID, addrID, types.Removing); err != nil {
-			walletService.log.Errorf("update wallet address state %v", err)
-		}
-		if err := walletService.repo.MessageRepo().UpdateUnFilledMessageState(walletName, addr, types.NoWalletMsg); err != nil {
-			walletService.log.Errorf("update unfilled message state %v", err)
-		}
-		go func() {
-			walletService.pendingAddrChan <- pendingAddr{walletName: walletName, addr: addr}
-		}()
-	}
-	walletService.log.Infof("wallet delete address %s", addr.String())
-}
-
-func (walletService *WalletService) removeAddressInfo(walletName string, addr address.Address) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-	if walletInfo, ok := walletService.walletInfos[walletName]; ok {
-		delete(walletInfo.addressInfos, addr)
-	}
-}
-
-//// wallet name and wallet id mapping
-func (walletService *WalletService) setWallets(walletName string, walletID types.UUID) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	walletService.wallets[walletName] = walletID
-}
-
-func (walletService *WalletService) getWalletID(walletName string) types.UUID {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	return walletService.wallets[walletName]
-}
-
-func (walletService *WalletService) getWalletName(walletID types.UUID) string {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	for k, v := range walletService.wallets {
-		if v == walletID {
-			return k
-		}
-	}
-
-	return ""
-}
-
-//// address and address id mapping
-func (walletService *WalletService) setAddresses(addr address.Address, addrID types.UUID) {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	walletService.addresses[addr] = addrID
-}
-
-func (walletService *WalletService) getAddressID(addr address.Address) types.UUID {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	return walletService.addresses[addr]
-}
-
-func (walletService *WalletService) getAddressByAddrID(addrID types.UUID) address.Address {
-	walletService.l.Lock()
-	defer walletService.l.Unlock()
-
-	for k, v := range walletService.addresses {
-		if v == addrID {
-			return k
-		}
-	}
-
-	return address.Undef
+	go func() {
+		walletService.pendingAddrChan <- pa
+	}()
+	walletService.log.Infof("wallet delete address %s", pa.addr.String())
 }

@@ -147,6 +147,9 @@ var listCmd = &cli.Command{
 			Usage: "pagination size, default tob 100",
 			Value: 100,
 		},
+		FromFlag,
+		outputTypeFlag,
+		verboseFlag,
 		&cli.IntFlag{
 			Name:  "state",
 			Value: int(types.UnFillMsg),
@@ -160,9 +163,6 @@ state:
   6:  NoWalletMsg
 `,
 		},
-		FromFlag,
-		outputTypeFlag,
-		verboseFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
