@@ -612,7 +612,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 			}
 		}
 		ms.log.Infof("start to broadcast message of address")
-		for fromAddr, _ := range fromMap {
+		for fromAddr := range fromMap {
 			if err := node.cli.MpoolPublishByAddr(ctx, fromAddr); err != nil {
 				ms.log.Errorf("publish message of address %s to node %s fail %v", fromAddr, node.name, err)
 			}
