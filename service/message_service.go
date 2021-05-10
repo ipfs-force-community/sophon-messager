@@ -771,6 +771,9 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	}
 	err = ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
 		message.SignedCid = msg.SignedCid
+		message.GasLimit = msg.GasLimit
+		message.GasPremium = msg.GasPremium
+		message.GasFeeCap = msg.GasFeeCap
 		message.UnsignedCid = msg.UnsignedCid
 		message.UnsignedMessage = msg.UnsignedMessage
 		message.State = msg.State

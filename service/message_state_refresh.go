@@ -78,6 +78,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 			}
 
 			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
+				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
 				//replace msg
 				unsignedCid := msg.msg.Cid()
 				localMsg.UnsignedMessage = *msg.msg
@@ -91,7 +92,6 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
 				replaceMsg[localMsg.ID] = localMsg
-				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
 			} else {
 				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
 					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
