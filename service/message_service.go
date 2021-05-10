@@ -617,6 +617,8 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 				ms.log.Errorf("publish message of address %s to node %s fail %v", fromAddr, node.name, err)
 			}
 		}
+
+		node.close()
 	}
 }
 
