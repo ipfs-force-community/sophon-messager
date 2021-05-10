@@ -27,6 +27,14 @@ func main() {
 	app := &cli.App{
 		Name:  "venus message",
 		Usage: "used for manage message",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Value:   "./messager.toml",
+				Usage:   "specify config file",
+			},
+		},
 		Commands: []*cli.Command{ccli.MsgCmds,
 			ccli.AddrCmds,
 			ccli.WalletCmds,
@@ -49,13 +57,6 @@ var runCmd = &cli.Command{
 	Name:  "run",
 	Usage: "run messager",
 	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "config",
-			Aliases: []string{"c"},
-			Value:   "./messager.toml",
-			Usage:   "specify config file",
-		},
-
 		&cli.StringFlag{
 			Name:  "auth-url",
 			Usage: "url for auth server",
