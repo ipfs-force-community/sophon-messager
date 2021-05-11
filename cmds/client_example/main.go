@@ -32,7 +32,6 @@ func main() {
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNfd2FsbGV0IiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.kU50CeVEREIkcT_rn-RcOJFDU5T1dwEpjPNoFz1ct-g"
 	header := http.Header{}
 	header.Add("Authorization", "Bearer "+token)
-	header.Add(types.WalletName, *walletName)
 
 	client, closer, err := client.NewMessageRPC(context.Background(), "http://"+*url+"/rpc/v0", header)
 	if err != nil {
@@ -41,7 +40,7 @@ func main() {
 	}
 	defer closer()
 
-	// hasWalletAddress(client, *walletName)
+	//hasWalletAddress(client, *walletName)
 	loopPushMsgs(client, *walletName)
 
 	from, _ := address.NewFromString("t3v3wx6tbwlvzev7hxhbpdlfwvwq5mbdhfrgmy2i2ztfaqhwjwc6zkxo6to4x2ms2acicd3x57fabxhpszzwqq")

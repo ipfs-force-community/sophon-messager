@@ -55,6 +55,9 @@ func (walletController WalletController) SetSelectMsgNum(ctx context.Context, wa
 }
 
 func (walletController WalletController) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
+	if err := verifyWalletName(ctx, walletName); err != nil {
+		return false, err
+	}
 	return walletController.WalletService.HasWalletAddress(ctx, walletName, addr)
 }
 

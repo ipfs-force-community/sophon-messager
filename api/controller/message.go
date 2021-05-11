@@ -18,6 +18,9 @@ type Message struct {
 }
 
 func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+	if err := verifyWalletName(ctx, walletName); err != nil {
+		return "", err
+	}
 	newId := types.NewUUID()
 	err := message.MsgService.PushMessage(ctx, &types.Message{
 		ID:              newId.String(),
@@ -26,18 +29,28 @@ func (message Message) PushMessage(ctx context.Context, msg *venusTypes.Unsigned
 		State:           types.UnFillMsg,
 		WalletName:      walletName,
 	})
+	if err != nil {
+		message.Logger.Errorf("push message failed %v", err)
+	}
 
 	return newId.String(), err
 }
 
 func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	return id, message.MsgService.PushMessage(ctx, &types.Message{
+	if err := verifyWalletName(ctx, walletName); err != nil {
+		return id, err
+	}
+	err := message.MsgService.PushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
 		WalletName:      walletName,
 	})
+	if err != nil {
+		message.Logger.Errorf("push message failed id %s error %v", id, err)
+	}
+	return id, err
 }
 
 func (message Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {

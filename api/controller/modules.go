@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -147,4 +148,17 @@ func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logru
 		}
 	}
 	return nil
+}
+
+func verifyWalletName(ctx context.Context, walletName string) error {
+	// wi from token
+	// walletName from request parameter
+	if wi, ok := ctx.Value(types.WalletInfo{}).(types.WalletInfo); ok {
+		// skip local request: !wi.NeedCompare
+		if !wi.NeedCompare || wi.WalletName == walletName {
+			return nil
+		}
+		return xerrors.Errorf("wallet not match, actual: %s, except: %s", walletName, wi.WalletName)
+	}
+	return xerrors.Errorf("not found wallet info in context")
 }

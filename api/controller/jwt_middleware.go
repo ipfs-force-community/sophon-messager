@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -38,6 +39,11 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 	}
 
 	if ip == "127.0.0.1" {
+		ctx := context.WithValue(req.Context(), types.WalletInfo{}, types.WalletInfo{
+			NeedCompare: false,
+		})
+		newReq := req.WithContext(ctx)
+		*req = *newReq
 		return 0, nil
 	}
 
@@ -71,22 +77,15 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 			return http.StatusUnauthorized, xerrors.Errorf("Perm failed (need %s): %s", authMap[method], allow.Perm)
 		}
 
-		// Verify that the name in the token is the same as the wallet name used in the request
-		if _, ok := needVerifyMethod[method]; ok {
-			walletName := req.Header.Get(types.WalletName)
-			if walletName != allow.Name {
-				w.WriteHeader(http.StatusUnauthorized)
-				return http.StatusUnauthorized, xerrors.Errorf("verify wallet name failed except: %s, actual: %s", allow.Name, walletName)
-			}
-		}
+		ctx := context.WithValue(req.Context(), types.WalletInfo{}, types.WalletInfo{
+			WalletName:  allow.Name,
+			NeedCompare: true,
+		})
+		newReq := req.WithContext(ctx)
+		*req = *newReq
+
 		return 0, nil
 	}
 
 	return http.StatusUnauthorized, xerrors.New("no token in request")
-}
-
-var needVerifyMethod = map[string]struct{}{
-	"HasWalletAddress":  {},
-	"PushMessageWithId": {},
-	"PushMessageWith":   {},
 }
