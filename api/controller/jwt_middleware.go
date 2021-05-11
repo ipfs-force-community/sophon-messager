@@ -58,15 +58,35 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 		if err != nil {
 			return 401, xerrors.Errorf("JWT Verification failed (originating from %s): %s", ip, err)
 		}
-		method := req.Context().Value(types.Arguments{}).(map[string]interface{})["method"].(string)
+		args, ok := req.Context().Value(types.Arguments{}).(map[string]interface{})
+		if !ok {
+			w.WriteHeader(401)
+			return 401, xerrors.Errorf("Not found arguments")
+		}
+		method := args["method"].(string)
 
 		perms := core.AdaptOldStrategy(allow.Perm)
-		if !utils.Contains(perms, allow.Perm) {
+		if !utils.Contains(perms, authMap[method]) {
 			w.WriteHeader(401)
 			return 401, xerrors.Errorf("Perm failed (need %s): %s", authMap[method], allow.Perm)
+		}
+
+		// Verify that the name in the token is the same as the wallet name used in the request
+		if _, ok := needVerifyMethod[method]; ok {
+			walletName := req.Header.Get(types.WalletName)
+			if walletName != allow.Name {
+				w.WriteHeader(401)
+				return 401, xerrors.Errorf("verify wallet name failed except: %s, actual: %s", allow.Name, walletName)
+			}
 		}
 		return 0, nil
 	}
 
 	return 401, xerrors.New("no token in request")
+}
+
+var needVerifyMethod = map[string]struct{}{
+	"HasWalletAddress":  {},
+	"PushMessageWithId": {},
+	"PushMessageWith":   {},
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,16 +23,26 @@ func main() {
 		log.Fatal(err)
 		return
 	}
+	url := flag.String("url", cfg.API.Address, "api address")
+	walletName := flag.String("wallet-name", "venus_wallet", "wallet name")
+	flag.Parse()
 
+	fmt.Printf("url: %s, wallet name: %s \n", *url, *walletName)
+
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNfd2FsbGV0IiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.kU50CeVEREIkcT_rn-RcOJFDU5T1dwEpjPNoFz1ct-g"
 	header := http.Header{}
-	client, closer, err := client.NewMessageRPC(context.Background(), "http://"+cfg.API.Address+"/rpc/v0", header)
+	header.Add("Authorization", "Bearer "+token)
+	header.Add(types.WalletName, *walletName)
+
+	client, closer, err := client.NewMessageRPC(context.Background(), "http://"+*url+"/rpc/v0", header)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	defer closer()
 
-	loopPushMsgs(client)
+	// hasWalletAddress(client, *walletName)
+	loopPushMsgs(client, *walletName)
 
 	from, _ := address.NewFromString("t3v3wx6tbwlvzev7hxhbpdlfwvwq5mbdhfrgmy2i2ztfaqhwjwc6zkxo6to4x2ms2acicd3x57fabxhpszzwqq")
 	to, _ := address.NewFromString("t3ru4e5hrvhsjjvyxyzzxzmsoahrdmobsfz6ohmd7ftswxyf7dxvhnmkq63cu5ozdy4wnrcqxx4gkwa427grga")
@@ -78,9 +89,9 @@ func main() {
 }
 
 // nolint
-func loopPushMsgs(client client.IMessager) {
-	from, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
-	to, _ := address.NewFromString("t3qtatmg6tsxolkrbpbb63lexcxgcph4pujowihkayxx23fonnztfspjhviejflu6ssjitqmx3sei5k63ul5la")
+func loopPushMsgs(client client.IMessager, walletName string) {
+	from, _ := address.NewFromString("t3vu4bjjfpwoez2woas2yczdrb362chpplbljpib7kwxzjad53srwpgmyhvm7y3vjpauljxc6qbdy3nghv7bwa")
+	to, _ := address.NewFromString("t3vu4bjjfpwoez2woas2yczdrb362chpplbljpib7kwxzjad53srwpgmyhvm7y3vjpauljxc6qbdy3nghv7bwa")
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -104,7 +115,7 @@ func loopPushMsgs(client client.IMessager) {
 					Method:  0,
 				},
 				msgMate,
-				"venus_wallet",
+				walletName,
 			)
 			if err != nil {
 				log.Fatal(err)
@@ -114,4 +125,15 @@ func loopPushMsgs(client client.IMessager) {
 			fmt.Println("send message " + uid)
 		}
 	}
+}
+
+// nolint
+func hasWalletAddress(client client.IMessager, walletName string) {
+	addr, _ := address.NewFromString("t3vu4bjjfpwoez2woas2yczdrb362chpplbljpib7kwxzjad53srwpgmyhvm7y3vjpauljxc6qbdy3nghv7bwa")
+
+	has, err := client.HasWalletAddress(context.Background(), walletName, addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("HasWalletAddress ", has)
 }

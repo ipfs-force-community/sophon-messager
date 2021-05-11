@@ -440,7 +440,7 @@ func (walletService *WalletService) checkAddressState() {
 			if wa, err := walletService.repo.WalletAddressRepo().GetWalletAddress(pa.walletID, pa.addrID); err == nil && wa.AddressState == types.Alive {
 				isDeleted = true
 			} else {
-				if err := walletService.repo.WalletAddressRepo().DelWalletAddress(pa.walletID, pa.addrID); err != nil {
+				if err := walletService.repo.WalletAddressRepo().DelWalletAddress(pa.walletID, pa.addrID); err != nil && xerrors.Is(err, gorm.ErrRecordNotFound) {
 					walletService.log.Errorf("update address state %v", err)
 					continue
 				}

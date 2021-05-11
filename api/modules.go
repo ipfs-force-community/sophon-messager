@@ -95,8 +95,12 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 
 		code, err = filter.PreRequest(writer, request)
 		if err != nil {
+			var id int64
+			if args, ok := request.Context().Value(types.Arguments{}).(map[string]interface{}); ok {
+				id = args["id"].(int64)
+			}
 			resp := controller.JsonRpcResponse{
-				ID: request.Context().Value(types.Arguments{}).(map[string]interface{})["id"].(int64),
+				ID: id,
 				Error: &controller.RespError{
 					Code:    code,
 					Message: err.Error(),
@@ -105,7 +109,7 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 			writer.WriteHeader(code)
 			data, _ := json.Marshal(resp)
 			_, _ = writer.Write(data)
-			log.Errorf("cannot auth token verify")
+			log.Errorf("cannot auth token verify %v", err)
 			return
 		}
 

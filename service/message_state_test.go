@@ -1,9 +1,10 @@
 package service
 
 import (
-	"github.com/filecoin-project/venus-messager/models"
 	"os"
 	"testing"
+
+	"github.com/filecoin-project/venus-messager/models"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
