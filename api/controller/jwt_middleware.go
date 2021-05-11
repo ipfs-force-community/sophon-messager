@@ -51,38 +51,38 @@ func (jwtFilter *JWTFilter) PreRequest(w http.ResponseWriter, req *http.Request)
 
 	if token != "" {
 		if !strings.HasPrefix(token, "Bearer ") {
-			return 401, xerrors.New("missing Bearer prefix in auth header")
+			return http.StatusUnauthorized, xerrors.New("missing Bearer prefix in auth header")
 		}
 		token = strings.TrimPrefix(token, "Bearer ")
 		allow, err := jwtFilter.jwtClient.Verify(util.MacAddr(), "venus-messager", ip, localIp, token)
 		if err != nil {
-			return 401, xerrors.Errorf("JWT Verification failed (originating from %s): %s", ip, err)
+			return http.StatusUnauthorized, xerrors.Errorf("JWT Verification failed (originating from %s): %s", ip, err)
 		}
 		args, ok := req.Context().Value(types.Arguments{}).(map[string]interface{})
 		if !ok {
-			w.WriteHeader(401)
-			return 401, xerrors.Errorf("Not found arguments")
+			w.WriteHeader(http.StatusUnauthorized)
+			return http.StatusUnauthorized, xerrors.Errorf("Not found arguments")
 		}
 		method := args["method"].(string)
 
 		perms := core.AdaptOldStrategy(allow.Perm)
 		if !utils.Contains(perms, authMap[method]) {
-			w.WriteHeader(401)
-			return 401, xerrors.Errorf("Perm failed (need %s): %s", authMap[method], allow.Perm)
+			w.WriteHeader(http.StatusUnauthorized)
+			return http.StatusUnauthorized, xerrors.Errorf("Perm failed (need %s): %s", authMap[method], allow.Perm)
 		}
 
 		// Verify that the name in the token is the same as the wallet name used in the request
 		if _, ok := needVerifyMethod[method]; ok {
 			walletName := req.Header.Get(types.WalletName)
 			if walletName != allow.Name {
-				w.WriteHeader(401)
-				return 401, xerrors.Errorf("verify wallet name failed except: %s, actual: %s", allow.Name, walletName)
+				w.WriteHeader(http.StatusUnauthorized)
+				return http.StatusUnauthorized, xerrors.Errorf("verify wallet name failed except: %s, actual: %s", allow.Name, walletName)
 			}
 		}
 		return 0, nil
 	}
 
-	return 401, xerrors.New("no token in request")
+	return http.StatusUnauthorized, xerrors.New("no token in request")
 }
 
 var needVerifyMethod = map[string]struct{}{

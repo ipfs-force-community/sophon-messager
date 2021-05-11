@@ -40,20 +40,20 @@ func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Re
 	if req.Method == http.MethodPost && req.URL.Path == "/rpc/v0" {
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			return 503, xerrors.New("failed to read json rpc body")
+			return http.StatusServiceUnavailable, xerrors.New("failed to read json rpc body")
 		}
 
 		jsonReq := &JsonRpcRequest{}
 		err = json.Unmarshal(body, jsonReq)
 		if err != nil {
-			return 503, xerrors.New("failed to unmarshal json rpc body")
+			return http.StatusServiceUnavailable, xerrors.New("failed to unmarshal json rpc body")
 		}
 		methodSeq := strings.Split(jsonReq.Method, ".")
 		//	methodPath := strings.Join(strings.Split(jsonReq.Method, "."), "/")
 		newRequestUrl := req.RequestURI + "/" + methodSeq[len(methodSeq)-1] + "/" + strconv.FormatInt(jsonReq.ID, 10)
 		newUrl, err := url.Parse(newRequestUrl)
 		if err != nil {
-			return 503, xerrors.New("failed to parser new url")
+			return http.StatusServiceUnavailable, xerrors.New("failed to parser new url")
 		}
 		req.URL = newUrl
 		req.RequestURI = newRequestUrl
