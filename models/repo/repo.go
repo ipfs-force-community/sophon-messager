@@ -28,6 +28,7 @@ type Repo interface {
 	SharedParamsRepo() SharedParamsRepo
 	NodeRepo() NodeRepo
 	WalletAddressRepo() WalletAddressRepo
+	FeeConfigRepo() FeeConfigRepo
 }
 
 type TxRepo interface {

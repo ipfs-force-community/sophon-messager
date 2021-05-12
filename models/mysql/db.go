@@ -39,6 +39,10 @@ func (d MysqlRepo) NodeRepo() repo.NodeRepo {
 	return newMysqlNodeRepo(d.DB)
 }
 
+func (d MysqlRepo) FeeConfigRepo() repo.FeeConfigRepo {
+	return newMysqlFeeConfigRepo(d.DB)
+}
+
 func (d MysqlRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(mysqlMessage{})
 	if err != nil {
@@ -58,6 +62,10 @@ func (d MysqlRepo) AutoMigrate() error {
 	}
 
 	if err := d.GetDb().AutoMigrate(mysqlWalletAddress{}); err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(mysqlFeeConfig{}); err != nil {
 		return err
 	}
 

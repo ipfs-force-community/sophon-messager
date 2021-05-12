@@ -37,6 +37,10 @@ func (d SqlLiteRepo) WalletAddressRepo() repo.WalletAddressRepo {
 	return newSqliteWalletAddressRepo(d.DB)
 }
 
+func (d SqlLiteRepo) FeeConfigRepo() repo.FeeConfigRepo {
+	return newSqliteFeeConfigRepo(d.DB)
+}
+
 func (d SqlLiteRepo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(sqliteMessage{})
 	if err != nil {
@@ -56,6 +60,10 @@ func (d SqlLiteRepo) AutoMigrate() error {
 	}
 
 	if err := d.GetDb().AutoMigrate(sqliteWalletAddress{}); err != nil {
+		return err
+	}
+
+	if err := d.GetDb().AutoMigrate(sqliteFeeConfig{}); err != nil {
 		return err
 	}
 

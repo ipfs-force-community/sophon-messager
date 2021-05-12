@@ -25,4 +25,7 @@ var TSqliteNode = reflect.TypeOf(&sqliteNode{})
 var TWalletAddress = reflect.TypeOf(&types.WalletAddress{})
 var TSqliteWalletAddress = reflect.TypeOf(&sqliteWalletAddress{})
 
+var TFeeConfig = reflect.TypeOf(&types.FeeConfig{})
+var TSqliteFeeConfig = reflect.TypeOf(&sqliteFeeConfig{})
+
 var ERRUnspportedMappingType = fmt.Errorf("unsupported mapping type")
