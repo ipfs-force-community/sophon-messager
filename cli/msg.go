@@ -564,9 +564,6 @@ var markBadCmd = &cli.Command{
 			return errors.New("confirm to exec this command, specify --really-do-it")
 		}
 
-		if cctx.NArg() == 0 {
-			return xerrors.New("must has id argument")
-		}
 		if cctx.IsSet("from") {
 			fromAddr, err := address.NewFromString(cctx.String("from"))
 			if err != nil {
@@ -578,14 +575,19 @@ var markBadCmd = &cli.Command{
 			}
 			for _, msg := range msgs {
 				if msg.State == types.UnFillMsg {
-					_, err = client.MarkBadMessage(cctx.Context, msg.ID)
-					if err != nil {
-						fmt.Printf("mark msg %s as bad fail %v\n", msg.ID, err)
-						continue
+					if msg.Receipt != nil && len(msg.Receipt.ReturnValue) > 0 {
+						_, err = client.MarkBadMessage(cctx.Context, msg.ID)
+						if err != nil {
+							fmt.Printf("mark msg %s as bad fail %v\n", msg.ID, err)
+							continue
+						}
 					}
 				}
 			}
 		} else {
+			if cctx.NArg() == 0 {
+				return xerrors.New("must has id argument")
+			}
 			for _, id := range cctx.Args().Slice() {
 				_, err = client.MarkBadMessage(cctx.Context, id)
 				if err != nil {
