@@ -564,9 +564,6 @@ var markBadCmd = &cli.Command{
 			return errors.New("confirm to exec this command, specify --really-do-it")
 		}
 
-		if cctx.NArg() == 0 {
-			return xerrors.New("must has id argument")
-		}
 		if cctx.IsSet("from") {
 			fromAddr, err := address.NewFromString(cctx.String("from"))
 			if err != nil {
@@ -588,6 +585,9 @@ var markBadCmd = &cli.Command{
 				}
 			}
 		} else {
+			if cctx.NArg() == 0 {
+				return xerrors.New("must has id argument")
+			}
 			for _, id := range cctx.Args().Slice() {
 				_, err = client.MarkBadMessage(cctx.Context, id)
 				if err != nil {
