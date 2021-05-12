@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
@@ -15,8 +14,6 @@ import (
 )
 
 const referParamsInterval = time.Second * 10
-
-var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
 var defParams = &types.SharedParams{
 	ID:                 0,

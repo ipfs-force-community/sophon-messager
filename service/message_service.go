@@ -77,8 +77,9 @@ func NewMessageService(repo repo.Repo,
 	addressService *AddressService,
 	walletService *WalletService,
 	sps *SharedParamsService,
-	nodeService *NodeService) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, walletService, sps)
+	nodeService *NodeService,
+	fcs *FeeConfigService) (*MessageService, error) {
+	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, walletService, sps, fcs)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,

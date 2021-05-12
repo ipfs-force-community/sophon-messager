@@ -11,6 +11,8 @@ import (
 
 type UUID uuid.UUID
 
+var EmptyUUID = uuid.UUID{}
+
 func NewUUID() UUID {
 	return UUID(uuid.New())
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -36,14 +37,19 @@ type MessageSelector struct {
 	addressService *AddressService
 	walletService  *WalletService
 	sps            *SharedParamsService
+	fcs            *FeeConfigService
 
-	addrInfos *addrInfos
+	cache oneTimeCache // Avoid repeated requests to the database
 }
 
-type addrInfos struct {
-	addrInfos map[string]addrInfo
+type oneTimeCache struct {
+	addrInfos  map[string]addrInfo
+	feeConfigs map[string]struct {
+		feeConfig *types.FeeConfig
+		err       error
+	}
 
-	l sync.Mutex
+	l sync.RWMutex
 }
 
 type addrInfo struct {
@@ -72,7 +78,8 @@ func NewMessageSelector(repo repo.Repo,
 	nodeClient *NodeClient,
 	addressService *AddressService,
 	walletService *WalletService,
-	sps *SharedParamsService) *MessageSelector {
+	sps *SharedParamsService,
+	fcs *FeeConfigService) *MessageSelector {
 	return &MessageSelector{repo: repo,
 		log:            log,
 		cfg:            cfg,
@@ -80,6 +87,7 @@ func NewMessageSelector(repo repo.Repo,
 		addressService: addressService,
 		walletService:  walletService,
 		sps:            sps,
+		fcs:            fcs,
 	}
 }
 
@@ -88,10 +96,14 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	if err != nil {
 		return nil, err
 	}
-	messageSelector.addrInfos = &addrInfos{
+	messageSelector.cache = oneTimeCache{
 		addrInfos: make(map[string]addrInfo),
+		feeConfigs: map[string]struct {
+			feeConfig *types.FeeConfig
+			err       error
+		}{},
 	}
-	defer messageSelector.clearAddrInfos()
+	defer messageSelector.clearCache()
 
 	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
 	if err != nil {
@@ -258,7 +270,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		msg.Nonce = addr.Nonce
 
 		// global msg meta
-		newMsgMeta := messageSelector.messageMeta(msg.Meta)
+		newMsgMeta := messageSelector.messageMeta(msg)
 
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
@@ -346,22 +358,23 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 	return result, expireMsg
 }
 
-func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta) *types.MsgMeta {
+func (messageSelector *MessageSelector) messageMeta(msg *types.Message) *types.MsgMeta {
 	newMsgMeta := &types.MsgMeta{}
-	*newMsgMeta = *meta
-	globalMeta := messageSelector.sps.GetParams().GetMsgMeta()
-	if globalMeta == nil {
+	*newMsgMeta = *msg.Meta
+
+	fc, found := messageSelector.getFeeConfig(msg.WalletName, uint64(msg.Method))
+	if !found {
 		return newMsgMeta
 	}
 
-	if meta.GasOverEstimation == 0 {
-		newMsgMeta.GasOverEstimation = globalMeta.GasOverEstimation
+	if fc.GasOverEstimation != 0 {
+		newMsgMeta.GasOverEstimation = fc.GasOverEstimation
 	}
-	if meta.MaxFee.NilOrZero() {
-		newMsgMeta.MaxFee = globalMeta.MaxFee
+	if !fc.MaxFee.NilOrZero() {
+		newMsgMeta.MaxFee = fc.MaxFee
 	}
-	if meta.MaxFeeCap.NilOrZero() {
-		newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
+	if !fc.MaxFeeCap.NilOrZero() {
+		newMsgMeta.MaxFeeCap = fc.MaxFeeCap
 	}
 
 	return newMsgMeta
@@ -440,8 +453,9 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	return msg, nil
 }
 
-func (messageSelector *MessageSelector) clearAddrInfos() {
-	for _, addrInfo := range messageSelector.addrInfos.addrInfos {
+func (messageSelector *MessageSelector) clearCache() {
+	// close client
+	for _, addrInfo := range messageSelector.cache.addrInfos {
 		if addrInfo.close != nil {
 			addrInfo.close()
 		}
@@ -449,37 +463,61 @@ func (messageSelector *MessageSelector) clearAddrInfos() {
 }
 
 func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr address.Address) (addrInfo, bool) {
-	messageSelector.addrInfos.l.Lock()
-	defer messageSelector.addrInfos.l.Unlock()
+	messageSelector.cache.l.Lock()
+	defer messageSelector.cache.l.Unlock()
 
 	key := walletName + ":" + addr.String()
-	if info, ok := messageSelector.addrInfos.addrInfos[key]; ok {
-		if info.err != nil {
-			return addrInfo{}, false
+	if info, ok := messageSelector.cache.addrInfos[key]; ok {
+		if info.err == nil {
+			return info, ok
 		}
-		return info, true
+		return addrInfo{}, false
 	}
 
+	var cli WalletClient
+	var close jsonrpc.ClientCloser
 	wa, err := messageSelector.walletService.GetWalletAddress(context.TODO(), walletName, addr)
-	if err != nil {
-		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
-		return addrInfo{}, false
+	if err == nil {
+		cli, close, err = messageSelector.walletService.GetWalletClient(context.TODO(), walletName)
 	}
-	cli, close, err := messageSelector.walletService.GetWalletClient(context.TODO(), walletName)
-	if err != nil {
-		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
-		return addrInfo{}, false
-	}
-
 	info := addrInfo{
 		walletCli: &cli,
 		close:     close,
 		state:     wa.AddressState,
-		err:       nil,
+		err:       err,
 	}
-	messageSelector.addrInfos.addrInfos[key] = info
+	messageSelector.cache.addrInfos[key] = info
+
+	if err != nil {
+		return addrInfo{}, false
+	}
 
 	return info, true
+}
+
+func (messageSelector *MessageSelector) getFeeConfig(walletName string, methodType uint64) (*types.FeeConfig, bool) {
+	messageSelector.cache.l.Lock()
+	defer messageSelector.cache.l.Unlock()
+
+	key := fmt.Sprintf("%s:%d", walletName, methodType)
+	if fc, ok := messageSelector.cache.feeConfigs[key]; ok {
+		if fc.err == nil {
+			return fc.feeConfig, ok
+		}
+		return nil, false
+	}
+
+	fc, err := messageSelector.fcs.SelectFeeConfig(walletName, methodType)
+	messageSelector.cache.feeConfigs[key] = struct {
+		feeConfig *types.FeeConfig
+		err       error
+	}{feeConfig: fc, err: err}
+
+	if err != nil {
+		return nil, false
+	}
+
+	return fc, true
 }
 
 func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {

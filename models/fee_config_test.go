@@ -2,7 +2,6 @@ package models
 
 import (
 	"testing"
-	"time"
 
 	"gorm.io/gorm"
 
@@ -25,8 +24,6 @@ func TestFeeConfig(t *testing.T) {
 			MaxFee:            big.NewInt(0),
 			MaxFeeCap:         big.NewInt(10),
 			IsDeleted:         -1,
-			CreatedAt:         time.Now(),
-			UpdatedAt:         time.Now(),
 		}
 
 		fc2 := &types.FeeConfig{
@@ -37,8 +34,26 @@ func TestFeeConfig(t *testing.T) {
 			MaxFee:            big.NewInt(11),
 			MaxFeeCap:         big.NewInt(0),
 			IsDeleted:         -1,
-			CreatedAt:         time.Now(),
-			UpdatedAt:         time.Now(),
+		}
+
+		globalFC := &types.FeeConfig{
+			ID:                types.UUID{},
+			WalletID:          types.UUID{},
+			MethodType:        -1,
+			GasOverEstimation: 1.2,
+			MaxFee:            big.NewInt(110),
+			MaxFeeCap:         big.NewInt(10),
+			IsDeleted:         -1,
+		}
+
+		walletFC := &types.FeeConfig{
+			ID:                types.NewUUID(),
+			WalletID:          types.NewUUID(),
+			MethodType:        -1,
+			GasOverEstimation: 1.2,
+			MaxFee:            big.NewInt(110),
+			MaxFeeCap:         big.NewInt(10),
+			IsDeleted:         -1,
 		}
 
 		t.Run("SaveFeeConfig", func(t *testing.T) {
@@ -66,6 +81,44 @@ func TestFeeConfig(t *testing.T) {
 
 		})
 
+		t.Run("GetGlobalFeeConfig", func(t *testing.T) {
+			_, err := feeConfigRepo.GetGlobalFeeConfig()
+			assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
+
+			// save global fee config
+			if err := feeConfigRepo.SaveFeeConfig(globalFC); err != nil {
+				// Data from the previous test
+				assert.Contains(t, err.Error(), "UNIQUE constraint failed")
+				return
+			}
+
+			fc, err := feeConfigRepo.GetGlobalFeeConfig()
+			assert.NoError(t, err)
+			assert.Equal(t, fc.GasOverEstimation, fc.GasOverEstimation)
+			assert.Equal(t, fc.MaxFeeCap, fc.MaxFeeCap)
+			assert.Equal(t, fc.MaxFee, fc.MaxFee)
+			assert.Equal(t, fc.IsDeleted, fc.IsDeleted)
+
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.MethodType))
+		})
+
+		t.Run("GetWalletFeeConfig", func(t *testing.T) {
+			_, err := feeConfigRepo.GetWalletFeeConfig(walletFC.WalletID)
+			assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
+
+			// save wallet fee config
+			assert.NoError(t, feeConfigRepo.SaveFeeConfig(walletFC))
+
+			fc, err := feeConfigRepo.GetWalletFeeConfig(walletFC.WalletID)
+			assert.NoError(t, err)
+			assert.Equal(t, fc.GasOverEstimation, fc.GasOverEstimation)
+			assert.Equal(t, fc.MaxFeeCap, fc.MaxFeeCap)
+			assert.Equal(t, fc.MaxFee, fc.MaxFee)
+			assert.Equal(t, fc.IsDeleted, fc.IsDeleted)
+
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.MethodType))
+		})
+
 		t.Run("HasFeeConfig", func(t *testing.T) {
 			has, err := feeConfigRepo.HasFeeConfig(fc2.WalletID, fc2.MethodType)
 			assert.NoError(t, err)
@@ -88,6 +141,7 @@ func TestFeeConfig(t *testing.T) {
 			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc2.WalletID, fc2.MethodType))
 			fcList2, err := feeConfigRepo.ListFeeConfig()
 			assert.NoError(t, err)
+			t.Log(fcList2)
 			assert.Equal(t, 0, len(fcList2))
 		})
 	}

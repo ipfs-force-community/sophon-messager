@@ -9,7 +9,7 @@ import (
 type FeeConfig struct {
 	ID                UUID    `json:"id"`
 	WalletID          UUID    `json:"walletID"`
-	MethodType        uint64  `json:"methodType"`
+	MethodType        int64   `json:"methodType"`
 	GasOverEstimation float64 `json:"gasOverEstimation"`
 	MaxFee            big.Int `json:"maxFee"`
 	MaxFeeCap         big.Int `json:"maxFeeCap"`

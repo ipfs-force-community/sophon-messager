@@ -15,13 +15,15 @@ func MakeServiceMap(msgService *MessageService,
 	walletService *WalletService,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	nodeService *NodeService) ServiceMap {
+	nodeService *NodeService,
+	fcService *FeeConfigService) ServiceMap {
 	sMap := make(ServiceMap)
 	sMap[reflect.TypeOf(msgService)] = msgService
 	sMap[reflect.TypeOf(walletService)] = walletService
 	sMap[reflect.TypeOf(addressService)] = addressService
 	sMap[reflect.TypeOf(sps)] = sps
 	sMap[reflect.TypeOf(nodeService)] = nodeService
+	sMap[reflect.TypeOf(fcService)] = fcService
 	return sMap
 }
 
@@ -32,6 +34,7 @@ func MessagerService() fx.Option {
 		fx.Provide(NewAddressService),
 		fx.Provide(NewSharedParamsService),
 		fx.Provide(NewNodeService),
+		fx.Provide(NewFeeConfigService),
 		fx.Provide(MakeServiceMap),
 	)
 }
