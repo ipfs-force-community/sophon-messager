@@ -41,7 +41,7 @@ func SetupController(router *gin.Engine, sMap service.ServiceMap, log *logrus.Lo
 	v1 := router.Group("rpc/v0")
 	var ts []reflect.Type
 	ts = append(ts, reflect.TypeOf(Message{}), reflect.TypeOf(Address{}), reflect.TypeOf(WalletController{}),
-		reflect.TypeOf(SharedParamsCtrl{}), reflect.TypeOf(NodeController{}))
+		reflect.TypeOf(SharedParamsCtrl{}), reflect.TypeOf(NodeController{}), reflect.TypeOf(FeeConfig{}))
 	return registerController(v1, sMap, log, ts)
 }
 

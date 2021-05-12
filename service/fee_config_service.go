@@ -48,6 +48,34 @@ func NewFeeConfigService(repo repo.Repo, logger *logrus.Logger) (*FeeConfigServi
 	return fcs, nil
 }
 
+func (fcs *FeeConfigService) SaveFeeConfig(fc *types.FeeConfig) (types.UUID, error) {
+	return fc.ID, fcs.repo.FeeConfigRepo().SaveFeeConfig(fc)
+}
+
+func (fcs *FeeConfigService) GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
+	return fcs.repo.FeeConfigRepo().GetFeeConfig(walletID, methodType)
+}
+
+func (fcs *FeeConfigService) GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error) {
+	return fcs.repo.FeeConfigRepo().GetWalletFeeConfig(walletID)
+}
+
+func (fcs *FeeConfigService) GetGlobalFeeConfig() (*types.FeeConfig, error) {
+	return fcs.repo.FeeConfigRepo().GetGlobalFeeConfig()
+}
+
+func (fcs *FeeConfigService) ListFeeConfig() ([]*types.FeeConfig, error) {
+	return fcs.repo.FeeConfigRepo().ListFeeConfig()
+}
+
+func (fcs *FeeConfigService) HasFeeConfig(walletID types.UUID, methodType int64) (bool, error) {
+	return fcs.repo.FeeConfigRepo().HasFeeConfig(walletID, methodType)
+}
+
+func (fcs *FeeConfigService) DeleteFeeConfig(walletID types.UUID, methodType int64) error {
+	return fcs.repo.FeeConfigRepo().DeleteFeeConfig(walletID, methodType)
+}
+
 func (fcs *FeeConfigService) SelectFeeConfig(walletName string, methodType uint64) (*types.FeeConfig, error) {
 	wallet, err := fcs.repo.WalletRepo().GetWalletByName(walletName)
 	if err != nil {

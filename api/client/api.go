@@ -67,6 +67,14 @@ type IMessager interface {
 	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
 	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:read
 	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                             //perm:admin
+
+	SaveFeeConfig(feeConfig *types.FeeConfig) (types.UUID, error)                 //perm:admin
+	GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) //perm:admin
+	GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error)             //perm:admin
+	GetGlobalFeeConfig() (*types.FeeConfig, error)                                //perm:admin
+	ListFeeConfig() ([]*types.FeeConfig, error)                                   //perm:admin
+	HasFeeConfig(walletID types.UUID, methodType int64) (bool, error)             //perm:admin
+	DeleteFeeConfig(walletID types.UUID, methodType int64) error                  //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
@@ -127,6 +135,14 @@ type Message struct {
 		SetSelectMsgNum   func(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error)
 		HasWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
+
+		SaveFeeConfig      func(feeConfig *types.FeeConfig) (types.UUID, error)
+		GetFeeConfig       func(walletID types.UUID, methodType int64) (*types.FeeConfig, error)
+		GetWalletFeeConfig func(walletID types.UUID) (*types.FeeConfig, error)
+		GetGlobalFeeConfig func() (*types.FeeConfig, error)
+		ListFeeConfig      func() ([]*types.FeeConfig, error)
+		HasFeeConfig       func(walletID types.UUID, methodType int64) (bool, error)
+		DeleteFeeConfig    func(walletID types.UUID, methodType int64) error
 	}
 }
 
@@ -376,4 +392,34 @@ func (message *Message) ListWalletAddress(ctx context.Context) ([]*types.WalletA
 
 func (message *Message) GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) {
 	return message.Internal.GetWalletAddress(ctx, walletName, addr)
+}
+
+/////// fee config ///////
+
+func (message *Message) SaveFeeConfig(feeConfig *types.FeeConfig) (types.UUID, error) {
+	return message.Internal.SaveFeeConfig(feeConfig)
+}
+
+func (message *Message) GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
+	return message.Internal.GetFeeConfig(walletID, methodType)
+}
+
+func (message *Message) GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error) {
+	return message.Internal.GetWalletFeeConfig(walletID)
+}
+
+func (message *Message) GetGlobalFeeConfig() (*types.FeeConfig, error) {
+	return message.Internal.GetGlobalFeeConfig()
+}
+
+func (message *Message) ListFeeConfig() ([]*types.FeeConfig, error) {
+	return message.Internal.ListFeeConfig()
+}
+
+func (message *Message) HasFeeConfig(walletID types.UUID, methodType int64) (bool, error) {
+	return message.Internal.HasFeeConfig(walletID, methodType)
+}
+
+func (message *Message) DeleteFeeConfig(walletID types.UUID, methodType int64) error {
+	return message.Internal.DeleteFeeConfig(walletID, methodType)
 }
