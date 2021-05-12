@@ -1,15 +1,17 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
+
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/types"
 )
 
 var DefaultMaxFee = venusTypes.MustParseFIL("0.07")
@@ -48,32 +50,32 @@ func NewFeeConfigService(repo repo.Repo, logger *logrus.Logger) (*FeeConfigServi
 	return fcs, nil
 }
 
-func (fcs *FeeConfigService) SaveFeeConfig(fc *types.FeeConfig) (types.UUID, error) {
+func (fcs *FeeConfigService) SaveFeeConfig(ctx context.Context, fc *types.FeeConfig) (types.UUID, error) {
 	return fc.ID, fcs.repo.FeeConfigRepo().SaveFeeConfig(fc)
 }
 
-func (fcs *FeeConfigService) GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
+func (fcs *FeeConfigService) GetFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
 	return fcs.repo.FeeConfigRepo().GetFeeConfig(walletID, methodType)
 }
 
-func (fcs *FeeConfigService) GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error) {
+func (fcs *FeeConfigService) GetWalletFeeConfig(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error) {
 	return fcs.repo.FeeConfigRepo().GetWalletFeeConfig(walletID)
 }
 
-func (fcs *FeeConfigService) GetGlobalFeeConfig() (*types.FeeConfig, error) {
+func (fcs *FeeConfigService) GetGlobalFeeConfig(ctx context.Context) (*types.FeeConfig, error) {
 	return fcs.repo.FeeConfigRepo().GetGlobalFeeConfig()
 }
 
-func (fcs *FeeConfigService) ListFeeConfig() ([]*types.FeeConfig, error) {
+func (fcs *FeeConfigService) ListFeeConfig(ctx context.Context) ([]*types.FeeConfig, error) {
 	return fcs.repo.FeeConfigRepo().ListFeeConfig()
 }
 
-func (fcs *FeeConfigService) HasFeeConfig(walletID types.UUID, methodType int64) (bool, error) {
+func (fcs *FeeConfigService) HasFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (bool, error) {
 	return fcs.repo.FeeConfigRepo().HasFeeConfig(walletID, methodType)
 }
 
-func (fcs *FeeConfigService) DeleteFeeConfig(walletID types.UUID, methodType int64) error {
-	return fcs.repo.FeeConfigRepo().DeleteFeeConfig(walletID, methodType)
+func (fcs *FeeConfigService) DeleteFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (types.UUID, error) {
+	return walletID, fcs.repo.FeeConfigRepo().DeleteFeeConfig(walletID, methodType)
 }
 
 func (fcs *FeeConfigService) SelectFeeConfig(walletName string, methodType uint64) (*types.FeeConfig, error) {

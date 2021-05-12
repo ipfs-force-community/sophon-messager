@@ -41,6 +41,7 @@ func main() {
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
 			ccli.WalletAddrCmds,
+			ccli.FeeConfigCmds,
 			runCmd,
 		},
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 var WalletAddrCmds = &cli.Command{
-	Name:  "wallet_addr",
+	Name:  "wallet-addr",
 	Usage: "wallet address commands",
 	Subcommands: []*cli.Command{
 		searchWalletAddrCmd,
