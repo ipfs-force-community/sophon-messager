@@ -16,7 +16,7 @@ type sqliteFeeConfig struct {
 	ID types.UUID `gorm:"column:id;type:varchar(256);primary_key;"`
 
 	WalletID          types.UUID `gorm:"column:wallet_id;type:varchar(256);NOT NULL"`
-	MethodType        int64      `gorm:"column:method_type;type:bigint;NOT NULL"`
+	Method            int64      `gorm:"column:method;type:bigint;NOT NULL"`
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            types.Int  `gorm:"column:max_fee;type:varchar(256);"`
 	MaxFeeCap         types.Int  `gorm:"column:max_fee_cap;type:varchar(256);"`
@@ -50,9 +50,9 @@ func (sfc *sqliteFeeConfigRepo) SaveFeeConfig(fc *types.FeeConfig) error {
 	return sfc.Save(fromFeeConfig(fc)).Error
 }
 
-func (sfc *sqliteFeeConfigRepo) GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
+func (sfc *sqliteFeeConfigRepo) GetFeeConfig(walletID types.UUID, method int64) (*types.FeeConfig, error) {
 	var fc sqliteFeeConfig
-	if err := sfc.Take(&fc, "wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).Error; err != nil {
+	if err := sfc.Take(&fc, "wallet_id = ? and method = ? and is_deleted = -1", walletID, method).Error; err != nil {
 		return nil, err
 	}
 
@@ -61,7 +61,7 @@ func (sfc *sqliteFeeConfigRepo) GetFeeConfig(walletID types.UUID, methodType int
 
 func (sfc *sqliteFeeConfigRepo) GetGlobalFeeConfig() (*types.FeeConfig, error) {
 	var fc sqliteFeeConfig
-	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method_type = ? and is_deleted = -1", types.DefGlobalFeeCfgID, types.UUID{}, -1).Error; err != nil {
+	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method = ? and is_deleted = -1", types.DefGlobalFeeCfgID, types.UUID{}, -1).Error; err != nil {
 		return nil, err
 	}
 
@@ -70,16 +70,16 @@ func (sfc *sqliteFeeConfigRepo) GetGlobalFeeConfig() (*types.FeeConfig, error) {
 
 func (sfc *sqliteFeeConfigRepo) GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error) {
 	var fc sqliteFeeConfig
-	if err := sfc.Take(&fc, "wallet_id = ? and method_type = ? and is_deleted = -1", walletID, -1).Error; err != nil {
+	if err := sfc.Take(&fc, "wallet_id = ? and method = ? and is_deleted = -1", walletID, -1).Error; err != nil {
 		return nil, err
 	}
 
 	return feeConfig(fc), nil
 }
 
-func (sfc *sqliteFeeConfigRepo) HasFeeConfig(walletID types.UUID, methodType int64) (bool, error) {
+func (sfc *sqliteFeeConfigRepo) HasFeeConfig(walletID types.UUID, method int64) (bool, error) {
 	var count int64
-	if err := sfc.Model((*sqliteFeeConfig)(nil)).Where("wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).
+	if err := sfc.Model((*sqliteFeeConfig)(nil)).Where("wallet_id = ? and method = ? and is_deleted = -1", walletID, method).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -101,8 +101,8 @@ func (sfc *sqliteFeeConfigRepo) ListFeeConfig() ([]*types.FeeConfig, error) {
 	return fcList, nil
 }
 
-func (sfc *sqliteFeeConfigRepo) DeleteFeeConfig(walletID types.UUID, methodType int64) error {
-	return sfc.Model((*sqliteFeeConfig)(nil)).Where("wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).
+func (sfc *sqliteFeeConfigRepo) DeleteFeeConfig(walletID types.UUID, method int64) error {
+	return sfc.Model((*sqliteFeeConfig)(nil)).Where("wallet_id = ? and method = ? and is_deleted = -1", walletID, method).
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted}).Error
 }
 

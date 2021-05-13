@@ -19,7 +19,7 @@ func TestFeeConfig(t *testing.T) {
 		fc := &types.FeeConfig{
 			ID:                types.NewUUID(),
 			WalletID:          types.NewUUID(),
-			MethodType:        0,
+			Method:            0,
 			GasOverEstimation: 1.25,
 			MaxFee:            big.NewInt(0),
 			MaxFeeCap:         big.NewInt(10),
@@ -29,7 +29,7 @@ func TestFeeConfig(t *testing.T) {
 		fc2 := &types.FeeConfig{
 			ID:                types.NewUUID(),
 			WalletID:          types.NewUUID(),
-			MethodType:        1,
+			Method:            1,
 			GasOverEstimation: 1.2,
 			MaxFee:            big.NewInt(11),
 			MaxFeeCap:         big.NewInt(0),
@@ -39,7 +39,7 @@ func TestFeeConfig(t *testing.T) {
 		globalFC := &types.FeeConfig{
 			ID:                types.DefGlobalFeeCfgID,
 			WalletID:          types.UUID{},
-			MethodType:        -1,
+			Method:            -1,
 			GasOverEstimation: 1.2,
 			MaxFee:            big.NewInt(110),
 			MaxFeeCap:         big.NewInt(10),
@@ -49,7 +49,7 @@ func TestFeeConfig(t *testing.T) {
 		walletFC := &types.FeeConfig{
 			ID:                types.NewUUID(),
 			WalletID:          types.NewUUID(),
-			MethodType:        -1,
+			Method:            -1,
 			GasOverEstimation: 1.2,
 			MaxFee:            big.NewInt(110),
 			MaxFeeCap:         big.NewInt(10),
@@ -62,7 +62,7 @@ func TestFeeConfig(t *testing.T) {
 		})
 
 		t.Run("GetFeeConfig", func(t *testing.T) {
-			result, err := feeConfigRepo.GetFeeConfig(fc.WalletID, fc.MethodType)
+			result, err := feeConfigRepo.GetFeeConfig(fc.WalletID, fc.Method)
 			assert.NoError(t, err)
 			assert.Equal(t, fc.ID, result.ID)
 			assert.Equal(t, fc.GasOverEstimation, result.GasOverEstimation)
@@ -75,8 +75,8 @@ func TestFeeConfig(t *testing.T) {
 			assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 			assert.Nil(t, result2)
 
-			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.MethodType))
-			_, err = feeConfigRepo.GetFeeConfig(fc.WalletID, fc.MethodType)
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.Method))
+			_, err = feeConfigRepo.GetFeeConfig(fc.WalletID, fc.Method)
 			assert.Error(t, err)
 
 		})
@@ -95,7 +95,7 @@ func TestFeeConfig(t *testing.T) {
 			assert.Equal(t, fc.MaxFee, fc.MaxFee)
 			assert.Equal(t, fc.IsDeleted, fc.IsDeleted)
 
-			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.MethodType))
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.Method))
 		})
 
 		t.Run("GetWalletFeeConfig", func(t *testing.T) {
@@ -112,11 +112,11 @@ func TestFeeConfig(t *testing.T) {
 			assert.Equal(t, fc.MaxFee, fc.MaxFee)
 			assert.Equal(t, fc.IsDeleted, fc.IsDeleted)
 
-			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.MethodType))
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc.WalletID, fc.Method))
 		})
 
 		t.Run("HasFeeConfig", func(t *testing.T) {
-			has, err := feeConfigRepo.HasFeeConfig(fc2.WalletID, fc2.MethodType)
+			has, err := feeConfigRepo.HasFeeConfig(fc2.WalletID, fc2.Method)
 			assert.NoError(t, err)
 			assert.Equal(t, true, has)
 
@@ -124,7 +124,7 @@ func TestFeeConfig(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, false, has)
 
-			has, err = feeConfigRepo.HasFeeConfig(fc.WalletID, fc.MethodType)
+			has, err = feeConfigRepo.HasFeeConfig(fc.WalletID, fc.Method)
 			assert.NoError(t, err)
 			assert.Equal(t, false, has)
 		})
@@ -134,7 +134,7 @@ func TestFeeConfig(t *testing.T) {
 			assert.NoError(t, err)
 			assert.GreaterOrEqual(t, len(fcList), 1)
 
-			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc2.WalletID, fc2.MethodType))
+			assert.NoError(t, feeConfigRepo.DeleteFeeConfig(fc2.WalletID, fc2.Method))
 			fcList2, err := feeConfigRepo.ListFeeConfig()
 			assert.NoError(t, err)
 			t.Log(fcList2)

@@ -495,11 +495,11 @@ func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr addr
 	return info, true
 }
 
-func (messageSelector *MessageSelector) getFeeConfig(walletName string, methodType uint64) (*types.FeeConfig, bool) {
+func (messageSelector *MessageSelector) getFeeConfig(walletName string, method uint64) (*types.FeeConfig, bool) {
 	messageSelector.cache.l.Lock()
 	defer messageSelector.cache.l.Unlock()
 
-	key := fmt.Sprintf("%s:%d", walletName, methodType)
+	key := fmt.Sprintf("%s:%d", walletName, method)
 	if fc, ok := messageSelector.cache.feeConfigs[key]; ok {
 		if fc.err == nil {
 			return fc.feeConfig, ok
@@ -507,7 +507,7 @@ func (messageSelector *MessageSelector) getFeeConfig(walletName string, methodTy
 		return nil, false
 	}
 
-	fc, err := messageSelector.fcs.SelectFeeConfig(walletName, methodType)
+	fc, err := messageSelector.fcs.SelectFeeConfig(walletName, method)
 	messageSelector.cache.feeConfigs[key] = struct {
 		feeConfig *types.FeeConfig
 		err       error

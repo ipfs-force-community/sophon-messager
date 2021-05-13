@@ -16,8 +16,8 @@ func (fc FeeConfig) SaveFeeConfig(ctx context.Context, feeConfig *types.FeeConfi
 	return fc.FeeConfigService.SaveFeeConfig(ctx, feeConfig)
 }
 
-func (fc FeeConfig) GetFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
-	return fc.FeeConfigService.GetFeeConfig(ctx, walletID, methodType)
+func (fc FeeConfig) GetFeeConfig(ctx context.Context, walletID types.UUID, method int64) (*types.FeeConfig, error) {
+	return fc.FeeConfigService.GetFeeConfig(ctx, walletID, method)
 }
 
 func (fc FeeConfig) GetWalletFeeConfig(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error) {
@@ -32,10 +32,10 @@ func (fc FeeConfig) ListFeeConfig(ctx context.Context) ([]*types.FeeConfig, erro
 	return fc.FeeConfigService.ListFeeConfig(ctx)
 }
 
-func (fc FeeConfig) HasFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (bool, error) {
-	return fc.FeeConfigService.HasFeeConfig(ctx, walletID, methodType)
+func (fc FeeConfig) HasFeeConfig(ctx context.Context, walletID types.UUID, method int64) (bool, error) {
+	return fc.FeeConfigService.HasFeeConfig(ctx, walletID, method)
 }
 
-func (fc FeeConfig) DeleteFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (types.UUID, error) {
-	return fc.FeeConfigService.DeleteFeeConfig(ctx, walletID, methodType)
+func (fc FeeConfig) DeleteFeeConfig(ctx context.Context, walletID types.UUID, method int64) (types.UUID, error) {
+	return fc.FeeConfigService.DeleteFeeConfig(ctx, walletID, method)
 }

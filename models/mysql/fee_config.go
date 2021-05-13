@@ -16,7 +16,7 @@ type mysqlFeeConfig struct {
 	ID types.UUID `gorm:"column:id;type:varchar(256);primary_key;"`
 
 	WalletID          types.UUID `gorm:"column:wallet_id;type:varchar(256);NOT NULL"`
-	MethodType        int64      `gorm:"column:method_type;type:bigint;NOT NULL"`
+	Method            int64      `gorm:"column:method;type:bigint;NOT NULL"`
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            types.Int  `gorm:"column:max_fee;type:varchar(256);"`
 	MaxFeeCap         types.Int  `gorm:"column:max_fee_cap;type:varchar(256);"`
@@ -50,9 +50,9 @@ func (sfc *mysqlFeeConfigRepo) SaveFeeConfig(fc *types.FeeConfig) error {
 	return sfc.Save(fromFeeConfig(fc)).Error
 }
 
-func (sfc *mysqlFeeConfigRepo) GetFeeConfig(walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
+func (sfc *mysqlFeeConfigRepo) GetFeeConfig(walletID types.UUID, method int64) (*types.FeeConfig, error) {
 	var fc mysqlFeeConfig
-	if err := sfc.Take(&fc, "wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).Error; err != nil {
+	if err := sfc.Take(&fc, "wallet_id = ? and method = ? and is_deleted = -1", walletID, method).Error; err != nil {
 		return nil, err
 	}
 
@@ -61,7 +61,7 @@ func (sfc *mysqlFeeConfigRepo) GetFeeConfig(walletID types.UUID, methodType int6
 
 func (sfc *mysqlFeeConfigRepo) GetGlobalFeeConfig() (*types.FeeConfig, error) {
 	var fc mysqlFeeConfig
-	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method_type = ? and is_deleted = -1", types.DefGlobalFeeCfgID, types.UUID{}, -1).Error; err != nil {
+	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method = ? and is_deleted = -1", types.DefGlobalFeeCfgID, types.UUID{}, -1).Error; err != nil {
 		return nil, err
 	}
 
@@ -70,16 +70,16 @@ func (sfc *mysqlFeeConfigRepo) GetGlobalFeeConfig() (*types.FeeConfig, error) {
 
 func (sfc *mysqlFeeConfigRepo) GetWalletFeeConfig(walletID types.UUID) (*types.FeeConfig, error) {
 	var fc mysqlFeeConfig
-	if err := sfc.Take(&fc, "wallet_id = ? and method_type = ? and is_deleted = -1", walletID, -1).Error; err != nil {
+	if err := sfc.Take(&fc, "wallet_id = ? and method = ? and is_deleted = -1", walletID, -1).Error; err != nil {
 		return nil, err
 	}
 
 	return feeConfig(fc), nil
 }
 
-func (sfc *mysqlFeeConfigRepo) HasFeeConfig(walletID types.UUID, methodType int64) (bool, error) {
+func (sfc *mysqlFeeConfigRepo) HasFeeConfig(walletID types.UUID, method int64) (bool, error) {
 	var count int64
-	if err := sfc.Model((*mysqlFeeConfig)(nil)).Where("wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).
+	if err := sfc.Model((*mysqlFeeConfig)(nil)).Where("wallet_id = ? and method = ? and is_deleted = -1", walletID, method).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -101,8 +101,8 @@ func (sfc *mysqlFeeConfigRepo) ListFeeConfig() ([]*types.FeeConfig, error) {
 	return fcList, nil
 }
 
-func (sfc *mysqlFeeConfigRepo) DeleteFeeConfig(walletID types.UUID, methodType int64) error {
-	return sfc.Model((*mysqlFeeConfig)(nil)).Where("wallet_id = ? and method_type = ? and is_deleted = -1", walletID, methodType).
+func (sfc *mysqlFeeConfigRepo) DeleteFeeConfig(walletID types.UUID, method int64) error {
+	return sfc.Model((*mysqlFeeConfig)(nil)).Where("wallet_id = ? and method = ? and is_deleted = -1", walletID, method).
 		Update("is_deleted", repo.Deleted).Error
 }
 

@@ -68,13 +68,13 @@ type IMessager interface {
 	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:read
 	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                             //perm:admin
 
-	SaveFeeConfig(ctx context.Context, feeConfig *types.FeeConfig) (types.UUID, error)                 //perm:admin
-	GetFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (*types.FeeConfig, error) //perm:admin
-	GetWalletFeeConfig(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error)             //perm:admin
-	GetGlobalFeeConfig(ctx context.Context) (*types.FeeConfig, error)                                  //perm:admin
-	ListFeeConfig(ctx context.Context) ([]*types.FeeConfig, error)                                     //perm:admin
-	HasFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (bool, error)             //perm:admin
-	DeleteFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (types.UUID, error)    //perm:admin
+	SaveFeeConfig(ctx context.Context, feeConfig *types.FeeConfig) (types.UUID, error)             //perm:admin
+	GetFeeConfig(ctx context.Context, walletID types.UUID, method int64) (*types.FeeConfig, error) //perm:admin
+	GetWalletFeeConfig(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error)         //perm:admin
+	GetGlobalFeeConfig(ctx context.Context) (*types.FeeConfig, error)                              //perm:admin
+	ListFeeConfig(ctx context.Context) ([]*types.FeeConfig, error)                                 //perm:admin
+	HasFeeConfig(ctx context.Context, walletID types.UUID, method int64) (bool, error)             //perm:admin
+	DeleteFeeConfig(ctx context.Context, walletID types.UUID, method int64) (types.UUID, error)    //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
@@ -137,12 +137,12 @@ type Message struct {
 		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
 
 		SaveFeeConfig      func(ctx context.Context, feeConfig *types.FeeConfig) (types.UUID, error)
-		GetFeeConfig       func(ctx context.Context, walletID types.UUID, methodType int64) (*types.FeeConfig, error)
+		GetFeeConfig       func(ctx context.Context, walletID types.UUID, method int64) (*types.FeeConfig, error)
 		GetWalletFeeConfig func(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error)
 		GetGlobalFeeConfig func(ctx context.Context) (*types.FeeConfig, error)
 		ListFeeConfig      func(ctx context.Context) ([]*types.FeeConfig, error)
-		HasFeeConfig       func(ctx context.Context, walletID types.UUID, methodType int64) (bool, error)
-		DeleteFeeConfig    func(ctx context.Context, walletID types.UUID, methodType int64) (types.UUID, error)
+		HasFeeConfig       func(ctx context.Context, walletID types.UUID, method int64) (bool, error)
+		DeleteFeeConfig    func(ctx context.Context, walletID types.UUID, method int64) (types.UUID, error)
 	}
 }
 
@@ -400,8 +400,8 @@ func (message *Message) SaveFeeConfig(ctx context.Context, feeConfig *types.FeeC
 	return message.Internal.SaveFeeConfig(ctx, feeConfig)
 }
 
-func (message *Message) GetFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (*types.FeeConfig, error) {
-	return message.Internal.GetFeeConfig(ctx, walletID, methodType)
+func (message *Message) GetFeeConfig(ctx context.Context, walletID types.UUID, method int64) (*types.FeeConfig, error) {
+	return message.Internal.GetFeeConfig(ctx, walletID, method)
 }
 
 func (message *Message) GetWalletFeeConfig(ctx context.Context, walletID types.UUID) (*types.FeeConfig, error) {
@@ -416,10 +416,10 @@ func (message *Message) ListFeeConfig(ctx context.Context) ([]*types.FeeConfig, 
 	return message.Internal.ListFeeConfig(ctx)
 }
 
-func (message *Message) HasFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (bool, error) {
-	return message.Internal.HasFeeConfig(ctx, walletID, methodType)
+func (message *Message) HasFeeConfig(ctx context.Context, walletID types.UUID, method int64) (bool, error) {
+	return message.Internal.HasFeeConfig(ctx, walletID, method)
 }
 
-func (message *Message) DeleteFeeConfig(ctx context.Context, walletID types.UUID, methodType int64) (types.UUID, error) {
-	return message.Internal.DeleteFeeConfig(ctx, walletID, methodType)
+func (message *Message) DeleteFeeConfig(ctx context.Context, walletID types.UUID, method int64) (types.UUID, error) {
+	return message.Internal.DeleteFeeConfig(ctx, walletID, method)
 }

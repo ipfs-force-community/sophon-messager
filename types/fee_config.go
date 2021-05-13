@@ -21,7 +21,7 @@ var DefGlobalFeeCfgID UUID
 type FeeConfig struct {
 	ID                UUID    `json:"id"`
 	WalletID          UUID    `json:"walletID"`
-	MethodType        int64   `json:"methodType"`
+	Method            int64   `json:"method"`
 	GasOverEstimation float64 `json:"gasOverEstimation"`
 	MaxFee            big.Int `json:"maxFee"`
 	MaxFeeCap         big.Int `json:"maxFeeCap"`
