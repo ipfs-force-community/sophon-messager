@@ -61,7 +61,7 @@ func (sfc *mysqlFeeConfigRepo) GetFeeConfig(walletID types.UUID, methodType int6
 
 func (sfc *mysqlFeeConfigRepo) GetGlobalFeeConfig() (*types.FeeConfig, error) {
 	var fc mysqlFeeConfig
-	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method_type = ? and is_deleted = -1", types.EmptyUUID, types.EmptyUUID, -1).Error; err != nil {
+	if err := sfc.Take(&fc, "id = ? and wallet_id = ? and method_type = ? and is_deleted = -1", types.DefGlobalFeeCfgID, types.UUID{}, -1).Error; err != nil {
 		return nil, err
 	}
 

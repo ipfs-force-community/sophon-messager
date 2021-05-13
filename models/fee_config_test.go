@@ -37,7 +37,7 @@ func TestFeeConfig(t *testing.T) {
 		}
 
 		globalFC := &types.FeeConfig{
-			ID:                types.UUID{},
+			ID:                types.DefGlobalFeeCfgID,
 			WalletID:          types.UUID{},
 			MethodType:        -1,
 			GasOverEstimation: 1.2,
@@ -86,11 +86,7 @@ func TestFeeConfig(t *testing.T) {
 			assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 
 			// save global fee config
-			if err := feeConfigRepo.SaveFeeConfig(globalFC); err != nil {
-				// Data from the previous test
-				assert.Contains(t, err.Error(), "UNIQUE constraint failed")
-				return
-			}
+			assert.NoError(t, feeConfigRepo.SaveFeeConfig(globalFC))
 
 			fc, err := feeConfigRepo.GetGlobalFeeConfig()
 			assert.NoError(t, err)

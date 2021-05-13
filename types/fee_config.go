@@ -3,8 +3,20 @@ package types
 import (
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/filecoin-project/go-state-types/big"
 )
+
+func init() {
+	uuid, err := ParseUUID("00000000-0000-0000-0000-000000000001")
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	DefGlobalFeeCfgID = uuid
+}
+
+var DefGlobalFeeCfgID UUID
 
 type FeeConfig struct {
 	ID                UUID    `json:"id"`

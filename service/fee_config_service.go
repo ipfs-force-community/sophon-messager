@@ -17,7 +17,7 @@ import (
 var DefaultMaxFee = venusTypes.MustParseFIL("0.07")
 
 var globalFeeConfig = types.FeeConfig{
-	ID:                types.UUID{},
+	ID:                types.DefGlobalFeeCfgID,
 	WalletID:          types.UUID{},
 	MethodType:        -1,
 	GasOverEstimation: 1.25,
@@ -30,9 +30,9 @@ type FeeConfigService struct {
 	log  *logrus.Logger
 }
 
-func NewFeeConfigService(repo repo.Repo, logger *logrus.Logger) (*FeeConfigService, error) {
+func NewFeeConfigService(r repo.Repo, logger *logrus.Logger) (*FeeConfigService, error) {
 	fcs := &FeeConfigService{
-		repo: repo,
+		repo: r,
 		log:  logger,
 	}
 	_, err := fcs.repo.FeeConfigRepo().GetGlobalFeeConfig()
@@ -41,6 +41,7 @@ func NewFeeConfigService(repo repo.Repo, logger *logrus.Logger) (*FeeConfigServi
 			return nil, err
 		}
 		gfc := &globalFeeConfig
+		gfc.IsDeleted = repo.NotDeleted
 		gfc.CreatedAt = time.Now()
 		if err := fcs.repo.FeeConfigRepo().SaveFeeConfig(gfc); err != nil {
 			return nil, xerrors.Errorf("save global fee config failed %v", err)
