@@ -14,6 +14,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
+	"github.com/filecoin-project/venus/pkg/crypto"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
@@ -162,13 +163,13 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	//判断是否需要推送消息
-	timeOutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	actor, err := messageSelector.nodeClient.StateGetActor(timeOutCtx, addr.Addr, ts.Key())
-
+	actorI, err := handleTimeout(messageSelector.nodeClient.StateGetActor, timeoutCtx, []interface{}{addr.Addr, ts.Key()})
 	if err != nil {
-		return nil, xerrors.Errorf("actor of address %s not found", addr.Addr)
+		return nil, err
 	}
+	actor := actorI.(*venusTypes.Actor)
 	nonceInLatestTs := actor.Nonce
 	if nonceInTs, ok := appliedNonce.Get(addr.Addr); ok {
 		nonceInLatestTs = nonceInTs
@@ -291,10 +292,10 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sig, err := addrInfo.walletCli.WalletSign(timeOutCtx, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
+		sigI, err := handleTimeout(addrInfo.walletCli.WalletSign, timeOutCtx, []interface{}{addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
-		})
+		}})
 		cancel()
 		if err != nil {
 			//todo client net crash?
@@ -303,6 +304,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 
+		sig := sigI.(*crypto.Signature)
 		msg.Signature = sig
 		//state
 		msg.State = types.FillMsg
@@ -411,28 +413,29 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 }
 func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
 	if msg.GasLimit == 0 {
-		gasLimit, err := messageSelector.nodeClient.GasEstimateGasLimit(ctx, msg, tsk)
+		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, tsk})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas used: %w", err)
 		}
+		gasLimit := gasLimitI.(int64)
 		//GasOverEstimation default value should be 1.25
 		msg.GasLimit = int64(float64(gasLimit) * meta.GasOverEstimation)
 	}
 
 	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
-		gasPremium, err := messageSelector.nodeClient.GasEstimateGasPremium(ctx, 10, msg.From, msg.GasLimit, tsk)
+		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, tsk})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas price: %w", err)
 		}
-		msg.GasPremium = gasPremium
+		msg.GasPremium = gasPremiumI.(big.Int)
 	}
 
 	if msg.GasFeeCap == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasFeeCap, venusTypes.NewInt(0)) == 0 {
-		feeCap, err := messageSelector.nodeClient.GasEstimateFeeCap(ctx, msg, 20, venusTypes.EmptyTSK)
+		feeCapI, err := handleTimeout(messageSelector.nodeClient.GasEstimateFeeCap, ctx, []interface{}{msg, int64(20), venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating fee cap: %w", err)
 		}
-		msg.GasFeeCap = feeCap
+		msg.GasFeeCap = feeCapI.(big.Int)
 	}
 
 	CapGasFee(msg, meta.MaxFee)
