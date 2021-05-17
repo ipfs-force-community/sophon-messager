@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 )
@@ -71,4 +73,37 @@ func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageSer
 		},
 	})
 	return nd
+}
+
+// In order to resolve the timeout does not work
+func handleTimeout(f interface{}, ctx context.Context, args []interface{}) (interface{}, error) {
+	if reflect.ValueOf(f).Kind() != reflect.Func {
+		return nil, xerrors.Errorf("first parameter must be method")
+	}
+
+	var out []reflect.Value
+	callDone := make(chan struct{})
+	rvs := make([]reflect.Value, 0, len(args)+1)
+	rvs = append(rvs, reflect.ValueOf(ctx))
+	for _, arg := range args {
+		rvs = append(rvs, reflect.ValueOf(arg))
+	}
+	go func() {
+		out = reflect.ValueOf(f).Call(rvs)
+		close(callDone)
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-callDone:
+	}
+
+	if len(out) == 2 {
+		if out[1].IsNil() {
+			return out[0].Interface(), nil
+		}
+		return nil, out[1].Interface().(error)
+	}
+
+	return nil, xerrors.Errorf("method must has 2 return as result")
 }
