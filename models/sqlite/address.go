@@ -13,10 +13,11 @@ import (
 )
 
 type sqliteAddress struct {
-	ID     types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr   string     `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
-	Nonce  uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
-	Weight int64      `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	ID         types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr       string     `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
+	Nonce      uint64     `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
+	Weight     int64      `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	WalletName string     `gorm:"column:wallet_name;type:varchar(256);NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -68,30 +69,9 @@ func (s sqliteAddressRepo) SaveAddress(ctx context.Context, addr *types.Address)
 	return s.DB.Save(FromAddress(addr)).Error
 }
 
-func (s sqliteAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address) error {
-	updateColumns := map[string]interface{}{
-		"nonce":      addr.Nonce,
-		"is_deleted": addr.IsDeleted,
-	}
-	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ?", addr.Addr.String()).Updates(updateColumns).Error
-}
-
-func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ?", addr.String()).UpdateColumn("nonce", nonce).Error
-}
-
-func (s sqliteAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	var count int64
-	err := s.DB.Model((*sqliteAddress)(nil)).Where("addr = ?", addr.String()).Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s sqliteAddressRepo) GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Take(&a, "addr = ? and is_deleted = -1", addr.String()).Error; err != nil {
+	if err := s.DB.Take(&a, "wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).Error; err != nil {
 		return nil, err
 	}
 
@@ -107,18 +87,22 @@ func (s sqliteAddressRepo) GetAddressByID(ctx context.Context, id types.UUID) (*
 	return a.Address()
 }
 
-func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, walletName string, addr address.Address) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.Take(&a, "wallet_name = ? and addr = ?", walletName, addr.String()).Error; err != nil {
 		return nil, err
 	}
 
 	return a.Address()
 }
 
-func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		Updates(map[string]interface{}{"is_deleted": repo.Deleted}).Error
+func (s sqliteAddressRepo) HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
+	var count int64
+	if err := s.DB.Model((*sqliteAddress)(nil)).
+		Where("wallet_name and addr = ? and is_deleted = -1", walletName, addr.String()).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
@@ -137,6 +121,16 @@ func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, e
 	}
 
 	return result, nil
+}
+
+func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
+	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumn("nonce", nonce).Error
+}
+
+func (s sqliteAddressRepo) DelAddress(ctx context.Context, walletName string, addr address.Address) error {
+	return s.DB.Model((*sqliteAddress)(nil)).Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
+		Updates(map[string]interface{}{"is_deleted": repo.Deleted}).Error
 }
 
 var _ repo.AddressRepo = &sqliteAddressRepo{}

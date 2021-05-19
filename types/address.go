@@ -10,8 +10,9 @@ type Address struct {
 	ID   UUID            `json:"id"`
 	Addr address.Address `json:"addr"`
 	//max for current, use nonce and +1
-	Nonce  uint64 `json:"nonce"`
-	Weight int64  `json:"weight"`
+	Nonce      uint64 `json:"nonce"`
+	Weight     int64  `json:"weight"`
+	WalletName string `json:"walletName"`
 
 	IsDeleted int       `json:"isDeleted"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `json:"createAt"`  // 创建时间
