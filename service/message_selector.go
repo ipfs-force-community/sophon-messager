@@ -85,10 +85,13 @@ func NewMessageSelector(repo repo.Repo,
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
-	addrList, err := messageSelector.addressService.ListAddress(ctx)
+	allAddrs, err := messageSelector.addressService.ListAddress(ctx)
 	if err != nil {
 		return nil, err
 	}
+	addrList := messageSelector.uniqAddresses(allAddrs)
+	addrSelMsgNum := messageSelector.addrSelectMsgNum(allAddrs)
+
 	messageSelector.addrInfos = &addrInfos{
 		addrInfos: make(map[string]addrInfo),
 	}
@@ -110,6 +113,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	sem := make(chan struct{}, 10)
 	wg.Add(len(addrList))
 	for _, addr := range addrList {
+		selMsgNum, _ := addrSelMsgNum[addr.Addr]
 		go func(addr *types.Address) {
 			sem <- struct{}{}
 			defer func() {
@@ -117,7 +121,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				<-sem
 			}()
 
-			addrSelResult, err := messageSelector.selectAddrMessage(ctx, appliedNonce, addr, ts)
+			addrSelResult, err := messageSelector.selectAddrMessage(ctx, appliedNonce, addr, ts, selMsgNum)
 			if err != nil {
 				messageSelector.log.Errorf("select message of %s fail %v", addr.Addr, err)
 				return
@@ -140,27 +144,8 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
-
-	addrsInfo, err := messageSelector.repo.WalletAddressRepo().GetWalletAddressByAddrID(addr.ID)
-	if err != nil {
-		return nil, xerrors.Errorf("got wallet address by addr id %v", err)
-	}
-	if len(addrsInfo) == 0 {
-		return nil, xerrors.Errorf("no wallet client")
-	}
-
-	var maxAllowPendingMessage uint64
-	if messageSelector.sps.GetParams().SharedParams != nil {
-		maxAllowPendingMessage = messageSelector.sps.GetParams().SelMsgNum
-	}
-	for _, addrInfo := range addrsInfo {
-		if addrInfo.SelMsgNum != 0 {
-			maxAllowPendingMessage = addrInfo.SelMsgNum
-			break
-		}
-	}
 
 	//判断是否需要推送消息
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
@@ -178,9 +163,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		messageSelector.log.Warnf("%s nonce in db %d is smaller than nonce on chain %d, update to latest", addr.Addr, addr.Nonce, nonceInLatestTs)
 		addr.Nonce = nonceInLatestTs
 		addr.UpdatedAt = time.Now()
-		err := messageSelector.repo.AddressRepo().SaveAddress(ctx, addr)
+		err := messageSelector.repo.AddressRepo().UpdateNonce(ctx, addr.Addr, addr.Nonce)
 		if err != nil {
-			return nil, xerrors.Errorf("update address %s nonce fail", addr.Addr)
+			return nil, xerrors.Errorf("update address %s nonce failed %v", addr.Addr, err)
 		}
 	}
 	//todo push signed but not onchain message, when to resend message
@@ -463,11 +448,12 @@ func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr addr
 		return info, true
 	}
 
-	wa, err := messageSelector.walletService.GetWalletAddress(context.TODO(), walletName, addr)
+	ai, err := messageSelector.addressService.GetAddress(context.TODO(), walletName, addr)
 	if err != nil {
 		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
 		return addrInfo{}, false
 	}
+	// 用getway的方式访问
 	cli, close, err := messageSelector.walletService.GetWalletClient(context.TODO(), walletName)
 	if err != nil {
 		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
@@ -477,12 +463,42 @@ func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr addr
 	info := addrInfo{
 		walletCli: &cli,
 		close:     close,
-		state:     wa.AddressState,
+		state:     ai.State,
 		err:       nil,
 	}
 	messageSelector.addrInfos.addrInfos[key] = info
 
 	return info, true
+}
+
+func (messageSelector *MessageSelector) uniqAddresses(addrList []*types.Address) []*types.Address {
+	uniqAddr := make(map[address.Address]struct{}, len(addrList))
+	addrs := make([]*types.Address, 0, len(addrList))
+	for _, addr := range addrList {
+		if _, ok := uniqAddr[addr.Addr]; !ok {
+			addrs = append(addrs, addr)
+			uniqAddr[addr.Addr] = struct{}{}
+		}
+	}
+
+	return addrs
+}
+
+func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Address) map[address.Address]uint64 {
+	var defSelMsgNum uint64
+	if messageSelector.sps.GetParams().SharedParams != nil {
+		defSelMsgNum = messageSelector.sps.GetParams().SelMsgNum
+	}
+	selMsgNum := make(map[address.Address]uint64)
+	for _, addr := range addrList {
+		if num, ok := selMsgNum[addr.Addr]; ok && num < addr.SelMsgNum {
+			selMsgNum[addr.Addr] = addr.SelMsgNum
+		} else {
+			selMsgNum[addr.Addr] = defSelMsgNum
+		}
+	}
+
+	return selMsgNum
 }
 
 func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/utils"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
@@ -176,7 +175,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			return nil, xerrors.Errorf("found message at height %d error %v", ts.Height(), err)
 		}
 
-		addrs := ms.walletService.AllAddresses()
+		addrs := ms.addressService.Addresses()
 		for _, msg := range msgs {
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
@@ -197,7 +196,7 @@ type pendingMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, error) {
 	var applyMsgs []pendingMessage
-	addrs := ms.walletService.AllAddresses()
+	addrs := ms.addressService.Addresses()
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
 		height := ts.Height()

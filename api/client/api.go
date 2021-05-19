@@ -41,12 +41,15 @@ type IMessager interface {
 	ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) //perm:admin
 	DeleteWallet(ctx context.Context, name string) (string, error)                       //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                  //perm:admin
-	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                 //perm:admin
-	HasAddress(ctx context.Context, addr address.Address) (bool, error)                           //perm:admin
-	ListAddress(ctx context.Context) ([]*types.Address, error)                                    //perm:admin
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) //perm:admin
-	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)             //perm:admin
+	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                       //perm:admin
+	GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)                   //perm:admin
+	HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                             //perm:admin
+	ListAddress(ctx context.Context) ([]*types.Address, error)                                                         //perm:admin
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)                      //perm:admin
+	DeleteAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
+	ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)            //perm:admin
+	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
+	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
 
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
@@ -58,12 +61,9 @@ type IMessager interface {
 	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
 	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
 
-	GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)       //perm:admin
-	ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)            //perm:admin
-	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
-	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
-	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                       //perm:read
-	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                             //perm:admin
+	GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) //perm:admin
+	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                 //perm:read
+	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                       //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
@@ -99,12 +99,15 @@ type Message struct {
 		ListRemoteWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
 		DeleteWallet            func(ctx context.Context, name string) (string, error)
 
-		SaveAddress   func(ctx context.Context, address *types.Address) (types.UUID, error)
-		GetAddress    func(ctx context.Context, addr address.Address) (*types.Address, error)
-		HasAddress    func(ctx context.Context, addr address.Address) (bool, error)
-		ListAddress   func(ctx context.Context) ([]*types.Address, error)
-		UpdateNonce   func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-		DeleteAddress func(ctx context.Context, addr address.Address) (address.Address, error)
+		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
+		GetAddress       func(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)
+		HasAddress       func(ctx context.Context, walletName string, addr address.Address) (bool, error)
+		ListAddress      func(ctx context.Context) ([]*types.Address, error)
+		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
+		DeleteAddress    func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
+		ForbiddenAddress func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
+		ActiveAddress    func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
+		SetSelectMsgNum  func(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
 		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
@@ -117,9 +120,6 @@ type Message struct {
 		DeleteNode func(ctx context.Context, name string) (struct{}, error)
 
 		GetWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)
-		ForbiddenAddress  func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
-		ActiveAddress     func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
-		SetSelectMsgNum   func(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error)
 		HasWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
 	}
@@ -241,12 +241,12 @@ func (message *Message) SaveAddress(ctx context.Context, address *types.Address)
 	return message.Internal.SaveAddress(ctx, address)
 }
 
-func (message *Message) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
-	return message.Internal.GetAddress(ctx, addr)
+func (message *Message) GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error) {
+	return message.Internal.GetAddress(ctx, walletName, addr)
 }
 
-func (message *Message) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	return message.Internal.HasAddress(ctx, addr)
+func (message *Message) HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
+	return message.Internal.HasAddress(ctx, walletName, addr)
 }
 
 func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, error) {
@@ -257,8 +257,20 @@ func (message *Message) UpdateNonce(ctx context.Context, addr address.Address, n
 	return message.Internal.UpdateNonce(ctx, addr, nonce)
 }
 
-func (message *Message) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return message.Internal.DeleteAddress(ctx, addr)
+func (message *Message) DeleteAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
+	return message.Internal.DeleteAddress(ctx, walletName, addr)
+}
+
+func (message *Message) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
+	return message.Internal.ForbiddenAddress(ctx, walletName, addr)
+}
+
+func (message *Message) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
+	return message.Internal.ActiveAddress(ctx, walletName, addr)
+}
+
+func (message *Message) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
+	return message.Internal.SetSelectMsgNum(ctx, walletName, addr, num)
 }
 
 /////// shared params ///////
@@ -298,18 +310,6 @@ func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, 
 }
 
 /////// wallet address ///////
-
-func (message *Message) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return message.Internal.ForbiddenAddress(ctx, walletName, addr)
-}
-
-func (message *Message) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return message.Internal.ActiveAddress(ctx, walletName, addr)
-}
-
-func (message *Message) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
-	return message.Internal.SetSelectMsgNum(ctx, walletName, addr, num)
-}
 
 func (message *Message) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
 	return message.Internal.HasWalletAddress(ctx, walletName, addr)

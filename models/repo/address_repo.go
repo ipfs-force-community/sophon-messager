@@ -17,4 +17,6 @@ type AddressRepo interface {
 	ListAddress(ctx context.Context) ([]*types.Address, error)
 	DelAddress(ctx context.Context, walletName string, addr address.Address) error
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
+	UpdateState(ctx context.Context, walletName string, addr address.Address, state types.State) error
+	UpdateSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) error
 }

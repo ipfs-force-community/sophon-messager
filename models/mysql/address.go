@@ -12,11 +12,13 @@ import (
 )
 
 type mysqlAddress struct {
-	ID         types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr       string     `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
-	Nonce      uint64     `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
-	Weight     int64      `gorm:"column:weight;type:bigint;index;NOT NULL"`
-	WalletName string     `gorm:"column:wallet_name;type:varchar(256);NOT NULL"`
+	ID         types.UUID  `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr       string      `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
+	Nonce      uint64      `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
+	Weight     int64       `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	SelMsgNum  uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
+	State      types.State `gorm:"column:state;type:int;index;"`
+	WalletName string      `gorm:"column:wallet_name;type:varchar(256);NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -33,6 +35,8 @@ func FromAddress(addr *types.Address) *mysqlAddress {
 		Addr:       addr.Addr.String(),
 		Nonce:      addr.Nonce,
 		Weight:     addr.Weight,
+		SelMsgNum:  addr.SelMsgNum,
+		State:      addr.State,
 		WalletName: addr.WalletName,
 		IsDeleted:  addr.IsDeleted,
 		CreatedAt:  addr.CreatedAt,
@@ -50,6 +54,8 @@ func (s mysqlAddress) Address() (*types.Address, error) {
 		Addr:       addr,
 		Nonce:      s.Nonce,
 		Weight:     s.Weight,
+		SelMsgNum:  s.SelMsgNum,
+		State:      s.State,
 		WalletName: s.WalletName,
 		IsDeleted:  s.IsDeleted,
 		CreatedAt:  s.CreatedAt,
@@ -127,10 +133,20 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, walletName string, addr address.Address) error {
 	return s.DB.Model((*mysqlAddress)(nil)).Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
-		UpdateColumn("is_deleted", repo.Deleted).Error
+		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.Removed, "updated_at": time.Now()}).Error
 }
 
 func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
 	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = -1", addr.String()).
-		UpdateColumn("nonce", nonce).Error
+		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateState(ctx context.Context, walletName string, addr address.Address, state types.State) error {
+	return s.DB.Model(&mysqlAddress{}).Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
+		UpdateColumns(map[string]interface{}{"state": state, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) error {
+	return s.DB.Model((*mysqlAddress)(nil)).Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
+		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
 }

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/filecoin-project/go-jsonrpc"
 
 	"github.com/filecoin-project/go-address"
@@ -38,12 +40,13 @@ const (
 )
 
 type MessageService struct {
-	repo          repo.Repo
-	log           *logrus.Logger
-	cfg           *config.MessageServiceConfig
-	nodeClient    *NodeClient
-	messageState  *MessageState
-	walletService *WalletService
+	repo           repo.Repo
+	log            *logrus.Logger
+	cfg            *config.MessageServiceConfig
+	nodeClient     *NodeClient
+	messageState   *MessageState
+	walletService  *WalletService
+	addressService *AddressService
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -90,8 +93,9 @@ func NewMessageService(repo repo.Repo,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
-		messageState:  messageState,
-		walletService: walletService,
+		messageState:   messageState,
+		walletService:  walletService,
+		addressService: addressService,
 		tsCache: &TipsetCache{
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
@@ -120,10 +124,13 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	if wa, err := ms.walletService.GetWalletAddress(ctx, msg.WalletName, msg.From); err != nil {
-		return xerrors.Errorf("found address %s %v", msg.From.String(), err)
-	} else if wa.AddressState != types.Alive {
-		return xerrors.Errorf("address state is %s", types.StateToString(wa.AddressState))
+	if addrInfo, err := ms.addressService.GetAddress(ctx, msg.WalletName, msg.From); err != nil {
+		if xerrors.Is(err, gorm.ErrRecordNotFound) { // 去钱包查询是否有该地址
+
+		}
+		return xerrors.Errorf("found address failed %v", err)
+	} else if addrInfo.State != types.Alive {
+		return xerrors.Errorf("address state is %s", types.StateToString(addrInfo.State))
 	}
 
 	msg.Nonce = 0
@@ -548,7 +555,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 
 		for _, addr := range selectResult.ModifyAddress {
-			err = txRepo.AddressRepo().SaveAddress(ctx, addr)
+			err = txRepo.AddressRepo().UpdateNonce(ctx, addr.Addr, addr.Nonce)
 			if err != nil {
 				return err
 			}
