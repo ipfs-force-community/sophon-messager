@@ -20,8 +20,11 @@ func SetLogger(logCfg *config.LogConfig) (*logrus.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(level)
 	log.SetLevel(level)
+	log.SetFormatter(&logrus.TextFormatter{
+		ForceColors:   true,
+		FullTimestamp: true,
+	})
 	file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0666)
 	if err == nil {
 		logrus.SetOutput(file)
