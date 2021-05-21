@@ -7,7 +7,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -27,7 +26,6 @@ type IMessager interface {
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
 	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                               //perm:admin
 	ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)                                       //perm:admin
-	UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)                                           //perm:admin
 	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)                                                                        //perm:admin
@@ -42,18 +40,17 @@ type IMessager interface {
 	ListWallet(ctx context.Context) ([]*types.Wallet, error)                             //perm:admin
 	ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) //perm:admin
 	DeleteWallet(ctx context.Context, name string) (string, error)                       //perm:admin
-	UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error)              //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (string, error)                      //perm:admin
+	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                  //perm:admin
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                 //perm:admin
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)                           //perm:admin
 	ListAddress(ctx context.Context) ([]*types.Address, error)                                    //perm:admin
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) //perm:admin
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)             //perm:admin
 
-	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                             //perm:admin
-	SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) //perm:admin
-	RefreshSharedParams(ctx context.Context) (struct{}, error)                                    //perm:admin
+	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
+	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
+	RefreshSharedParams(ctx context.Context) (struct{}, error)                         //perm:admin
 
 	SaveNode(ctx context.Context, node *types.Node) (struct{}, error) //perm:admin
 	GetNode(ctx context.Context, name string) (*types.Node, error)    //perm:admin
@@ -87,7 +84,6 @@ type Message struct {
 		ListMessageByFromState   func(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error)
 		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
 		ListBlockedMessage       func(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)
-		UpdateMessageStateByCid  func(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error)
 		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
@@ -102,9 +98,8 @@ type Message struct {
 		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
 		ListRemoteWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
 		DeleteWallet            func(ctx context.Context, name string) (string, error)
-		UpdateWallet            func(ctx context.Context, wallet *types.Wallet) (string, error)
 
-		SaveAddress   func(ctx context.Context, address *types.Address) (string, error)
+		SaveAddress   func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress    func(ctx context.Context, addr address.Address) (*types.Address, error)
 		HasAddress    func(ctx context.Context, addr address.Address) (bool, error)
 		ListAddress   func(ctx context.Context) ([]*types.Address, error)
@@ -112,7 +107,7 @@ type Message struct {
 		DeleteAddress func(ctx context.Context, addr address.Address) (address.Address, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
-		SetSharedParams     func(context.Context, *types.SharedParams) (*types.SharedParams, error)
+		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
 		RefreshSharedParams func(ctx context.Context) (struct{}, error)
 
 		SaveNode   func(ctx context.Context, node *types.Node) (struct{}, error)
@@ -182,10 +177,6 @@ func (message *Message) ListBlockedMessage(ctx context.Context, addr address.Add
 	return message.Internal.ListBlockedMessage(ctx, addr, d)
 }
 
-func (message *Message) UpdateMessageStateByCid(ctx context.Context, cid cid.Cid, state types.MessageState) (cid.Cid, error) {
-	return message.Internal.UpdateMessageStateByCid(ctx, cid, state)
-}
-
 func (message *Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
 	return message.Internal.UpdateMessageStateByID(ctx, id, state)
 }
@@ -211,49 +202,7 @@ func (message *Message) MarkBadMessage(ctx context.Context, id string) (struct{}
 }
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
-	tm := time.NewTicker(time.Second * 30)
-	defer tm.Stop()
-
-	doneCh := make(chan struct{}, 1)
-	doneCh <- struct{}{}
-
-	for {
-		select {
-		case <-doneCh:
-			msg, err := message.Internal.GetMessageByUid(ctx, id)
-			if err != nil {
-				return nil, err
-			}
-
-			switch msg.State {
-			//OffChain
-			case types.FillMsg:
-				fallthrough
-			case types.UnFillMsg:
-				fallthrough
-			case types.UnKnown:
-				continue
-			//OnChain
-			case types.ReplacedMsg:
-				fallthrough
-			case types.OnChainMsg:
-				if msg.Confidence > int64(confidence) {
-					return msg, nil
-				}
-				continue
-			//Error
-			case types.FailedMsg:
-				return msg, nil
-			case types.NoWalletMsg:
-				return nil, xerrors.New("msg failed due to wallet disappear")
-			}
-
-		case <-tm.C:
-			doneCh <- struct{}{}
-		case <-ctx.Done():
-			return nil, xerrors.New("exit by client ")
-		}
-	}
+	return message.Internal.WaitMessage(ctx, id, confidence)
 }
 
 ///////  wallet  ///////
@@ -286,13 +235,9 @@ func (message *Message) DeleteWallet(ctx context.Context, name string) (string, 
 	return message.Internal.DeleteWallet(ctx, name)
 }
 
-func (message *Message) UpdateWallet(ctx context.Context, wallet *types.Wallet) (string, error) {
-	return message.Internal.UpdateWallet(ctx, wallet)
-}
-
 ///////  address ///////
 
-func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (string, error) {
+func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
 	return message.Internal.SaveAddress(ctx, address)
 }
 
@@ -322,7 +267,7 @@ func (message *Message) GetSharedParams(ctx context.Context) (*types.SharedParam
 	return message.Internal.GetSharedParams(ctx)
 }
 
-func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) (*types.SharedParams, error) {
+func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
 	return message.Internal.SetSharedParams(ctx, params)
 }
 

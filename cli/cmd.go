@@ -3,6 +3,8 @@ package cli
 import (
 	"net/http"
 
+	"github.com/filecoin-project/venus-messager/service"
+
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/urfave/cli/v2"
 
@@ -15,9 +17,13 @@ func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {
 	if err != nil {
 		return &client.Message{}, func() {}, err
 	}
+	addr, err := service.DialArgs(cfg.API.Address)
+	if err != nil {
+		return &client.Message{}, func() {}, err
+	}
 
 	header := http.Header{}
-	client, closer, err := client.NewMessageRPC(ctx.Context, "http://"+cfg.API.Address+"/rpc/v0", header)
+	client, closer, err := client.NewMessageRPC(ctx.Context, addr, header)
 
 	return client, closer, err
 }

@@ -2,118 +2,37 @@ package api
 
 import (
 	"context"
-	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"net"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
+	"reflect"
 
-	"github.com/gin-gonic/gin"
+	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/venus-auth/core"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
-	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/service"
 )
 
-type JsonRpcRequest struct {
-	// common
-	Jsonrpc string            `json:"jsonrpc"`
-	ID      int64             `json:"id,omitempty"`
-	Meta    map[string]string `json:"meta,omitempty"`
+func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger, msgImp *MessageImp) error {
+	var msgAPI client.Message
+	permissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
-	// request
-	Method string        `json:"method,omitempty"`
-	Params []interface{} `json:"params,omitempty"`
-}
-
-type RewriteJsonRpcToRestful struct {
-	*gin.Engine
-}
-
-func (r *RewriteJsonRpcToRestful) PreRequest(w http.ResponseWriter, req *http.Request) (int, error) {
-	if req.Method == http.MethodPost && req.URL.Path == "/rpc/v0" {
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			return 503, xerrors.New("failed to read json rpc body")
-		}
-
-		jsonReq := &JsonRpcRequest{}
-		err = json.Unmarshal(body, jsonReq)
-		if err != nil {
-			return 503, xerrors.New("failed to unmarshal json rpc body")
-		}
-		methodSeq := strings.Split(jsonReq.Method, ".")
-		//	methodPath := strings.Join(strings.Split(jsonReq.Method, "."), "/")
-		newRequestUrl := req.RequestURI + "/" + methodSeq[len(methodSeq)-1] + "/" + strconv.FormatInt(jsonReq.ID, 10)
-		newUrl, err := url.Parse(newRequestUrl)
-		if err != nil {
-			return 503, xerrors.New("failed to parser new url")
-		}
-		req.URL = newUrl
-		req.RequestURI = newRequestUrl
-		params, _ := json.Marshal(jsonReq.Params)
-
-		ctx := context.WithValue(req.Context(), types.Arguments{}, map[string]interface{}{
-			"method": methodSeq[len(methodSeq)-1],
-			"params": params,
-			"id":     jsonReq.ID,
-		})
-		newReq := req.WithContext(ctx)
-		*req = *newReq
-	}
-	return 0, nil
-}
-
-func InitRouter(logger *logrus.Logger) *gin.Engine {
-	g := gin.New()
-	g.Use(log.GinLogrus(logger), gin.Recovery())
-	return g
-}
-
-func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger) error {
-	rewriteJsonRpc := &RewriteJsonRpcToRestful{
-		Engine: r,
-	}
-	filter := controller.NewJWTFilter(jwtClient, log, r)
+	srv := jsonrpc.NewServer()
+	srv.Register("Message", &msgAPI)
 
 	handler := http.NewServeMux()
-	handler.Handle("/debug/pprof/", http.DefaultServeMux)
-
-	handler.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		code, err := rewriteJsonRpc.PreRequest(writer, request)
-		if err != nil {
-			writer.WriteHeader(code)
-			log.Errorf("cannot transfser jsonrpc to rustful")
-			return
-		}
-
-		code, err = filter.PreRequest(writer, request)
-		if err != nil {
-			resp := controller.JsonRpcResponse{
-				ID: request.Context().Value(types.Arguments{}).(map[string]interface{})["id"].(int64),
-				Error: &controller.RespError{
-					Code:    code,
-					Message: err.Error(),
-				},
-			}
-			writer.WriteHeader(code)
-			data, _ := json.Marshal(resp)
-			_, _ = writer.Write(data)
-			log.Errorf("cannot auth token verify")
-			return
-		}
-
-		r.ServeHTTP(writer, request)
-	})
+	handler.Handle("/rpc/v0", srv)
+	authMux := jwt.NewAuthMux(jwtClient, log, handler)
+	authMux.TruthHandle("/debug/pprof/", http.DefaultServeMux)
 
 	apiserv := &http.Server{
-		Handler: handler,
+		Handler: authMux,
 	}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -130,4 +49,79 @@ func RunAPI(lc fx.Lifecycle, r *gin.Engine, jwtClient jwt.IJwtClient, lst net.Li
 		},
 	})
 	return nil
+}
+
+type MessageImp struct {
+	*service.AddressService
+	*service.MessageService
+	*service.WalletService
+	*service.NodeService
+	*service.SharedParamsService
+}
+
+var _ client.IMessager = (*MessageImp)(nil)
+
+func NewMessageImp(msgService *service.MessageService,
+	walletService *service.WalletService,
+	addressService *service.AddressService,
+	sps *service.SharedParamsService,
+	nodeService *service.NodeService) *MessageImp {
+	return &MessageImp{
+		AddressService:      addressService,
+		MessageService:      msgService,
+		NodeService:         nodeService,
+		WalletService:       walletService,
+		SharedParamsService: sps,
+	}
+}
+
+func permissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
+	rint := reflect.ValueOf(out).Elem()
+	ra := reflect.ValueOf(in)
+
+	for f := 0; f < rint.NumField(); f++ {
+		field := rint.Type().Field(f)
+
+		fn := ra.MethodByName(field.Name)
+		requiredPerm, ok := permMap[field.Name]
+		if !ok {
+			panic(fmt.Sprintf("'%s' not found perm", field.Name))
+		}
+
+		rint.Field(f).Set(reflect.MakeFunc(field.Type, func(args []reflect.Value) (results []reflect.Value) {
+			ctx := args[0].Interface().(context.Context)
+			err := hasPerm(ctx, requiredPerm)
+			if err == nil {
+				return fn.Call(args)
+			}
+
+			err = xerrors.Errorf("missing permission to invoke '%s' %s", field.Name, err.Error())
+			rerr := reflect.ValueOf(&err).Elem()
+
+			if field.Type.NumOut() == 2 {
+				return []reflect.Value{
+					reflect.Zero(field.Type.Out(0)),
+					rerr,
+				}
+			} else {
+				return []reflect.Value{rerr}
+			}
+		}))
+
+	}
+}
+
+func hasPerm(ctx context.Context, requiredPerm string) error {
+	perms, ok := ctx.Value(core.PermCtxKey).([]core.Permission)
+	if !ok {
+		return xerrors.Errorf("unknown perm type %T", ctx.Value(core.PermCtxKey))
+	}
+
+	for _, p := range perms {
+		if requiredPerm == p {
+			return nil
+		}
+	}
+
+	return xerrors.Errorf("(need %s) has %v", requiredPerm, perms)
 }

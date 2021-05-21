@@ -7,13 +7,15 @@ import (
 	"os"
 	"path/filepath"
 
+	ma "github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/api"
-	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
@@ -141,10 +143,18 @@ func runAction(ctx *cli.Context) error {
 	}
 	defer closer()
 
-	lst, err := net.Listen("tcp", cfg.API.Address)
+	mAddr, err := ma.NewMultiaddr(cfg.API.Address)
 	if err != nil {
 		return err
 	}
+
+	// Listen on the configured address in order to bind the port number in case it has
+	// been configured as zero (i.e. OS-provided)
+	apiListener, err := manet.Listen(mAddr)
+	if err != nil {
+		return err
+	}
+	lst := manet.NetListener(apiListener)
 
 	shutdownChan := make(chan struct{})
 	provider := fx.Options(
@@ -161,7 +171,7 @@ func runAction(ctx *cli.Context) error {
 		//service
 		service.MessagerService(),
 		//api
-		fx.Provide(api.InitRouter),
+		fx.Provide(api.NewMessageImp),
 		//jwt
 		fx.Provide(jwt.NewJwtClient),
 		//middleware
@@ -174,7 +184,6 @@ func runAction(ctx *cli.Context) error {
 	invoker := fx.Options(
 		//invoke
 		fx.Invoke(models.AutoMigrate),
-		fx.Invoke(controller.SetupController),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(api.RunAPI),
 	)
