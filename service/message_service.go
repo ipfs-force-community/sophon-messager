@@ -55,6 +55,8 @@ type MessageService struct {
 
 	sps         *SharedParamsService
 	nodeService *NodeService
+
+	preCancel context.CancelFunc
 }
 
 type headChan struct {

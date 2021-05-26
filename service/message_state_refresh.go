@@ -145,9 +145,24 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	ms.log.Infof("process block %d, revert %d message apply %d message ", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs))
-	ms.triggerPush <- h.apply[0]
 
+	if ms.preCancel != nil {
+		ms.preCancel()
+	}
+	var triggerCtx context.Context
+	triggerCtx, ms.preCancel = context.WithCancel(context.Background())
+	ms.delayTrigger(triggerCtx, h.apply[0])
 	return nil
+}
+
+func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
+	select {
+	case <-time.After(5 * time.Second):
+		ms.triggerPush <- ts
+		return
+	case <-ctx.Done():
+		return
+	}
 }
 
 func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {

@@ -423,7 +423,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	}
 
 	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
-		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, tsk})
+		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas price: %w", err)
 		}
