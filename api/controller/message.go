@@ -18,26 +18,15 @@ type Message struct {
 }
 
 func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	newId := types.NewUUID()
-	err := message.MsgService.PushMessage(ctx, &types.Message{
-		ID:              newId.String(),
-		UnsignedMessage: *msg,
-		Meta:            meta,
-		State:           types.UnFillMsg,
-		WalletName:      walletName,
-	})
-
-	return newId.String(), err
+	return message.MsgService.PushMessage(ctx, msg, meta, walletName)
 }
 
 func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	return id, message.MsgService.PushMessage(ctx, &types.Message{
-		ID:              id,
-		UnsignedMessage: *msg,
-		Meta:            meta,
-		State:           types.UnFillMsg,
-		WalletName:      walletName,
-	})
+	return message.MsgService.PushMessageWithId(ctx, id, msg, meta, walletName)
+}
+
+func (message Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
+	return message.MsgService.WaitMessage(ctx, id, confidence)
 }
 
 func (message Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -88,10 +77,6 @@ func (message Message) ListBlockedMessage(ctx context.Context, addr address.Addr
 	return message.MsgService.ListBlockedMessage(ctx, addr, d)
 }
 
-func (message Message) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
-	return message.MsgService.UpdateMessageStateByCid(ctx, cid, state)
-}
-
 func (message Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
 	return message.MsgService.UpdateMessageStateByID(ctx, id, state)
 }
@@ -101,7 +86,7 @@ func (message Message) UpdateAllFilledMessage(ctx context.Context) (int, error) 
 }
 
 func (message Message) UpdateFilledMessageByID(ctx context.Context, id string) (string, error) {
-	return message.MsgService.UpdateSignedMessageByID(ctx, id)
+	return message.MsgService.UpdateFilledMessageByID(ctx, id)
 }
 
 func (message Message) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {

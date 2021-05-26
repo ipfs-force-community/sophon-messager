@@ -102,7 +102,7 @@ func NewMessageService(repo repo.Repo,
 	return ms, nil
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) error {
+func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) error {
 	if len(msg.ID) == 0 {
 		return xerrors.New("empty uid")
 	}
@@ -130,6 +130,73 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *types.Message) e
 	}
 
 	return err
+}
+
+func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+	newId := types.NewUUID()
+	return newId.String(), ms.pushMessage(ctx, &types.Message{
+		ID:              newId.String(),
+		UnsignedMessage: *msg,
+		Meta:            meta,
+		State:           types.UnFillMsg,
+		WalletName:      walletName,
+	})
+}
+
+func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+	return id, ms.pushMessage(ctx, &types.Message{
+		ID:              id,
+		UnsignedMessage: *msg,
+		Meta:            meta,
+		State:           types.UnFillMsg,
+		WalletName:      walletName,
+	})
+}
+
+func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
+	tm := time.NewTicker(time.Second * 30)
+	defer tm.Stop()
+
+	doneCh := make(chan struct{}, 1)
+	doneCh <- struct{}{}
+
+	for {
+		select {
+		case <-doneCh:
+			msg, err := ms.GetMessageByUid(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+
+			switch msg.State {
+			//OffChain
+			case types.FillMsg:
+				fallthrough
+			case types.UnFillMsg:
+				fallthrough
+			case types.UnKnown:
+				continue
+			//OnChain
+			case types.ReplacedMsg:
+				fallthrough
+			case types.OnChainMsg:
+				if msg.Confidence > int64(confidence) {
+					return msg, nil
+				}
+				continue
+			//Error
+			case types.FailedMsg:
+				return msg, nil
+			case types.NoWalletMsg:
+				return nil, xerrors.New("msg failed due to wallet disappear")
+			}
+
+		case <-tm.C:
+			doneCh <- struct{}{}
+		case <-ctx.Done():
+			return nil, xerrors.New("exit by client ")
+		}
+	}
 }
 
 func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
@@ -333,8 +400,9 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		tsCache, err := readTipsetFile(ms.cfg.TipsetFilePath)
 		if err != nil {
 			ms.log.Errorf("read tipset file failed %v", err)
+		} else {
+			ms.tsCache = tsCache
 		}
-		ms.tsCache = tsCache
 	})
 
 	if len(ms.tsCache.Cache) == 0 {
@@ -692,7 +760,7 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 	return nil
 }
 
-func (ms *MessageService) UpdateSignedMessageByID(ctx context.Context, id string) (string, error) {
+func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string) (string, error) {
 	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
 		return id, err

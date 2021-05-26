@@ -89,7 +89,7 @@ func DefaultConfig() *Config {
 			Level: "info",
 		},
 		API: APIConfig{
-			Address: "0.0.0.0:39812",
+			Address: "/ip4/0.0.0.0/tcp/39812",
 		},
 		Node: NodeConfig{
 			Url:   "",

@@ -26,7 +26,7 @@ func (a Address) HasAddress(ctx context.Context, addr address.Address) (bool, er
 	return a.AddressService.HasAddress(ctx, addr)
 }
 
-func (a Address) ListAddress(ctx context.Context) ([]*types.Address, error) {
+func (a *Address) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return a.AddressService.ListAddress(ctx)
 }
 

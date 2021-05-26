@@ -1,6 +1,6 @@
 package controller
 
-var authMap = map[string]string{
+var AuthMap = map[string]string{
 	"SetSharedParams":          "admin",
 	"GetMessageBySignedCid":    "read",
 	"ListMessageByFromState":   "admin",
