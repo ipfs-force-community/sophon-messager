@@ -413,7 +413,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 }
 func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
 	if msg.GasLimit == 0 {
-		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, tsk})
+		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas used: %w", err)
 		}
