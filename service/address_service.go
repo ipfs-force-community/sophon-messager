@@ -57,6 +57,11 @@ func (addressService *AddressService) HasAddress(ctx context.Context, walletName
 	return addressService.repo.AddressRepo().HasAddress(ctx, walletName, addr)
 }
 
+// Deprecated: use HasAddress instead.
+func (addressService *AddressService) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
+	return addressService.repo.AddressRepo().HasAddress(ctx, walletName, addr)
+}
+
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return addressService.repo.AddressRepo().ListAddress(ctx)
 }

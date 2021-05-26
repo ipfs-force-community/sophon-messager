@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-wallet/core"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -35,22 +34,8 @@ type MessageSelector struct {
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	addressService *AddressService
-	walletService  *WalletService
 	sps            *SharedParamsService
 	gatewayCli     *GatewayClient
-}
-
-type addrInfos struct {
-	addrInfos map[string]addrInfo
-
-	l sync.Mutex
-}
-
-type addrInfo struct {
-	walletCli IWalletClient
-	close     jsonrpc.ClientCloser
-	state     types.State
-	err       error
 }
 
 type MsgSelectResult struct {

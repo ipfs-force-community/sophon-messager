@@ -34,14 +34,6 @@ type IMessager interface {
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
 	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
 
-	SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error)            //perm:admin
-	GetWalletByName(ctx context.Context, name string) (*types.Wallet, error)             //perm:admin
-	GetWalletByID(ctx context.Context, id types.UUID) (*types.Wallet, error)             //perm:admin
-	HasWallet(ctx context.Context, name string) (bool, error)                            //perm:admin
-	ListWallet(ctx context.Context) ([]*types.Wallet, error)                             //perm:admin
-	ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) //perm:admin
-	DeleteWallet(ctx context.Context, name string) (string, error)                       //perm:admin
-
 	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                       //perm:admin
 	GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)                   //perm:admin
 	HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                             //perm:admin
@@ -56,15 +48,13 @@ type IMessager interface {
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
 	RefreshSharedParams(ctx context.Context) (struct{}, error)                         //perm:admin
 
+	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) //perm:read
+
 	SaveNode(ctx context.Context, node *types.Node) (struct{}, error) //perm:admin
 	GetNode(ctx context.Context, name string) (*types.Node, error)    //perm:admin
 	HasNode(ctx context.Context, name string) (bool, error)           //perm:admin
 	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
 	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
-
-	GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) //perm:admin
-	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                 //perm:read
-	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                       //perm:admin
 
 	//ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                          //perm:read
 	ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) //perm:read
@@ -96,14 +86,6 @@ type Message struct {
 		RepublishMessage         func(ctx context.Context, id string) (struct{}, error)
 		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
 
-		SaveWallet              func(ctx context.Context, wallet *types.Wallet) (types.UUID, error)
-		GetWalletByName         func(ctx context.Context, name string) (*types.Wallet, error)
-		GetWalletByID           func(ctx context.Context, id types.UUID) (*types.Wallet, error)
-		HasWallet               func(ctx context.Context, name string) (bool, error)
-		ListWallet              func(ctx context.Context) ([]*types.Wallet, error)
-		ListRemoteWalletAddress func(ctx context.Context, name string) ([]address.Address, error)
-		DeleteWallet            func(ctx context.Context, name string) (string, error)
-
 		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress       func(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)
 		HasAddress       func(ctx context.Context, walletName string, addr address.Address) (bool, error)
@@ -124,9 +106,7 @@ type Message struct {
 		ListNode   func(ctx context.Context) ([]*types.Node, error)
 		DeleteNode func(ctx context.Context, name string) (struct{}, error)
 
-		GetWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)
-		HasWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (bool, error)
-		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
+		HasWalletAddress func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 
 		//ResponseWalletEvent func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
 		ListenWalletEvent func(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error)
@@ -214,36 +194,6 @@ func (message *Message) WaitMessage(ctx context.Context, id string, confidence u
 	return message.Internal.WaitMessage(ctx, id, confidence)
 }
 
-///////  wallet  ///////
-
-func (message *Message) SaveWallet(ctx context.Context, wallet *types.Wallet) (types.UUID, error) {
-	return message.Internal.SaveWallet(ctx, wallet)
-}
-
-func (message *Message) GetWalletByName(ctx context.Context, name string) (*types.Wallet, error) {
-	return message.Internal.GetWalletByName(ctx, name)
-}
-
-func (message *Message) GetWalletByID(ctx context.Context, id types.UUID) (*types.Wallet, error) {
-	return message.Internal.GetWalletByID(ctx, id)
-}
-
-func (message *Message) HasWallet(ctx context.Context, name string) (bool, error) {
-	return message.Internal.HasWallet(ctx, name)
-}
-
-func (message *Message) ListRemoteWalletAddress(ctx context.Context, name string) ([]address.Address, error) {
-	return message.Internal.ListRemoteWalletAddress(ctx, name)
-}
-
-func (message *Message) ListWallet(ctx context.Context) ([]*types.Wallet, error) {
-	return message.Internal.ListWallet(ctx)
-}
-
-func (message *Message) DeleteWallet(ctx context.Context, name string) (string, error) {
-	return message.Internal.DeleteWallet(ctx, name)
-}
-
 ///////  address ///////
 
 func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
@@ -322,14 +272,6 @@ func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, 
 
 func (message *Message) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
 	return message.Internal.HasWalletAddress(ctx, walletName, addr)
-}
-
-func (message *Message) ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error) {
-	return message.Internal.ListWalletAddress(ctx)
-}
-
-func (message *Message) GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) {
-	return message.Internal.GetWalletAddress(ctx, walletName, addr)
 }
 
 //func (message *Message) ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {

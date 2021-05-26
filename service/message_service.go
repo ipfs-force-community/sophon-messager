@@ -45,7 +45,6 @@ type MessageService struct {
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	messageState   *MessageState
-	walletService  *WalletService
 	addressService *AddressService
 	gateClient     *GatewayClient
 
@@ -757,7 +756,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
 
-	for addr := range ms.walletService.AllAddresses() {
+	for addr := range ms.addressService.Addresses() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)
@@ -857,13 +856,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	cli, close, err := ms.walletService.GetWalletClient(ctx, msg.WalletName)
-	if err != nil {
-		return cid.Undef, xerrors.Errorf("got wallet client %v", err)
-	}
-	defer close()
-
-	signedMsg, err := ToSignedMsg(ctx, &cli, msg)
+	signedMsg, err := ToSignedMsg(ctx, ms.gateClient.WalletClient, msg)
 	if err != nil {
 		return cid.Undef, err
 	}
@@ -919,7 +912,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (stru
 	return struct{}{}, nil
 }
 
-func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+func ToSignedMsg(ctx context.Context, walletCli *WalletEventClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.UnsignedMessage.Cid()
 	msg.UnsignedCid = &unsignedCid
 	//签名
@@ -927,7 +920,7 @@ func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Messag
 	if err != nil {
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), core.MsgMeta{
+	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), core.MsgMeta{
 		Type:  core.MTChainMsg,
 		Extra: data.RawData(),
 	})

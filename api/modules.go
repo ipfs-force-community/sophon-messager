@@ -54,7 +54,6 @@ func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *lo
 type MessageImp struct {
 	*service.AddressService
 	*service.MessageService
-	*service.WalletService
 	*service.NodeService
 	*service.SharedParamsService
 	*service.GatewayService
@@ -63,7 +62,6 @@ type MessageImp struct {
 var _ client.IMessager = (*MessageImp)(nil)
 
 func NewMessageImp(msgService *service.MessageService,
-	walletService *service.WalletService,
 	addressService *service.AddressService,
 	sps *service.SharedParamsService,
 	nodeService *service.NodeService,
@@ -72,7 +70,6 @@ func NewMessageImp(msgService *service.MessageService,
 		AddressService:      addressService,
 		MessageService:      msgService,
 		NodeService:         nodeService,
-		WalletService:       walletService,
 		SharedParamsService: sps,
 		GatewayService:      gatewayService,
 	}

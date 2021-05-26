@@ -39,10 +39,8 @@ func main() {
 		},
 		Commands: []*cli.Command{ccli.MsgCmds,
 			ccli.AddrCmds,
-			ccli.WalletCmds,
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
-			ccli.WalletAddrCmds,
 			runCmd,
 		},
 	}
