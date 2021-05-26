@@ -6,6 +6,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/venus-messager/types"
@@ -64,6 +65,10 @@ type IMessager interface {
 	GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) //perm:admin
 	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                 //perm:read
 	ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error)                                       //perm:admin
+
+	//ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                          //perm:read
+	ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) //perm:read
+	SupportNewAccount(ctx context.Context, channelId string, account string) error                            //perm:read
 }
 
 var _ IMessager = (*Message)(nil)
@@ -122,6 +127,10 @@ type Message struct {
 		GetWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error)
 		HasWalletAddress  func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 		ListWalletAddress func(ctx context.Context) ([]*types.WalletAddress, error)
+
+		//ResponseWalletEvent func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
+		ListenWalletEvent func(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error)
+		SupportNewAccount func(ctx context.Context, channelId string, account string) error
 	}
 }
 
@@ -321,4 +330,16 @@ func (message *Message) ListWalletAddress(ctx context.Context) ([]*types.WalletA
 
 func (message *Message) GetWalletAddress(ctx context.Context, walletName string, addr address.Address) (*types.WalletAddress, error) {
 	return message.Internal.GetWalletAddress(ctx, walletName, addr)
+}
+
+//func (message *Message) ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {
+//	return message.Internal.ResponseWalletEvent(ctx, resp)
+//}
+
+func (message *Message) ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) {
+	return message.Internal.ListenWalletEvent(ctx, supportAccounts)
+}
+
+func (message *Message) SupportNewAccount(ctx context.Context, channelId string, account string) error {
+	return message.Internal.SupportNewAccount(ctx, channelId, account)
 }

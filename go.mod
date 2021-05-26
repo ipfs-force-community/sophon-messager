@@ -10,14 +10,15 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
 	github.com/filecoin-project/venus v0.9.6
-	github.com/filecoin-project/venus-auth v1.0.2-0.20210507023017-76ce8b64e6db
-	github.com/filecoin-project/venus-wallet v1.0.1-0.20210507062236-b94c303c7104
+	github.com/filecoin-project/venus-auth v1.1.0
+	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gin-gonic/gin v1.6.3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs-force-community/venus-gateway v0.0.0-20210525072315-8c87f4d464f8
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

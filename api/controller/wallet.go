@@ -42,18 +42,6 @@ func (walletController WalletController) DeleteWallet(ctx context.Context, name 
 	return walletController.WalletService.DeleteWallet(ctx, name)
 }
 
-func (walletController WalletController) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return walletController.WalletService.ForbiddenAddress(ctx, walletName, addr)
-}
-
-func (walletController WalletController) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return walletController.WalletService.ActiveAddress(ctx, walletName, addr)
-}
-
-func (walletController WalletController) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
-	return walletController.WalletService.SetSelectMsgNum(ctx, walletName, addr, num)
-}
-
 func (walletController WalletController) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
 	return walletController.WalletService.HasWalletAddress(ctx, walletName, addr)
 }

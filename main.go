@@ -148,6 +148,12 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	gatewayCli, err := service.NewGatewayClient(&cfg.Gateway)
+	if err != nil {
+		return err
+	}
+	defer gatewayCli.Close()
+
 	// Listen on the configured address in order to bind the port number in case it has
 	// been configured as zero (i.e. OS-provided)
 	apiListener, err := manet.Listen(mAddr)
@@ -160,9 +166,10 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway),
 		fx.Supply(log),
 		fx.Supply(client),
+		fx.Supply(gatewayCli),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),

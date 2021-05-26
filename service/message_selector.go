@@ -37,8 +37,7 @@ type MessageSelector struct {
 	addressService *AddressService
 	walletService  *WalletService
 	sps            *SharedParamsService
-
-	addrInfos *addrInfos
+	gatewayCli     *GatewayClient
 }
 
 type addrInfos struct {
@@ -72,15 +71,15 @@ func NewMessageSelector(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	nodeClient *NodeClient,
 	addressService *AddressService,
-	walletService *WalletService,
-	sps *SharedParamsService) *MessageSelector {
+	sps *SharedParamsService,
+	gatewayCli *GatewayClient) *MessageSelector {
 	return &MessageSelector{repo: repo,
 		log:            log,
 		cfg:            cfg,
 		nodeClient:     nodeClient,
 		addressService: addressService,
-		walletService:  walletService,
 		sps:            sps,
+		gatewayCli:     gatewayCli,
 	}
 }
 
@@ -91,11 +90,6 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	}
 	addrList := messageSelector.uniqAddresses(allAddrs)
 	addrSelMsgNum := messageSelector.addrSelectMsgNum(allAddrs)
-
-	messageSelector.addrInfos = &addrInfos{
-		addrInfos: make(map[string]addrInfo),
-	}
-	defer messageSelector.clearAddrInfos()
 
 	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
 	if err != nil {
@@ -230,13 +224,8 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Warnf("the maximum number of failures has been reached %d", allowFailedNum)
 			break
 		}
-		addrInfo, ok := messageSelector.getAddrInfo(msg.WalletName, msg.From)
-		if !ok {
-			messageSelector.log.Warnf("not found wallet client %s", msg.WalletName)
-			continue
-		}
-		if addrInfo.state != types.Alive && addrInfo.state != types.Forbiden {
-			messageSelector.log.Infof("wallet %s address %v state is %s, skip select unchain message", msg.WalletName, addr.Addr, types.StateToString(addrInfo.state))
+		if addr.State != types.Alive && addr.State != types.Forbiden {
+			messageSelector.log.Infof("wallet %s address %v state is %s, skip select unchain message", msg.WalletName, addr.Addr, types.StateToString(addr.State))
 			continue
 		}
 
@@ -277,7 +266,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(addrInfo.walletCli.WalletSign, timeOutCtx, []interface{}{addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
+		sigI, err := handleTimeout(messageSelector.gatewayCli.WalletClient.WalletSign, timeOutCtx, []interface{}{addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		}})
@@ -426,49 +415,6 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	CapGasFee(msg, meta.MaxFee)
 
 	return msg, nil
-}
-
-func (messageSelector *MessageSelector) clearAddrInfos() {
-	for _, addrInfo := range messageSelector.addrInfos.addrInfos {
-		if addrInfo.close != nil {
-			addrInfo.close()
-		}
-	}
-}
-
-func (messageSelector *MessageSelector) getAddrInfo(walletName string, addr address.Address) (addrInfo, bool) {
-	messageSelector.addrInfos.l.Lock()
-	defer messageSelector.addrInfos.l.Unlock()
-
-	key := walletName + ":" + addr.String()
-	if info, ok := messageSelector.addrInfos.addrInfos[key]; ok {
-		if info.err != nil {
-			return addrInfo{}, false
-		}
-		return info, true
-	}
-
-	ai, err := messageSelector.addressService.GetAddress(context.TODO(), walletName, addr)
-	if err != nil {
-		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
-		return addrInfo{}, false
-	}
-	// 用getway的方式访问
-	cli, close, err := messageSelector.walletService.GetWalletClient(context.TODO(), walletName)
-	if err != nil {
-		messageSelector.addrInfos.addrInfos[key] = addrInfo{err: err}
-		return addrInfo{}, false
-	}
-
-	info := addrInfo{
-		walletCli: &cli,
-		close:     close,
-		state:     ai.State,
-		err:       nil,
-	}
-	messageSelector.addrInfos.addrInfos[key] = info
-
-	return info, true
 }
 
 func (messageSelector *MessageSelector) uniqAddresses(addrList []*types.Address) []*types.Address {

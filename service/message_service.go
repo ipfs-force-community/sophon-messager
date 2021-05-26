@@ -47,6 +47,7 @@ type MessageService struct {
 	messageState   *MessageState
 	walletService  *WalletService
 	addressService *AddressService
+	gateClient     *GatewayClient
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -81,10 +82,10 @@ func NewMessageService(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
 	addressService *AddressService,
-	walletService *WalletService,
 	sps *SharedParamsService,
-	nodeService *NodeService) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, walletService, sps)
+	nodeService *NodeService,
+	gateClient *GatewayClient) (*MessageService, error) {
+	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps, gateClient)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,
@@ -94,8 +95,8 @@ func NewMessageService(repo repo.Repo,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
 		messageState:   messageState,
-		walletService:  walletService,
 		addressService: addressService,
+		gateClient:     gateClient,
 		tsCache: &TipsetCache{
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
@@ -126,9 +127,31 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 
 	if addrInfo, err := ms.addressService.GetAddress(ctx, msg.WalletName, msg.From); err != nil {
 		if xerrors.Is(err, gorm.ErrRecordNotFound) { // 去钱包查询是否有该地址
-
+			has, err := ms.gateClient.WalletClient.WalletHas(ctx, msg.WalletName, msg.From)
+			if err != nil {
+				return err
+			}
+			if has {
+				if _, err = ms.addressService.SaveAddress(ctx, &types.Address{
+					ID:         types.NewUUID(),
+					Addr:       msg.From,
+					Nonce:      0,
+					Weight:     0,
+					SelMsgNum:  0,
+					State:      types.Alive,
+					WalletName: msg.WalletName,
+					IsDeleted:  repo.NotDeleted,
+					CreatedAt:  time.Now(),
+					UpdatedAt:  time.Now(),
+				}); err != nil {
+					return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
+				}
+			} else {
+				return xerrors.Errorf("not found address ")
+			}
+		} else {
+			return err
 		}
-		return xerrors.Errorf("found address failed %v", err)
 	} else if addrInfo.State != types.Alive {
 		return xerrors.Errorf("address state is %s", types.StateToString(addrInfo.State))
 	}

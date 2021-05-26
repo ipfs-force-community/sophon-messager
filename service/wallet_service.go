@@ -177,24 +177,12 @@ func (walletService *WalletService) getWalletIDAndAddrID(ctx context.Context, wa
 	if err != nil {
 		return types.UUID{}, types.UUID{}, xerrors.Errorf("got wallet %v", err)
 	}
-	addrInfo, err := walletService.repo.AddressRepo().GetAddress(ctx, addr)
-	if err != nil {
-		return types.UUID{}, types.UUID{}, err
-	}
+	//addrInfo, err := walletService.repo.AddressRepo().GetAddress(ctx, addr)
+	//if err != nil {
+	//	return types.UUID{}, types.UUID{}, err
+	//}
 
-	return wallet.ID, addrInfo.ID, nil
-}
-
-func (walletService *WalletService) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
-	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
-	if err != nil {
-		return addr, err
-	}
-	if err := walletService.repo.WalletAddressRepo().UpdateSelectMsgNum(walletID, addID, num); err != nil {
-		return addr, err
-	}
-
-	return addr, nil
+	return wallet.ID, types.UUID{}, nil
 }
 
 func (walletService *WalletService) ListWalletAddress(ctx context.Context) ([]*types.WalletAddress, error) {
@@ -447,11 +435,11 @@ func (walletService *WalletService) checkAddressState() {
 				walletService.log.Infof("deleted address %v", pa.addr.String())
 
 				// not using address, delete it
-				if has, err := walletService.repo.WalletAddressRepo().HasAddress(pa.addrID); err == nil && !has {
-					if _, err = walletService.addressService.DeleteAddress(context.TODO(), pa.addr); err != nil {
-						walletService.log.Errorf("delete address(%s) %v", pa.addr.String(), err)
-					}
-				}
+				//if has, err := walletService.repo.WalletAddressRepo().HasAddress(pa.addrID); err == nil && !has {
+				//	if _, err = walletService.addressService.DeleteAddress(context.TODO(), pa.addr); err != nil {
+				//		walletService.log.Errorf("delete address(%s) %v", pa.addr.String(), err)
+				//	}
+				//}
 				isDeleted = true
 			}
 		}
@@ -462,34 +450,6 @@ func (walletService *WalletService) checkAddressState() {
 			}()
 		}
 	}
-}
-
-func (walletService *WalletService) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
-	if err != nil {
-		return address.Undef, err
-	}
-	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletID, addID, types.Forbiden); err != nil {
-		return address.Undef, err
-	}
-
-	walletService.log.Infof("forbidden address %v", addr.String())
-
-	return addr, nil
-}
-
-func (walletService *WalletService) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	walletID, addID, err := walletService.getWalletIDAndAddrID(ctx, walletName, addr)
-	if err != nil {
-		return address.Undef, err
-	}
-	if err := walletService.repo.WalletAddressRepo().UpdateAddressState(walletID, addID, types.Alive); err != nil {
-		return address.Undef, err
-	}
-
-	walletService.log.Infof("active address %v", addr.String())
-
-	return addr, nil
 }
 
 func (walletService *WalletService) AllAddresses() map[address.Address]struct{} {

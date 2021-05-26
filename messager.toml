@@ -39,3 +39,12 @@
 
 [wallet]
   scanInterval = 10
+
+[gateway]
+  disable = false
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNuX21lc3NhZ2VyX3Rlc3QiLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.qauUjc2IvdFBabiyZ4YO1Rax0IamrD1ANUoXhr_2rQY"
+  url = "/ip4/192.168.19.94/tcp/45132"
+
+  [gateway.cfg]
+    RequestQueueSize = 30
+    RequestTimeout = "5m0s"

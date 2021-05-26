@@ -57,6 +57,7 @@ type MessageImp struct {
 	*service.WalletService
 	*service.NodeService
 	*service.SharedParamsService
+	*service.GatewayService
 }
 
 var _ client.IMessager = (*MessageImp)(nil)
@@ -65,13 +66,15 @@ func NewMessageImp(msgService *service.MessageService,
 	walletService *service.WalletService,
 	addressService *service.AddressService,
 	sps *service.SharedParamsService,
-	nodeService *service.NodeService) *MessageImp {
+	nodeService *service.NodeService,
+	gatewayService *service.GatewayService) *MessageImp {
 	return &MessageImp{
 		AddressService:      addressService,
 		MessageService:      msgService,
 		NodeService:         nodeService,
 		WalletService:       walletService,
 		SharedParamsService: sps,
+		GatewayService:      gatewayService,
 	}
 }
 
