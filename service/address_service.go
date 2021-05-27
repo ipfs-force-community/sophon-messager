@@ -8,23 +8,28 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/sirupsen/logrus"
 
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
+
+var errAddressNotExists = xerrors.New("address not exists")
 
 type AddressService struct {
 	repo repo.Repo
 	log  *logrus.Logger
 
-	sps *SharedParamsService
+	sps          *SharedParamsService
+	walletClient *gateway.IWalletCli
 }
 
-func NewAddressService(repo repo.Repo, logger *logrus.Logger, sps *SharedParamsService) *AddressService {
+func NewAddressService(repo repo.Repo, logger *logrus.Logger, sps *SharedParamsService, walletClient *gateway.IWalletCli) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
 		log:  logger,
 
-		sps: sps,
+		sps:          sps,
+		walletClient: walletClient,
 	}
 
 	return addressService
@@ -50,9 +55,22 @@ func (addressService *AddressService) UpdateNonce(ctx context.Context, addr addr
 }
 
 func (addressService *AddressService) GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error) {
-	return addressService.repo.AddressRepo().GetAddress(ctx, walletName, addr)
+	addrInfo, err := addressService.repo.AddressRepo().GetAddress(ctx, walletName, addr)
+	if err != nil {
+		return nil, err
+	}
+	has, err := addressService.walletClient.WalletHas(ctx, walletName, addr)
+	if err != nil {
+		return nil, xerrors.Errorf("call 'WalletHas' failed %v", err)
+	}
+	if has {
+		return addrInfo, nil
+	}
+
+	return nil, errAddressNotExists
 }
 
+//TODO: Make sure the wallet has an address ？
 func (addressService *AddressService) HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
 	return addressService.repo.AddressRepo().HasAddress(ctx, walletName, addr)
 }
@@ -63,7 +81,29 @@ func (addressService *AddressService) HasWalletAddress(ctx context.Context, wall
 }
 
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {
-	return addressService.repo.AddressRepo().ListAddress(ctx)
+	return addressService.listAddress(ctx, true)
+}
+
+func (addressService *AddressService) listAddress(ctx context.Context, verify bool) ([]*types.Address, error) {
+	list, err := addressService.repo.AddressRepo().ListAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !verify {
+		return list, err
+	}
+
+	addrList := make([]*types.Address, 0, len(list))
+	for _, addrInfo := range list {
+		has, err := addressService.walletClient.WalletHas(ctx, addrInfo.WalletName, addrInfo.Addr)
+		if err != nil {
+			return nil, xerrors.Errorf("call 'WalletHas' failed %v", err)
+		}
+		if has {
+			addrList = append(addrList, addrInfo)
+		}
+	}
+	return addrList, nil
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
@@ -99,7 +139,7 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, walle
 
 func (addressService *AddressService) Addresses() map[address.Address]struct{} {
 	addrs := make(map[address.Address]struct{})
-	addrList, err := addressService.ListAddress(context.Background())
+	addrList, err := addressService.listAddress(context.Background(), false)
 	if err != nil {
 		addressService.log.Errorf("list address %v", err)
 		return addrs

@@ -71,7 +71,7 @@ func NewMessageSelector(repo repo.Repo,
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
-	allAddrs, err := messageSelector.addressService.ListAddress(ctx)
+	allAddrs, err := messageSelector.addressService.listAddress(ctx, false)
 	if err != nil {
 		return nil, err
 	}

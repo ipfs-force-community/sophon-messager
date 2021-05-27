@@ -21,7 +21,7 @@ var AddrCmds = &cli.Command{
 	Subcommands: []*cli.Command{
 		searchAddrCmd,
 		listAddrCmd,
-		//deleteAddrCmd,
+		deleteAddrCmd,
 		//updateNonceCmd,
 		forbiddenAddrCmd,
 		activeAddrCmd,
@@ -124,7 +124,6 @@ var updateNonceCmd = &cli.Command{
 	},
 }
 
-// nolint
 var deleteAddrCmd = &cli.Command{
 	Name:      "del",
 	Usage:     "delete address",
