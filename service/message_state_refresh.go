@@ -151,7 +151,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 	var triggerCtx context.Context
 	triggerCtx, ms.preCancel = context.WithCancel(context.Background())
-	ms.delayTrigger(triggerCtx, h.apply[0])
+	go ms.delayTrigger(triggerCtx, h.apply[0])
 	return nil
 }
 
