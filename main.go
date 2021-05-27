@@ -19,6 +19,7 @@ import (
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
@@ -146,11 +147,18 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	gatewayCli, err := service.NewGatewayClient(&cfg.Gateway)
-	if err != nil {
-		return err
+	var walletClient *gateway.IWalletCli
+	if cfg.Gateway.Disable { // use local gateway
+		gatewayService := gateway.NewGatewayService(&cfg.Gateway)
+		walletClient = &gateway.IWalletCli{IWalletClient: gatewayService}
+	} else {
+		walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway)
+		walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
+		if err != nil {
+			return err
+		}
+		defer walletCliCloser()
 	}
-	defer gatewayCli.Close()
 
 	// Listen on the configured address in order to bind the port number in case it has
 	// been configured as zero (i.e. OS-provided)
@@ -167,7 +175,7 @@ func runAction(ctx *cli.Context) error {
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway),
 		fx.Supply(log),
 		fx.Supply(client),
-		fx.Supply(gatewayCli),
+		fx.Supply(walletClient),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),

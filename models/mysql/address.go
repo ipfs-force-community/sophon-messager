@@ -106,7 +106,7 @@ func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, walletName string, a
 
 func (s mysqlAddressRepo) HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
 	var count int64
-	if err := s.DB.Model(&mysqlAddress{}).Where("wallet_name = ? and addr = ? and is_deleted = ?", walletName, addr.String()).
+	if err := s.DB.Model(&mysqlAddress{}).Where("wallet_name = ? and addr = ? and is_deleted = -1", walletName, addr.String()).
 		Count(&count).Error; err != nil {
 		return false, err
 	}

@@ -80,8 +80,8 @@ func main() {
 
 // nolint
 func loopPushMsgs(client client.IMessager) {
-	from, _ := address.NewFromString("t3rbxpw3sr4auzx4lbga2yanwgvjvn7dfze3wajiyp3inezyhc3j7nacokwcijsmhpgmg5xstdepe4aszvt2ta")
-	to, _ := address.NewFromString("t3rbxpw3sr4auzx4lbga2yanwgvjvn7dfze3wajiyp3inezyhc3j7nacokwcijsmhpgmg5xstdepe4aszvt2ta")
+	from, _ := address.NewFromString("t3sgfo6cyr7m5owfc2qowgemtwxkmyg2w6doyesateps7xwngcxublkhpzxnapzrz4kkvqsv23h6w6foke3gca")
+	to, _ := address.NewFromString("t3sgfo6cyr7m5owfc2qowgemtwxkmyg2w6doyesateps7xwngcxublkhpzxnapzrz4kkvqsv23h6w6foke3gca")
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -101,11 +101,11 @@ func loopPushMsgs(client client.IMessager) {
 					To:      to,
 					From:    from,
 					Nonce:   1,
-					Value:   abi.NewTokenAmount(100),
+					Value:   abi.NewTokenAmount(1),
 					Method:  0,
 				},
 				msgMate,
-				"venus_wallet",
+				"testminer",
 			)
 			if err != nil {
 				log.Fatal(err)

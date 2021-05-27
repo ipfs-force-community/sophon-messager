@@ -243,7 +243,7 @@ var setAddrSelMsgNumCmd = &cli.Command{
 	Usage:     "set the number of address selection messages",
 	ArgsUsage: "address",
 	Flags: []cli.Flag{
-		&cli.IntFlag{
+		&cli.Uint64Flag{
 			Name:  "num",
 			Usage: "the number of one address selection message",
 		},

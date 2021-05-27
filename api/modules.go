@@ -16,6 +16,7 @@ import (
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/service"
 )
 
@@ -51,27 +52,32 @@ func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *lo
 	return nil
 }
 
+type ImplParams struct {
+	fx.In
+	AddressService      *service.AddressService
+	MessageService      *service.MessageService
+	NodeService         *service.NodeService
+	SharedParamsService *service.SharedParamsService
+	GatewayService      *gateway.GatewayService `optional:"true"`
+}
+
 type MessageImp struct {
 	*service.AddressService
 	*service.MessageService
 	*service.NodeService
 	*service.SharedParamsService
-	*service.GatewayService
+	*gateway.GatewayService
 }
 
 var _ client.IMessager = (*MessageImp)(nil)
 
-func NewMessageImp(msgService *service.MessageService,
-	addressService *service.AddressService,
-	sps *service.SharedParamsService,
-	nodeService *service.NodeService,
-	gatewayService *service.GatewayService) *MessageImp {
+func NewMessageImp(implParams ImplParams) *MessageImp {
 	return &MessageImp{
-		AddressService:      addressService,
-		MessageService:      msgService,
-		NodeService:         nodeService,
-		SharedParamsService: sps,
-		GatewayService:      gatewayService,
+		AddressService:      implParams.AddressService,
+		MessageService:      implParams.MessageService,
+		NodeService:         implParams.NodeService,
+		SharedParamsService: implParams.SharedParamsService,
+		GatewayService:      implParams.GatewayService,
 	}
 }
 

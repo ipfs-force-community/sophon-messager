@@ -23,6 +23,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -46,7 +47,7 @@ type MessageService struct {
 	nodeClient     *NodeClient
 	messageState   *MessageState
 	addressService *AddressService
-	gateClient     *GatewayClient
+	walletClient   gateway.IWalletClient
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -83,8 +84,8 @@ func NewMessageService(repo repo.Repo,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
-	gateClient *GatewayClient) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps, gateClient)
+	walletClient *gateway.IWalletCli) (*MessageService, error) {
+	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,
@@ -95,7 +96,7 @@ func NewMessageService(repo repo.Repo,
 
 		messageState:   messageState,
 		addressService: addressService,
-		gateClient:     gateClient,
+		walletClient:   walletClient,
 		tsCache: &TipsetCache{
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
@@ -124,39 +125,33 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	if addrInfo, err := ms.addressService.GetAddress(ctx, msg.WalletName, msg.From); err != nil {
-		if xerrors.Is(err, gorm.ErrRecordNotFound) { // 去钱包查询是否有该地址
-			has, err := ms.gateClient.WalletClient.WalletHas(ctx, msg.WalletName, msg.From)
-			if err != nil {
-				return err
+	has, err := ms.walletClient.WalletHas(ctx, msg.WalletName, msg.From)
+	if err != nil {
+		return err
+	}
+	if has {
+		// cache address ?
+		has, err := ms.addressService.HasAddress(ctx, msg.WalletName, msg.From)
+		if (err != nil && xerrors.Is(err, gorm.ErrRecordNotFound)) || (err == nil && !has) {
+			if _, err = ms.addressService.SaveAddress(ctx, &types.Address{
+				ID:         types.NewUUID(),
+				Addr:       msg.From,
+				Nonce:      0,
+				State:      types.Alive,
+				WalletName: msg.WalletName,
+				IsDeleted:  repo.NotDeleted,
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+			}); err != nil {
+				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
 			}
-			if has {
-				if _, err = ms.addressService.SaveAddress(ctx, &types.Address{
-					ID:         types.NewUUID(),
-					Addr:       msg.From,
-					Nonce:      0,
-					Weight:     0,
-					SelMsgNum:  0,
-					State:      types.Alive,
-					WalletName: msg.WalletName,
-					IsDeleted:  repo.NotDeleted,
-					CreatedAt:  time.Now(),
-					UpdatedAt:  time.Now(),
-				}); err != nil {
-					return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
-				}
-			} else {
-				return xerrors.Errorf("not found address ")
-			}
-		} else {
-			return err
 		}
-	} else if addrInfo.State != types.Alive {
-		return xerrors.Errorf("address state is %s", types.StateToString(addrInfo.State))
+	} else {
+		return xerrors.Errorf("address not exists")
 	}
 
 	msg.Nonce = 0
-	err := ms.repo.MessageRepo().CreateMessage(msg)
+	err = ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
 		ms.messageState.SetMessage(msg.ID, msg)
 	}
@@ -856,7 +851,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	signedMsg, err := ToSignedMsg(ctx, ms.gateClient.WalletClient, msg)
+	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)
 	if err != nil {
 		return cid.Undef, err
 	}
@@ -912,7 +907,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (stru
 	return struct{}{}, nil
 }
 
-func ToSignedMsg(ctx context.Context, walletCli *WalletEventClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.UnsignedMessage.Cid()
 	msg.UnsignedCid = &unsignedCid
 	//签名

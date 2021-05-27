@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/venus-messager/gateway"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-wallet/core"
 
@@ -35,7 +37,7 @@ type MessageSelector struct {
 	nodeClient     *NodeClient
 	addressService *AddressService
 	sps            *SharedParamsService
-	gatewayCli     *GatewayClient
+	walletClient   gateway.IWalletClient
 }
 
 type MsgSelectResult struct {
@@ -57,14 +59,14 @@ func NewMessageSelector(repo repo.Repo,
 	nodeClient *NodeClient,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	gatewayCli *GatewayClient) *MessageSelector {
+	walletClient *gateway.IWalletCli) *MessageSelector {
 	return &MessageSelector{repo: repo,
 		log:            log,
 		cfg:            cfg,
 		nodeClient:     nodeClient,
 		addressService: addressService,
 		sps:            sps,
-		gatewayCli:     gatewayCli,
+		walletClient:   walletClient,
 	}
 }
 
@@ -92,7 +94,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	sem := make(chan struct{}, 10)
 	wg.Add(len(addrList))
 	for _, addr := range addrList {
-		selMsgNum, _ := addrSelMsgNum[addr.Addr]
+		selMsgNum := addrSelMsgNum[addr.Addr]
 		go func(addr *types.Address) {
 			sem <- struct{}{}
 			defer func() {
@@ -251,7 +253,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(messageSelector.gatewayCli.WalletClient.WalletSign, timeOutCtx, []interface{}{addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
+		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), core.MsgMeta{
 			Type:  core.MTChainMsg,
 			Extra: data.RawData(),
 		}})
@@ -422,10 +424,14 @@ func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Addre
 	}
 	selMsgNum := make(map[address.Address]uint64)
 	for _, addr := range addrList {
-		if num, ok := selMsgNum[addr.Addr]; ok && num < addr.SelMsgNum {
+		if num, ok := selMsgNum[addr.Addr]; ok && (num < addr.SelMsgNum || addr.SelMsgNum < defSelMsgNum) {
 			selMsgNum[addr.Addr] = addr.SelMsgNum
-		} else {
-			selMsgNum[addr.Addr] = defSelMsgNum
+		} else if !ok {
+			if addr.SelMsgNum == 0 {
+				selMsgNum[addr.Addr] = defSelMsgNum
+			} else {
+				selMsgNum[addr.Addr] = addr.SelMsgNum
+			}
 		}
 	}
 

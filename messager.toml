@@ -34,8 +34,8 @@
   backTime = 86400
 
 [node]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
-  url = "/ip4/127.0.0.1/tcp/3453"
+  url = "/ip4/8.130.166.31/tcp/1234"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNuX21lc3NhZ2VyX3Rlc3QiLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.qauUjc2IvdFBabiyZ4YO1Rax0IamrD1ANUoXhr_2rQY"
 
 [wallet]
   scanInterval = 10

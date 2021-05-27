@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/big"
@@ -10,10 +12,8 @@ import (
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
-	"github.com/multiformats/go-multiaddr"
-	manet "github.com/multiformats/go-multiaddr/net"
-	"net/http"
-	"net/url"
+
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type NodeClient struct {
@@ -45,31 +45,13 @@ type NodeClient struct {
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {
 	headers := http.Header{}
 	if len(cfg.Token) != 0 {
-		headers.Add("Authorization", "Bearer "+string(cfg.Token))
+		headers.Add("Authorization", "Bearer "+cfg.Token)
 	}
-	addr, err := DialArgs(cfg.Url)
+	addr, err := utils.DialArgs(cfg.Url)
 	if err != nil {
 		return nil, nil, err
 	}
 	var res NodeClient
 	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res}, headers)
 	return &res, closer, err
-}
-
-func DialArgs(addr string) (string, error) {
-	ma, err := multiaddr.NewMultiaddr(addr)
-	if err == nil {
-		_, addr, err := manet.DialArgs(ma)
-		if err != nil {
-			return "", err
-		}
-
-		return "ws://" + addr + "/rpc/v0", nil
-	}
-
-	_, err = url.Parse(addr)
-	if err != nil {
-		return "", err
-	}
-	return addr + "/rpc/v0", nil
 }

@@ -5,11 +5,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 func StringToTipsetKey(str string) (venusTypes.TipSetKey, error) {
@@ -97,4 +100,22 @@ func WriteFile(filePath string, obj interface{}) error {
 	_, err = file.Write(b)
 
 	return err
+}
+
+func DialArgs(addr string) (string, error) {
+	ma, err := multiaddr.NewMultiaddr(addr)
+	if err == nil {
+		_, addr, err := manet.DialArgs(ma)
+		if err != nil {
+			return "", err
+		}
+
+		return "ws://" + addr + "/rpc/v0", nil
+	}
+
+	_, err = url.Parse(addr)
+	if err != nil {
+		return "", err
+	}
+	return addr + "/rpc/v0", nil
 }
