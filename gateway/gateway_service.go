@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"context"
+
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/ipfs-force-community/venus-gateway/walletevent"
 )
@@ -11,6 +13,6 @@ type GatewayService struct {
 
 func NewGatewayService(cfg *config.GatewayConfig) *GatewayService {
 	return &GatewayService{
-		walletevent.NewWalletEventStream(&cfg.Cfg),
+		walletevent.NewWalletEventStream(context.Background(), &cfg.Cfg),
 	}
 }

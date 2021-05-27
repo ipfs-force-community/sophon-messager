@@ -10,14 +10,14 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/go-jsonrpc"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
@@ -31,6 +31,8 @@ import (
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
 var errMinimumNonce = "minimum expected nonce"
+
+var localhost = "127.0.0.1"
 
 const (
 	MaxHeadChangeProcess = 5
@@ -147,7 +149,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 			}
 		}
 	} else {
-		return xerrors.Errorf("address not exists")
+		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
 	}
 
 	msg.Nonce = 0
@@ -159,8 +161,23 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
+func ipAccountFromContext(ctx context.Context) (string, string) {
+	ip, _ := ctx.Value(gatewayTypes.IPKey).(string)
+	account, _ := ctx.Value(gatewayTypes.AccountKey).(string)
+
+	return ip, account
+}
+
 func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
 	newId := types.NewUUID()
+	ip, account := ipAccountFromContext(ctx)
+	if ip != localhost {
+		if len(account) == 0 {
+			return "", xerrors.Errorf("account is empty, message: %v", msg)
+		}
+		walletName = account
+	}
+
 	return newId.String(), ms.pushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
@@ -171,6 +188,13 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Unsig
 }
 
 func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+	ip, account := ipAccountFromContext(ctx)
+	if ip != localhost {
+		if len(account) == 0 {
+			return "", xerrors.Errorf("account is empty, message: %v", msg)
+		}
+		walletName = account
+	}
 	return id, ms.pushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,

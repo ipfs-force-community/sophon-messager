@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/filecoin-project/venus-messager/utils"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -17,15 +19,19 @@ import (
 )
 
 func main() {
-	_, err := config.ReadConfig("./messager.toml")
+	cfg, err := config.ReadConfig("./messager.toml")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+	addr, err := utils.DialArgs(cfg.API.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	header := http.Header{}
 	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNfd2FsbGV0IiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.kU50CeVEREIkcT_rn-RcOJFDU5T1dwEpjPNoFz1ct-g")
-	client, closer, err := client.NewMessageRPC(context.Background(), "http://127.0.0.1:39812/rpc/v0", header)
+	client, closer, err := client.NewMessageRPC(context.Background(), addr, header)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -80,8 +86,8 @@ func main() {
 
 // nolint
 func loopPushMsgs(client client.IMessager) {
-	from, _ := address.NewFromString("t3sgfo6cyr7m5owfc2qowgemtwxkmyg2w6doyesateps7xwngcxublkhpzxnapzrz4kkvqsv23h6w6foke3gca")
-	to, _ := address.NewFromString("t3sgfo6cyr7m5owfc2qowgemtwxkmyg2w6doyesateps7xwngcxublkhpzxnapzrz4kkvqsv23h6w6foke3gca")
+	from, _ := address.NewFromString("t3uhnofyu3yeuh7cntnepebv5kje4fsjwaxwtgescj5246p2dk5yarbt3rpdny2itxxjkasmxxigptpqa3nizq")
+	to, _ := address.NewFromString("t3uhnofyu3yeuh7cntnepebv5kje4fsjwaxwtgescj5246p2dk5yarbt3rpdny2itxxjkasmxxigptpqa3nizq")
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()

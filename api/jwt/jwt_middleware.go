@@ -1,11 +1,13 @@
 package jwt
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/util"
+	"github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,8 +30,10 @@ func (authMux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	token := r.Header.Get("Authorization")
+	remoteAddr := strings.Split(r.RemoteAddr, ":")[0]
+	ctx = context.WithValue(ctx, types.IPKey, remoteAddr)
 	// if other nodes on the same PC, the permission check will passes directly
-	if strings.Split(r.RemoteAddr, ":")[0] == "127.0.0.1" {
+	if remoteAddr == "127.0.0.1" {
 		ctx = core.WithPerm(ctx, core.PermAdmin)
 	} else {
 		if token == "" {
@@ -52,7 +56,7 @@ func (authMux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(401)
 			return
 		}
-
+		ctx = context.WithValue(ctx, types.AccountKey, res.Name)
 		ctx = core.WithPerm(ctx, res.Perm)
 	}
 	*r = *(r.WithContext(ctx))

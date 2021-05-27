@@ -22,7 +22,7 @@ import (
 
 func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger, msgImp *MessageImp) error {
 	var msgAPI client.Message
-	permissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
+	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", &msgAPI)
@@ -81,7 +81,7 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 	}
 }
 
-func permissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
+func PermissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
 	rint := reflect.ValueOf(out).Elem()
 	ra := reflect.ValueOf(in)
 

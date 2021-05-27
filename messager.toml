@@ -35,15 +35,15 @@
 
 [node]
   url = "/ip4/8.130.166.31/tcp/1234"
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNuX21lc3NhZ2VyX3Rlc3QiLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.qauUjc2IvdFBabiyZ4YO1Rax0IamrD1ANUoXhr_2rQY"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
 
 [wallet]
   scanInterval = 10
 
 [gateway]
   disable = false
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNuX21lc3NhZ2VyX3Rlc3QiLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.qauUjc2IvdFBabiyZ4YO1Rax0IamrD1ANUoXhr_2rQY"
   url = "/ip4/192.168.19.94/tcp/45132"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
 
   [gateway.cfg]
     RequestQueueSize = 30

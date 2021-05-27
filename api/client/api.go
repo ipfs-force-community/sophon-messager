@@ -56,9 +56,9 @@ type IMessager interface {
 	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
 	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
 
-	//ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                          //perm:read
-	ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) //perm:read
-	SupportNewAccount(ctx context.Context, channelId string, account string) error                            //perm:read
+	ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                                //perm:write
+	ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) //perm:write
+	SupportNewAccount(ctx context.Context, channelId string, account string) error                            //perm:write
 }
 
 var _ IMessager = (*Message)(nil)
@@ -108,7 +108,7 @@ type Message struct {
 
 		HasWalletAddress func(ctx context.Context, walletName string, addr address.Address) (bool, error)
 
-		//ResponseWalletEvent func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
+		ResponseEvent     func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
 		ListenWalletEvent func(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error)
 		SupportNewAccount func(ctx context.Context, channelId string, account string) error
 	}
@@ -274,9 +274,9 @@ func (message *Message) HasWalletAddress(ctx context.Context, walletName string,
 	return message.Internal.HasWalletAddress(ctx, walletName, addr)
 }
 
-//func (message *Message) ResponseWalletEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {
-//	return message.Internal.ResponseWalletEvent(ctx, resp)
-//}
+func (message *Message) ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {
+	return message.Internal.ResponseEvent(ctx, resp)
+}
 
 func (message *Message) ListenWalletEvent(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error) {
 	return message.Internal.ListenWalletEvent(ctx, supportAccounts)
