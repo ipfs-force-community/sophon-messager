@@ -61,6 +61,7 @@ type MessageService struct {
 
 type headChan struct {
 	apply, revert []*venusTypes.TipSet
+	isReconnect   bool
 	done          chan error
 }
 
@@ -368,9 +369,10 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 
 	done := make(chan error)
 	ms.headChans <- &headChan{
-		apply:  gapTipset,
-		revert: revertTipset,
-		done:   done,
+		apply:       gapTipset,
+		revert:      revertTipset,
+		done:        done,
+		isReconnect: true,
 	}
 
 	return <-done

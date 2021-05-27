@@ -149,12 +149,15 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	if ms.preCancel != nil {
 		ms.preCancel()
 	}
-	var triggerCtx context.Context
-	triggerCtx, ms.preCancel = context.WithCancel(context.Background())
-	go ms.delayTrigger(triggerCtx, h.apply[0])
+	if !h.isReconnect { //reconnect do not push messager avoid wrong gas estimate
+		var triggerCtx context.Context
+		triggerCtx, ms.preCancel = context.WithCancel(context.Background())
+		go ms.delayTrigger(triggerCtx, h.apply[0])
+	}
 	return nil
 }
 
+//delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
 	case <-time.After(5 * time.Second):
