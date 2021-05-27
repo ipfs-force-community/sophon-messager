@@ -160,7 +160,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 //delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(8 * time.Second):
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():
