@@ -19,7 +19,7 @@ var AddrCmds = &cli.Command{
 	Name:  "address",
 	Usage: "address commands",
 	Subcommands: []*cli.Command{
-		searchAddrCmd,
+		//searchAddrCmd,
 		listAddrCmd,
 		deleteAddrCmd,
 		//updateNonceCmd,
@@ -29,6 +29,7 @@ var AddrCmds = &cli.Command{
 	},
 }
 
+// nolint
 var searchAddrCmd = &cli.Command{
 	Name:      "search",
 	Usage:     "search address",
@@ -128,9 +129,6 @@ var deleteAddrCmd = &cli.Command{
 	Name:      "del",
 	Usage:     "delete address",
 	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		walletNameFlag,
-	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -146,7 +144,7 @@ var deleteAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		_, err = client.DeleteAddress(ctx.Context, ctx.String("wallet-name"), addr)
+		_, err = client.DeleteAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -159,9 +157,6 @@ var forbiddenAddrCmd = &cli.Command{
 	Name:      "forbidden",
 	Usage:     "forbidden address",
 	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		walletNameFlag,
-	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -177,9 +172,8 @@ var forbiddenAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		walletName := ctx.String("wallet-name")
 
-		hasAddr, err := client.HasAddress(ctx.Context, walletName, addr)
+		hasAddr, err := client.HasAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -187,7 +181,7 @@ var forbiddenAddrCmd = &cli.Command{
 			return xerrors.Errorf("address not exist")
 		}
 
-		_, err = client.ForbiddenAddress(ctx.Context, walletName, addr)
+		_, err = client.ForbiddenAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -200,9 +194,6 @@ var activeAddrCmd = &cli.Command{
 	Name:      "active",
 	Usage:     "activate a frozen address",
 	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		walletNameFlag,
-	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -218,9 +209,8 @@ var activeAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		walletName := ctx.String("wallet-name")
 
-		hasAddr, err := client.HasAddress(ctx.Context, walletName, addr)
+		hasAddr, err := client.HasAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -228,7 +218,7 @@ var activeAddrCmd = &cli.Command{
 			return xerrors.Errorf("address not exist")
 		}
 
-		_, err = client.ActiveAddress(ctx.Context, walletName, addr)
+		_, err = client.ActiveAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -246,7 +236,6 @@ var setAddrSelMsgNumCmd = &cli.Command{
 			Name:  "num",
 			Usage: "the number of one address selection message",
 		},
-		walletNameFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -262,8 +251,7 @@ var setAddrSelMsgNumCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		walletName := ctx.String("wallet-name")
-		if _, err := client.SetSelectMsgNum(ctx.Context, walletName, addr, ctx.Uint64("num")); err != nil {
+		if _, err := client.SetSelectMsgNum(ctx.Context, addr, ctx.Uint64("num")); err != nil {
 			return err
 		}
 

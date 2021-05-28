@@ -50,6 +50,7 @@ func main() {
 	}
 
 	header := http.Header{}
+	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs")
 	gatewayCli, closer, err := client.NewMessageRPC(context.Background(), "ws://127.0.0.1:39812/rpc/v0", header)
 	if err != nil {
 		panic(err)

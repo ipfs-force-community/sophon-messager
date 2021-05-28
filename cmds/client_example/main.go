@@ -30,7 +30,7 @@ func main() {
 	}
 
 	header := http.Header{}
-	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNfd2FsbGV0IiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.kU50CeVEREIkcT_rn-RcOJFDU5T1dwEpjPNoFz1ct-g")
+	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs")
 	client, closer, err := client.NewMessageRPC(context.Background(), addr, header)
 	if err != nil {
 		log.Fatal(err)
@@ -61,7 +61,6 @@ func main() {
 			Method:  0,
 		},
 		msgMate,
-		"venus_wallet",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -111,7 +110,6 @@ func loopPushMsgs(client client.IMessager) {
 					Method:  0,
 				},
 				msgMate,
-				"testminer",
 			)
 			if err != nil {
 				log.Fatal(err)

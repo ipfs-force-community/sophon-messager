@@ -17,12 +17,12 @@ type Message struct {
 	MsgService *service.MessageService
 }
 
-func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	return message.MsgService.PushMessage(ctx, msg, meta, walletName)
+func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.MsgService.PushMessage(ctx, msg, meta)
 }
 
-func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	return message.MsgService.PushMessageWithId(ctx, id, msg, meta, walletName)
+func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.MsgService.PushMessageWithId(ctx, id, msg, meta)
 }
 
 func (message Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

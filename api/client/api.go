@@ -15,8 +15,8 @@ import (
 type IMessager interface {
 	HasMessageByUid(ctx context.Context, id string) (bool, error)                                                                                  //perm:read
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)                                                         //perm:read
-	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)                      //perm:write
-	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)     //perm:write
+	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                                         //perm:write
+	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                        //perm:write
 	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)                                                                        //perm:read
 	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)                                                                       //perm:read
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                                //perm:read
@@ -34,21 +34,19 @@ type IMessager interface {
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
 	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                       //perm:admin
-	GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)                   //perm:admin
-	HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error)                             //perm:admin
-	ListAddress(ctx context.Context) ([]*types.Address, error)                                                         //perm:admin
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)                      //perm:admin
-	DeleteAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
-	ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)            //perm:admin
-	ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error)               //perm:admin
-	SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) //perm:admin
+	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                    //perm:admin
+	GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error)   //perm:admin
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)                             //perm:read
+	ListAddress(ctx context.Context) ([]*types.Address, error)                                      //perm:admin
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)   //perm:admin
+	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
+	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)            //perm:admin
+	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) //perm:admin
 
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
 	RefreshSharedParams(ctx context.Context) (struct{}, error)                         //perm:admin
-
-	HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) //perm:read
 
 	SaveNode(ctx context.Context, node *types.Node) (struct{}, error) //perm:admin
 	GetNode(ctx context.Context, name string) (*types.Node, error)    //perm:admin
@@ -67,8 +65,8 @@ type Message struct {
 	Internal struct {
 		HasMessageByUid          func(ctx context.Context, id string) (bool, error)
 		WaitMessage              func(ctx context.Context, id string, confidence uint64) (*types.Message, error)
-		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
-		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error)
+		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
+		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		GetMessageByUid          func(ctx context.Context, id string) (*types.Message, error)
 		GetMessageByCid          func(ctx context.Context, id cid.Cid) (*types.Message, error)
 		GetMessageBySignedCid    func(ctx context.Context, cid cid.Cid) (*types.Message, error)
@@ -87,14 +85,14 @@ type Message struct {
 		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
 
 		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
-		GetAddress       func(ctx context.Context, walletName string, addr address.Address) (*types.Address, error)
-		HasAddress       func(ctx context.Context, walletName string, addr address.Address) (bool, error)
+		GetAddress       func(ctx context.Context, account string, addr address.Address) (*types.Address, error)
+		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
 		ListAddress      func(ctx context.Context) ([]*types.Address, error)
 		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-		DeleteAddress    func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
-		ForbiddenAddress func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
-		ActiveAddress    func(ctx context.Context, walletName string, addr address.Address) (address.Address, error)
-		SetSelectMsgNum  func(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error)
+		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
+		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
+		SetSelectMsgNum  func(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
 		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
@@ -106,8 +104,6 @@ type Message struct {
 		ListNode   func(ctx context.Context) ([]*types.Node, error)
 		DeleteNode func(ctx context.Context, name string) (struct{}, error)
 
-		HasWalletAddress func(ctx context.Context, walletName string, addr address.Address) (bool, error)
-
 		ResponseEvent     func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
 		ListenWalletEvent func(ctx context.Context, supportAccounts []string) (chan *gatewayTypes.RequestEvent, error)
 		SupportNewAccount func(ctx context.Context, channelId string, account string) error
@@ -118,12 +114,12 @@ func (message *Message) HasMessageByUid(ctx context.Context, id string) (bool, e
 	return message.Internal.HasMessageByUid(ctx, id)
 }
 
-func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta, walletName string) (string, error) {
-	return message.Internal.PushMessage(ctx, msg, meta, walletName)
+func (message *Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+	return message.Internal.PushMessage(ctx, msg, meta)
 }
 
-func (message *Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	return message.Internal.PushMessageWithId(ctx, id, msg, meta, walletName)
+func (message *Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.Internal.PushMessageWithId(ctx, id, msg, meta)
 }
 
 func (message *Message) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
@@ -200,12 +196,12 @@ func (message *Message) SaveAddress(ctx context.Context, address *types.Address)
 	return message.Internal.SaveAddress(ctx, address)
 }
 
-func (message *Message) GetAddress(ctx context.Context, walletName string, addr address.Address) (*types.Address, error) {
-	return message.Internal.GetAddress(ctx, walletName, addr)
+func (message *Message) GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error) {
+	return message.Internal.GetAddress(ctx, account, addr)
 }
 
-func (message *Message) HasAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
-	return message.Internal.HasAddress(ctx, walletName, addr)
+func (message *Message) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	return message.Internal.HasAddress(ctx, addr)
 }
 
 func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, error) {
@@ -216,20 +212,20 @@ func (message *Message) UpdateNonce(ctx context.Context, addr address.Address, n
 	return message.Internal.UpdateNonce(ctx, addr, nonce)
 }
 
-func (message *Message) DeleteAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return message.Internal.DeleteAddress(ctx, walletName, addr)
+func (message *Message) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.DeleteAddress(ctx, addr)
 }
 
-func (message *Message) ForbiddenAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return message.Internal.ForbiddenAddress(ctx, walletName, addr)
+func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.ForbiddenAddress(ctx, addr)
 }
 
-func (message *Message) ActiveAddress(ctx context.Context, walletName string, addr address.Address) (address.Address, error) {
-	return message.Internal.ActiveAddress(ctx, walletName, addr)
+func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	return message.Internal.ActiveAddress(ctx, addr)
 }
 
-func (message *Message) SetSelectMsgNum(ctx context.Context, walletName string, addr address.Address, num uint64) (address.Address, error) {
-	return message.Internal.SetSelectMsgNum(ctx, walletName, addr, num)
+func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+	return message.Internal.SetSelectMsgNum(ctx, addr, num)
 }
 
 /////// shared params ///////
@@ -268,11 +264,7 @@ func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, 
 	return message.Internal.DeleteNode(ctx, name)
 }
 
-/////// wallet address ///////
-
-func (message *Message) HasWalletAddress(ctx context.Context, walletName string, addr address.Address) (bool, error) {
-	return message.Internal.HasWalletAddress(ctx, walletName, addr)
-}
+/////// wallet event ///////
 
 func (message *Message) ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {
 	return message.Internal.ResponseEvent(ctx, resp)

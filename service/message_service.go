@@ -32,8 +32,6 @@ import (
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
 var errMinimumNonce = "minimum expected nonce"
 
-var localhost = "127.0.0.1"
-
 const (
 	MaxHeadChangeProcess = 5
 
@@ -133,17 +131,16 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}
 	if has {
 		// cache address ?
-		has, err := ms.addressService.HasAddress(ctx, msg.WalletName, msg.From)
+		has, err := ms.addressService.HasAddress(ctx, msg.From)
 		if (err != nil && xerrors.Is(err, gorm.ErrRecordNotFound)) || (err == nil && !has) {
 			if _, err = ms.addressService.SaveAddress(ctx, &types.Address{
-				ID:         types.NewUUID(),
-				Addr:       msg.From,
-				Nonce:      0,
-				State:      types.Alive,
-				WalletName: msg.WalletName,
-				IsDeleted:  repo.NotDeleted,
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				ID:        types.NewUUID(),
+				Addr:      msg.From,
+				Nonce:     0,
+				State:     types.Alive,
+				IsDeleted: repo.NotDeleted,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			}); err != nil {
 				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
 			}
@@ -168,39 +165,27 @@ func ipAccountFromContext(ctx context.Context) (string, string) {
 	return ip, account
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	newId := types.NewUUID()
-	ip, account := ipAccountFromContext(ctx)
-	if ip != localhost {
-		if len(account) == 0 {
-			return "", xerrors.Errorf("account is empty, message: %v", msg)
-		}
-		walletName = account
-	}
+	_, account := ipAccountFromContext(ctx)
 
 	return newId.String(), ms.pushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      walletName,
+		WalletName:      account,
 	})
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
-	ip, account := ipAccountFromContext(ctx)
-	if ip != localhost {
-		if len(account) == 0 {
-			return "", xerrors.Errorf("account is empty, message: %v", msg)
-		}
-		walletName = account
-	}
+func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	_, account := ipAccountFromContext(ctx)
 	return id, ms.pushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      walletName,
+		WalletName:      account,
 	})
 }
 
