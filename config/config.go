@@ -16,6 +16,7 @@ type Config struct {
 	MessageState   MessageStateConfig   `toml:"messageState"`
 	Wallet         WalletConfig         `toml:"wallet"`
 	Gateway        GatewayConfig        `toml:"gateway"`
+	Local          LocalConfig          `toml:"local"`
 }
 
 type NodeConfig struct {
@@ -72,10 +73,14 @@ type MessageStateConfig struct {
 }
 
 type GatewayConfig struct {
-	Disable bool                `toml:"disable"`
-	Token   string              `toml:"token"`
-	Url     string              `toml:"url"`
-	Cfg     gatewayTypes.Config `toml:"cfg"`
+	RemoteEnable bool                `toml:"remoteEnable"`
+	Token        string              `toml:"token"`
+	Url          string              `toml:"url"`
+	Cfg          gatewayTypes.Config `toml:"cfg"`
+}
+
+type LocalConfig struct {
+	Token string `toml:"token"`
 }
 
 func DefaultConfig() *Config {
@@ -119,13 +124,14 @@ func DefaultConfig() *Config {
 			SkipPushMessage: false,
 		},
 		Gateway: GatewayConfig{
-			Disable: false,
-			Token:   "",
-			Url:     "",
+			RemoteEnable: false,
+			Token:        "",
+			Url:          "",
 			Cfg: gatewayTypes.Config{
 				RequestQueueSize: 30,
 				RequestTimeout:   time.Minute * 5,
 			},
 		},
+		Local: LocalConfig{Token: ""},
 	}
 }

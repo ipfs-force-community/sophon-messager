@@ -41,10 +41,13 @@
   scanInterval = 10
 
 [gateway]
-  disable = false
+  remoteEnable = false
   url = "/ip4/192.168.19.94/tcp/45132"
   token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
 
   [gateway.cfg]
     RequestQueueSize = 30
     RequestTimeout = "5m0s"
+
+[local]
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"

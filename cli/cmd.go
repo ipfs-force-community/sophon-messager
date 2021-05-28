@@ -22,6 +22,7 @@ func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {
 	}
 
 	header := http.Header{}
+	header.Set("Authorization", "Bearer "+cfg.Local.Token)
 	client, closer, err := client.NewMessageRPC(ctx.Context, addr, header)
 
 	return client, closer, err

@@ -29,36 +29,39 @@ func (authMux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+
 	token := r.Header.Get("Authorization")
+	if token == "" {
+		token = r.FormValue("token")
+		if token != "" {
+			token = "Bearer " + token
+		}
+	}
+
+	if !strings.HasPrefix(token, "Bearer ") {
+		authMux.log.Warn("missing Bearer prefix in header")
+		w.WriteHeader(401)
+		return
+	}
+
+	token = strings.TrimPrefix(token, "Bearer ")
+	res, err := authMux.jwtClient.Verify(util.MacAddr(), "venus-message", r.RemoteAddr, r.Host, token)
+	if err != nil {
+		authMux.log.Warnf("JWT Verification failed (originating from %s): %s", r.RemoteAddr, err)
+		w.WriteHeader(401)
+		return
+	}
+	ctx = context.WithValue(ctx, types.AccountKey, res.Name)
+
 	remoteAddr := strings.Split(r.RemoteAddr, ":")[0]
 	ctx = context.WithValue(ctx, types.IPKey, remoteAddr)
-	// if other nodes on the same PC, the permission check will passes directly
 	if remoteAddr == "127.0.0.1" {
+		// if other nodes on the same PC, the permission check will passes directly
 		ctx = core.WithPerm(ctx, core.PermAdmin)
 	} else {
-		if token == "" {
-			token = r.FormValue("token")
-			if token != "" {
-				token = "Bearer " + token
-			}
-		}
-
-		if !strings.HasPrefix(token, "Bearer ") {
-			authMux.log.Warn("missing Bearer prefix in header")
-			w.WriteHeader(401)
-			return
-		}
-
-		token = strings.TrimPrefix(token, "Bearer ")
-		res, err := authMux.jwtClient.Verify(util.MacAddr(), "venus-message", r.RemoteAddr, r.Host, token)
-		if err != nil {
-			authMux.log.Warnf("JWT Verification failed (originating from %s): %s", r.RemoteAddr, err)
-			w.WriteHeader(401)
-			return
-		}
-		ctx = context.WithValue(ctx, types.AccountKey, res.Name)
 		ctx = core.WithPerm(ctx, res.Perm)
 	}
+
 	*r = *(r.WithContext(ctx))
 	authMux.mux.ServeHTTP(w, r)
 }

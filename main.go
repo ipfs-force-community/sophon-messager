@@ -149,7 +149,7 @@ func runAction(ctx *cli.Context) error {
 
 	var walletClient *gateway.IWalletCli
 	var gatewayProvider fx.Option
-	if cfg.Gateway.Disable { // use local gateway
+	if !cfg.Gateway.RemoteEnable { // use local gateway
 		gatewayService := gateway.NewGatewayService(&cfg.Gateway)
 		walletClient = &gateway.IWalletCli{IWalletClient: gatewayService}
 		gatewayProvider = fx.Options(fx.Supply(gatewayService))
