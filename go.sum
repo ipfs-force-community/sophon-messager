@@ -581,6 +581,8 @@ github.com/ipfs-force-community/venus-gateway v0.0.0-20210525072315-8c87f4d464f8
 github.com/ipfs-force-community/venus-gateway v0.0.0-20210525072315-8c87f4d464f8/go.mod h1:FX1ksBDCLXRQ2mOXn3afSN9zyvK6XAgdg9Q2L3V+QkM=
 github.com/ipfs-force-community/venus-gateway v0.0.0-20210526063645-4d8ad2f2c0ca h1:B26bmR6J78wkj39xNUolbAb7UN6iEjY6v2AdbS9PaP0=
 github.com/ipfs-force-community/venus-gateway v0.0.0-20210526063645-4d8ad2f2c0ca/go.mod h1:m1gMbwD/mEw3jxIkaTWx/TCWQ3e4V6ccJ2Vw7q/lvVQ=
+github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d h1:J1qw6gabC5OEi335Z2Ar00BxLMxXGOTWD5s4x7gPK5c=
+github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d/go.mod h1:m1gMbwD/mEw3jxIkaTWx/TCWQ3e4V6ccJ2Vw7q/lvVQ=
 github.com/ipfs/bbloom v0.0.1/go.mod h1:oqo8CVWsJFMOZqTglBG4wydCE4IQA/G2/SEofB0rjUI=
 github.com/ipfs/bbloom v0.0.4 h1:Gi+8EGJ2y5qiD5FbsbpX/TMNcJw8gSqr7eyjHa4Fhvs=
 github.com/ipfs/bbloom v0.0.4/go.mod h1:cS9YprKXpoZ9lT0n/Mw/a6/aFV6DTjTLYHeA+gyqMG0=
