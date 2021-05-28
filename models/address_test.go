@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
@@ -26,15 +27,18 @@ func TestAddress(t *testing.T) {
 		assert.NoError(t, err)
 
 		addrInfo := &types.Address{
-			ID:        types.NewUUID(),
-			Addr:      addr,
-			Nonce:     3,
-			Weight:    100,
-			SelMsgNum: 1,
-			State:     types.Alive,
-			IsDeleted: -1,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:                types.NewUUID(),
+			Addr:              addr,
+			Nonce:             3,
+			Weight:            100,
+			SelMsgNum:         1,
+			State:             types.Alive,
+			GasOverEstimation: 1.25,
+			MaxFee:            big.NewInt(10),
+			MaxFeeCap:         big.NewInt(1),
+			IsDeleted:         -1,
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 
 		addrInfo2 := &types.Address{
@@ -42,6 +46,8 @@ func TestAddress(t *testing.T) {
 			Addr:      addr2,
 			SelMsgNum: 10,
 			State:     types.Alive,
+			MaxFee:    big.NewInt(110),
+			MaxFeeCap: big.NewInt(11),
 			Nonce:     2,
 			IsDeleted: -1,
 			CreatedAt: time.Time{},
@@ -73,6 +79,9 @@ func TestAddress(t *testing.T) {
 			assert.Equal(t, expect.Weight, actual.Weight)
 			assert.Equal(t, expect.SelMsgNum, actual.SelMsgNum)
 			assert.Equal(t, expect.State, actual.State)
+			assert.Equal(t, expect.GasOverEstimation, actual.GasOverEstimation)
+			assert.Equal(t, expect.MaxFee, actual.MaxFee)
+			assert.Equal(t, expect.MaxFeeCap, actual.MaxFeeCap)
 		}
 
 		t.Run("GetAddress", func(t *testing.T) {
@@ -118,6 +127,19 @@ func TestAddress(t *testing.T) {
 			r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 			assert.NoError(t, err)
 			assert.Equal(t, num, r.SelMsgNum)
+		})
+
+		t.Run("UpdateFeeParams", func(t *testing.T) {
+			gasOverEstimation := 1.5
+			maxFeeCap := big.NewInt(1000)
+			maxFee := big.NewInt(1000)
+			assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap))
+
+			r, err := addressRepo.GetAddress(ctx, addr)
+			assert.NoError(t, err)
+			assert.Equal(t, gasOverEstimation, r.GasOverEstimation)
+			assert.Equal(t, maxFee, r.MaxFee)
+			assert.Equal(t, maxFeeCap, r.MaxFeeCap)
 		})
 
 		t.Run("DelAddress", func(t *testing.T) {

@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 
-	"golang.org/x/xerrors"
+	"github.com/filecoin-project/go-state-types/big"
 
 	"github.com/filecoin-project/go-address"
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -54,16 +56,8 @@ func (addressService *AddressService) UpdateNonce(ctx context.Context, addr addr
 	return addr, addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
 }
 
-func (addressService *AddressService) GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error) {
-	has, err := addressService.walletClient.WalletHas(ctx, account, addr)
-	if err != nil {
-		return nil, xerrors.Errorf("call 'WalletHas' failed %v", err)
-	}
-	if has {
-		return addressService.repo.AddressRepo().GetAddress(ctx, addr)
-	}
-
-	return nil, errAddressNotExists
+func (addressService *AddressService) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
+	return addressService.repo.AddressRepo().GetAddress(ctx, addr)
 }
 
 func (addressService *AddressService) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
@@ -72,7 +66,30 @@ func (addressService *AddressService) HasAddress(ctx context.Context, addr addre
 }
 
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {
-	return addressService.repo.AddressRepo().ListAddress(ctx)
+	wi, err := addressService.walletClient.ListWalletInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	addrs := make(map[address.Address]struct{})
+	for _, info := range wi {
+		for _, one := range info.ConnectStates {
+			for _, addr := range one.Addrs {
+				if _, ok := addrs[addr]; !ok {
+					addrs[addr] = struct{}{}
+				}
+			}
+		}
+	}
+	addrList := make([]*types.Address, 0, len(addrs))
+	for addr := range addrs {
+		ai, err := addressService.GetAddress(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		addrList = append(addrList, ai)
+	}
+
+	return addrList, nil
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
@@ -104,6 +121,32 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr 
 	addressService.log.Infof("set select msg num: %s %d", addr.String(), num)
 
 	return addr, nil
+}
+
+func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFeeStr, maxFeeCapStr string) (address.Address, error) {
+	has, err := addressService.repo.AddressRepo().HasAddress(ctx, addr)
+	if err != nil {
+		return address.Undef, err
+	}
+	if !has {
+		return address.Undef, errAddressNotExists
+	}
+
+	var maxFee, maxFeeCap big.Int
+	if len(maxFeeStr) != 0 {
+		maxFee, err = venusTypes.BigFromString(maxFeeStr)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("parsing max-spend: %v", err)
+		}
+	}
+	if len(maxFeeCapStr) != 0 {
+		maxFeeCap, err = venusTypes.BigFromString(maxFeeCapStr)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("parsing max-feecap: %v", err)
+		}
+	}
+
+	return addr, addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
 func (addressService *AddressService) Addresses() map[address.Address]struct{} {

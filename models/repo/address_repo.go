@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
 
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -19,4 +20,5 @@ type AddressRepo interface {
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
 	UpdateState(ctx context.Context, addr address.Address, state types.State) error
 	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error
+	UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap big.Int) error
 }

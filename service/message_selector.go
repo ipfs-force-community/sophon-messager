@@ -220,7 +220,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		msg.Nonce = addr.Nonce
 
 		// global msg meta
-		newMsgMeta := messageSelector.messageMeta(msg.Meta)
+		newMsgMeta := messageSelector.messageMeta(msg.Meta, addr)
 
 		//todo 估算gas, spec怎么做？
 		//通过配置影响 maxfee
@@ -309,22 +309,31 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 	return result, expireMsg
 }
 
-func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta) *types.MsgMeta {
+func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInfo *types.Address) *types.MsgMeta {
 	newMsgMeta := &types.MsgMeta{}
 	*newMsgMeta = *meta
 	globalMeta := messageSelector.sps.GetParams().GetMsgMeta()
-	if globalMeta == nil {
-		return newMsgMeta
-	}
 
 	if meta.GasOverEstimation == 0 {
-		newMsgMeta.GasOverEstimation = globalMeta.GasOverEstimation
+		if addrInfo.GasOverEstimation != 0 {
+			newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
+		} else if globalMeta != nil {
+			newMsgMeta.GasOverEstimation = globalMeta.GasOverEstimation
+		}
 	}
 	if meta.MaxFee.NilOrZero() {
-		newMsgMeta.MaxFee = globalMeta.MaxFee
+		if !addrInfo.MaxFee.Nil() {
+			newMsgMeta.MaxFee = addrInfo.MaxFee
+		} else if globalMeta != nil {
+			newMsgMeta.MaxFee = globalMeta.MaxFee
+		}
 	}
 	if meta.MaxFeeCap.NilOrZero() {
-		newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
+		if !addrInfo.MaxFeeCap.Nil() {
+			newMsgMeta.MaxFeeCap = addrInfo.MaxFeeCap
+		} else if globalMeta != nil {
+			newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
+		}
 	}
 
 	return newMsgMeta

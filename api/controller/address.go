@@ -18,8 +18,8 @@ func (a Address) SaveAddress(ctx context.Context, address *types.Address) (types
 	return a.AddressService.SaveAddress(ctx, address)
 }
 
-func (a Address) GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error) {
-	return a.AddressService.GetAddress(ctx, account, addr)
+func (a Address) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
+	return a.AddressService.GetAddress(ctx, addr)
 }
 
 func (a Address) HasAddress(ctx context.Context, addr address.Address) (bool, error) {

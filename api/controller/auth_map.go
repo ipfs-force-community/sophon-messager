@@ -41,4 +41,5 @@ var AuthMap = map[string]string{
 	"UpdateMessageStateByID":   "admin",
 	"ListAddress":              "admin",
 	"DeleteAddress":            "admin",
+	"SetFeeParams":             "admin",
 }

@@ -9,12 +9,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var walletNameFlag = &cli.StringFlag{
-	Name:    "wallet-name",
-	Usage:   "wallet name",
-	Aliases: []string{"name"},
-}
-
 var AddrCmds = &cli.Command{
 	Name:  "address",
 	Usage: "address commands",
@@ -26,6 +20,7 @@ var AddrCmds = &cli.Command{
 		forbiddenAddrCmd,
 		activeAddrCmd,
 		setAddrSelMsgNumCmd,
+		setFeeParamsCmd,
 	},
 }
 
@@ -34,9 +29,6 @@ var searchAddrCmd = &cli.Command{
 	Name:      "search",
 	Usage:     "search address",
 	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		walletNameFlag,
-	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
@@ -52,7 +44,7 @@ var searchAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		addrInfo, err := client.GetAddress(ctx.Context, ctx.String("wallet-name"), addr)
+		addrInfo, err := client.GetAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -256,5 +248,45 @@ var setAddrSelMsgNumCmd = &cli.Command{
 		}
 
 		return nil
+	},
+}
+
+var setFeeParamsCmd = &cli.Command{
+	Name:      "set-fee-params",
+	Usage:     "Address setting fee associated configuration",
+	ArgsUsage: "address",
+	Flags: []cli.Flag{
+		&cli.Float64Flag{
+			Name:  "gas-overestimation",
+			Usage: "Estimate the coefficient of gas",
+		},
+		&cli.StringFlag{
+			Name:  "max-feecap",
+			Usage: "Max feecap for a message (burn and pay to miner, attoFIL/GasUnit)",
+		},
+		&cli.StringFlag{
+			Name:  "max-fee",
+			Usage: "Spend up to X attoFIL for message",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+
+		_, err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.String("max-fee"), ctx.String("max-feecap"))
+
+		return err
 	},
 }

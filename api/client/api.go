@@ -34,15 +34,16 @@ type IMessager interface {
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
 	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                    //perm:admin
-	GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error)   //perm:admin
-	HasAddress(ctx context.Context, addr address.Address) (bool, error)                             //perm:read
-	ListAddress(ctx context.Context) ([]*types.Address, error)                                      //perm:admin
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)   //perm:admin
-	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
-	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)            //perm:admin
-	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)               //perm:admin
-	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) //perm:admin
+	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                                          //perm:admin
+	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                                         //perm:admin
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)                                                                   //perm:read
+	ListAddress(ctx context.Context) ([]*types.Address, error)                                                                            //perm:admin
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)                                         //perm:admin
+	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
+	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                  //perm:admin
+	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error)                                       //perm:admin
+	SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) //perm:admin
 
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
@@ -85,7 +86,7 @@ type Message struct {
 		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
 
 		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
-		GetAddress       func(ctx context.Context, account string, addr address.Address) (*types.Address, error)
+		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
 		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
 		ListAddress      func(ctx context.Context) ([]*types.Address, error)
 		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
@@ -93,6 +94,7 @@ type Message struct {
 		ForbiddenAddress func(ctx context.Context, addr address.Address) (address.Address, error)
 		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 		SetSelectMsgNum  func(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
+		SetFeeParams     func(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
 		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
@@ -196,8 +198,8 @@ func (message *Message) SaveAddress(ctx context.Context, address *types.Address)
 	return message.Internal.SaveAddress(ctx, address)
 }
 
-func (message *Message) GetAddress(ctx context.Context, account string, addr address.Address) (*types.Address, error) {
-	return message.Internal.GetAddress(ctx, account, addr)
+func (message *Message) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
+	return message.Internal.GetAddress(ctx, addr)
 }
 
 func (message *Message) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
@@ -226,6 +228,10 @@ func (message *Message) ActiveAddress(ctx context.Context, addr address.Address)
 
 func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
 	return message.Internal.SetSelectMsgNum(ctx, addr, num)
+}
+
+func (message *Message) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) {
+	return message.Internal.SetFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
 /////// shared params ///////

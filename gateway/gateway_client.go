@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/venus-wallet/core"
+	"github.com/ipfs-force-community/venus-gateway/walletevent"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -16,6 +17,8 @@ import (
 type IWalletClient interface {
 	WalletHas(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
 	WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error)
+
+	ListWalletInfo(ctx context.Context) ([]*walletevent.WalletDetail, error)
 }
 
 // *api.MessageImp and *gateway.WalletClient both implement IWalletClient, so injection will fail
@@ -27,6 +30,8 @@ type WalletClient struct {
 	Internal struct {
 		WalletHas  func(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
 		WalletSign func(ctx context.Context, account string, addr address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error)
+
+		ListWalletInfo func(ctx context.Context) ([]*walletevent.WalletDetail, error)
 	}
 }
 
@@ -36,6 +41,10 @@ func (w *WalletClient) WalletHas(ctx context.Context, supportAccount string, add
 
 func (w *WalletClient) WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta core.MsgMeta) (*crypto.Signature, error) {
 	return w.Internal.WalletSign(ctx, account, addr, toSign, meta)
+}
+
+func (w *WalletClient) ListWalletInfo(ctx context.Context) ([]*walletevent.WalletDetail, error) {
+	return w.Internal.ListWalletInfo(ctx)
 }
 
 func NewWalletClient(cfg *config.GatewayConfig) (IWalletClient, jsonrpc.ClientCloser, error) {
