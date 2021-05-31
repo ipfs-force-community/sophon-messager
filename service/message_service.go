@@ -348,7 +348,7 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.A
 	if addr != address.Undef {
 		msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr, d)
 	} else {
-		addrList, err := ms.repo.AddressRepo().ListAddress(ctx)
+		addrList, err := ms.addressService.ListAddress(ctx)
 		if err != nil {
 			return nil, err
 		}

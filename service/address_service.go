@@ -66,30 +66,7 @@ func (addressService *AddressService) HasAddress(ctx context.Context, addr addre
 }
 
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {
-	wi, err := addressService.walletClient.ListWalletInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	addrs := make(map[address.Address]struct{})
-	for _, info := range wi {
-		for _, one := range info.ConnectStates {
-			for _, addr := range one.Addrs {
-				if _, ok := addrs[addr]; !ok {
-					addrs[addr] = struct{}{}
-				}
-			}
-		}
-	}
-	addrList := make([]*types.Address, 0, len(addrs))
-	for addr := range addrs {
-		ai, err := addressService.GetAddress(ctx, addr)
-		if err != nil {
-			return nil, err
-		}
-		addrList = append(addrList, ai)
-	}
-
-	return addrList, nil
+	return addressService.repo.AddressRepo().ListAddress(ctx)
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
