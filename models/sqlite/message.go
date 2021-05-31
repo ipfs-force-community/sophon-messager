@@ -371,6 +371,14 @@ func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce
 	return msg.Message(), nil
 }
 
+func (m *sqliteMessageRepo) GetMessageByFromNonceAndState(from address.Address, nonce uint64, state types.MessageState) (*types.Message, error) {
+	var msg sqliteMessage
+	if err := m.DB.Where("from_addr = ? and nonce = ? and state = ?", from.String(), nonce, state).Take(&msg).Error; err != nil {
+		return nil, err
+	}
+	return msg.Message(), nil
+}
+
 func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Find(&sqlMsgs).Error; err != nil {

@@ -761,13 +761,22 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			//	ms.log.Errorf("push message error %v", err)
 			//}
 		case newHead := <-ms.triggerPush:
-			start := time.Now()
-			ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
-			err := ms.pushMessageToPool(ctx, newHead)
-			if err != nil {
-				ms.log.Errorf("push message error %v", err)
+			select {
+			case f := <-ms.addressService.resetAddressFunc:
+				nonce, err := f()
+				ms.addressService.resetAddressRes <- resetAddressResult{
+					latestNonce: nonce,
+					err:         err,
+				}
+			default:
+				start := time.Now()
+				ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
+				err := ms.pushMessageToPool(ctx, newHead)
+				if err != nil {
+					ms.log.Errorf("push message error %v", err)
+				}
+				ms.log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
 			}
-			ms.log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
 		}
 	}
 }

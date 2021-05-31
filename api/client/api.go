@@ -47,6 +47,7 @@ type IMessager interface {
 	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
 	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error)                                       //perm:admin
 	SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) //perm:admin
+	ResetAddress(ctx context.Context, addr address.Address, nonce uint64) (uint64, error)                                                 //perm:admin
 
 	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
 	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
@@ -101,6 +102,7 @@ type Message struct {
 		ActiveAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
 		SetSelectMsgNum  func(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
 		SetFeeParams     func(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error)
+		ResetAddress     func(ctx context.Context, addr address.Address, nonce uint64) (uint64, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
 		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
@@ -240,6 +242,10 @@ func (message *Message) ActiveAddress(ctx context.Context, addr address.Address)
 
 func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
 	return message.Internal.SetSelectMsgNum(ctx, addr, num)
+}
+
+func (message *Message) ResetAddress(ctx context.Context, addr address.Address, nonce uint64) (uint64, error) {
+	return message.Internal.ResetAddress(ctx, addr, nonce)
 }
 
 func (message *Message) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) {

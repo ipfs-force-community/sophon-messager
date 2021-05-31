@@ -19,6 +19,7 @@ type MessageRepo interface {
 	SaveMessage(msg *types.Message) error
 
 	GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error)
+	GetMessageByFromNonceAndState(from address.Address, nonce uint64, state types.MessageState) (*types.Message, error)
 	GetMessageByUid(id string) (*types.Message, error)
 	HasMessageByUid(id string) (bool, error)
 	GetMessageState(id string) (types.MessageState, error)

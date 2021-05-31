@@ -21,6 +21,11 @@ import (
 	"github.com/filecoin-project/venus-messager/types"
 )
 
+var ReallyDoItFlag = &cli.BoolFlag{
+	Name:  "really-do-it",
+	Usage: "specify this flag to confirm mark-bad",
+}
+
 var MsgCmds = &cli.Command{
 	Name:  "msg",
 	Usage: "message commands",
@@ -545,10 +550,7 @@ var markBadCmd = &cli.Command{
 	Name:  "mark-bad",
 	Usage: "mark bad message",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "really-do-it",
-			Usage: "specify this flag to confirm mark-bad",
-		},
+		ReallyDoItFlag,
 		&cli.StringFlag{
 			Name:  "from",
 			Usage: "mark unfill message as bad message if specify this flag",

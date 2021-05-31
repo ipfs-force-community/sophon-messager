@@ -23,7 +23,7 @@ var defParams = &types.SharedParams{
 	ID:                 0,
 	ExpireEpoch:        0,
 	GasOverEstimation:  1.25,
-	MaxFee:             big.Int{DefaultMaxFee.Int},
+	MaxFee:             big.Int{Int: DefaultMaxFee.Int},
 	MaxFeeCap:          big.NewInt(0),
 	SelMsgNum:          20,
 	ScanInterval:       10,
