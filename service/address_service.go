@@ -61,8 +61,7 @@ func (addressService *AddressService) GetAddress(ctx context.Context, addr addre
 }
 
 func (addressService *AddressService) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	_, account := ipAccountFromContext(ctx)
-	return addressService.walletClient.WalletHas(ctx, account, addr)
+	return addressService.repo.AddressRepo().HasAddress(ctx, addr)
 }
 
 func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types.Address, error) {

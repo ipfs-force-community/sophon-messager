@@ -130,10 +130,8 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		return err
 	}
 	if has {
-		// cache address ?
-		has, err := ms.addressService.HasAddress(ctx, msg.From)
-		if (err != nil && xerrors.Is(err, gorm.ErrRecordNotFound)) || (err == nil && !has) {
-			if _, err = ms.addressService.SaveAddress(ctx, &types.Address{
+		saveAddr := func() error {
+			_, err = ms.addressService.SaveAddress(ctx, &types.Address{
 				ID:        types.NewUUID(),
 				Addr:      msg.From,
 				Nonce:     0,
@@ -141,9 +139,24 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 				IsDeleted: repo.NotDeleted,
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
-			}); err != nil {
+			})
+			return err
+		}
+		has, err := ms.addressService.HasAddress(ctx, msg.From)
+		if err != nil {
+			if xerrors.Is(err, gorm.ErrRecordNotFound) {
+				if err := saveAddr(); err != nil {
+					return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
+				}
+				ms.log.Infof("add new address %s", msg.From.String())
+			} else {
+				return err
+			}
+		} else if !has {
+			if err := saveAddr(); err != nil {
 				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
 			}
+			ms.log.Infof("add new address %s", msg.From.String())
 		}
 	} else {
 		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
@@ -769,6 +782,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 		msgs = append(msgs, filledMsgs...)
 	}
 
+	ms.log.Infof("%d messages need to sync", len(msgs))
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
@@ -791,7 +805,7 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet); err != nil {
 			return err
 		}
-		ms.log.Infof("update message %v by node success", msg.ID)
+		ms.log.Infof("update message %v by node success, height: %d", msg.ID, msgLookup.Height)
 	}
 
 	return nil
