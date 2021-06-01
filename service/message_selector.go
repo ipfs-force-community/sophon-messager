@@ -277,7 +277,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Errorf("message %s estimate message fail %v, try to next message", msg.ID, err)
 			continue
 		}
-
+		messageSelector.log.Infof("estimate message %s meta maxfee %s, max fee cap %s, over estimation %f", msg.ID, newMsgMeta.MaxFee, newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation)
 		msg.GasFeeCap = newMsg.GasFeeCap
 		msg.GasPremium = newMsg.GasPremium
 		msg.GasLimit = newMsg.GasLimit
@@ -413,7 +413,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 }
 func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
 	if msg.GasLimit == 0 {
-		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, tsk})
+		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas used: %w", err)
 		}
@@ -423,7 +423,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	}
 
 	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
-		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, tsk})
+		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, xerrors.Errorf("estimating gas price: %w", err)
 		}
