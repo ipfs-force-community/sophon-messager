@@ -277,7 +277,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Errorf("message %s estimate message fail %v, try to next message", msg.ID, err)
 			continue
 		}
-		messageSelector.log.Infof("estimate message %s meta maxfee %s, max fee cap %s, over estimation %s", msg.ID, newMsgMeta.MaxFee.String(), newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation)
+		messageSelector.log.Infof("estimate message %s meta maxfee %s, max fee cap %s, over estimation %f", msg.ID, newMsgMeta.MaxFee, newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation)
 		msg.GasFeeCap = newMsg.GasFeeCap
 		msg.GasPremium = newMsg.GasPremium
 		msg.GasLimit = newMsg.GasLimit
