@@ -61,7 +61,7 @@ func newWalletClient(ctx context.Context, token, url string) (*WalletClient, jso
 	if err != nil {
 		return nil, nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&walletClient.Internal}, headers)
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Gateway", []interface{}{&walletClient.Internal}, headers)
 
 	return &walletClient, closer, err
 }
