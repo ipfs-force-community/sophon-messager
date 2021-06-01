@@ -142,7 +142,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 			})
 			return err
 		}
-		has, err := ms.addressService.HasAddress(ctx, msg.From)
+		has, err := ms.addressService.repo.AddressRepo().HasAddress(ctx, msg.From)
 		if err != nil {
 			if xerrors.Is(err, gorm.ErrRecordNotFound) {
 				if err := saveAddr(); err != nil {
