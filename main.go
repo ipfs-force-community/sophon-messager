@@ -89,6 +89,15 @@ var runCmd = &cli.Command{
 			Name:  "mysql-dsn",
 			Usage: "mysql connection string",
 		},
+
+		&cli.StringFlag{
+			Name:  "gateway-url",
+			Usage: "gateway url",
+		},
+		&cli.StringFlag{
+			Name:  "gateway-token",
+			Usage: "gateway token",
+		},
 	},
 	Action: runAction,
 }
@@ -234,6 +243,15 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 
 	if ctx.IsSet("node-token") {
 		cfg.Node.Token = ctx.String("node-token")
+	}
+
+	if ctx.IsSet("gateway-url") {
+		cfg.Gateway.RemoteEnable = true
+		cfg.Gateway.Url = ctx.String("gateway-url")
+	}
+
+	if ctx.IsSet("gateway-token") {
+		cfg.Gateway.Token = ctx.String("gateway-token")
 	}
 
 	if ctx.IsSet("db-type") {
