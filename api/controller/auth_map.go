@@ -42,4 +42,5 @@ var AuthMap = map[string]string{
 	"ListAddress":              "admin",
 	"DeleteAddress":            "admin",
 	"SetFeeParams":             "admin",
+	"WalletHas":                "read",
 }

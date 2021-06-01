@@ -39,6 +39,7 @@ type IMessager interface {
 	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                                          //perm:admin
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                                         //perm:admin
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)                                                                   //perm:read
+	WalletHas(ctx context.Context, addr address.Address) (bool, error)                                                                    //perm:read
 	ListAddress(ctx context.Context) ([]*types.Address, error)                                                                            //perm:admin
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)                                         //perm:admin
 	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
@@ -90,6 +91,7 @@ type Message struct {
 		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
 		HasAddress       func(ctx context.Context, addr address.Address) (bool, error)
+		WalletHas        func(ctx context.Context, addr address.Address) (bool, error)
 		ListAddress      func(ctx context.Context) ([]*types.Address, error)
 		UpdateNonce      func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
 		DeleteAddress    func(ctx context.Context, addr address.Address) (address.Address, error)
@@ -206,6 +208,10 @@ func (message *Message) GetAddress(ctx context.Context, addr address.Address) (*
 
 func (message *Message) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
 	return message.Internal.HasAddress(ctx, addr)
+}
+
+func (message *Message) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
+	return message.Internal.WalletHas(ctx, addr)
 }
 
 func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, error) {
