@@ -45,6 +45,7 @@ type sqliteMessage struct {
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
 
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
 
@@ -76,6 +77,7 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 		Meta:       sqlMsg.Meta.Meta(),
 		State:      sqlMsg.State,
 		WalletName: sqlMsg.WalletName,
+		FromUser:   sqlMsg.FromUser,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
 	}
@@ -111,6 +113,7 @@ func FromMessage(srcMsg *types.Message) *sqliteMessage {
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
+		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
 	}
@@ -231,19 +234,6 @@ func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 func (m *sqliteMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.FillMsg).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*types.Message, len(sqlMsgs))
-	for index, sqlMsg := range sqlMsgs {
-		result[index] = sqlMsg.Message()
-	}
-	return result, nil
-}
-
-func (m *sqliteMessageRepo) ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error) {
-	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? and wallet_name = ?", addr.String(), types.FillMsg, walletName).Error
 	if err != nil {
 		return nil, err
 	}
@@ -511,11 +501,6 @@ func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.Mess
 func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
 	return m.DB.Model(&sqliteMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
-}
-
-func (m *sqliteMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
-	return m.DB.Model(&sqliteMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
-		UpdateColumn("state", state).Error
 }
 
 func (m *sqliteMessageRepo) MarkBadMessage(id string) (struct{}, error) {

@@ -13,11 +13,13 @@ import (
 	"syscall"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	"github.com/google/uuid"
 	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
+	"github.com/ipfs-force-community/venus-gateway/walletevent"
+
+	"github.com/filecoin-project/venus-messager/api/client"
 )
 
 // go run cmds/mock_wallet_example/main.go --account testminer --private-key 7b22707269766174654b6579223a226b45564e4d662b48533242593469774c7535374f37675055625449776859504e4a364264717532556e47453d222c2274797065223a22626c73227d
@@ -57,7 +59,7 @@ func main() {
 	}
 	defer closer()
 
-	reqEvent, err := gatewayCli.ListenWalletEvent(context.Background(), accounts)
+	reqEvent, err := gatewayCli.ListenWalletEvent(context.Background(), &walletevent.WalletRegisterPolicy{SupportAccounts: accounts})
 	if err != nil {
 		panic(err)
 	}

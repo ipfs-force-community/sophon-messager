@@ -33,7 +33,6 @@ type MessageRepo interface {
 	ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
-	ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error)
 	ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListUnchainedMsgs() ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
@@ -42,7 +41,6 @@ type MessageRepo interface {
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) error
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageStateByID(id string, state types.MessageState) error
-	UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error
 	MarkBadMessage(id string) (struct{}, error)
 	UpdateReturnValue(id string, returnVal string) error
 }

@@ -343,35 +343,6 @@ func TestListFilledMessageByAddress(t *testing.T) {
 	})
 }
 
-func TestUpdateUnFilledMessageState(t *testing.T) {
-	sqliteRepo, mysqlRepo := setupRepo(t)
-
-	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
-
-		msgs := NewMessages(10)
-		for _, msg := range msgs {
-			msg.State = types.UnFillMsg
-			err := messageRepo.CreateMessage(msg)
-			assert.NoError(t, err)
-		}
-
-		assert.NoError(t, messageRepo.UpdateUnFilledMessageState(msgs[0].WalletName, msgs[0].From, types.NoWalletMsg))
-
-		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
-		assert.NoError(t, err)
-		assert.Equal(t, types.NoWalletMsg, msg.State)
-	}
-	t.Run("UpdateUnFilledMessageState", func(t *testing.T) {
-		t.Run("sqlite", func(t *testing.T) {
-			messageRepoTest(t, sqliteRepo.MessageRepo())
-		})
-		t.Run("mysql", func(t *testing.T) {
-			t.SkipNow()
-			messageRepoTest(t, mysqlRepo.MessageRepo())
-		})
-	})
-}
-
 func TestMarkBadMessage(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 

@@ -617,6 +617,7 @@ type message struct {
 	Meta *types.MsgMeta
 
 	WalletName string
+	FromUser   string
 
 	State string
 
@@ -646,6 +647,7 @@ func transformMessage(msg *types.Message) *message {
 		TipSetKey:       msg.TipSetKey,
 		Meta:            msg.Meta,
 		WalletName:      msg.WalletName,
+		FromUser:        msg.FromUser,
 		State:           types.MsgStateToString(msg.State),
 		UpdatedAt:       msg.UpdatedAt,
 		CreatedAt:       msg.CreatedAt,

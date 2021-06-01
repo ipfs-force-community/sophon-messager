@@ -46,6 +46,7 @@ type mysqlMessage struct {
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
 
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
@@ -76,6 +77,7 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 		Signature:  (*crypto.Signature)(sqlMsg.Signature),
 		Meta:       sqlMsg.Meta.Meta(),
 		WalletName: sqlMsg.WalletName,
+		FromUser:   sqlMsg.FromUser,
 		State:      sqlMsg.State,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
@@ -112,6 +114,7 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
+		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
 	}
@@ -254,19 +257,6 @@ func (m *mysqlMessageRepo) ExpireMessage(msgs []*types.Message) error {
 func (m *mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.FillMsg).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*types.Message, len(sqlMsgs))
-	for index, sqlMsg := range sqlMsgs {
-		result[index] = sqlMsg.Message()
-	}
-	return result, nil
-}
-
-func (m *mysqlMessageRepo) ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error) {
-	var sqlMsgs []*mysqlMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? and wallet_name = ?", addr.String(), types.FillMsg, walletName).Error
 	if err != nil {
 		return nil, err
 	}
@@ -510,11 +500,6 @@ func (m *mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.Messa
 func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
 	return m.DB.Debug().Model(&mysqlMessage{}).
 		Where("id = ?", id).UpdateColumn("state", state).Error
-}
-
-func (m *mysqlMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
-	return m.DB.Debug().Model(&mysqlMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
-		UpdateColumn("state", state).Error
 }
 
 func (m *mysqlMessageRepo) MarkBadMessage(id string) (struct{}, error) {

@@ -188,6 +188,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Unsig
 		Meta:            meta,
 		State:           types.UnFillMsg,
 		WalletName:      account,
+		FromUser:        account,
 	})
 }
 
@@ -199,6 +200,7 @@ func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg 
 		Meta:            meta,
 		State:           types.UnFillMsg,
 		WalletName:      account,
+		FromUser:        account,
 	})
 }
 

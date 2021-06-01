@@ -48,6 +48,7 @@ type Message struct {
 	TipSetKey  venusTypes.TipSetKey
 	Meta       *MsgMeta
 	WalletName string
+	FromUser   string
 
 	State MessageState
 
