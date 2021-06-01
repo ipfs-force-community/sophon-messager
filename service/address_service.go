@@ -109,18 +109,24 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 		return address.Undef, errAddressNotExists
 	}
 
+	var needUpdate bool
 	var maxFee, maxFeeCap big.Int
 	if len(maxFeeStr) != 0 {
 		maxFee, err = venusTypes.BigFromString(maxFeeStr)
 		if err != nil {
 			return address.Undef, xerrors.Errorf("parsing max-spend: %v", err)
 		}
+		needUpdate = true
 	}
 	if len(maxFeeCapStr) != 0 {
 		maxFeeCap, err = venusTypes.BigFromString(maxFeeCapStr)
 		if err != nil {
 			return address.Undef, xerrors.Errorf("parsing max-feecap: %v", err)
 		}
+		needUpdate = true
+	}
+	if !needUpdate && gasOverEstimation == 0 {
+		return addr, nil
 	}
 
 	return addr, addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)

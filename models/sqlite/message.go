@@ -223,7 +223,11 @@ func (m *sqliteMessageRepo) HasMessageByUid(id string) (bool, error) {
 
 func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.FailedMsg).Error
+		updateColumns := map[string]interface{}{
+			"state":      types.FailedMsg,
+			"updated_at": time.Now(),
+		}
+		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumns(updateColumns).Error
 		if err != nil {
 			return err
 		}
@@ -487,6 +491,7 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
 		"tipset_key":           tsKey.String(),
+		"updated_at":           time.Now(),
 	}
 	return m.DB.Model(&sqliteMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
@@ -494,19 +499,35 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	updateColumns := map[string]interface{}{
+		"state":      state,
+		"updated_at": time.Now(),
+	}
 	return m.DB.Model(&sqliteMessage{}).
-		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
+		Where("unsigned_cid = ?", cid).UpdateColumns(updateColumns).Error
 }
 
 func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
+	updateColumns := map[string]interface{}{
+		"state":      state,
+		"updated_at": time.Now(),
+	}
 	return m.DB.Model(&sqliteMessage{}).
-		Where("id = ?", id).UpdateColumn("state", state).Error
+		Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *sqliteMessageRepo) MarkBadMessage(id string) (struct{}, error) {
-	return struct{}{}, m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumn("state", types.FailedMsg).Error
+	updateColumns := map[string]interface{}{
+		"state":      types.FailedMsg,
+		"updated_at": time.Now(),
+	}
+	return struct{}{}, m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *sqliteMessageRepo) UpdateReturnValue(id string, returnVal string) error {
-	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumn("receipt_return_value", returnVal).Error
+	updateColumns := map[string]interface{}{
+		"receipt_return_value": returnVal,
+		"updated_at":           time.Now(),
+	}
+	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

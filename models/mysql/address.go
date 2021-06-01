@@ -18,7 +18,7 @@ type mysqlAddress struct {
 	Nonce             uint64      `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
 	Weight            int64       `gorm:"column:weight;type:bigint;index;NOT NULL"`
 	SelMsgNum         uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
-	State             types.State `gorm:"column:state;type:int;index;"`
+	State             types.State `gorm:"column:state;type:int;index;default:1"`
 	GasOverEstimation float64     `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            types.Int   `gorm:"column:max_fee;type:varchar(256);"`
 	MaxFeeCap         types.Int   `gorm:"column:max_fee_cap;type:varchar(256);"`
@@ -174,6 +174,7 @@ func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Addr
 	if !maxFeeCap.Nil() {
 		updateColumns["max_fee_cap"] = types.NewFromGo(maxFeeCap.Int)
 	}
+	updateColumns["updated_at"] = time.Now()
 
 	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).UpdateColumns(updateColumns).Error
 }
