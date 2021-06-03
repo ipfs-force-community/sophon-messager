@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"modernc.org/mathutil"
 	"sort"
 	"sync"
 	"time"
@@ -153,7 +154,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			return nil, xerrors.Errorf("update address %s nonce failed %v", addr.Addr, err)
 		}
 	}
-	//todo push signed but not onchain message, when to resend message
+
 	filledMessage, err := messageSelector.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
 	if err != nil {
 		messageSelector.log.Warnf("list filled message %v", err)
@@ -176,15 +177,16 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			ToPushMsg: toPushMessage,
 		}, nil
 	}
-	selectCount := maxAllowPendingMessage - nonceGap
-	messageSelector.log.Infof("address %s pre state actor nonce %d, latest nonce %d, assigned nonce %d, nonce gap %d, want %d", addr.Addr, actor.Nonce, nonceInLatestTs, addr.Nonce, nonceGap, selectCount)
-
-	//消息排序
+	wantCount := maxAllowPendingMessage - nonceGap
+	messageSelector.log.Infof("address %s pre state actor nonce %d, latest nonce %d, assigned nonce %d, nonce gap %d, want %d", addr.Addr, actor.Nonce, nonceInLatestTs, addr.Nonce, nonceGap, wantCount)
+	//get message
+	selectCount := mathutil.MinUint64(wantCount*2, 100)
 	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr, int(selectCount))
 	if err != nil {
 		return nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
 	}
 
+	//exclude expire message
 	messages, expireMsgs := messageSelector.excludeExpire(ts, messages)
 	sort.Slice(messages, func(i, j int) bool {
 		return messages[i].Meta.ExpireEpoch < messages[j].Meta.ExpireEpoch
@@ -201,7 +203,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 	var count = uint64(0)
 	var selectMsg []*types.Message
-	var msgsErrInfo []msgErrInfo
+	var errMsg []msgErrInfo
 
 	estimateMesssages := make([]*EstimateMessage, len(messages))
 	for index, msg := range messages {
@@ -231,7 +233,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			messageSelector.log.Errorf("estimate message %s fail %s", msg.ID, estimateResult[index].Err)
 		}
 		estimateMsg := estimateResult[index].Msg
-		if count >= selectCount {
+		if count >= wantCount {
 			break
 		}
 
@@ -257,7 +259,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}})
 		cancel()
 		if err != nil {
-			msgsErrInfo = append(msgsErrInfo, msgErrInfo{id: msg.ID, err: signMsg + err.Error()})
+			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: signMsg + err.Error()})
 			messageSelector.log.Errorf("wallet sign failed %s fail %v", msg.ID, err)
 			break
 		}
@@ -280,12 +282,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	messageSelector.log.Infof("address %s select message %d ExpireMsgs %d ToPushMsgs %d ErrMsgs %d max nonce %d",
-		addr.Addr, len(selectMsg), len(expireMsgs), len(toPushMessage), len(msgsErrInfo), addr.Nonce)
+		addr.Addr, len(selectMsg), len(expireMsgs), len(toPushMessage), len(errMsg), addr.Nonce)
 	return &MsgSelectResult{
 		SelectMsg: selectMsg,
 		ExpireMsg: expireMsgs,
 		ToPushMsg: toPushMessage,
-		ErrMsg:    msgsErrInfo,
+		ErrMsg:    errMsg,
 	}, nil
 }
 
