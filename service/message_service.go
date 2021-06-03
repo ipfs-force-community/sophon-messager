@@ -340,8 +340,8 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	return msgs, nil
 }
 
-func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListFailedMessage()
+func (ms *MessageService) ListFailedMessage(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListFailedMessage(addr)
 }
 
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
@@ -960,4 +960,57 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	msg.SignedCid = &signedCid
 
 	return signedMsg, nil
+}
+
+func (ms *MessageService) ReportMessageState(ctx context.Context, addr address.Address, t time.Duration) (*types.MessageReport, error) {
+	mr := &types.MessageReport{}
+	if addr != address.Undef {
+		reportItem, err := ms.reportMessageState(addr, t)
+		if err != nil {
+			return nil, err
+		}
+		mr.ReportItems = append(mr.ReportItems, reportItem)
+
+		return mr, nil
+	}
+
+	mr.ReportItems = append(mr.ReportItems, &types.ReportItem{
+		Address: "ALL",
+	})
+	reportItem, err := ms.reportMessageState(address.Undef, t)
+	if err != nil {
+		return nil, err
+	}
+	mr.ReportItems[0].UnFillMsg += reportItem.UnFillMsg
+	mr.ReportItems[0].FillMsg += reportItem.FillMsg
+	mr.ReportItems[0].ExceptionMsg += reportItem.ExceptionMsg
+	mr.ReportItems[0].UnPackedMsg += reportItem.UnPackedMsg
+
+	return mr, nil
+}
+
+func (ms *MessageService) reportMessageState(addr address.Address, t time.Duration) (*types.ReportItem, error) {
+	unFillMsgCount, err := ms.repo.MessageRepo().GetMessageStateCount(addr, types.UnFillMsg)
+	if err != nil {
+		return nil, err
+	}
+	fillMsgCount, err := ms.repo.MessageRepo().GetMessageStateCount(addr, types.FillMsg)
+	if err != nil {
+		return nil, err
+	}
+	failedMsg, err := ms.repo.MessageRepo().ListFailedMessage(addr)
+	if err != nil {
+		return nil, err
+	}
+	blockMsg, err := ms.repo.MessageRepo().ListBlockedMessage(addr, t)
+	if err != nil {
+		return nil, err
+	}
+	return &types.ReportItem{
+		Address:      addr.String(),
+		UnFillMsg:    unFillMsgCount,
+		FillMsg:      fillMsgCount,
+		ExceptionMsg: int64(len(failedMsg)),
+		UnPackedMsg:  int64(len(blockMsg)),
+	}, nil
 }

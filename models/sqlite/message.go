@@ -371,6 +371,17 @@ func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce
 	return msg.Message(), nil
 }
 
+func (m *sqliteMessageRepo) GetMessageStateCount(addr address.Address, state types.MessageState) (int64, error) {
+	query := m.DB.Model((*sqliteMessage)(nil)).Where("state = ?", state)
+	if addr != address.Undef {
+		query.Where("from_addr = ?", addr.String())
+	}
+	var count int64
+	err := query.Count(&count).Error
+
+	return count, err
+}
+
 func (m *sqliteMessageRepo) ListMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Find(&sqlMsgs).Error; err != nil {
@@ -421,9 +432,15 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 	return result, err
 }
 
-func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListFailedMessage(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	var err error
+
+	if addr != address.Undef {
+		err = m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND receipt_return_value is not null", addr.String(), types.UnFillMsg).Error
+	} else {
+		err = m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -436,8 +453,14 @@ func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 
 func (m *sqliteMessageRepo) ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
+	var err error
+
 	t := time.Now().Add(-d)
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
+	if addr != address.Undef {
+		err = m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND updated_at < ?", addr.String(), types.FillMsg, t).Error
+	} else {
+		err = m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND updated_at < ?", types.FillMsg, t).Error
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -27,7 +27,7 @@ type IMessager interface {
 	ListMessage(ctx context.Context) ([]*types.Message, error)                                                                                     //perm:admin
 	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) //perm:admin
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                      //perm:admin
-	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                               //perm:admin
+	ListFailedMessage(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                         //perm:admin
 	ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)                                       //perm:admin
 	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                               //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                       //perm:admin
@@ -35,6 +35,7 @@ type IMessager interface {
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) //perm:admin
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
 	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
+	ReportMessageState(ctx context.Context, addr address.Address, t time.Duration) (*types.MessageReport, error)                                   //perm:admin
 
 	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                                          //perm:admin
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                                         //perm:admin
@@ -79,7 +80,7 @@ type Message struct {
 		ListMessage              func(ctx context.Context) ([]*types.Message, error)
 		ListMessageByAddress     func(ctx context.Context, addr address.Address) ([]*types.Message, error)
 		ListMessageByFromState   func(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error)
-		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
+		ListFailedMessage        func(ctx context.Context, addr address.Address) ([]*types.Message, error)
 		ListBlockedMessage       func(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)
 		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
@@ -87,6 +88,7 @@ type Message struct {
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
 		RepublishMessage         func(ctx context.Context, id string) (struct{}, error)
 		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
+		ReportMessageState       func(ctx context.Context, addr address.Address, t time.Duration) (*types.MessageReport, error)
 
 		SaveAddress      func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress       func(ctx context.Context, addr address.Address) (*types.Address, error)
@@ -160,8 +162,8 @@ func (message *Message) ListMessageByAddress(ctx context.Context, addr address.A
 	return message.Internal.ListMessageByAddress(ctx, addr)
 }
 
-func (message *Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	return message.Internal.ListFailedMessage(ctx)
+func (message *Message) ListFailedMessage(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return message.Internal.ListFailedMessage(ctx, addr)
 }
 
 func (message *Message) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
@@ -194,6 +196,10 @@ func (message *Message) MarkBadMessage(ctx context.Context, id string) (struct{}
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
 	return message.Internal.WaitMessage(ctx, id, confidence)
+}
+
+func (message *Message) ReportMessageState(ctx context.Context, addr address.Address, t time.Duration) (*types.MessageReport, error) {
+	return message.Internal.ReportMessageState(ctx, addr, t)
 }
 
 ///////  address ///////

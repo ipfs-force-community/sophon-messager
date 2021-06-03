@@ -87,3 +87,15 @@ func MsgStateToString(state MessageState) string {
 		return "UnKnown"
 	}
 }
+
+type MessageReport struct {
+	ReportItems []*ReportItem
+}
+
+type ReportItem struct {
+	Address      string
+	UnFillMsg    int64
+	FillMsg      int64
+	ExceptionMsg int64
+	UnPackedMsg  int64 // Not packed for a long time
+}

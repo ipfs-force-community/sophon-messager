@@ -35,6 +35,7 @@ var MsgCmds = &cli.Command{
 		waitMessagerCmd,
 		republishCmd,
 		markBadCmd,
+		reportCmd,
 	},
 }
 
@@ -221,20 +222,18 @@ var listFailedCmd = &cli.Command{
 		defer closer()
 
 		var msgs []*types.Message
-
-		msgs, err = client.ListFailedMessage(ctx.Context)
-		if err != nil {
-			return err
-		}
+		var addr address.Address
 
 		if addrStr := ctx.String("from"); len(addrStr) > 0 {
-			newMsgs := make([]*types.Message, 0, len(msgs))
-			for _, msg := range msgs {
-				if msg.From.String() == addrStr {
-					newMsgs = append(newMsgs, msg)
-				}
+			addr, err = address.NewFromString(addrStr)
+			if err != nil {
+				return err
 			}
-			msgs = newMsgs
+		}
+
+		msgs, err = client.ListFailedMessage(ctx.Context, addr)
+		if err != nil {
+			return err
 		}
 
 		if ctx.String("output-type") == "table" {
@@ -598,6 +597,79 @@ var markBadCmd = &cli.Command{
 				}
 			}
 		}
+
+		return nil
+	},
+}
+
+var reportCmd = &cli.Command{
+	Name:  "report",
+	Usage: "report message state",
+	Flags: []cli.Flag{
+		FromFlag,
+		outputTypeFlag,
+		&cli.StringFlag{
+			Name:    "time",
+			Usage:   "exceeding residence time, eg. 3s,3m,3h (default 3h)",
+			Aliases: []string{"t"},
+			Value:   "1h",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		var from address.Address
+		if addrStr := ctx.String("from"); len(addrStr) > 0 {
+			from, err = address.NewFromString(addrStr)
+			if err != nil {
+				return err
+			}
+		}
+		t, err := time.ParseDuration(ctx.String("time"))
+		if err != nil {
+			return err
+		}
+		msgReport, err := client.ReportMessageState(ctx.Context, from, t)
+		if err != nil {
+			return err
+		}
+
+		if ctx.String("output-type") != "table" {
+			bytes, err := json.MarshalIndent(msgReport.ReportItems[0], " ", "\t")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(bytes))
+
+			return nil
+		}
+
+		msTW := tablewriter.New(
+			tablewriter.Col("Address"),
+			tablewriter.Col("UnFillMsg"),
+			tablewriter.Col("FillMsg"),
+			tablewriter.Col("ExceptionMsg"),
+			tablewriter.Col("ExpireMsg"),
+			tablewriter.Col("LongTimeUnPackedMsg"),
+		)
+		data := map[string]interface{}{
+			"Address":             msgReport.ReportItems[0].Address,
+			"UnFillMsg":           msgReport.ReportItems[0].UnFillMsg,
+			"FillMsg":             msgReport.ReportItems[0].FillMsg,
+			"ExceptionMsg":        msgReport.ReportItems[0].ExceptionMsg,
+			"LongTimeUnPackedMsg": msgReport.ReportItems[0].UnPackedMsg,
+		}
+		msTW.Write(data)
+
+		buf := new(bytes.Buffer)
+		if err := msTW.Flush(buf); err != nil {
+			return err
+		}
+		fmt.Println(buf)
 
 		return nil
 	},

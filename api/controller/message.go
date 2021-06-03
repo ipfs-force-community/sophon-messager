@@ -69,8 +69,8 @@ func (message Message) ListMessageByAddress(ctx context.Context, addr address.Ad
 	return message.MsgService.ListMessageByAddress(ctx, addr)
 }
 
-func (message Message) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	return message.MsgService.ListFailedMessage(ctx)
+func (message Message) ListFailedMessage(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+	return message.MsgService.ListFailedMessage(ctx, addr)
 }
 
 func (message Message) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {

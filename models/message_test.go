@@ -391,7 +391,11 @@ func TestUpdateReturnValue(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, failedInfo, string(msg.Receipt.ReturnValue))
 
-		failedMsgs, err := messageRepo.ListFailedMessage()
+		failedMsgs, err := messageRepo.ListFailedMessage(address.Undef)
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, len(failedMsgs), 1)
+
+		failedMsgs, err = messageRepo.ListFailedMessage(msgs[0].From)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(failedMsgs), 1)
 	}
