@@ -98,6 +98,10 @@ var runCmd = &cli.Command{
 			Name:  "gateway-token",
 			Usage: "gateway token",
 		},
+		&cli.StringFlag{
+			Name:  "auth-token",
+			Usage: "auth token",
+		},
 	},
 	Action: runAction,
 }
@@ -241,13 +245,18 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 		cfg.Node.Url = ctx.String("node-url")
 	}
 
-	if ctx.IsSet("node-token") {
-		cfg.Node.Token = ctx.String("node-token")
-	}
-
 	if ctx.IsSet("gateway-url") {
 		cfg.Gateway.RemoteEnable = true
 		cfg.Gateway.Url = ctx.String("gateway-url")
+	}
+
+	if ctx.IsSet("auth-token") {
+		cfg.Node.Token = ctx.String("auth-token")
+		cfg.Gateway.Token = ctx.String("auth-token")
+	}
+
+	if ctx.IsSet("node-token") {
+		cfg.Node.Token = ctx.String("node-token")
 	}
 
 	if ctx.IsSet("gateway-token") {
