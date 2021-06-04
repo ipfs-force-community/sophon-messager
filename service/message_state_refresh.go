@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -68,12 +67,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	t := time.Now()
 	replaceMsg, err := ms.updateMessageState(ctx, tsKeys, applyMsgs, revertMsgs)
 	if err != nil {
 		return err
 	}
-	fmt.Println("refresh db ", time.Now().Sub(t).Milliseconds())
 	// update cache
 	for id, msg := range replaceMsg {
 		ms.messageState.SetMessage(id, msg)
