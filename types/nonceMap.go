@@ -31,3 +31,17 @@ func (nonceMap *NonceMap) Add(addr address.Address, val uint64) {
 	defer nonceMap.lk.RUnlock()
 	nonceMap.nonceMap[addr] = val
 }
+
+func (nonceMap *NonceMap) Len() int {
+	nonceMap.lk.RLock()
+	defer nonceMap.lk.RUnlock()
+	return len(nonceMap.nonceMap)
+}
+
+func (nonceMap *NonceMap) Each(f func(addr address.Address, val uint64)) {
+	nonceMap.lk.RLock()
+	defer nonceMap.lk.RUnlock()
+	for addr, value := range nonceMap.nonceMap {
+		f(addr, value)
+	}
+}
