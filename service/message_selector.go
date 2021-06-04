@@ -142,7 +142,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 	actor := actorI.(*venusTypes.Actor)
 	nonceInLatestTs := actor.Nonce
+	//todo actor nonce maybe the latest ts. not need appliedNonce
 	if nonceInTs, ok := appliedNonce.Get(addr.Addr); ok {
+		messageSelector.log.Infof("update %s nonce in ts %d  nonce in actor", addr.Addr, nonceInTs, nonceInLatestTs)
 		nonceInLatestTs = nonceInTs
 	}
 	if nonceInLatestTs > addr.Nonce {
