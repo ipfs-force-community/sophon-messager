@@ -9,7 +9,6 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-auth/core"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
@@ -17,10 +16,11 @@ import (
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/gateway"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
 )
 
-func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger, msgImp *MessageImp) error {
+func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp) error {
 	var msgAPI client.Message
 	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
@@ -59,6 +59,7 @@ type ImplParams struct {
 	NodeService         *service.NodeService
 	SharedParamsService *service.SharedParamsService
 	GatewayService      *gateway.GatewayService `optional:"true"`
+	Logger              *log.Logger
 }
 
 type MessageImp struct {
@@ -67,6 +68,7 @@ type MessageImp struct {
 	*service.NodeService
 	*service.SharedParamsService
 	*gateway.GatewayService
+	*log.Logger
 }
 
 var _ client.IMessager = (*MessageImp)(nil)
@@ -78,6 +80,7 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		NodeService:         implParams.NodeService,
 		SharedParamsService: implParams.SharedParamsService,
 		GatewayService:      implParams.GatewayService,
+		Logger:              implParams.Logger,
 	}
 }
 

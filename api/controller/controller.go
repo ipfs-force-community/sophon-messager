@@ -1,9 +1,7 @@
 package controller
 
-import (
-	"github.com/sirupsen/logrus"
-)
+import "github.com/filecoin-project/venus-messager/log"
 
 type BaseController struct {
-	Logger *logrus.Logger
+	Logger *log.Logger
 }

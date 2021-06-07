@@ -1,14 +1,14 @@
 package service
 
 import (
-	"github.com/filecoin-project/venus-messager/models"
 	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -29,7 +29,7 @@ func TestMessageStateCache(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	msgState, err := NewMessageState(db, logrus.New(), &config.MessageStateConfig{
+	msgState, err := NewMessageState(db, log.New(), &config.MessageStateConfig{
 		BackTime:          60,
 		CleanupInterval:   3,
 		DefaultExpiration: 2,

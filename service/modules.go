@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"time"
 
+	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
-	"github.com/sirupsen/logrus"
-	"go.uber.org/fx"
+	"github.com/filecoin-project/venus-messager/log"
 )
 
 type ServiceMap map[reflect.Type]interface{}
@@ -36,7 +36,7 @@ func MessagerService() fx.Option {
 	)
 }
 
-func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageService, log *logrus.Logger) *NodeEvents {
+func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageService, log *log.Logger) *NodeEvents {
 	nd := &NodeEvents{
 		client:     client,
 		log:        log,

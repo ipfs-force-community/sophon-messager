@@ -19,11 +19,11 @@ import (
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/ipfs/go-cid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/gateway"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -42,7 +42,7 @@ const (
 
 type MessageService struct {
 	repo           repo.Repo
-	log            *logrus.Logger
+	log            *log.Logger
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	messageState   *MessageState
@@ -78,7 +78,7 @@ type TipsetCache struct {
 
 func NewMessageService(repo repo.Repo,
 	nc *NodeClient,
-	logger *logrus.Logger,
+	logger *log.Logger,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
 	addressService *AddressService,

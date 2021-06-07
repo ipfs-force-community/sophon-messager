@@ -3,19 +3,18 @@ package service
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
 
 type NodeService struct {
 	repo repo.Repo
-	log  *logrus.Logger
+	log  *log.Logger
 }
 
-func NewNodeService(repo repo.Repo, logger *logrus.Logger) *NodeService {
+func NewNodeService(repo repo.Repo, logger *log.Logger) *NodeService {
 	return &NodeService{repo: repo, log: logger}
 }
 

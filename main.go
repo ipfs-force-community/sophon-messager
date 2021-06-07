@@ -10,7 +10,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
@@ -42,6 +41,7 @@ func main() {
 			ccli.AddrCmds,
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
+			ccli.LogCmds,
 			runCmd,
 		},
 	}
@@ -282,7 +282,7 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 }
 
 type fxLogger struct {
-	log *logrus.Logger
+	log *log.Logger
 }
 
 func (l fxLogger) Printf(str string, args ...interface{}) {

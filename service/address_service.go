@@ -3,14 +3,13 @@ package service
 import (
 	"context"
 
-	"github.com/filecoin-project/go-state-types/big"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/gateway"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -19,13 +18,13 @@ var errAddressNotExists = xerrors.New("address not exists")
 
 type AddressService struct {
 	repo repo.Repo
-	log  *logrus.Logger
+	log  *log.Logger
 
 	sps          *SharedParamsService
 	walletClient *gateway.IWalletCli
 }
 
-func NewAddressService(repo repo.Repo, logger *logrus.Logger, sps *SharedParamsService, walletClient *gateway.IWalletCli) *AddressService {
+func NewAddressService(repo repo.Repo, logger *log.Logger, sps *SharedParamsService, walletClient *gateway.IWalletCli) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
 		log:  logger,

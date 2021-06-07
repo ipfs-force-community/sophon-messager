@@ -34,7 +34,7 @@
   backTime = 86400
 
 [node]
-  url = "/ip4/8.130.166.31/tcp/1234"
+  url = "/ip4/8.130.165.167/tcp/1234"
   token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
 
 [wallet]

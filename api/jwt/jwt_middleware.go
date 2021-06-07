@@ -8,18 +8,19 @@ import (
 	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/util"
 	"github.com/ipfs-force-community/venus-gateway/types"
-	"github.com/sirupsen/logrus"
+
+	"github.com/filecoin-project/venus-messager/log"
 )
 
 type AuthMux struct {
 	jwtClient   IJwtClient
-	log         *logrus.Logger
+	log         *log.Logger
 	mux         *http.ServeMux
 	trustHandle map[string]http.Handler
 }
 
-func NewAuthMux(jwtClient IJwtClient, log *logrus.Logger, mux *http.ServeMux) *AuthMux {
-	return &AuthMux{jwtClient: jwtClient, log: log, mux: mux, trustHandle: map[string]http.Handler{}}
+func NewAuthMux(jwtClient IJwtClient, logger *log.Logger, mux *http.ServeMux) *AuthMux {
+	return &AuthMux{jwtClient: jwtClient, log: logger, mux: mux, trustHandle: map[string]http.Handler{}}
 }
 
 func (authMux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
