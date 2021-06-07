@@ -9,7 +9,7 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
-	github.com/filecoin-project/venus v0.9.2-0.20210603072509-1a7e6e11d39c // indirect
+	github.com/filecoin-project/venus v0.9.2-0.20210603072509-1a7e6e11d39c
 	github.com/filecoin-project/venus-auth v1.1.0
 	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gin-gonic/gin v1.6.3
@@ -44,7 +44,7 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.3
 	honnef.co/go/tools v0.1.3 // indirect
-	modernc.org/mathutil v1.1.1 // indirect
+	modernc.org/mathutil v1.1.1
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
