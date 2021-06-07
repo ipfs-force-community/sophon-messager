@@ -202,7 +202,9 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 	if from != address.Undef {
 		query = query.Where("from_addr=?", from.String())
 	}
-
+	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
+		query.Order("created_at")
+	}
 	query = query.Where("state=?", state)
 
 	var sqlMsgs []*mysqlMessage
@@ -420,7 +422,7 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 
 func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +436,7 @@ func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 func (m *mysqlMessageRepo) ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	t := time.Now().Add(-d)
-	err := m.DB.Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
 	if err != nil {
 		return nil, err
 	}

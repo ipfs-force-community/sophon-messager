@@ -403,7 +403,9 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 	if from != address.Undef {
 		query = query.Where("from_addr=?", from)
 	}
-
+	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
+		query.Order("created_at")
+	}
 	query = query.Where("state=?", state)
 
 	var sqlMsgs []*sqliteMessage
@@ -421,7 +423,7 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 
 func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +437,7 @@ func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 func (m *sqliteMessageRepo) ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	t := time.Now().Add(-d)
-	err := m.DB.Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
 	if err != nil {
 		return nil, err
 	}

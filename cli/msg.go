@@ -325,6 +325,7 @@ var tw = tablewriter.New(
 	tablewriter.Col("ExitCode"),
 	tablewriter.Col("Return"),
 	tablewriter.Col("Height"),
+	tablewriter.Col("CreateAt"),
 )
 
 func outputWithTable(msgs []*types.Message, verbose bool) error {
@@ -342,6 +343,7 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 			"Method":     msg.UnsignedMessage.Method,
 			"Height":     msg.Height,
 			"State":      msg.State,
+			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		if !verbose {
 			if from := msg.UnsignedMessage.From.String(); len(from) > 9 {
