@@ -155,7 +155,6 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 				}
 			}
 			delete(revertMsgs, msg.cid)
-			return nil
 		}
 		return nil
 	})
