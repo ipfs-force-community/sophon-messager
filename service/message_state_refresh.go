@@ -67,49 +67,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	replaceMsg := make(map[string]*types.Message)
-	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		for _, msg := range applyMsgs {
-			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
-			if err != nil {
-				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
-				continue
-			}
-
-			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
-				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
-				//replace msg
-				unsignedCid := msg.msg.Cid()
-				localMsg.UnsignedMessage = *msg.msg
-				localMsg.UnsignedCid = &unsignedCid
-				localMsg.SignedCid = &msg.cid
-				localMsg.State = types.ReplacedMsg
-				localMsg.Receipt = msg.receipt
-				localMsg.Height = int64(msg.height)
-				localMsg.TipSetKey = tsKeys[msg.height]
-				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
-				}
-				replaceMsg[localMsg.ID] = localMsg
-			} else {
-				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
-				}
-			}
-			delete(revertMsgs, msg.cid)
-		}
-		for cid := range revertMsgs {
-			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
-				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	replaceMsg, err := ms.updateMessageState(ctx, tsKeys, applyMsgs, revertMsgs)
 	if err != nil {
 		return err
 	}
-
 	// update cache
 	for id, msg := range replaceMsg {
 		ms.messageState.SetMessage(id, msg)
@@ -154,6 +115,50 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		go ms.delayTrigger(triggerCtx, h.apply[0])
 	}
 	return nil
+}
+
+func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi.ChainEpoch]venustypes.TipSetKey, applyMsgs []pendingMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, error) {
+	replaceMsg := make(map[string]*types.Message)
+	return replaceMsg, ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+		for cid := range revertMsgs {
+			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
+				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
+				return err
+			}
+		}
+
+		for _, msg := range applyMsgs {
+			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
+			if err != nil {
+				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
+				continue
+			}
+			tsKey := tsKeys[msg.height]
+			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
+				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
+				//replace msg
+				unsignedCid := msg.msg.Cid()
+				localMsg.UnsignedMessage = *msg.msg
+				localMsg.UnsignedCid = &unsignedCid
+				localMsg.SignedCid = &msg.cid
+				localMsg.State = types.ReplacedMsg
+				localMsg.Receipt = msg.receipt
+				localMsg.Height = int64(msg.height)
+				localMsg.TipSetKey = tsKey
+				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
+				replaceMsg[localMsg.ID] = localMsg
+			} else {
+				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKey); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
+			}
+			delete(revertMsgs, msg.cid)
+			return nil
+		}
+		return nil
+	})
 }
 
 //delayTrigger wait for stable ts

@@ -762,7 +762,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			//}
 		case newHead := <-ms.triggerPush:
 			start := time.Now()
-			ms.log.Infof("start to push message %d task wait", len(ms.triggerPush))
+			ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
 			err := ms.pushMessageToPool(ctx, newHead)
 			if err != nil {
 				ms.log.Errorf("push message error %v", err)
