@@ -144,7 +144,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	nonceInLatestTs := actor.Nonce
 	//todo actor nonce maybe the latest ts. not need appliedNonce
 	if nonceInTs, ok := appliedNonce.Get(addr.Addr); ok {
-		messageSelector.log.Infof("update %s nonce in ts %d  nonce in actor", addr.Addr, nonceInTs, nonceInLatestTs)
+		messageSelector.log.Infof("update address %s nonce in ts %d  nonce in actor %d", addr.Addr, nonceInTs, nonceInLatestTs)
 		nonceInLatestTs = nonceInTs
 	}
 	if nonceInLatestTs > addr.Nonce {
@@ -232,6 +232,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	for index, msg := range messages {
 		//if error print error message
 		if len(estimateResult[index].Err) != 0 {
+			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
 			messageSelector.log.Errorf("estimate message %s fail %s", msg.ID, estimateResult[index].Err)
 		}
 		estimateMsg := estimateResult[index].Msg
