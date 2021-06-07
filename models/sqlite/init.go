@@ -10,9 +10,6 @@ import (
 var TMessage = reflect.TypeOf(&types.Message{})
 var TSqliteMessage = reflect.TypeOf(&sqliteMessage{})
 
-var TWallet = reflect.TypeOf(&types.Wallet{})
-var TSqliteWallet = reflect.TypeOf(&sqliteWallet{})
-
 var TAddress = reflect.TypeOf(&types.Address{})
 var TSqliteAddress = reflect.TypeOf(&sqliteAddress{})
 
@@ -21,8 +18,5 @@ var TSharedParams = reflect.TypeOf(&types.SharedParams{})
 
 var TNode = reflect.TypeOf(&types.Node{})
 var TSqliteNode = reflect.TypeOf(&sqliteNode{})
-
-var TWalletAddress = reflect.TypeOf(&types.WalletAddress{})
-var TSqliteWalletAddress = reflect.TypeOf(&sqliteWalletAddress{})
 
 var ERRUnspportedMappingType = fmt.Errorf("unsupported mapping type")

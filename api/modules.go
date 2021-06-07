@@ -16,12 +16,13 @@ import (
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/service"
 )
 
 func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *logrus.Logger, msgImp *MessageImp) error {
 	var msgAPI client.Message
-	permissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
+	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", &msgAPI)
@@ -51,31 +52,36 @@ func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *lo
 	return nil
 }
 
+type ImplParams struct {
+	fx.In
+	AddressService      *service.AddressService
+	MessageService      *service.MessageService
+	NodeService         *service.NodeService
+	SharedParamsService *service.SharedParamsService
+	GatewayService      *gateway.GatewayService `optional:"true"`
+}
+
 type MessageImp struct {
 	*service.AddressService
 	*service.MessageService
-	*service.WalletService
 	*service.NodeService
 	*service.SharedParamsService
+	*gateway.GatewayService
 }
 
 var _ client.IMessager = (*MessageImp)(nil)
 
-func NewMessageImp(msgService *service.MessageService,
-	walletService *service.WalletService,
-	addressService *service.AddressService,
-	sps *service.SharedParamsService,
-	nodeService *service.NodeService) *MessageImp {
+func NewMessageImp(implParams ImplParams) *MessageImp {
 	return &MessageImp{
-		AddressService:      addressService,
-		MessageService:      msgService,
-		NodeService:         nodeService,
-		WalletService:       walletService,
-		SharedParamsService: sps,
+		AddressService:      implParams.AddressService,
+		MessageService:      implParams.MessageService,
+		NodeService:         implParams.NodeService,
+		SharedParamsService: implParams.SharedParamsService,
+		GatewayService:      implParams.GatewayService,
 	}
 }
 
-func permissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
+func PermissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
 	rint := reflect.ValueOf(out).Elem()
 	ra := reflect.ValueOf(in)
 

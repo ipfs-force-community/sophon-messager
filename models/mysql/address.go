@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -12,10 +13,15 @@ import (
 )
 
 type mysqlAddress struct {
-	ID     types.UUID `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr   string     `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
-	Nonce  uint64     `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
-	Weight int64      `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	ID                types.UUID  `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr              string      `gorm:"column:addr;type:varchar(256);NOT NULL"` // 主键
+	Nonce             uint64      `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
+	Weight            int64       `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	SelMsgNum         uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
+	State             types.State `gorm:"column:state;type:int;index;default:1"`
+	GasOverEstimation float64     `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
+	MaxFee            types.Int   `gorm:"column:max_fee;type:varchar(256);"`
+	MaxFeeCap         types.Int   `gorm:"column:max_fee_cap;type:varchar(256);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -27,15 +33,26 @@ func (s mysqlAddress) TableName() string {
 }
 
 func FromAddress(addr *types.Address) *mysqlAddress {
-	return &mysqlAddress{
+	mysqlAddr := &mysqlAddress{
 		ID:        addr.ID,
 		Addr:      addr.Addr.String(),
 		Nonce:     addr.Nonce,
 		Weight:    addr.Weight,
+		SelMsgNum: addr.SelMsgNum,
+		State:     addr.State,
 		IsDeleted: addr.IsDeleted,
 		CreatedAt: addr.CreatedAt,
 		UpdatedAt: addr.UpdatedAt,
 	}
+
+	if !addr.MaxFee.Nil() {
+		mysqlAddr.MaxFee = types.NewFromGo(addr.MaxFee.Int)
+	}
+	if !addr.MaxFeeCap.Nil() {
+		mysqlAddr.MaxFeeCap = types.NewFromGo(addr.MaxFeeCap.Int)
+	}
+
+	return mysqlAddr
 }
 
 func (s mysqlAddress) Address() (*types.Address, error) {
@@ -48,6 +65,10 @@ func (s mysqlAddress) Address() (*types.Address, error) {
 		Addr:      addr,
 		Nonce:     s.Nonce,
 		Weight:    s.Weight,
+		SelMsgNum: s.SelMsgNum,
+		State:     s.State,
+		MaxFee:    big.Int{Int: s.MaxFee.Int},
+		MaxFeeCap: big.Int{Int: s.MaxFeeCap.Int},
 		IsDeleted: s.IsDeleted,
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -64,30 +85,8 @@ func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
 	return &mysqlAddressRepo{DB: db}
 }
 
-func (s mysqlAddressRepo) SaveAddress(ctx context.Context, addr *types.Address) error {
-	return s.DB.Save(FromAddress(addr)).Error
-}
-
-func (s mysqlAddressRepo) UpdateAddress(ctx context.Context, addr *types.Address) error {
-	updateColumns := map[string]interface{}{
-		"nonce":      addr.Nonce,
-		"is_deleted": addr.IsDeleted,
-	}
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.Addr.String()).Updates(updateColumns).Error
-}
-
-func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).
-		UpdateColumn("nonce", nonce).Error
-}
-
-func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	var count int64
-	err := s.DB.Model(&mysqlAddress{}).Where("addr = ?", addr.String()).Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+func (s mysqlAddressRepo) SaveAddress(ctx context.Context, a *types.Address) error {
+	return s.DB.Save(FromAddress(a)).Error
 }
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
@@ -117,9 +116,13 @@ func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address
 	return a.Address()
 }
 
-func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		Updates(map[string]interface{}{"is_deleted": 1}).Error
+func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	var count int64
+	if err := s.DB.Model(&mysqlAddress{}).Where(" addr = ? and is_deleted = -1", addr.String()).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
@@ -138,4 +141,40 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 	}
 
 	return result, nil
+}
+
+func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
+	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.Removed, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.State) error {
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumns(map[string]interface{}{"state": state, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
+	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
+}
+
+func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap big.Int) error {
+	updateColumns := make(map[string]interface{})
+	if gasOverEstimation != 0 {
+		updateColumns["gas_over_estimation"] = gasOverEstimation
+	}
+	if !maxFee.Nil() {
+		updateColumns["max_fee"] = types.NewFromGo(maxFee.Int)
+	}
+	if !maxFeeCap.Nil() {
+		updateColumns["max_fee_cap"] = types.NewFromGo(maxFeeCap.Int)
+	}
+	updateColumns["updated_at"] = time.Now()
+
+	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).UpdateColumns(updateColumns).Error
 }

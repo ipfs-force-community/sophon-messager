@@ -9,15 +9,16 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.0
-	github.com/filecoin-project/venus v0.9.6
-	github.com/filecoin-project/venus-auth v1.0.2-0.20210507023017-76ce8b64e6db
-	github.com/filecoin-project/venus-wallet v1.0.1-0.20210507062236-b94c303c7104
+	github.com/filecoin-project/venus v0.9.2-0.20210603072509-1a7e6e11d39c
+	github.com/filecoin-project/venus-auth v1.1.0
+	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gin-gonic/gin v1.6.3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
 	github.com/ipfs/go-cid v0.0.7
 	github.com/jonboulle/clockwork v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -27,6 +28,7 @@ require (
 	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
+	github.com/prometheus/common v0.25.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
@@ -42,6 +44,7 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.3
 	honnef.co/go/tools v0.1.3 // indirect
+	modernc.org/mathutil v1.1.1
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi

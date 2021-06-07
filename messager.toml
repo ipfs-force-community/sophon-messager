@@ -34,8 +34,20 @@
   backTime = 86400
 
 [node]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJhbGwiXX0.S5ucwvhFM6tkuLInwZi0VSBEl1T570oLVfp47KBWcXo"
-  url = "/ip4/127.0.0.1/tcp/3453"
+  url = "/ip4/8.130.166.31/tcp/1234"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
 
 [wallet]
   scanInterval = 10
+
+[gateway]
+  remoteEnable = false
+  url = "/ip4/192.168.19.94/tcp/45132"
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
+
+  [gateway.cfg]
+    RequestQueueSize = 30
+    RequestTimeout = "5m0s"
+
+[local]
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"

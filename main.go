@@ -19,6 +19,7 @@ import (
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
@@ -39,10 +40,8 @@ func main() {
 		},
 		Commands: []*cli.Command{ccli.MsgCmds,
 			ccli.AddrCmds,
-			ccli.WalletCmds,
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
-			ccli.WalletAddrCmds,
 			runCmd,
 		},
 	}
@@ -89,6 +88,19 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "mysql-dsn",
 			Usage: "mysql connection string",
+		},
+
+		&cli.StringFlag{
+			Name:  "gateway-url",
+			Usage: "gateway url",
+		},
+		&cli.StringFlag{
+			Name:  "gateway-token",
+			Usage: "gateway token",
+		},
+		&cli.StringFlag{
+			Name:  "auth-token",
+			Usage: "auth token",
 		},
 	},
 	Action: runAction,
@@ -148,6 +160,21 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	var walletClient *gateway.IWalletCli
+	gatewayProvider := fx.Options()
+	if !cfg.Gateway.RemoteEnable { // use local gateway
+		gatewayService := gateway.NewGatewayService(&cfg.Gateway)
+		walletClient = &gateway.IWalletCli{IWalletClient: gatewayService}
+		gatewayProvider = fx.Options(fx.Supply(gatewayService))
+	} else {
+		walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway)
+		walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
+		if err != nil {
+			return err
+		}
+		defer walletCliCloser()
+	}
+
 	// Listen on the configured address in order to bind the port number in case it has
 	// been configured as zero (i.e. OS-provided)
 	apiListener, err := manet.Listen(mAddr)
@@ -160,9 +187,10 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway),
 		fx.Supply(log),
 		fx.Supply(client),
+		fx.Supply(walletClient),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),
@@ -187,7 +215,7 @@ func runAction(ctx *cli.Context) error {
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(api.RunAPI),
 	)
-	app := fx.New(provider, invoker)
+	app := fx.New(gatewayProvider, provider, invoker)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
 		return xerrors.Errorf("starting node: %w", err)
@@ -217,8 +245,22 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 		cfg.Node.Url = ctx.String("node-url")
 	}
 
+	if ctx.IsSet("gateway-url") {
+		cfg.Gateway.RemoteEnable = true
+		cfg.Gateway.Url = ctx.String("gateway-url")
+	}
+
+	if ctx.IsSet("auth-token") {
+		cfg.Node.Token = ctx.String("auth-token")
+		cfg.Gateway.Token = ctx.String("auth-token")
+	}
+
 	if ctx.IsSet("node-token") {
 		cfg.Node.Token = ctx.String("node-token")
+	}
+
+	if ctx.IsSet("gateway-token") {
+		cfg.Gateway.Token = ctx.String("gateway-token")
 	}
 
 	if ctx.IsSet("db-type") {

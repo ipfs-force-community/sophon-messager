@@ -17,10 +17,6 @@ func (d SqlLiteRepo) MessageRepo() repo.MessageRepo {
 	return newSqliteMessageRepo(d.DB)
 }
 
-func (d SqlLiteRepo) WalletRepo() repo.WalletRepo {
-	return newSqliteWalletRepo(d.DB)
-}
-
 func (d SqlLiteRepo) AddressRepo() repo.AddressRepo {
 	return newSqliteAddressRepo(d.DB)
 }
@@ -31,10 +27,6 @@ func (d SqlLiteRepo) SharedParamsRepo() repo.SharedParamsRepo {
 
 func (d SqlLiteRepo) NodeRepo() repo.NodeRepo {
 	return newSqliteNodeRepo(d.DB)
-}
-
-func (d SqlLiteRepo) WalletAddressRepo() repo.WalletAddressRepo {
-	return newSqliteWalletAddressRepo(d.DB)
 }
 
 func (d SqlLiteRepo) AutoMigrate() error {
@@ -51,15 +43,7 @@ func (d SqlLiteRepo) AutoMigrate() error {
 		return err
 	}
 
-	if err := d.GetDb().AutoMigrate(sqliteNode{}); err != nil {
-		return err
-	}
-
-	if err := d.GetDb().AutoMigrate(sqliteWalletAddress{}); err != nil {
-		return err
-	}
-
-	return d.GetDb().AutoMigrate(sqliteWallet{})
+	return d.GetDb().AutoMigrate(sqliteNode{})
 }
 
 func (d SqlLiteRepo) GetDb() *gorm.DB {
@@ -77,14 +61,6 @@ var _ repo.TxRepo = (*TxSqlliteRepo)(nil)
 
 type TxSqlliteRepo struct {
 	*gorm.DB
-}
-
-func (t *TxSqlliteRepo) WalletAddressRepo() repo.WalletAddressRepo {
-	return newSqliteWalletAddressRepo(t.DB)
-}
-
-func (t *TxSqlliteRepo) WalletRepo() repo.WalletRepo {
-	return newSqliteWalletRepo(t.DB)
 }
 
 func (t *TxSqlliteRepo) MessageRepo() repo.MessageRepo {

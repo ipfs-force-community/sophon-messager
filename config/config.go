@@ -2,6 +2,8 @@ package config
 
 import (
 	"time"
+
+	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 )
 
 type Config struct {
@@ -13,6 +15,8 @@ type Config struct {
 	MessageService MessageServiceConfig `toml:"messageService"`
 	MessageState   MessageStateConfig   `toml:"messageState"`
 	Wallet         WalletConfig         `toml:"wallet"`
+	Gateway        GatewayConfig        `toml:"gateway"`
+	Local          LocalConfig          `toml:"local"`
 }
 
 type NodeConfig struct {
@@ -68,6 +72,17 @@ type MessageStateConfig struct {
 	DefaultExpiration, CleanupInterval int // message 缓存的有效时间和清理间隔
 }
 
+type GatewayConfig struct {
+	RemoteEnable bool                `toml:"remoteEnable"`
+	Token        string              `toml:"token"`
+	Url          string              `toml:"url"`
+	Cfg          gatewayTypes.Config `toml:"cfg"`
+}
+
+type LocalConfig struct {
+	Token string `toml:"token"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		DB: DbConfig{
@@ -108,5 +123,15 @@ func DefaultConfig() *Config {
 			SkipProcessHead: false,
 			SkipPushMessage: false,
 		},
+		Gateway: GatewayConfig{
+			RemoteEnable: false,
+			Token:        "",
+			Url:          "",
+			Cfg: gatewayTypes.Config{
+				RequestQueueSize: 30,
+				RequestTimeout:   time.Minute * 5,
+			},
+		},
+		Local: LocalConfig{Token: ""},
 	}
 }

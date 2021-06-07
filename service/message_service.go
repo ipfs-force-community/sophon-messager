@@ -8,19 +8,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/filecoin-project/go-jsonrpc"
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -38,12 +41,13 @@ const (
 )
 
 type MessageService struct {
-	repo          repo.Repo
-	log           *logrus.Logger
-	cfg           *config.MessageServiceConfig
-	nodeClient    *NodeClient
-	messageState  *MessageState
-	walletService *WalletService
+	repo           repo.Repo
+	log            *logrus.Logger
+	cfg            *config.MessageServiceConfig
+	nodeClient     *NodeClient
+	messageState   *MessageState
+	addressService *AddressService
+	walletClient   gateway.IWalletClient
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -78,10 +82,10 @@ func NewMessageService(repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
 	addressService *AddressService,
-	walletService *WalletService,
 	sps *SharedParamsService,
-	nodeService *NodeService) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, walletService, sps)
+	nodeService *NodeService,
+	walletClient *gateway.IWalletCli) (*MessageService, error) {
+	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,
@@ -90,8 +94,9 @@ func NewMessageService(repo repo.Repo,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
-		messageState:  messageState,
-		walletService: walletService,
+		messageState:   messageState,
+		addressService: addressService,
+		walletClient:   walletClient,
 		tsCache: &TipsetCache{
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
@@ -120,14 +125,45 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	if wa, err := ms.walletService.GetWalletAddress(ctx, msg.WalletName, msg.From); err != nil {
-		return xerrors.Errorf("found address %s %v", msg.From.String(), err)
-	} else if wa.AddressState != types.Alive {
-		return xerrors.Errorf("address state is %s", types.StateToString(wa.AddressState))
+	has, err := ms.walletClient.WalletHas(ctx, msg.WalletName, msg.From)
+	if err != nil {
+		return err
+	}
+	if has {
+		saveAddr := func() error {
+			_, err = ms.addressService.SaveAddress(ctx, &types.Address{
+				ID:        types.NewUUID(),
+				Addr:      msg.From,
+				Nonce:     0,
+				State:     types.Alive,
+				IsDeleted: repo.NotDeleted,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			})
+			return err
+		}
+		has, err := ms.addressService.HasAddress(ctx, msg.From)
+		if err != nil {
+			if xerrors.Is(err, gorm.ErrRecordNotFound) {
+				if err := saveAddr(); err != nil {
+					return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
+				}
+				ms.log.Infof("add new address %s", msg.From.String())
+			} else {
+				return err
+			}
+		} else if !has {
+			if err := saveAddr(); err != nil {
+				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
+			}
+			ms.log.Infof("add new address %s", msg.From.String())
+		}
+	} else {
+		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
 	}
 
 	msg.Nonce = 0
-	err := ms.repo.MessageRepo().CreateMessage(msg)
+	err = ms.repo.MessageRepo().CreateMessage(msg)
 	if err == nil {
 		ms.messageState.SetMessage(msg.ID, msg)
 	}
@@ -135,24 +171,36 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+func ipAccountFromContext(ctx context.Context) (string, string) {
+	ip, _ := ctx.Value(gatewayTypes.IPKey).(string)
+	account, _ := ctx.Value(gatewayTypes.AccountKey).(string)
+
+	return ip, account
+}
+
+func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	newId := types.NewUUID()
+	_, account := ipAccountFromContext(ctx)
+
 	return newId.String(), ms.pushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      walletName,
+		WalletName:      account,
+		FromUser:        account,
 	})
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, walletName string) (string, error) {
+func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	_, account := ipAccountFromContext(ctx)
 	return id, ms.pushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      walletName,
+		WalletName:      account,
+		FromUser:        account,
 	})
 }
 
@@ -315,7 +363,7 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.A
 	if addr != address.Undef {
 		msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr, d)
 	} else {
-		addrList, err := ms.repo.AddressRepo().ListAddress(ctx)
+		addrList, err := ms.addressService.ListAddress(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -548,7 +596,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 
 		for _, addr := range selectResult.ModifyAddress {
-			err = txRepo.AddressRepo().SaveAddress(ctx, addr)
+			err = txRepo.AddressRepo().UpdateNonce(ctx, addr.Addr, addr.Nonce)
 			if err != nil {
 				return err
 			}
@@ -714,7 +762,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			//}
 		case newHead := <-ms.triggerPush:
 			start := time.Now()
-			ms.log.Infof("start to push message %d task wait", len(ms.triggerPush))
+			ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
 			err := ms.pushMessageToPool(ctx, newHead)
 			if err != nil {
 				ms.log.Errorf("push message error %v", err)
@@ -727,7 +775,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
 
-	for addr := range ms.walletService.AllAddresses() {
+	for addr := range ms.addressService.Addresses() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)
@@ -736,6 +784,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 		msgs = append(msgs, filledMsgs...)
 	}
 
+	ms.log.Infof("%d messages need to sync", len(msgs))
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
@@ -758,7 +807,7 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet); err != nil {
 			return err
 		}
-		ms.log.Infof("update message %v by node success", msg.ID)
+		ms.log.Infof("update message %v by node success, height: %d", msg.ID, msgLookup.Height)
 	}
 
 	return nil
@@ -827,13 +876,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		}
 	}
 
-	cli, close, err := ms.walletService.GetWalletClient(ctx, msg.WalletName)
-	if err != nil {
-		return cid.Undef, xerrors.Errorf("got wallet client %v", err)
-	}
-	defer close()
-
-	signedMsg, err := ToSignedMsg(ctx, &cli, msg)
+	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)
 	if err != nil {
 		return cid.Undef, err
 	}
@@ -889,7 +932,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (stru
 	return struct{}{}, nil
 }
 
-func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.UnsignedMessage.Cid()
 	msg.UnsignedCid = &unsignedCid
 	//签名
@@ -897,7 +940,7 @@ func ToSignedMsg(ctx context.Context, walletCli IWalletClient, msg *types.Messag
 	if err != nil {
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), core.MsgMeta{
+	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), core.MsgMeta{
 		Type:  core.MTChainMsg,
 		Extra: data.RawData(),
 	})

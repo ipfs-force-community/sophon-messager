@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/filecoin-project/venus-messager/utils"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -17,15 +19,19 @@ import (
 )
 
 func main() {
-	_, err := config.ReadConfig("./messager.toml")
+	cfg, err := config.ReadConfig("./messager.toml")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+	addr, err := utils.DialArgs(cfg.API.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	header := http.Header{}
-	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXNfd2FsbGV0IiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.kU50CeVEREIkcT_rn-RcOJFDU5T1dwEpjPNoFz1ct-g")
-	client, closer, err := client.NewMessageRPC(context.Background(), "http://127.0.0.1:39812/rpc/v0", header)
+	header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs")
+	client, closer, err := client.NewMessageRPC(context.Background(), addr, header)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -55,7 +61,6 @@ func main() {
 			Method:  0,
 		},
 		msgMate,
-		"venus_wallet",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -80,8 +85,8 @@ func main() {
 
 // nolint
 func loopPushMsgs(client client.IMessager) {
-	from, _ := address.NewFromString("t3rbxpw3sr4auzx4lbga2yanwgvjvn7dfze3wajiyp3inezyhc3j7nacokwcijsmhpgmg5xstdepe4aszvt2ta")
-	to, _ := address.NewFromString("t3rbxpw3sr4auzx4lbga2yanwgvjvn7dfze3wajiyp3inezyhc3j7nacokwcijsmhpgmg5xstdepe4aszvt2ta")
+	from, _ := address.NewFromString("t3uhnofyu3yeuh7cntnepebv5kje4fsjwaxwtgescj5246p2dk5yarbt3rpdny2itxxjkasmxxigptpqa3nizq")
+	to, _ := address.NewFromString("t3uhnofyu3yeuh7cntnepebv5kje4fsjwaxwtgescj5246p2dk5yarbt3rpdny2itxxjkasmxxigptpqa3nizq")
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -101,11 +106,10 @@ func loopPushMsgs(client client.IMessager) {
 					To:      to,
 					From:    from,
 					Nonce:   1,
-					Value:   abi.NewTokenAmount(100),
+					Value:   abi.NewTokenAmount(1),
 					Method:  0,
 				},
 				msgMate,
-				"venus_wallet",
 			)
 			if err != nil {
 				log.Fatal(err)

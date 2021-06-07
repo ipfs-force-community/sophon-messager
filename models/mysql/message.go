@@ -46,6 +46,7 @@ type mysqlMessage struct {
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
 
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
@@ -76,6 +77,7 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 		Signature:  (*crypto.Signature)(sqlMsg.Signature),
 		Meta:       sqlMsg.Meta.Meta(),
 		WalletName: sqlMsg.WalletName,
+		FromUser:   sqlMsg.FromUser,
 		State:      sqlMsg.State,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
@@ -112,6 +114,7 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
+		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
 	}
@@ -189,6 +192,10 @@ type mysqlMessageRepo struct {
 	*gorm.DB
 }
 
+func newMysqlMessageRepo(db *gorm.DB) *mysqlMessageRepo {
+	return &mysqlMessageRepo{DB: db}
+}
+
 func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
 	query := m.DB.Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
 
@@ -220,10 +227,6 @@ func (m *mysqlMessageRepo) HasMessageByUid(id string) (bool, error) {
 	return count > 0, nil
 }
 
-func newMysqlMessageRepo(db *gorm.DB) *mysqlMessageRepo {
-	return &mysqlMessageRepo{DB: db}
-}
-
 func (m *mysqlMessageRepo) GetMessageState(id string) (types.MessageState, error) {
 	type Result struct {
 		State int
@@ -243,7 +246,11 @@ func (m *mysqlMessageRepo) GetMessageState(id string) (types.MessageState, error
 
 func (m *mysqlMessageRepo) ExpireMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.DB.Table("messages").Where("id=?", msg.ID).UpdateColumn("state", types.FailedMsg).Error
+		updateColumns := map[string]interface{}{
+			"state":      types.FailedMsg,
+			"updated_at": time.Now(),
+		}
+		err := m.DB.Table("messages").Where("id = ?", msg.ID).UpdateColumns(updateColumns).Error
 		if err != nil {
 			return err
 		}
@@ -254,19 +261,6 @@ func (m *mysqlMessageRepo) ExpireMessage(msgs []*types.Message) error {
 func (m *mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.FillMsg).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*types.Message, len(sqlMsgs))
-	for index, sqlMsg := range sqlMsgs {
-		result[index] = sqlMsg.Message()
-	}
-	return result, nil
-}
-
-func (m *mysqlMessageRepo) ListFilledMessageByWallet(walletName string, addr address.Address) ([]*types.Message, error) {
-	var sqlMsgs []*mysqlMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? and wallet_name = ?", addr.String(), types.FillMsg, walletName).Error
 	if err != nil {
 		return nil, err
 	}
@@ -496,6 +490,7 @@ func (m *mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
 		"tipset_key":           tsKey.String(),
+		"updated_at":           time.Now(),
 	}
 	return m.DB.Model(&mysqlMessage{}).
 		Where("unsigned_cid = ?", unsignedCid).
@@ -503,24 +498,35 @@ func (m *mysqlMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 }
 
 func (m *mysqlMessageRepo) UpdateMessageStateByCid(cid string, state types.MessageState) error {
+	updateColumns := map[string]interface{}{
+		"state":      state,
+		"updated_at": time.Now(),
+	}
 	return m.DB.Model(&mysqlMessage{}).
-		Where("unsigned_cid = ?", cid).UpdateColumn("state", state).Error
+		Where("unsigned_cid = ?", cid).UpdateColumns(updateColumns).Error
 }
 
 func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.MessageState) error {
+	updateColumns := map[string]interface{}{
+		"state":      state,
+		"updated_at": time.Now(),
+	}
 	return m.DB.Debug().Model(&mysqlMessage{}).
-		Where("id = ?", id).UpdateColumn("state", state).Error
-}
-
-func (m *mysqlMessageRepo) UpdateUnFilledMessageState(walletName string, addr address.Address, state types.MessageState) error {
-	return m.DB.Debug().Model(&mysqlMessage{}).Where("wallet_name = ? and from_addr = ? and state = ?", walletName, addr.String(), types.UnFillMsg).
-		UpdateColumn("state", state).Error
+		Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *mysqlMessageRepo) MarkBadMessage(id string) (struct{}, error) {
-	return struct{}{}, m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumn("state", types.FailedMsg).Error
+	updateColumns := map[string]interface{}{
+		"state":      types.FailedMsg,
+		"updated_at": time.Now(),
+	}
+	return struct{}{}, m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *mysqlMessageRepo) UpdateReturnValue(id string, returnVal string) error {
-	return m.DB.Model((*mysqlMessage)(nil)).Where("id = ?", id).UpdateColumn("receipt_return_value", returnVal).Error
+	updateColumns := map[string]interface{}{
+		"receipt_return_value": returnVal,
+		"updated_at":           time.Now(),
+	}
+	return m.DB.Model((*mysqlMessage)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

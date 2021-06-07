@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/utils"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
@@ -68,49 +67,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	replaceMsg := make(map[string]*types.Message)
-	err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		for _, msg := range applyMsgs {
-			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
-			if err != nil {
-				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
-				continue
-			}
-
-			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
-				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
-				//replace msg
-				unsignedCid := msg.msg.Cid()
-				localMsg.UnsignedMessage = *msg.msg
-				localMsg.UnsignedCid = &unsignedCid
-				localMsg.SignedCid = &msg.cid
-				localMsg.State = types.ReplacedMsg
-				localMsg.Receipt = msg.receipt
-				localMsg.Height = int64(msg.height)
-				localMsg.TipSetKey = tsKeys[msg.height]
-				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
-				}
-				replaceMsg[localMsg.ID] = localMsg
-			} else {
-				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKeys[msg.height]); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
-				}
-			}
-			delete(revertMsgs, msg.cid)
-		}
-		for cid := range revertMsgs {
-			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
-				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	replaceMsg, err := ms.updateMessageState(ctx, tsKeys, applyMsgs, revertMsgs)
 	if err != nil {
 		return err
 	}
-
 	// update cache
 	for id, msg := range replaceMsg {
 		ms.messageState.SetMessage(id, msg)
@@ -157,6 +117,50 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	return nil
 }
 
+func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi.ChainEpoch]venustypes.TipSetKey, applyMsgs []pendingMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, error) {
+	replaceMsg := make(map[string]*types.Message)
+	return replaceMsg, ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+		for cid := range revertMsgs {
+			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
+				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
+				return err
+			}
+		}
+
+		for _, msg := range applyMsgs {
+			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
+			if err != nil {
+				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
+				continue
+			}
+			tsKey := tsKeys[msg.height]
+			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
+				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
+				//replace msg
+				unsignedCid := msg.msg.Cid()
+				localMsg.UnsignedMessage = *msg.msg
+				localMsg.UnsignedCid = &unsignedCid
+				localMsg.SignedCid = &msg.cid
+				localMsg.State = types.ReplacedMsg
+				localMsg.Receipt = msg.receipt
+				localMsg.Height = int64(msg.height)
+				localMsg.TipSetKey = tsKey
+				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
+				replaceMsg[localMsg.ID] = localMsg
+			} else {
+				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKey); err != nil {
+					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+				}
+			}
+			delete(revertMsgs, msg.cid)
+			return nil
+		}
+		return nil
+	})
+}
+
 //delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
@@ -176,7 +180,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			return nil, xerrors.Errorf("found message at height %d error %v", ts.Height(), err)
 		}
 
-		addrs := ms.walletService.AllAddresses()
+		addrs := ms.addressService.Addresses()
 		for _, msg := range msgs {
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
@@ -197,7 +201,7 @@ type pendingMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, error) {
 	var applyMsgs []pendingMessage
-	addrs := ms.walletService.AllAddresses()
+	addrs := ms.addressService.Addresses()
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
 		height := ts.Height()
