@@ -234,6 +234,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		if len(estimateResult[index].Err) != 0 {
 			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: gasEstimate + err.Error()})
 			messageSelector.log.Errorf("estimate message %s fail %s", msg.ID, estimateResult[index].Err)
+			continue
 		}
 		estimateMsg := estimateResult[index].Msg
 		if count >= wantCount {
