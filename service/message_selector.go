@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"modernc.org/mathutil"
 	"sort"
 	"sync"
 	"time"
+
+	"modernc.org/mathutil"
 
 	"github.com/filecoin-project/venus-messager/gateway"
 
@@ -214,7 +215,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		estimateMesssages[index] = &EstimateMessage{
 			Msg: &msg.UnsignedMessage,
 			Spec: &venusTypes.MessageSendSpec{
-				MaxFee:            newMsgMeta.MaxFeeCap,
+				MaxFee:            newMsgMeta.MaxFee,
 				GasOverEstimation: newMsgMeta.GasOverEstimation,
 			},
 		}
