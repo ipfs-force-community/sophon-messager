@@ -3,15 +3,16 @@ package service
 import (
 	"context"
 
+	"golang.org/x/xerrors"
+
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 )
 
 type NodeEvents struct {
 	client     *NodeClient
-	log        *logrus.Logger
+	log        *log.Logger
 	msgService *MessageService
 }
 

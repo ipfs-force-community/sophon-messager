@@ -61,6 +61,8 @@ type IMessager interface {
 	ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                                             //perm:write
 	ListenWalletEvent(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error) //perm:write
 	SupportNewAccount(ctx context.Context, channelId string, account string) error                                         //perm:write
+
+	SetLogLevel(ctx context.Context, level string) error //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
@@ -113,6 +115,8 @@ type Message struct {
 		ResponseEvent     func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
 		ListenWalletEvent func(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error)
 		SupportNewAccount func(ctx context.Context, channelId string, account string) error
+
+		SetLogLevel func(ctx context.Context, level string) error
 	}
 }
 
@@ -290,4 +294,10 @@ func (message *Message) ListenWalletEvent(ctx context.Context, wrp *walletevent.
 
 func (message *Message) SupportNewAccount(ctx context.Context, channelId string, account string) error {
 	return message.Internal.SupportNewAccount(ctx, channelId, account)
+}
+
+/////// log ///////
+
+func (message *Message) SetLogLevel(ctx context.Context, level string) error {
+	return message.Internal.SetLogLevel(ctx, level)
 }

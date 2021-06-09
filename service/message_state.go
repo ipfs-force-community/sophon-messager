@@ -5,16 +5,16 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
 
 type MessageState struct {
 	repo repo.Repo
-	log  *logrus.Logger
+	log  *log.Logger
 	cfg  *config.MessageStateConfig
 
 	idCids *idCidCache // 保存 cid 和 id的映射，方便从msgCache中找消息状态
@@ -22,7 +22,7 @@ type MessageState struct {
 	messageCache *cache.Cache // id 为 key
 }
 
-func NewMessageState(repo repo.Repo, logger *logrus.Logger, cfg *config.MessageStateConfig) (*MessageState, error) {
+func NewMessageState(repo repo.Repo, logger *log.Logger, cfg *config.MessageStateConfig) (*MessageState, error) {
 	ms := &MessageState{
 		repo: repo,
 		log:  logger,

@@ -7,10 +7,10 @@ import (
 
 	"github.com/filecoin-project/go-state-types/big"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -32,7 +32,7 @@ var defParams = &types.SharedParams{
 
 type SharedParamsService struct {
 	repo repo.Repo
-	log  *logrus.Logger
+	log  *log.Logger
 
 	params *Params
 }
@@ -43,7 +43,7 @@ type Params struct {
 	ScanIntervalChan chan time.Duration
 }
 
-func NewSharedParamsService(repo repo.Repo, logger *logrus.Logger) (*SharedParamsService, error) {
+func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
 	sps := &SharedParamsService{
 		repo: repo,
 		log:  logger,

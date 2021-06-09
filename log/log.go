@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -14,24 +15,43 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 )
 
-func SetLogger(logCfg *config.LogConfig) (*logrus.Logger, error) {
+type Logger struct {
+	*logrus.Logger
+}
+
+func New() *Logger {
+	return &Logger{logrus.New()}
+}
+
+func SetLogger(logCfg *config.LogConfig) (*Logger, error) {
 	log := logrus.New()
-	level, err := logrus.ParseLevel(logCfg.Level)
-	if err != nil {
-		return nil, err
-	}
 	log.SetFormatter(&logrus.TextFormatter{
 		ForceColors:   true,
 		FullTimestamp: true,
 	})
-	log.SetLevel(level)
+	logger := &Logger{log}
+	err := logger.SetLogLevel(context.Background(), logCfg.Level)
+	if err != nil {
+		return nil, err
+	}
+
 	file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0666)
 	if err == nil {
 		logrus.SetOutput(file)
 	} else {
 		return nil, xerrors.Errorf("open log file fail")
 	}
-	return log, nil
+	return logger, nil
+}
+
+func (logger *Logger) SetLogLevel(ctx context.Context, levelStr string) error {
+	level, err := logrus.ParseLevel(levelStr)
+	if err != nil {
+		return err
+	}
+	logger.SetLevel(level)
+
+	return nil
 }
 
 // 2016-09-27 09:38:21.541541811 +0200 CEST

@@ -6,22 +6,18 @@ import (
 	"sync"
 	"time"
 
-	"modernc.org/mathutil"
-
-	"github.com/filecoin-project/venus-messager/gateway"
-
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-wallet/core"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-
+	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
+	"modernc.org/mathutil"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/gateway"
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -33,7 +29,7 @@ const (
 
 type MessageSelector struct {
 	repo           repo.Repo
-	log            *logrus.Logger
+	log            *log.Logger
 	cfg            *config.MessageServiceConfig
 	nodeClient     *NodeClient
 	addressService *AddressService
@@ -55,14 +51,14 @@ type msgErrInfo struct {
 }
 
 func NewMessageSelector(repo repo.Repo,
-	log *logrus.Logger,
+	logger *log.Logger,
 	cfg *config.MessageServiceConfig,
 	nodeClient *NodeClient,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	walletClient *gateway.IWalletCli) *MessageSelector {
 	return &MessageSelector{repo: repo,
-		log:            log,
+		log:            logger,
 		cfg:            cfg,
 		nodeClient:     nodeClient,
 		addressService: addressService,

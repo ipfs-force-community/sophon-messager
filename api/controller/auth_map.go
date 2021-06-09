@@ -43,4 +43,5 @@ var AuthMap = map[string]string{
 	"DeleteAddress":            "admin",
 	"SetFeeParams":             "admin",
 	"WalletHas":                "read",
+	"SetLogLevel":              "admin",
 }

@@ -9,9 +9,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -37,7 +37,7 @@ const (
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func SetupController(router *gin.Engine, sMap service.ServiceMap, log *logrus.Logger) error {
+func SetupController(router *gin.Engine, sMap service.ServiceMap, log *log.Logger) error {
 	v1 := router.Group("rpc/v0")
 	var ts []reflect.Type
 	ts = append(ts, reflect.TypeOf(Message{}), reflect.TypeOf(Address{}), reflect.TypeOf(SharedParamsCtrl{}),
@@ -56,7 +56,7 @@ type JsonRpcResponse struct {
 	Error  *RespError  `json:"error,omitempty"`
 }
 
-func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *logrus.Logger, controllers []reflect.Type) error {
+func registerController(v1 *gin.RouterGroup, sMap service.ServiceMap, log *log.Logger, controllers []reflect.Type) error {
 	for i := range controllers {
 		controllerT := controllers[i]
 		methodNumber := controllerT.NumMethod()
