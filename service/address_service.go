@@ -27,7 +27,6 @@ type AddressService struct {
 
 	resetAddressFunc chan func() (uint64, error)
 	resetAddressRes  chan resetAddressResult
-	isResetAddress   bool
 }
 
 func NewAddressService(repo repo.Repo,
@@ -192,6 +191,17 @@ func (addressService *AddressService) resetAddress(ctx context.Context, addr add
 				break
 			}
 		}
+
+		unFillMsgs, err := txRepo.MessageRepo().ListUnFilledMessage(addr)
+		if err != nil {
+			return err
+		}
+		for _, msg := range unFillMsgs {
+			if _, err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
+				return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
+			}
+		}
+
 		if latestNonce < addrInfo.Nonce {
 			return txRepo.AddressRepo().UpdateNonce(ctx, addr, latestNonce)
 		}
@@ -204,29 +214,19 @@ func (addressService *AddressService) resetAddress(ctx context.Context, addr add
 }
 
 func (addressService *AddressService) ResetAddress(ctx context.Context, addr address.Address, targetNonce uint64) (uint64, error) {
-	if addressService.isResetAddress {
-		return 0, xerrors.Errorf("resetting the address is already underway")
-	}
-	addressService.isResetAddress = true
-	defer func() {
-		addressService.isResetAddress = false
-	}()
-
 	addressService.resetAddressFunc <- func() (uint64, error) {
 		return addressService.resetAddress(ctx, addr, targetNonce)
 	}
 
-	for {
-		select {
-		case r, ok := <-addressService.resetAddressRes:
-			if !ok {
-				return 0, xerrors.Errorf("unexpect error")
-			}
-			addressService.log.Infof("reset address %s success, current nonce %d ", addr.String(), r.latestNonce)
-			return r.latestNonce, r.err
-		case <-ctx.Done():
-			return 0, ctx.Err()
+	select {
+	case r, ok := <-addressService.resetAddressRes:
+		if !ok {
+			return 0, xerrors.Errorf("unexpect error")
 		}
+		addressService.log.Infof("reset address %s success, current nonce %d ", addr.String(), r.latestNonce)
+		return r.latestNonce, r.err
+	case <-ctx.Done():
+		return 0, ctx.Err()
 	}
 }
 

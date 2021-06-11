@@ -40,9 +40,9 @@ func TestSaveAndGetMessage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.LessOrEqual(t, 1, len(allMsg))
 
-		unchainedMsgs, err := messageRepo.ListUnchainedMsgs()
+		unFilledMsgs, err := messageRepo.ListUnFilledMessage(msg.From)
 		assert.NoError(t, err)
-		assert.LessOrEqual(t, 1, len(unchainedMsgs))
+		assert.LessOrEqual(t, 1, len(unFilledMsgs))
 
 		signedMsg := NewSignedMessages(1)[0]
 		err = messageRepo.CreateMessage(signedMsg)
@@ -172,7 +172,7 @@ func TestGetMessageState(t *testing.T) {
 		assert.NoError(t, err)
 		state, err := messageRepo.GetMessageState(msg.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, state, types.UnKnown)
+		assert.Equal(t, state, types.UnFillMsg)
 
 		for _, state := range []types.MessageState{types.UnFillMsg, types.FillMsg, types.OnChainMsg, types.FailedMsg} {
 			msg.State = state
@@ -350,7 +350,6 @@ func TestMarkBadMessage(t *testing.T) {
 
 		msgs := NewMessages(1)
 		for _, msg := range msgs {
-			msg.State = types.UnFillMsg
 			err := messageRepo.CreateMessage(msg)
 			assert.NoError(t, err)
 		}
@@ -380,7 +379,6 @@ func TestUpdateReturnValue(t *testing.T) {
 
 		msgs := NewMessages(2)
 		for _, msg := range msgs {
-			msg.State = types.UnFillMsg
 			err := messageRepo.CreateMessage(msg)
 			assert.NoError(t, err)
 		}
@@ -412,7 +410,6 @@ func TestListBlockedMessage(t *testing.T) {
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
 
 		msgs := NewMessages(3)
-		msgs[0].State = types.UnFillMsg
 		msgs[1].State = types.FillMsg
 		assert.NoError(t, messageRepo.CreateMessage(msgs[0]))
 		assert.NoError(t, messageRepo.CreateMessage(msgs[1]))

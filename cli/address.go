@@ -323,6 +323,8 @@ var resetAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println("It will take dozens of seconds.")
+
 		currentNonce, err := client.ResetAddress(ctx.Context, addr, ctx.Uint64("nonce"))
 		if err != nil {
 			return err

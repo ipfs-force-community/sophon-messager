@@ -456,11 +456,10 @@ func (m *sqliteMessageRepo) ListBlockedMessage(addr address.Address, d time.Dura
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListUnFilledMessage(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	if err := m.DB.Model((*sqliteMessage)(nil)).
-		Where("height=0 and signed_data is null").
-		Find(&sqlMsgs).Error; err != nil {
+		Find(&sqlMsgs, "from_addr = ? AND state = ?", addr.String(), types.UnFillMsg).Error; err != nil {
 		return nil, err
 	}
 
