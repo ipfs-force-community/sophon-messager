@@ -394,6 +394,14 @@ func (m *mysqlMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce 
 	return msg.Message(), nil
 }
 
+func (m *mysqlMessageRepo) GetMessageByFromNonceAndState(from address.Address, nonce uint64, state types.MessageState) (*types.Message, error) {
+	var msg mysqlMessage
+	if err := m.DB.Where("from_addr = ? and nonce = ? and state = ?", from.String(), nonce, state).Take(&msg).Error; err != nil {
+		return nil, err
+	}
+	return msg.Message(), nil
+}
+
 func (m *mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	if err := m.DB.Find(&sqlMsgs).Error; err != nil {
@@ -447,11 +455,10 @@ func (m *mysqlMessageRepo) ListBlockedMessage(addr address.Address, d time.Durat
 	return result, nil
 }
 
-func (m *mysqlMessageRepo) ListUnchainedMsgs() ([]*types.Message, error) {
+func (m *mysqlMessageRepo) ListUnFilledMessage(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	if err := m.DB.Model((*mysqlMessage)(nil)).
-		Where("height=0 and signed_data is null").
-		Find(&sqlMsgs).Error; err != nil {
+		Find(&sqlMsgs, "from_addr = ? AND state = ?", addr.String(), types.UnFillMsg).Error; err != nil {
 		return nil, err
 	}
 

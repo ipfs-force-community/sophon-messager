@@ -59,6 +59,7 @@ func NewMessage() *types.Message {
 			GasOverEstimation: 0.5,
 		},
 		Receipt: &venustypes.MessageReceipt{ExitCode: -1},
+		State:   types.UnFillMsg,
 	}
 }
 

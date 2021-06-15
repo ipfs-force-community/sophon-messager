@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"golang.org/x/xerrors"
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
@@ -21,16 +22,28 @@ type AddressService struct {
 	log  *log.Logger
 
 	sps          *SharedParamsService
+	nodeClient   *NodeClient
 	walletClient *gateway.IWalletCli
+
+	resetAddressFunc chan func() (uint64, error)
+	resetAddressRes  chan resetAddressResult
 }
 
-func NewAddressService(repo repo.Repo, logger *log.Logger, sps *SharedParamsService, walletClient *gateway.IWalletCli) *AddressService {
+func NewAddressService(repo repo.Repo,
+	logger *log.Logger,
+	sps *SharedParamsService,
+	walletClient *gateway.IWalletCli,
+	nodeClient *NodeClient) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
 		log:  logger,
 
 		sps:          sps,
+		nodeClient:   nodeClient,
 		walletClient: walletClient,
+
+		resetAddressFunc: make(chan func() (uint64, error)),
+		resetAddressRes:  make(chan resetAddressResult),
 	}
 
 	return addressService
@@ -133,6 +146,88 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	}
 
 	return addr, addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
+}
+
+type resetAddressResult struct {
+	latestNonce uint64
+	err         error
+}
+
+func (addressService *AddressService) resetAddress(ctx context.Context, addr address.Address, targetNonce uint64) (uint64, error) {
+	addrInfo, err := addressService.GetAddress(ctx, addr)
+	if err != nil {
+		return 0, err
+	}
+	actor, err := addressService.nodeClient.StateGetActor(ctx, addr, venusTypes.EmptyTSK)
+	if err != nil {
+		return 0, err
+	}
+
+	if targetNonce != 0 {
+		if targetNonce < actor.Nonce {
+			return 0, xerrors.Errorf("target nonce(%d) smaller than chain nonce(%d)", targetNonce, actor.Nonce)
+		}
+	} else {
+		targetNonce = actor.Nonce
+	}
+	addressService.log.Infof("reset address target nonce %d, chain nonce %d", targetNonce, actor.Nonce)
+
+	latestNonce := addrInfo.Nonce
+	if err := addressService.repo.Transaction(func(txRepo repo.TxRepo) error {
+		for nonce := addrInfo.Nonce - 1; nonce >= targetNonce; nonce-- {
+			msg, err := txRepo.MessageRepo().GetMessageByFromNonceAndState(addr, nonce, types.FillMsg)
+			if err != nil {
+				if xerrors.Is(err, gorm.ErrRecordNotFound) {
+					continue
+				}
+				return xerrors.Errorf("found message by address(%s) and nonce(%d) failed %v", addr.String(), nonce, err)
+			}
+			if msg.State == types.FillMsg {
+				if _, err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
+					return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
+				}
+				latestNonce = nonce
+			} else if msg.State == types.OnChainMsg {
+				break
+			}
+		}
+
+		unFillMsgs, err := txRepo.MessageRepo().ListUnFilledMessage(addr)
+		if err != nil {
+			return err
+		}
+		for _, msg := range unFillMsgs {
+			if _, err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
+				return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
+			}
+		}
+
+		if latestNonce < addrInfo.Nonce {
+			return txRepo.AddressRepo().UpdateNonce(ctx, addr, latestNonce)
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return latestNonce, nil
+}
+
+func (addressService *AddressService) ResetAddress(ctx context.Context, addr address.Address, targetNonce uint64) (uint64, error) {
+	addressService.resetAddressFunc <- func() (uint64, error) {
+		return addressService.resetAddress(ctx, addr, targetNonce)
+	}
+
+	select {
+	case r, ok := <-addressService.resetAddressRes:
+		if !ok {
+			return 0, xerrors.Errorf("unexpect error")
+		}
+		addressService.log.Infof("reset address %s success, current nonce %d ", addr.String(), r.latestNonce)
+		return r.latestNonce, r.err
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
 }
 
 func (addressService *AddressService) Addresses() map[address.Address]struct{} {

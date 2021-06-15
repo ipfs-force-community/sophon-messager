@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-state-types/big"
 
 	"gorm.io/gorm"
@@ -31,8 +32,8 @@ func FromSharedParams(sp types.SharedParams) *mysqlSharedParams {
 		ID:                 sp.ID,
 		ExpireEpoch:        sp.ExpireEpoch,
 		GasOverEstimation:  sp.GasOverEstimation,
-		MaxFee:             types.Int{sp.MaxFee.Int},
-		MaxFeeCap:          types.Int{sp.MaxFeeCap.Int},
+		MaxFee:             types.Int{Int: sp.MaxFee.Int},
+		MaxFeeCap:          types.Int{Int: sp.MaxFeeCap.Int},
 		SelMsgNum:          sp.SelMsgNum,
 		ScanInterval:       sp.ScanInterval,
 		MaxEstFailNumOfMsg: sp.MaxEstFailNumOfMsg,
@@ -91,8 +92,8 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 
 	ssp.ExpireEpoch = params.ExpireEpoch
 	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.MaxFeeCap = types.Int{params.MaxFeeCap.Int}
-	ssp.MaxFee = types.Int{params.MaxFee.Int}
+	ssp.MaxFeeCap = types.Int{Int: params.MaxFeeCap.Int}
+	ssp.MaxFee = types.Int{Int: params.MaxFee.Int}
 
 	ssp.SelMsgNum = params.SelMsgNum
 
