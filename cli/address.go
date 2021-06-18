@@ -17,8 +17,8 @@ var AddrCmds = &cli.Command{
 		listAddrCmd,
 		deleteAddrCmd,
 		//updateNonceCmd,
-		//forbiddenAddrCmd,
-		//activeAddrCmd,
+		forbiddenAddrCmd,
+		activeAddrCmd,
 		setAddrSelMsgNumCmd,
 		setFeeParamsCmd,
 		resetAddrCmd,
@@ -146,7 +146,6 @@ var deleteAddrCmd = &cli.Command{
 	},
 }
 
-// nolint
 var forbiddenAddrCmd = &cli.Command{
 	Name:      "forbidden",
 	Usage:     "forbidden address",
@@ -179,12 +178,12 @@ var forbiddenAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println("forbidden address success!")
 
 		return nil
 	},
 }
 
-// nolint
 var activeAddrCmd = &cli.Command{
 	Name:      "active",
 	Usage:     "activate a frozen address",
@@ -217,6 +216,7 @@ var activeAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println("active address success!")
 
 		return nil
 	},

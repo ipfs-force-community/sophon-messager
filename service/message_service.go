@@ -142,7 +142,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 			})
 			return err
 		}
-		has, err := ms.addressService.HasAddress(ctx, msg.From)
+		addrInfo, err := ms.addressService.GetAddress(ctx, msg.From)
 		if err != nil {
 			if xerrors.Is(err, gorm.ErrRecordNotFound) {
 				if err := saveAddr(); err != nil {
@@ -152,11 +152,9 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 			} else {
 				return err
 			}
-		} else if !has {
-			if err := saveAddr(); err != nil {
-				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
-			}
-			ms.log.Infof("add new address %s", msg.From.String())
+		} else if addrInfo.State == types.Forbiden {
+			ms.log.Errorf("address(%s) is forbidden", msg.From.String())
+			return xerrors.Errorf("address(%s) is forbidden", msg.From.String())
 		}
 	} else {
 		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
