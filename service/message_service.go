@@ -740,7 +740,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 	}
 }
 
-func (ms *MessageService) StartPushMessage(ctx context.Context) {
+func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool) {
 	tm := time.NewTicker(time.Second * 30)
 	defer tm.Stop()
 
@@ -762,6 +762,10 @@ func (ms *MessageService) StartPushMessage(ctx context.Context) {
 			// Receiving a channel `resetAddressFunc`, then reset the address
 			ms.resetAddress()
 
+			if skipPushMsg {
+				ms.log.Info("skip push message")
+				continue
+			}
 			start := time.Now()
 			ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
 			err := ms.pushMessageToPool(ctx, newHead)
