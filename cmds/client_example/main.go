@@ -25,14 +25,14 @@ func main() {
 	var fromStr string
 	var toStr string
 	var count int
-	var value int64
+	var value string
 
 	flag.StringVar(&apiAddress, "api", "", "messager api address")
 	flag.StringVar(&token, "token", "", "messager token")
 	flag.StringVar(&fromStr, "from", "", "from which address is the message sent")
 	flag.StringVar(&toStr, "to", "", "to whom is the message sent")
 	flag.IntVar(&count, "count", 50, "number of messages sent per second")
-	flag.Int64Var(&value, "value", 0, "")
+	flag.StringVar(&value, "value", "", "")
 
 	flag.Parse()
 
@@ -60,6 +60,16 @@ func main() {
 	}
 	if len(apiAddress) == 0 {
 		apiAddress = cfg.API.Address
+	}
+
+	if len(token) == 0 {
+		token = cfg.Node.Token
+	}
+
+	val, err := venustypes.ParseFIL(value)
+	if err != nil {
+		log.Fatalf("failed to parse amount: %v", err)
+		return
 	}
 
 	fmt.Println("api address: ", apiAddress)
@@ -100,7 +110,7 @@ func main() {
 					To:      to,
 					From:    from,
 					Nonce:   1,
-					Value:   abi.NewTokenAmount(value),
+					Value:   abi.TokenAmount(val),
 					Method:  0,
 				},
 				msgMate,

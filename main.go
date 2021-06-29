@@ -42,6 +42,7 @@ func main() {
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
 			ccli.LogCmds,
+			ccli.SendCmd,
 			runCmd,
 		},
 	}

@@ -45,4 +45,5 @@ var AuthMap = map[string]string{
 	"WaitMessage":              "read",
 	"UpdateAllFilledMessage":   "admin",
 	"SetSelectMsgNum":          "admin",
+	"Send":                     "admin",
 }

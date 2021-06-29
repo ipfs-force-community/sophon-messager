@@ -321,14 +321,14 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInf
 		}
 	}
 	if meta.MaxFee.NilOrZero() {
-		if !addrInfo.MaxFee.Nil() {
+		if !addrInfo.MaxFee.NilOrZero() {
 			newMsgMeta.MaxFee = addrInfo.MaxFee
 		} else if globalMeta != nil {
 			newMsgMeta.MaxFee = globalMeta.MaxFee
 		}
 	}
 	if meta.MaxFeeCap.NilOrZero() {
-		if !addrInfo.MaxFeeCap.Nil() {
+		if !addrInfo.MaxFeeCap.NilOrZero() {
 			newMsgMeta.MaxFeeCap = addrInfo.MaxFeeCap
 		} else if globalMeta != nil {
 			newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap

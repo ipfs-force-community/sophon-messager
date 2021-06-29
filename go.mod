@@ -8,11 +8,17 @@ require (
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
-	github.com/filecoin-project/go-state-types v0.1.0
+	github.com/filecoin-project/go-state-types v0.1.1-0.20210506134452-99b279731c48
+	github.com/filecoin-project/specs-actors v0.9.13
+	github.com/filecoin-project/specs-actors/v2 v2.3.5-0.20210114162132-5b58b773f4fb
+	github.com/filecoin-project/specs-actors/v3 v3.1.1
+	github.com/filecoin-project/specs-actors/v4 v4.0.0
+	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/venus v0.9.2-0.20210603072509-1a7e6e11d39c
 	github.com/filecoin-project/venus-auth v1.1.0
 	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gin-gonic/gin v1.6.3
+	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
@@ -33,6 +39,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
+	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
 	go.uber.org/fx v1.13.1
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/mod v0.4.1 // indirect
