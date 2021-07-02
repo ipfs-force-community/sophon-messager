@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/filecoin-project/go-jsonrpc/auth"
+
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-auth/core"
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
@@ -20,7 +22,7 @@ import (
 	"github.com/filecoin-project/venus-messager/service"
 )
 
-func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp) error {
+func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp) error {
 	var msgAPI client.Message
 	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
@@ -29,8 +31,8 @@ func RunAPI(lc fx.Lifecycle, jwtClient jwt.IJwtClient, lst net.Listener, log *lo
 
 	handler := http.NewServeMux()
 	handler.Handle("/rpc/v0", srv)
-	authMux := jwt.NewAuthMux(jwtClient, log, handler)
-	authMux.TruthHandle("/debug/pprof/", http.DefaultServeMux)
+	authMux := jwtclient.NewAuthMux(jwtCli.Local, jwtCli.Remote, handler, log)
+	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
 
 	apiserv := &http.Server{
 		Handler: authMux,
@@ -84,6 +86,9 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 	}
 }
 
+var AllPermissions = []auth.Permission{"read", "write", "sign", "admin"}
+var defaultPerms = []auth.Permission{"read"}
+
 func PermissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
 	rint := reflect.ValueOf(out).Elem()
 	ra := reflect.ValueOf(in)
@@ -99,12 +104,11 @@ func PermissionedProxy(permMap map[string]string, in interface{}, out interface{
 
 		rint.Field(f).Set(reflect.MakeFunc(field.Type, func(args []reflect.Value) (results []reflect.Value) {
 			ctx := args[0].Interface().(context.Context)
-			err := hasPerm(ctx, requiredPerm)
-			if err == nil {
+			if auth.HasPerm(ctx, defaultPerms, requiredPerm) {
 				return fn.Call(args)
 			}
 
-			err = xerrors.Errorf("missing permission to invoke '%s' %s", field.Name, err.Error())
+			err := xerrors.Errorf("missing permission to invoke '%s', need '%s'", field.Name, requiredPerm)
 			rerr := reflect.ValueOf(&err).Elem()
 
 			if field.Type.NumOut() == 2 {
@@ -118,19 +122,4 @@ func PermissionedProxy(permMap map[string]string, in interface{}, out interface{
 		}))
 
 	}
-}
-
-func hasPerm(ctx context.Context, requiredPerm string) error {
-	perms, ok := ctx.Value(core.PermCtxKey).([]core.Permission)
-	if !ok {
-		return xerrors.Errorf("unknown perm type %T", ctx.Value(core.PermCtxKey))
-	}
-
-	for _, p := range perms {
-		if requiredPerm == p {
-			return nil
-		}
-	}
-
-	return xerrors.Errorf("(need %s) has %v", requiredPerm, perms)
 }

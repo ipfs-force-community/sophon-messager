@@ -8,18 +8,17 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/gateway"
@@ -170,8 +169,8 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 }
 
 func ipAccountFromContext(ctx context.Context) (string, string) {
-	ip, _ := ctx.Value(gatewayTypes.IPKey).(string)
-	account, _ := ctx.Value(gatewayTypes.AccountKey).(string)
+	ip, _ := jwtclient.CtxGetTokenLocation(ctx)
+	account, _ := jwtclient.CtxGetName(ctx)
 
 	return ip, account
 }
@@ -805,7 +804,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
-			ms.log.Errorf("update filled message %v", err)
+			ms.log.Errorf("update filled message: %v", err)
 			continue
 		}
 		updateCount++

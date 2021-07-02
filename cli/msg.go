@@ -374,7 +374,7 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 }
 
 var updateAllFilledMessageCmd = &cli.Command{
-	Name:  "update_all_filled_msg",
+	Name:  "update-all-filled-msg",
 	Usage: "manual update all filled message state",
 	Action: func(ctx *cli.Context) error {
 		cli, closer, err := getAPI(ctx)
@@ -394,7 +394,7 @@ var updateAllFilledMessageCmd = &cli.Command{
 }
 
 var updateFilledMessageCmd = &cli.Command{
-	Name:  "update_filled_msg",
+	Name:  "update-filled-msg",
 	Usage: "manual update one filled message state",
 	Flags: []cli.Flag{
 		&cli.StringFlag{

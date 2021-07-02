@@ -31,7 +31,7 @@ func main() {
 	flag.StringVar(&fromStr, "from", "", "from which address is the message sent")
 	flag.StringVar(&toStr, "to", "", "to whom is the message sent")
 	flag.IntVar(&count, "count", 50, "number of messages sent per second")
-	flag.StringVar(&value, "value", "", "")
+	flag.StringVar(&value, "value", "0", "")
 
 	flag.Parse()
 

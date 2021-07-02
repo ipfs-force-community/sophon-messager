@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	_ "net/http/pprof"
@@ -123,6 +124,9 @@ func runAction(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		if err := genSecret(&cfg.JWT); err != nil {
+			return xerrors.Errorf("failed to generate secret %v", err)
+		}
 		err = config.WriteConfig(path, cfg)
 		if err != nil {
 			return err
@@ -131,6 +135,15 @@ func runAction(ctx *cli.Context) error {
 		cfg, err = config.ReadConfig(path)
 		if err != nil {
 			return err
+		}
+		if len(cfg.JWT.Local.Secret) == 0 {
+			if err := genSecret(&cfg.JWT); err != nil {
+				return xerrors.Errorf("failed to generate secret %v", err)
+			}
+			err = config.WriteConfig(path, cfg)
+			if err != nil {
+				return err
+			}
 		}
 		err = updateFlag(cfg, ctx)
 		if err != nil {
@@ -236,7 +249,7 @@ func runAction(ctx *cli.Context) error {
 
 func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 	if ctx.IsSet("auth-url") {
-		cfg.JWT.Url = ctx.String("auth-url")
+		cfg.JWT.AuthURL = ctx.String("auth-url")
 	}
 
 	if ctx.IsSet("node-url") {
@@ -285,4 +298,17 @@ type fxLogger struct {
 
 func (l fxLogger) Printf(str string, args ...interface{}) {
 	l.log.Infof(str, args...)
+}
+
+func genSecret(cfg *config.JWTConfig) error {
+	if len(cfg.Local.Secret) == 0 {
+		sBytes, tBytes, err := jwt.GenSecretAndToken()
+		if err != nil {
+			return err
+		}
+		cfg.Local.Secret = hex.EncodeToString(sBytes)
+		cfg.Local.Token = string(tBytes)
+	}
+
+	return nil
 }
