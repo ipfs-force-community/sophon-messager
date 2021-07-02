@@ -20,7 +20,7 @@ jobs:
 
     - name: Deps
       env:
-        GOPROXY: "https://goproxy.io,direct"
+        GOPROXY: "https://goproxy.org,direct"
         GO111MODULE: "on"
       run: |
         sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
@@ -29,7 +29,7 @@ jobs:
 
     - name: Build
       env:
-        GOPROXY: "https://goproxy.io,direct"
+        GOPROXY: "https://goproxy.org,direct"
         GO111MODULE: "on"
       run: go build -v ./...
 
