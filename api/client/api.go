@@ -64,6 +64,8 @@ type IMessager interface {
 	SupportNewAccount(ctx context.Context, channelId string, account string) error                                         //perm:write
 
 	SetLogLevel(ctx context.Context, level string) error //perm:admin
+
+	Send(ctx context.Context, params types.SendParams) (string, error) //perm:admin
 }
 
 var _ IMessager = (*Message)(nil)
@@ -119,6 +121,8 @@ type Message struct {
 		SupportNewAccount func(ctx context.Context, channelId string, account string) error
 
 		SetLogLevel func(ctx context.Context, level string) error
+
+		Send func(ctx context.Context, params types.SendParams) (string, error)
 	}
 }
 
@@ -306,4 +310,10 @@ func (message *Message) SupportNewAccount(ctx context.Context, channelId string,
 
 func (message *Message) SetLogLevel(ctx context.Context, level string) error {
 	return message.Internal.SetLogLevel(ctx, level)
+}
+
+/////// send ///////
+
+func (message *Message) Send(ctx context.Context, params types.SendParams) (string, error) {
+	return message.Internal.Send(ctx, params)
 }
