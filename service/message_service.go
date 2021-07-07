@@ -874,7 +874,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		msg.GasFeeCap = big.Max(retm.GasFeeCap, msg.GasPremium)
 
 		mff := func() (abi.TokenAmount, error) {
-			return abi.TokenAmount(venusTypes.DefaultDefaultMaxFee), nil
+			return abi.TokenAmount(DefaultMaxFee), nil
 		}
 
 		messagepool.CapGasFee(mff, &msg.UnsignedMessage, mss)
