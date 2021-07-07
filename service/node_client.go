@@ -8,7 +8,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-messager/config"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
@@ -31,8 +31,8 @@ type NodeClient struct {
 	ChainHead              func(context.Context) (*types.TipSet, error)
 	ChainGetTipSet         func(context.Context, types.TipSetKey) (*types.TipSet, error)
 	ChainGetBlock          func(context.Context, cid.Cid) (*types.BlockHeader, error)
-	ChainGetBlockMessages  func(context.Context, cid.Cid) (*chain2.BlockMessages, error)
-	ChainGetParentMessages func(ctx context.Context, bcid cid.Cid) ([]chain2.Message, error)
+	ChainGetBlockMessages  func(context.Context, cid.Cid) (*apitypes.BlockMessages, error)
+	ChainGetParentMessages func(ctx context.Context, bcid cid.Cid) ([]apitypes.Message, error)
 	ChainGetParentReceipts func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)
 	StateAccountKey        func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
 	StateSearchMsg         func(context.Context, cid.Cid) (*chain.MsgLookup, error)
