@@ -24,8 +24,6 @@ jobs:
         GO111MODULE: "on"
       run: |
         sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
-        git submodule update --init
-        ./extern/filecoin-ffi/install-filcrypto
 
     - name: Build
       env:
