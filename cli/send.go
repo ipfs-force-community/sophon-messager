@@ -19,8 +19,9 @@ var SendCmd = &cli.Command{
 	ArgsUsage: "[targetAddress] [amount]",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:  "from",
-			Usage: "optionally specify the address to send",
+			Name:     "from",
+			Usage:    "optionally specify the address to send",
+			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  "gas-premium",
@@ -51,8 +52,9 @@ var SendCmd = &cli.Command{
 			Usage: "specify invocation parameters in hex",
 		},
 		&cli.StringFlag{
-			Name:  "account",
-			Usage: "optionally specify the account to send",
+			Name:     "account",
+			Usage:    "optionally specify the account to send",
+			Required: true,
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -85,11 +87,7 @@ var SendCmd = &cli.Command{
 		}
 		params.From = addr
 
-		if ctx.IsSet("account") {
-			params.Account = ctx.String("account")
-		} else {
-			return xerrors.Errorf("must pass account")
-		}
+		params.Account = ctx.String("account")
 
 		if ctx.IsSet("gas-premium") {
 			gp, err := venusTypes.BigFromString(ctx.String("gas-premium"))
