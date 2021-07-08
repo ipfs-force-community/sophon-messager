@@ -14,7 +14,7 @@
 
   [db.sqlite]
     debug = false
-    path = "./message.db"
+    file = "./message.db"
 
 [jwt]
   url = "http://127.0.0.1:8989"

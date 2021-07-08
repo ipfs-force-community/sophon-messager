@@ -85,7 +85,7 @@ func ObjectToString(i interface{}) string {
 }
 
 func setupRepo(t *testing.T) (repo.Repo, repo.Repo) {
-	sqliteRepo, err := sqlite.OpenSqlite(&config.SqliteConfig{Path: "./test_sqlite_db", Debug: true})
+	sqliteRepo, err := sqlite.OpenSqlite(&config.SqliteConfig{File: "./test_sqlite_db", Debug: true})
 	assert.NoError(t, err)
 
 	//mysqlRepo, err := mysql.OpenMysql(&config.MySqlConfig{

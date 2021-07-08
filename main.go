@@ -62,7 +62,6 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "auth-url",
 			Usage: "url for auth server",
-			Value: "http://127.0.0.1:8989",
 		},
 
 		//node
@@ -79,12 +78,10 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "db-type",
 			Usage: "which db to use. sqlite/mysql",
-			Value: "sqlite",
 		},
 		&cli.StringFlag{
-			Name:  "sqlite-path",
-			Usage: "sqlite db path",
-			Value: "./message.db",
+			Name:  "sqlite-file",
+			Usage: "the path and file name of SQLite, eg. ~/sqlite/message.db",
 		},
 		&cli.StringFlag{
 			Name:  "mysql-dsn",
@@ -268,8 +265,8 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 		cfg.DB.Type = ctx.String("db-type")
 		switch cfg.DB.Type {
 		case "sqlite":
-			if ctx.IsSet("sqlite-path") {
-				cfg.DB.Sqlite.Path = ctx.String("sqlite-path")
+			if ctx.IsSet("sqlite-file") {
+				cfg.DB.Sqlite.File = ctx.String("sqlite-file")
 			}
 		case "mysql":
 			if ctx.IsSet("mysql-dsn") {

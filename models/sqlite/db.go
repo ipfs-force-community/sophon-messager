@@ -79,11 +79,11 @@ func (d SqlLiteRepo) DbClose() error {
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
 	//cache=shared&_journal_mode=wal&sync=normal
 	//cache=shared&sync=full
-	db, err := gorm.Open(sqlite.Open(cfg.Path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(cfg.File+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
-		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.Path, err)
+		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.File, err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
