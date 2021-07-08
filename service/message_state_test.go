@@ -14,7 +14,7 @@ import (
 )
 
 func TestMessageStateCache(t *testing.T) {
-	db, err := sqlite.OpenSqlite(&config.SqliteConfig{Path: "message_state.db"})
+	db, err := sqlite.OpenSqlite(&config.SqliteConfig{File: "message_state.db"})
 	assert.NoError(t, err)
 	defer func() {
 		assert.NoError(t, os.Remove("message_state.db"))

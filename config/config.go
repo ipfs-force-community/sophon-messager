@@ -40,7 +40,7 @@ type DbConfig struct {
 }
 
 type SqliteConfig struct {
-	Path  string `toml:"path"`
+	File  string `toml:"file"`
 	Debug bool   `toml:"debug"`
 }
 
@@ -94,7 +94,7 @@ func DefaultConfig() *Config {
 				ConnMaxLifeTime:  time.Second * 60,
 				Debug:            false,
 			},
-			Sqlite: SqliteConfig{Path: "./message.db"},
+			Sqlite: SqliteConfig{File: "./message.db"},
 		},
 		JWT: JWTConfig{
 			Url: "http://127.0.0.1:8989",
