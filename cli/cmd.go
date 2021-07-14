@@ -1,14 +1,12 @@
 package cli
 
 import (
-	"net/http"
-
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {
@@ -16,14 +14,14 @@ func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {
 	if err != nil {
 		return &client.Message{}, func() {}, err
 	}
-	addr, err := utils.DialArgs(cfg.API.Address)
+
+	apiInfo := apiinfo.NewAPIInfo(cfg.API.Address, cfg.Local.Token)
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
-		return &client.Message{}, func() {}, err
+		return nil, nil, err
 	}
 
-	header := http.Header{}
-	header.Set("Authorization", "Bearer "+cfg.Local.Token)
-	client, closer, err := client.NewMessageRPC(ctx.Context, addr, header)
+	client, closer, err := client.NewMessageRPC(ctx.Context, addr, apiInfo.AuthHeader())
 
 	return client, closer, err
 }

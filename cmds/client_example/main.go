@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -16,7 +16,6 @@ import (
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/types"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func main() {
@@ -79,14 +78,12 @@ func main() {
 	fmt.Println("count      : ", count)
 	fmt.Println("value      : ", value)
 
-	addr, err := utils.DialArgs(apiAddress)
+	apiInfo := apiinfo.NewAPIInfo(apiAddress, token)
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	header := http.Header{}
-	header.Set("Authorization", "Bearer "+token)
-	client, closer, err := client.NewMessageRPC(context.Background(), addr, header)
+	client, closer, err := client.NewMessageRPC(context.Background(), addr, apiInfo.AuthHeader())
 	if err != nil {
 		log.Fatal(err)
 		return

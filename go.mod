@@ -20,9 +20,10 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913
 	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
 	github.com/ipfs/go-cid v0.0.7
-	github.com/multiformats/go-multiaddr v0.3.1
+	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

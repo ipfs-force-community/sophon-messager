@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/big"
@@ -11,9 +9,8 @@ import (
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/ipfs/go-cid"
-
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type EstimateMessage struct {
@@ -53,15 +50,12 @@ type NodeClient struct {
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {
-	headers := http.Header{}
-	if len(cfg.Token) != 0 {
-		headers.Add("Authorization", "Bearer "+cfg.Token)
-	}
-	addr, err := utils.DialArgs(cfg.Url)
+	apiInfo := apiinfo.NewAPIInfo(cfg.Url, cfg.Token)
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err
 	}
 	var res NodeClient
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res}, headers)
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{&res}, apiInfo.AuthHeader())
 	return &res, closer, err
 }
