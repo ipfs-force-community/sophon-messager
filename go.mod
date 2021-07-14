@@ -14,8 +14,9 @@ require (
 	github.com/filecoin-project/specs-actors/v4 v4.0.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/venus v1.0.1-0.20210707073618-62e8cf9a7834
-	github.com/filecoin-project/venus-auth v1.1.1-0.20210601064545-55f3162444fd
+	github.com/filecoin-project/venus-auth v1.2.2-0.20210714064732-580ac6c21b7a
 	github.com/filecoin-project/venus-wallet v1.1.0
+	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
@@ -34,10 +35,12 @@ require (
 	go.uber.org/fx v1.13.1
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	gorm.io/driver/mysql v1.0.5
+	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.3
+	gorm.io/gorm v1.21.11
 	modernc.org/mathutil v1.1.1
 )
 
 replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210708021325-1ca28be4e5a3
+
+replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab

@@ -15,7 +15,7 @@ func getAPI(ctx *cli.Context) (client.IMessager, jsonrpc.ClientCloser, error) {
 		return &client.Message{}, func() {}, err
 	}
 
-	apiInfo := apiinfo.NewAPIInfo(cfg.API.Address, cfg.Local.Token)
+	apiInfo := apiinfo.NewAPIInfo(cfg.API.Address, cfg.JWT.Local.Token)
 	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err

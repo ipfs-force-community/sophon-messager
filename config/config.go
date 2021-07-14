@@ -16,7 +16,6 @@ type Config struct {
 	MessageState   MessageStateConfig   `toml:"messageState"`
 	Wallet         WalletConfig         `toml:"wallet"`
 	Gateway        GatewayConfig        `toml:"gateway"`
-	Local          LocalConfig          `toml:"local"`
 }
 
 type NodeConfig struct {
@@ -53,7 +52,11 @@ type MySqlConfig struct {
 }
 
 type JWTConfig struct {
-	Url string `toml:"url"`
+	AuthURL string `toml:"authURL"`
+	Local   struct {
+		Secret string `toml:"secret"`
+		Token  string `toml:"token"`
+	} `toml:"local"`
 }
 
 type WalletConfig struct {
@@ -79,10 +82,6 @@ type GatewayConfig struct {
 	Cfg          gatewayTypes.Config `toml:"cfg"`
 }
 
-type LocalConfig struct {
-	Token string `toml:"token"`
-}
-
 func DefaultConfig() *Config {
 	return &Config{
 		DB: DbConfig{
@@ -97,7 +96,7 @@ func DefaultConfig() *Config {
 			Sqlite: SqliteConfig{File: "./message.db"},
 		},
 		JWT: JWTConfig{
-			Url: "http://127.0.0.1:8989",
+			AuthURL: "http://127.0.0.1:8989",
 		},
 		Log: LogConfig{
 			Path:  "messager.log",
@@ -132,6 +131,5 @@ func DefaultConfig() *Config {
 				RequestTimeout:   time.Minute * 5,
 			},
 		},
-		Local: LocalConfig{Token: ""},
 	}
 }

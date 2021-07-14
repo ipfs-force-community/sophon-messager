@@ -16,8 +16,21 @@
     debug = false
     file = "./message.db"
 
+[gateway]
+  remoteEnable = false
+  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
+  url = "/ip4/8.130.165.167/tcp/45132"
+
+  [gateway.cfg]
+    RequestQueueSize = 30
+    RequestTimeout = "5m0s"
+
 [jwt]
-  url = "http://127.0.0.1:8989"
+  authURL = ""
+
+  [jwt.local]
+    secret = "105db7a4e53a23f5c2450737e44a6e6919b3d12b5f07ebfae0a32fe6bf01a834"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiYWRtaW4iLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.7BXOppHMHGAX19N94UmgFoalX6AV4JhMrVPH9tL7VQU"
 
 [log]
   level = "info"
@@ -34,20 +47,8 @@
   backTime = 86400
 
 [node]
-  url = "/ip4/8.130.165.167/tcp/1234"
   token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
+  url = "/ip4/8.130.165.167/tcp/3453"
 
 [wallet]
   scanInterval = 10
-
-[gateway]
-  remoteEnable = true
-  url = "/ip4/192.168.19.94/tcp/45132"
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
-
-  [gateway.cfg]
-    RequestQueueSize = 30
-    RequestTimeout = "5m0s"
-
-[local]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
