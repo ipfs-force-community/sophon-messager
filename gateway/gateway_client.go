@@ -2,16 +2,14 @@ package gateway
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/venus-wallet/core"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/ipfs-force-community/venus-gateway/walletevent"
 
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type IWalletClient interface {
@@ -52,16 +50,14 @@ func NewWalletClient(cfg *config.GatewayConfig) (IWalletClient, jsonrpc.ClientCl
 }
 
 func newWalletClient(ctx context.Context, token, url string) (*WalletClient, jsonrpc.ClientCloser, error) {
-	headers := http.Header{}
-	headers.Add("Authorization", "Bearer "+token)
-
-	walletClient := WalletClient{}
-
-	addr, err := utils.DialArgs(url)
+	apiInfo := apiinfo.NewAPIInfo(url, token)
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Gateway", []interface{}{&walletClient.Internal}, headers)
+
+	walletClient := WalletClient{}
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Gateway", []interface{}{&walletClient.Internal}, apiInfo.AuthHeader())
 
 	return &walletClient, closer, err
 }
