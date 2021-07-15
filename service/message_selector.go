@@ -11,6 +11,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/crypto"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"golang.org/x/xerrors"
 	"modernc.org/mathutil"
@@ -191,6 +192,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	sort.Slice(messages, func(i, j int) bool {
 		return messages[i].Meta.ExpireEpoch < messages[j].Meta.ExpireEpoch
 	})
+
+	// filter send funds message
+	messages = messageSelector.FilterSendFunds(messages)
 
 	//todo 如何筛选
 	if len(messages) == 0 {
@@ -434,6 +438,19 @@ func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Addre
 	}
 
 	return selMsgNum
+}
+
+func (messageSelector *MessageSelector) FilterSendFunds(msgs []*types.Message) []*types.Message {
+	newMsgs := make([]*types.Message, 0, len(msgs))
+	for _, msg := range msgs {
+		if msg.Method == builtin.MethodSend {
+			messageSelector.log.Warnf("msg %s want to send funds", msg.ID)
+			continue
+		}
+		newMsgs = append(newMsgs, msg)
+	}
+
+	return newMsgs
 }
 
 func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {
