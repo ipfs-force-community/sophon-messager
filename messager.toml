@@ -29,8 +29,8 @@
   authURL = ""
 
   [jwt.local]
-    secret = "105db7a4e53a23f5c2450737e44a6e6919b3d12b5f07ebfae0a32fe6bf01a834"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiYWRtaW4iLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.7BXOppHMHGAX19N94UmgFoalX6AV4JhMrVPH9tL7VQU"
+    secret = ""
+    token = ""
 
 [log]
   level = "info"

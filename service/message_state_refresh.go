@@ -31,10 +31,11 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 				now := time.Now()
 				if err := ms.doRefreshMessageState(ctx, h); err != nil {
 					h.done <- err
-					ms.log.Errorf("doRefreshMessageState occurs unexpected err:\n%v\n", err)
+					ms.log.Errorf("refresh message occurs unexpected error %v", err)
+					continue
 				}
 				h.done <- nil
-				ms.log.Infof("end refresh message state, cost %d 'ms' ", time.Since(now).Milliseconds())
+				ms.log.Infof("end refresh message state, spent %d 'ms'", time.Since(now).Milliseconds())
 			case <-ctx.Done():
 				ms.log.Warnf("context error: %v", ctx.Err())
 				return
@@ -176,7 +177,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 	for _, ts := range h.revert {
 		msgs, err := ms.repo.MessageRepo().ListFilledMessageByHeight(ts.Height())
 		if err != nil {
-			return nil, xerrors.Errorf("found message at height %d error %v", ts.Height(), err)
+			return nil, xerrors.Errorf("found filled message at height %d error %v", ts.Height(), err)
 		}
 
 		addrs := ms.addressService.Addresses()
@@ -184,7 +185,6 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
 			}
-
 		}
 	}
 
@@ -206,12 +206,12 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 		height := ts.Height()
 		msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
 		if err != nil {
-			return nil, xerrors.Errorf("get parent message failed %w", err)
+			return nil, xerrors.Errorf("got parent message failed %w", err)
 		}
 
 		receipts, err := ms.nodeClient.ChainGetParentReceipts(ctx, bcid)
 		if err != nil {
-			return nil, xerrors.Errorf("get parent Receipt failed %w", err)
+			return nil, xerrors.Errorf("got parent receipt failed %w", err)
 		}
 
 		if len(msgs) != len(receipts) {

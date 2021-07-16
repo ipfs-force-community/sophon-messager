@@ -57,7 +57,7 @@ func GenSecretAndToken() ([]byte, []byte, error) {
 	}
 
 	token, err := jwt3.Sign(auth.JWTPayload{
-		Name: "admin",
+		Name: "venus-messager-admin",
 		Perm: "admin",
 	}, jwt3.NewHS256(sk))
 	if err != nil {

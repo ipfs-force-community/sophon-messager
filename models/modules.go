@@ -16,7 +16,7 @@ func SetDataBase(cfg *config.DbConfig) (repo.Repo, error) {
 	case "mysql":
 		return mysql.OpenMysql(&cfg.MySql)
 	default:
-		return nil, xerrors.Errorf("unsupport db type,(%s, %s)", "sqlite", "mysql")
+		return nil, xerrors.Errorf("unexpected db type %s (want 'sqlite' or 'mysql')", cfg.Type)
 	}
 }
 

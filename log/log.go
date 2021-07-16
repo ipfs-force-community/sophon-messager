@@ -39,7 +39,7 @@ func SetLogger(logCfg *config.LogConfig) (*Logger, error) {
 	if err == nil {
 		logrus.SetOutput(file)
 	} else {
-		return nil, xerrors.Errorf("open log file fail")
+		return nil, xerrors.Errorf("open log file fail %v", err)
 	}
 	return logger, nil
 }
