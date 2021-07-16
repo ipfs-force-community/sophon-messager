@@ -29,7 +29,7 @@ import (
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
-var errMinimumNonce = "minimum expected nonce"
+var errMinimumNonce = xerrors.New("minimum expected nonce")
 
 const (
 	MaxHeadChangeProcess = 5
@@ -179,26 +179,36 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Unsig
 	newId := types.NewUUID()
 	_, account := ipAccountFromContext(ctx)
 
-	return newId.String(), ms.pushMessage(ctx, &types.Message{
+	if err := ms.pushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
 		WalletName:      account,
 		FromUser:        account,
-	})
+	}); err != nil {
+		ms.log.Errorf("push message %s failed %v", newId.String(), err)
+		return newId.String(), err
+	}
+
+	return newId.String(), nil
 }
 
 func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
-	return id, ms.pushMessage(ctx, &types.Message{
+	if err := ms.pushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
 		WalletName:      account,
 		FromUser:        account,
-	})
+	}); err != nil {
+		ms.log.Errorf("push message %s failed %v", id, err)
+		return id, err
+	}
+
+	return id, nil
 }
 
 func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
@@ -348,7 +358,7 @@ func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr a
 		for _, msg := range msgs {
 			ids = append(ids, msg.ID)
 		}
-		ms.log.Errorf("list failed message %d %s", len(ids), strings.Join(ids, ","))
+		ms.log.Warnf("list failed message by address %s %s", addr, strings.Join(ids, ","))
 	}
 
 	return msgs, err
@@ -378,7 +388,7 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.A
 		for _, msg := range msgs {
 			ids = append(ids, msg.ID)
 		}
-		ms.log.Errorf("list blocked message %d %s", len(ids), strings.Join(ids, ","))
+		ms.log.Warnf("list blocked message by address %s %s", addr, strings.Join(ids, ","))
 	}
 
 	return msgs, err
@@ -525,7 +535,7 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 			gapTipset = append(gapTipset, ts)
 			ts, err = ms.nodeClient.ChainGetTipSet(ctx, ts.Parents())
 			if err != nil {
-				return nil, nil, xerrors.Errorf("get tipset failed %v", err)
+				return nil, nil, xerrors.Errorf("got tipset(%s) failed %v", ts.Parents(), err)
 			}
 		}
 		loopCount++
@@ -600,7 +610,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 
 		for _, m := range selectResult.ErrMsg {
-			ms.log.Infof("update err message %s", m.id)
+			ms.log.Infof("update message %s return value with error %s", m.id, err)
 			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
@@ -616,7 +626,6 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	ms.log.Infof("success to save to database")
 
 	tCacheUpdate := time.Now()
-	ms.log.Infof("success to update memory cache")
 	//update cache
 	for _, msg := range selectResult.SelectMsg {
 		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
@@ -654,6 +663,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			return err
 		}
 	}
+	ms.log.Infof("success to update memory cache")
 
 	//broad cast  push to node in config ,push to multi node in db config
 	go func() {
@@ -661,15 +671,15 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for _, msg := range selectResult.ToPushMsg {
 			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil {
-				if !(strings.Contains(err.Error(), errMinimumNonce) || strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
-					ms.log.Errorf("push to message %s from: %s, nonce: %d, error  %v", msg.Message.Cid().String(), msg.Message.From, msg.Message.Nonce, pushErr)
+				if !(strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+					ms.log.Errorf("push message %s to node failed %v", msg.Message.Cid().String(), pushErr)
 				}
 			}
 		}
 
 		ms.multiNodeToPush(ctx, selectResult.ToPushMsg)
 
-		ms.log.Infof("Push message select time:%d , save db time:%d ,update cache time:%d, push time: %d",
+		ms.log.Infof("Push message select spent:%d , save db spent:%d ,update cache spent:%d, push to node spent: %d",
 			time.Since(tSelect).Milliseconds(),
 			time.Since(tSaveDb).Milliseconds(),
 			time.Since(tCacheUpdate).Milliseconds(),
@@ -723,15 +733,15 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		for _, msg := range msgs {
 			if _, err := node.cli.MpoolPush(ctx, msg); err != nil {
 				//skip error
-				if !(strings.Contains(err.Error(), errMinimumNonce) || strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
-					ms.log.Errorf("push message to node %s %v", node.name, err)
+				if !(strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+					ms.log.Errorf("push message %s to node %s %v", msg.Cid(), node.name, err)
 				}
 			}
 		}
 		ms.log.Infof("start to broadcast message of address")
 		for fromAddr := range fromMap {
 			if err := node.cli.MpoolPublishByAddr(ctx, fromAddr); err != nil {
-				ms.log.Errorf("publish message of address %s to node %s fail %v", fromAddr, node.name, err)
+				ms.log.Errorf("publish message of address %s to node %s failed %v", fromAddr, node.name, err)
 			}
 		}
 
@@ -759,7 +769,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 			//}
 		case newHead := <-ms.triggerPush:
 			// Receiving a channel `resetAddressFunc`, then reset the address
-			ms.resetAddress()
+			ms.tryResetAddress()
 
 			if skipPushMsg {
 				ms.log.Info("skip push message")
@@ -776,7 +786,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 	}
 }
 
-func (ms *MessageService) resetAddress() {
+func (ms *MessageService) tryResetAddress() {
 	select {
 	case f := <-ms.addressService.resetAddressFunc:
 		nonce, err := f()

@@ -160,9 +160,13 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Infof("node info url: %s, token: %s", cfg.Node.Url, cfg.Node.Token)
+	log.Infof("auth info url: %s", cfg.JWT.AuthURL)
+	log.Infof("gateway info enable: %v, url: %s, token: %s", cfg.Gateway.RemoteEnable, cfg.Gateway.Url, cfg.Node.Token)
+
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
-		return err
+		return xerrors.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
 
@@ -286,7 +290,7 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 				cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
 			}
 		default:
-			return xerrors.New("unsupport db type")
+			return xerrors.Errorf("unexpected db type %s", cfg.DB.Type)
 		}
 	}
 	return nil

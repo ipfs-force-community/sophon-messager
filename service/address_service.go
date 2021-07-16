@@ -93,7 +93,7 @@ func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Forbiden); err != nil {
 		return address.Undef, err
 	}
-	addressService.log.Infof("forbidden address %v", addr.String())
+	addressService.log.Infof("forbidden address %v success", addr.String())
 
 	return addr, nil
 }
@@ -102,7 +102,7 @@ func (addressService *AddressService) ActiveAddress(ctx context.Context, addr ad
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Alive); err != nil {
 		return address.Undef, err
 	}
-	addressService.log.Infof("active address %v", addr.String())
+	addressService.log.Infof("active address %v success", addr.String())
 
 	return addr, nil
 }
