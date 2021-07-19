@@ -8,7 +8,8 @@ import (
 )
 
 type JwtClient struct {
-	Local, Remote jwtclient.IJwtAuthClient
+	Local  jwtclient.IJwtAuthClient
+	Remote *RemoteAuthClient
 }
 
 func NewJwtClient(jwtCfg *config.JWTConfig) (*JwtClient, error) {

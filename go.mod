@@ -14,13 +14,14 @@ require (
 	github.com/filecoin-project/specs-actors/v4 v4.0.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/venus v1.0.1-0.20210707073618-62e8cf9a7834
-	github.com/filecoin-project/venus-auth v1.2.2-0.20210714064732-580ac6c21b7a
+	github.com/filecoin-project/venus-auth v1.2.2-0.20210716071053-565a8999f9e5
 	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
+	github.com/ipfs-force-community/metrics v0.0.0-20210716075100-f6c912bf4b47
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913
 	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
 	github.com/ipfs/go-cid v0.0.7
@@ -37,7 +38,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.11
+	gorm.io/gorm v1.21.12
 	modernc.org/mathutil v1.1.1
 )
 
