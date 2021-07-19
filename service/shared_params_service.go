@@ -27,7 +27,7 @@ var defParams = &types.SharedParams{
 	MaxFeeCap:          big.NewInt(0),
 	SelMsgNum:          20,
 	ScanInterval:       10,
-	MaxEstFailNumOfMsg: 5,
+	MaxEstFailNumOfMsg: 50,
 }
 
 type SharedParamsService struct {
