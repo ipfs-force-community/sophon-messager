@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/filecoin-project/go-state-types/big"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/venus-messager/types"
 )
 
 var SharedParamsCmds = &cli.Command{
@@ -21,9 +20,26 @@ var SharedParamsCmds = &cli.Command{
 }
 
 var setSharedParamsCmd = &cli.Command{
-	Name:      "set",
-	Usage:     `set current shared params commands, eg. set: venus-messager share-params set "{\"expireEpoch\": 0, \"gasOverEstimation\": 1.25, \"maxFee\": 7000000000000000, \"maxFeeCap\": 0, \"selMsgNum\": 20, \"scanInterval\": 10, \"maxEstFailNumOfMsg\": 5}"`,
-	ArgsUsage: "[params]",
+	Name:  "set",
+	Usage: "set current shared params",
+	Flags: []cli.Flag{
+		&cli.Float64Flag{
+			Name:  "gas-over-estimation",
+			Value: 1.25,
+		},
+		&cli.StringFlag{
+			Name: "max-fee",
+			Value: "7000000000000000",
+		},
+		&cli.StringFlag{
+			Name: "max-feecap",
+			Value: "0",
+		},
+		&cli.Uint64Flag{
+			Name:  "sel-msg-num",
+			Value: 20,
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() > 1 {
 			return cli.ShowCommandHelp(ctx, ctx.Command.Name)
@@ -35,23 +51,33 @@ var setSharedParamsCmd = &cli.Command{
 		}
 		defer closer()
 
-		if ctx.Args().Len() == 0 {
-			return xerrors.Errorf("must pass params")
-		}
-
-		sp := new(types.SharedParams)
-		bytes := []byte(ctx.Args().Get(0))
-
-		err = json.Unmarshal(bytes, sp)
+		params, err := api.GetSharedParams(ctx.Context)
 		if err != nil {
 			return err
 		}
+		if ctx.IsSet("gas-over-estimation") {
+			params.GasOverEstimation = ctx.Float64("gas-over-estimation")
+		}
+		if ctx.IsSet("max-fee") {
+			params.MaxFee, err = big.FromString(ctx.String("max-fee"))
+			if err != nil {
+				return xerrors.Errorf("parse max-fee failed %v", err)
+			}
+		}
+		if ctx.IsSet("max-feecap") {
+			params.MaxFeeCap, err = big.FromString(ctx.String("max-feecap"))
+			if err != nil {
+				return xerrors.Errorf("parse max-feecap failed %v", err)
+			}
+		}
+		if ctx.IsSet("sel-msg-num") {
+			params.SelMsgNum = ctx.Uint64("sel-msg-num")
+		}
 
-		_, err = api.SetSharedParams(ctx.Context, sp)
+		_, err = api.SetSharedParams(ctx.Context, params)
 		if err != nil {
 			return err
 		}
-		fmt.Println("sp: ", *sp)
 
 		return nil
 	},

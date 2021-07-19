@@ -21,13 +21,10 @@ var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
 var defParams = &types.SharedParams{
 	ID:                 0,
-	ExpireEpoch:        0,
 	GasOverEstimation:  1.25,
 	MaxFee:             big.Int{Int: DefaultMaxFee.Int},
 	MaxFeeCap:          big.NewInt(0),
 	SelMsgNum:          20,
-	ScanInterval:       10,
-	MaxEstFailNumOfMsg: 5,
 }
 
 type SharedParamsService struct {
@@ -96,7 +93,6 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedParams) {
 	}
 	sps.log.Infof("old params %v ", sps.params.SharedParams)
 	if sharedParams.GetMsgMeta() != nil {
-		sps.params.ExpireEpoch = sharedParams.ExpireEpoch
 		sps.params.GasOverEstimation = sharedParams.GasOverEstimation
 		sps.params.MaxFee = sharedParams.MaxFee
 		sps.params.MaxFeeCap = sharedParams.MaxFeeCap
@@ -104,13 +100,6 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedParams) {
 	if sharedParams.SelMsgNum > 0 {
 		sps.params.SelMsgNum = sharedParams.SelMsgNum
 	}
-	if sharedParams.ScanInterval > 0 {
-		if sps.params.ScanInterval != sharedParams.ScanInterval {
-			sps.params.ScanInterval = sharedParams.ScanInterval
-			sps.params.ScanIntervalChan <- time.Duration(sharedParams.ScanInterval) * time.Second
-		}
-	}
-	sps.params.MaxEstFailNumOfMsg = sharedParams.MaxEstFailNumOfMsg
 	sps.log.Infof("new params %v", sharedParams)
 }
 

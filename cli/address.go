@@ -13,7 +13,7 @@ var AddrCmds = &cli.Command{
 	Name:  "address",
 	Usage: "address commands",
 	Subcommands: []*cli.Command{
-		//searchAddrCmd,
+		searchAddrCmd,
 		listAddrCmd,
 		deleteAddrCmd,
 		//updateNonceCmd,
@@ -25,7 +25,6 @@ var AddrCmds = &cli.Command{
 	},
 }
 
-// nolint
 var searchAddrCmd = &cli.Command{
 	Name:      "search",
 	Usage:     "search address",
