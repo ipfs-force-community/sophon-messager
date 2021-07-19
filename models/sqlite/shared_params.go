@@ -7,8 +7,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/go-state-types/abi"
-
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -16,7 +14,6 @@ import (
 type sqliteSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:INT unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:INT;NOT NULL"`
 	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
 	MaxFee            types.Int      `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
 	MaxFeeCap         types.Int      `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
