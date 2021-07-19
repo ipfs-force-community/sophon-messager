@@ -611,7 +611,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 
 		for _, m := range selectResult.ErrMsg {
-			ms.log.Infof("update message %s return value with error %s", m.id, err)
+			ms.log.Infof("update message %s return value with error %s", m.id, m.err)
 			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
