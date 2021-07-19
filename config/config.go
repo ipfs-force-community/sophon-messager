@@ -16,6 +16,7 @@ type Config struct {
 	MessageState   MessageStateConfig   `toml:"messageState"`
 	Wallet         WalletConfig         `toml:"wallet"`
 	Gateway        GatewayConfig        `toml:"gateway"`
+	RateLimit      RateLimitConfig      `toml:"rateLimit"`
 }
 
 type NodeConfig struct {
@@ -82,6 +83,10 @@ type GatewayConfig struct {
 	Cfg          gatewayTypes.Config `toml:"cfg"`
 }
 
+type RateLimitConfig struct {
+	Redis string `toml:"redis"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		DB: DbConfig{
@@ -131,5 +136,6 @@ func DefaultConfig() *Config {
 				RequestTimeout:   time.Minute * 5,
 			},
 		},
+		RateLimit: RateLimitConfig{Redis: ""},
 	}
 }

@@ -101,6 +101,9 @@ var runCmd = &cli.Command{
 			Name:  "auth-token",
 			Usage: "auth token",
 		},
+		&cli.StringFlag{
+			Name: "rate-limit-redis",
+		},
 	},
 	Action: runAction,
 }
@@ -160,9 +163,10 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Infof("node info url: %s, token: %s", cfg.Node.Url, cfg.Node.Token)
-	log.Infof("auth info url: %s", cfg.JWT.AuthURL)
-	log.Infof("gateway info enable: %v, url: %s, token: %s", cfg.Gateway.RemoteEnable, cfg.Gateway.Url, cfg.Node.Token)
+	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
+	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
+	log.Infof("gateway info enable: %v, url: %s, token: %s\n", cfg.Gateway.RemoteEnable, cfg.Gateway.Url, cfg.Node.Token)
+	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
@@ -202,7 +206,7 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway, &cfg.RateLimit),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(walletClient),
@@ -292,6 +296,9 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 		default:
 			return xerrors.Errorf("unexpected db type %s", cfg.DB.Type)
 		}
+	}
+	if ctx.IsSet("rate-limit-redis") {
+		cfg.RateLimit.Redis = ctx.String("rate-limit-redis")
 	}
 	return nil
 }

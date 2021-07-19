@@ -7,27 +7,44 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/filecoin-project/go-jsonrpc/auth"
-
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/ipfs-force-community/metrics/ratelimit"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
+	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
 )
 
-func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp) error {
+func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp, rateLimitCfg *config.RateLimitConfig) error {
 	var msgAPI client.Message
 	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
 
 	srv := jsonrpc.NewServer()
-	srv.Register("Message", &msgAPI)
+	if len(rateLimitCfg.Redis) != 0 && jwtCli.Remote != nil && jwtCli.Remote.Cli != nil {
+		limiter, err := ratelimit.NewRateLimitHandler(
+			rateLimitCfg.Redis,
+			nil,
+			&jwtclient.ValueFromCtx{},
+			jwtclient.WarpLimitFinder(jwtCli.Remote.Cli),
+			log,
+		)
+		if err != nil {
+			return err
+		}
+		var rateLimitAPI client.Message
+		limiter.WarpFunctions(&msgAPI, &rateLimitAPI.Internal)
+		srv.Register("Message", &rateLimitAPI)
+	} else {
+		srv.Register("Message", &msgAPI)
+	}
 
 	handler := http.NewServeMux()
 	handler.Handle("/rpc/v0", srv)

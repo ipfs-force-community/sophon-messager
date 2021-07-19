@@ -11,23 +11,23 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 )
 
-type remoteJwtClient struct {
-	cli *jwtclient.JWTClient
+type RemoteAuthClient struct {
+	Cli *jwtclient.JWTClient
 }
 
-func newRemoteJwtClient(jwtCfg *config.JWTConfig) jwtclient.IJwtAuthClient {
-	var remote *remoteJwtClient
+func newRemoteJwtClient(jwtCfg *config.JWTConfig) *RemoteAuthClient {
+	var remote *RemoteAuthClient
 	if len(jwtCfg.AuthURL) > 0 {
-		remote = &remoteJwtClient{}
-		remote.cli = jwtclient.NewJWTClient(jwtCfg.AuthURL)
+		remote = &RemoteAuthClient{}
+		remote.Cli = jwtclient.NewJWTClient(jwtCfg.AuthURL)
 	}
 
 	return remote
 }
 
-func (c *remoteJwtClient) Verify(ctx context.Context, token string) ([]auth.Permission, error) {
-	if c != nil && c.cli != nil {
-		res, err := c.cli.Verify(ctx, token)
+func (c *RemoteAuthClient) Verify(ctx context.Context, token string) ([]auth.Permission, error) {
+	if c != nil && c.Cli != nil {
+		res, err := c.Cli.Verify(ctx, token)
 		if err != nil {
 			return nil, err
 		}

@@ -672,7 +672,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for _, msg := range selectResult.ToPushMsg {
 			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil {
-				if !(strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
 					ms.log.Errorf("push message %s to node failed %v", msg.Message.Cid().String(), pushErr)
 				}
 			}
@@ -734,7 +734,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 		for _, msg := range msgs {
 			if _, err := node.cli.MpoolPush(ctx, msg); err != nil {
 				//skip error
-				if !(strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error())) {
+				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
 					ms.log.Errorf("push message %s to node %s %v", msg.Cid(), node.name, err)
 				}
 			}
