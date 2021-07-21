@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/ipfs-force-community/metrics"
 	"time"
 
 	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
@@ -17,6 +18,7 @@ type Config struct {
 	Wallet         WalletConfig         `toml:"wallet"`
 	Gateway        GatewayConfig        `toml:"gateway"`
 	RateLimit      RateLimitConfig      `toml:"rateLimit"`
+	Trace          metrics.TraceConfig  `toml:"tracing"`
 }
 
 type NodeConfig struct {
@@ -137,5 +139,11 @@ func DefaultConfig() *Config {
 			},
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
+		Trace: metrics.TraceConfig{
+			JaegerEndpoint:       "localhost:6831",
+			ProbabilitySampler:   1.0,
+			JaegerTracingEnabled: false,
+			ServerName:           "venus-messenger",
+		},
 	}
 }

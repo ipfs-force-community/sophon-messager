@@ -1,6 +1,6 @@
 .idea
 .vscode
-
+messager.toml.local
 ./venus-messager
 ./*.log
 *.db

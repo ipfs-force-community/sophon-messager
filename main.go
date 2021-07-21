@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/filecoin-project/venus-messager/metrics"
 	"net"
 	_ "net/http/pprof"
 	"os"
@@ -65,7 +66,7 @@ var runCmd = &cli.Command{
 			Usage: "url for auth server",
 		},
 
-		//node
+		// node
 		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "url for connection lotus/venus",
@@ -75,7 +76,7 @@ var runCmd = &cli.Command{
 			Usage: "token auth for lotus/venus",
 		},
 
-		//database
+		// database
 		&cli.StringFlag{
 			Name:  "db-type",
 			Usage: "which db to use. sqlite/mysql",
@@ -167,7 +168,6 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info enable: %v, url: %s, token: %s\n", cfg.Gateway.RemoteEnable, cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
-
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
 		return xerrors.Errorf("connect to node failed %v", err)
@@ -205,23 +205,24 @@ func runAction(ctx *cli.Context) error {
 	shutdownChan := make(chan struct{})
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
-		//prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway, &cfg.RateLimit),
+		// prover
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway, &cfg.RateLimit, &cfg.Trace),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(walletClient),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),
-		//db
+		// db
 		fx.Provide(models.SetDataBase),
-		//service
+		// service
 		service.MessagerService(),
-		//api
+		// api
 		fx.Provide(api.NewMessageImp),
-		//jwt
+		// jwt
 		fx.Provide(jwt.NewJwtClient),
-		//middleware
+
+		// middleware
 
 		fx.Provide(func() net.Listener {
 			return lst
@@ -229,9 +230,10 @@ func runAction(ctx *cli.Context) error {
 	)
 
 	invoker := fx.Options(
-		//invoke
+		// invoke
 		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
+		fx.Invoke(metrics.SetupJaeger),
 		fx.Invoke(api.RunAPI),
 	)
 	app := fx.New(gatewayProvider, provider, invoker)
