@@ -657,11 +657,11 @@ github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 h1:W9WBk7
 github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839/go.mod h1:xaLFMmpvUxqXtVkUJfg9QmT88cDaCJ3ZKgdZ78oO8Qo=
 github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab h1:+Jov61TTljdzTKBecQizmUWJ6IIoVgzjukKppVr5TgI=
 github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab/go.mod h1:ZgYiWVnCk43ChwoH8hAmI1IRbuVtq3GSTHwtRB/Kqhk=
-github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210708021325-1ca28be4e5a3 h1:gfp0NSRr1k/G+2E/DeBesn+1XkwS4385MbIZJ4uEr+E=
-github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210708021325-1ca28be4e5a3/go.mod h1:XBBpuKIMaXIIzeqzO1iucq4GvbF8CxmXRFoezRh+Cx4=
+github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721083944-2d3bf5f194b8 h1:liONhq/uFKHXMshjncHsKZWuC6iTxum2AmMRfLJ3WJI=
+github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721083944-2d3bf5f194b8/go.mod h1:XBBpuKIMaXIIzeqzO1iucq4GvbF8CxmXRFoezRh+Cx4=
 github.com/ipfs-force-community/metrics v0.0.0-20210714124606-3d65e2d7cec1/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
-github.com/ipfs-force-community/metrics v0.0.0-20210716075100-f6c912bf4b47 h1:ZJSDVkO3he5765itE+gOfEf2yPUVphb95yA41hAqV20=
-github.com/ipfs-force-community/metrics v0.0.0-20210716075100-f6c912bf4b47/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
+github.com/ipfs-force-community/metrics v0.0.0-20210721090333-ec5dd3d53773 h1:hL2NgtDDvBa8BG9HSCmR7o854Df1qoIuWPXSGwQkZVc=
+github.com/ipfs-force-community/metrics v0.0.0-20210721090333-ec5dd3d53773/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
 github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913 h1:gG4XNWAPb0F168+/SaEqoJNBuMcmswqsZ6RVqqjnb6g=
 github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913/go.mod h1:AWIt7L1UiUeIzqQdjQ/quZcVcCdnr6GXabGLBgEIMzU=
 github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d h1:J1qw6gabC5OEi335Z2Ar00BxLMxXGOTWD5s4x7gPK5c=

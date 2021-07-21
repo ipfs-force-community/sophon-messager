@@ -16,7 +16,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/metrics v0.0.0-20210716075100-f6c912bf4b47
+	github.com/ipfs-force-community/metrics v0.0.0-20210721090333-ec5dd3d53773
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913
 	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
 	github.com/ipfs/go-cid v0.0.7
@@ -37,6 +37,6 @@ require (
 	modernc.org/mathutil v1.1.1
 )
 
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210708021325-1ca28be4e5a3
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721083944-2d3bf5f194b8
 
 replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
