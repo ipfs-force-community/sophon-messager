@@ -19,7 +19,7 @@ type sqliteMessage struct {
 	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
 	Version uint64 `gorm:"column:version;type:unsigned bigint"`
 
-	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;"`
+	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
@@ -47,7 +47,7 @@ type sqliteMessage struct {
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
 	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
 
-	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;"`
+	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间

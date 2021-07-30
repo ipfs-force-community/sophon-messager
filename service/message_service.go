@@ -133,12 +133,12 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}
 	var addrInfo *types.Address
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		addrInfo, err = ms.addressService.GetAddress(ctx, msg.From)
+		addrInfo, err = txRepo.AddressRepo().GetAddress(ctx, msg.From)
 		if err == nil {
 			return nil
 		}
 		if xerrors.Is(err, gorm.ErrRecordNotFound) {
-			if err = ms.repo.AddressRepo().SaveAddress(ctx, &types.Address{
+			if err = txRepo.AddressRepo().SaveAddress(ctx, &types.Address{
 				ID:        types.NewUUID(),
 				Addr:      msg.From,
 				Nonce:     0,
