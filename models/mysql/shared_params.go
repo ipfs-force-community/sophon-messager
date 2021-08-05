@@ -14,10 +14,10 @@ import (
 type mysqlSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:SMALLINT(2) unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
-	MaxFee            types.Int      `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         types.Int      `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
-	SelMsgNum         uint64         `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
+	GasOverEstimation float64   `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
+	MaxFee            types.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
+	MaxFeeCap         types.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	SelMsgNum         uint64    `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
 }
 
 func FromSharedParams(sp types.SharedParams) *mysqlSharedParams {

@@ -28,11 +28,11 @@ var setSharedParamsCmd = &cli.Command{
 			Value: 1.25,
 		},
 		&cli.StringFlag{
-			Name: "max-fee",
+			Name:  "max-fee",
 			Value: "7000000000000000",
 		},
 		&cli.StringFlag{
-			Name: "max-feecap",
+			Name:  "max-feecap",
 			Value: "0",
 		},
 		&cli.Uint64Flag{

@@ -24,7 +24,7 @@ var AuthMap = map[string]string{
 	"ListMessageByFromState":   "admin",
 	"RepublishMessage":         "admin",
 	"MarkBadMessage":           "admin",
-	"ResetAddress":             "admin",
+	"ClearUnFillMessage":       "admin",
 	"SetSharedParams":          "admin",
 	"GetNode":                  "admin",
 	"HasMessageByUid":          "read",
