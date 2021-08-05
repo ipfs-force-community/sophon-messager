@@ -21,7 +21,6 @@ var AddrCmds = &cli.Command{
 		activeAddrCmd,
 		setAddrSelMsgNumCmd,
 		setFeeParamsCmd,
-		resetAddrCmd,
 	},
 }
 
@@ -290,46 +289,5 @@ var setFeeParamsCmd = &cli.Command{
 		_, err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.String("max-fee"), ctx.String("max-feecap"))
 
 		return err
-	},
-}
-
-var resetAddrCmd = &cli.Command{
-	Name:      "reset",
-	Usage:     "reset address nonce",
-	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		ReallyDoItFlag,
-		&cli.Uint64Flag{
-			Name:  "nonce",
-			Usage: "The nonce you want to set",
-		},
-	},
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		if !ctx.Bool("really-do-it") {
-			return xerrors.New("confirm to exec this command, specify --really-do-it")
-		}
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
-		}
-
-		addr, err := address.NewFromString(ctx.Args().First())
-		if err != nil {
-			return err
-		}
-		fmt.Println("It will take dozens of seconds.")
-
-		currentNonce, err := client.ResetAddress(ctx.Context, addr, ctx.Uint64("nonce"))
-		if err != nil {
-			return err
-		}
-		fmt.Printf("address %s current nonce %d \n", addr.String(), currentNonce)
-
-		return nil
 	},
 }

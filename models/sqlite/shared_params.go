@@ -14,9 +14,9 @@ import (
 type sqliteSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:INT unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
-	MaxFee            types.Int      `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         types.Int      `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	GasOverEstimation float64   `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
+	MaxFee            types.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
+	MaxFeeCap         types.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
 
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 }

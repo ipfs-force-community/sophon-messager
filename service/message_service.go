@@ -60,6 +60,9 @@ type MessageService struct {
 	nodeService *NodeService
 
 	preCancel context.CancelFunc
+
+	cleanUnFillMsgFunc chan func() (int, error)
+	cleanUnFillMsgRes  chan cleanUnFillMsgResult
 }
 
 type headChan struct {
@@ -73,6 +76,11 @@ type TipsetCache struct {
 	CurrHeight int64
 
 	l sync.Mutex
+}
+
+type cleanUnFillMsgResult struct {
+	count int
+	err   error
 }
 
 func NewMessageService(repo repo.Repo,
@@ -100,9 +108,11 @@ func NewMessageService(repo repo.Repo,
 			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
 			CurrHeight: 0,
 		},
-		triggerPush: make(chan *venusTypes.TipSet, 20),
-		sps:         sps,
-		nodeService: nodeService,
+		triggerPush:        make(chan *venusTypes.TipSet, 20),
+		sps:                sps,
+		nodeService:        nodeService,
+		cleanUnFillMsgFunc: make(chan func() (int, error)),
+		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 	}
 	ms.refreshMessageState(context.TODO())
 
@@ -671,8 +681,8 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		tPush := time.Now()
 		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for _, msg := range selectResult.ToPushMsg {
-			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); err != nil {
-				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+			if _, pushErr := ms.nodeClient.MpoolPush(ctx, msg); pushErr != nil {
+				if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
 					ms.log.Errorf("push message %s to node failed %v", msg.Message.Cid().String(), pushErr)
 				}
 			}
@@ -769,8 +779,8 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 			//	ms.log.Errorf("push message error %v", err)
 			//}
 		case newHead := <-ms.triggerPush:
-			// Receiving a channel `resetAddressFunc`, then reset the address
-			ms.tryResetAddress()
+			// Clear all unfill messages by address
+			ms.tryClearUnFillMsg()
 
 			if skipPushMsg {
 				ms.log.Info("skip push message")
@@ -787,13 +797,13 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 	}
 }
 
-func (ms *MessageService) tryResetAddress() {
+func (ms *MessageService) tryClearUnFillMsg() {
 	select {
-	case f := <-ms.addressService.resetAddressFunc:
-		nonce, err := f()
-		ms.addressService.resetAddressRes <- resetAddressResult{
-			latestNonce: nonce,
-			err:         err,
+	case f := <-ms.cleanUnFillMsgFunc:
+		count, err := f()
+		ms.cleanUnFillMsgRes <- cleanUnFillMsgResult{
+			count: count,
+			err:   err,
 		}
 	default:
 	}
@@ -987,4 +997,42 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	msg.SignedCid = &signedCid
 
 	return signedMsg, nil
+}
+
+func (ms *MessageService) clearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
+	var count int
+	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+		unFillMsgs, err := txRepo.MessageRepo().ListUnFilledMessage(addr)
+		if err != nil {
+			return err
+		}
+		for _, msg := range unFillMsgs {
+			if _, err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
+				return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
+			}
+			count++
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
+	ms.cleanUnFillMsgFunc <- func() (int, error) {
+		return ms.clearUnFillMessage(ctx, addr)
+	}
+
+	select {
+	case r, ok := <-ms.cleanUnFillMsgRes:
+		if !ok {
+			return 0, xerrors.Errorf("unexpect error")
+		}
+		ms.log.Infof("clear unfill messages success, address: %v, count: %d", addr.String(), r.count)
+		return r.count, r.err
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
 }

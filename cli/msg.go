@@ -40,6 +40,7 @@ var MsgCmds = &cli.Command{
 		waitMessagerCmd,
 		republishCmd,
 		markBadCmd,
+		clearUnFillMessageCmd,
 	},
 }
 
@@ -665,4 +666,41 @@ func transformMessage(msg *types.Message) *message {
 	}
 
 	return m
+}
+
+var clearUnFillMessageCmd = &cli.Command{
+	Name:      "clear-unfill-msg",
+	Usage:     "clear unfill messages by address",
+	ArgsUsage: "address",
+	Flags: []cli.Flag{
+		ReallyDoItFlag,
+	},
+	Action: func(ctx *cli.Context) error {
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !ctx.Bool("really-do-it") {
+			return xerrors.New("confirm to exec this command, specify --really-do-it")
+		}
+		if !ctx.Args().Present() {
+			return xerrors.Errorf("must pass address")
+		}
+
+		addr, err := address.NewFromString(ctx.Args().First())
+		if err != nil {
+			return err
+		}
+		fmt.Println("It will take dozens of seconds.")
+
+		count, err := client.ClearUnFillMessage(ctx.Context, addr)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("clear %d unfill messages \n", count)
+
+		return nil
+	},
 }
