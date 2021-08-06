@@ -3,11 +3,11 @@
   Address = "/ip4/0.0.0.0/tcp/39812"
 
 [db]
-  type = "mysql"
+  type = "sqlite"
 
   [db.mysql]
     connMaxLifeTime = "1m0s"
-    connectionString = "root:Root1234@(127.0.0.1:3306)/messager?parseTime=true&loc=Local"
+    connectionString = ""
     debug = false
     maxIdleConn = 10
     maxOpenConn = 10
@@ -17,16 +17,16 @@
     file = "./message.db"
 
 [gateway]
-  remoteEnable = false
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
-  url = "/ip4/8.130.165.167/tcp/45132"
+  remoteEnable = true
+  token = ""
+  url = "/ip4/127.0.0.1/tcp/45132"
 
   [gateway.cfg]
     RequestQueueSize = 30
     RequestTimeout = "5m0s"
 
 [jwt]
-  authURL = ""
+  authURL = "http://127.0.0.1:8989"
 
   [jwt.local]
     secret = ""
@@ -47,11 +47,14 @@
   backTime = 86400
 
 [node]
-  token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdG1pbmVyIiwicGVybSI6ImFkbWluIiwiZXh0IjoiIn0.oakIfSg1Iiv1T2F1BtH1bsb_1GeXWuirdPSjvE5wQLs"
-  url = "/ip4/8.130.165.167/tcp/3453"
+  token = ""
+  url = "/ip4/127.0.0.1/tcp/3453"
 
 [rateLimit]
   redis = ""
 
-[wallet]
-  scanInterval = 10
+[tracing]
+  JaegerEndpoint = ""
+  JaegerTracingEnabled = false
+  ProbabilitySampler = 1.0
+  ServerName = "venus-messenger"

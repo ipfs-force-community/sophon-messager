@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/ipfs-force-community/metrics"
 	"time"
+
+	"github.com/ipfs-force-community/metrics"
 
 	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 )
@@ -15,7 +16,6 @@ type Config struct {
 	Node           NodeConfig           `toml:"node"`
 	MessageService MessageServiceConfig `toml:"messageService"`
 	MessageState   MessageStateConfig   `toml:"messageState"`
-	Wallet         WalletConfig         `toml:"wallet"`
 	Gateway        GatewayConfig        `toml:"gateway"`
 	RateLimit      RateLimitConfig      `toml:"rateLimit"`
 	Trace          metrics.TraceConfig  `toml:"tracing"`
@@ -60,10 +60,6 @@ type JWTConfig struct {
 		Secret string `toml:"secret"`
 		Token  string `toml:"token"`
 	} `toml:"local"`
-}
-
-type WalletConfig struct {
-	ScanInterval int `toml:"scanInterval"` // second
 }
 
 type MessageServiceConfig struct {
@@ -113,11 +109,8 @@ func DefaultConfig() *Config {
 			Address: "/ip4/0.0.0.0/tcp/39812",
 		},
 		Node: NodeConfig{
-			Url:   "",
+			Url:   "/ip4/127.0.0.1/tcp/3453",
 			Token: "",
-		},
-		Wallet: WalletConfig{
-			ScanInterval: 10,
 		},
 		MessageState: MessageStateConfig{
 			BackTime:          3600 * 24,
@@ -130,9 +123,9 @@ func DefaultConfig() *Config {
 			SkipPushMessage: false,
 		},
 		Gateway: GatewayConfig{
-			RemoteEnable: false,
+			RemoteEnable: true,
 			Token:        "",
-			Url:          "",
+			Url:          "/ip4/127.0.0.1/tcp/45132",
 			Cfg: gatewayTypes.Config{
 				RequestQueueSize: 30,
 				RequestTimeout:   time.Minute * 5,
@@ -140,7 +133,7 @@ func DefaultConfig() *Config {
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace: metrics.TraceConfig{
-			JaegerEndpoint:       "localhost:6831",
+			JaegerEndpoint:       "",
 			ProbabilitySampler:   1.0,
 			JaegerTracingEnabled: false,
 			ServerName:           "venus-messenger",

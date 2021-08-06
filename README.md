@@ -15,20 +15,96 @@ messager is a component used to manage local messages, with the purpose of savin
 - 🔲 Enhanced API Security
 - 🔲 Rich and flexible message sorting options
 - 🔲 Message-delivery assuring: Auto replace parameters and resend messages whenever there is a failure
-- ❓ Manage messages through a multi-tenant pattern by wallet name
-
 
 ## Getting Start
 
 build binary
 ```sh
-git clone 
-make deps
+git clone https://github.com/filecoin-project/venus-messager.git
 make
 ```
 
-edit messager.toml config file, edit node url and token
+## Config
+
+```
+[api]
+  Address = "/ip4/0.0.0.0/tcp/39812"
+
+[db]
+  # support sqlite and mysql
+  type = "sqlite"
+
+  [db.mysql]
+    connMaxLifeTime = "1m0s"
+    connectionString = "" # eg. root:password@(127.0.0.1:3306)/messager?parseTime=true&loc=Local
+    debug = false
+    maxIdleConn = 10
+    maxOpenConn = 10
+
+  [db.sqlite]
+    debug = false
+    file = "./message.db"
+
+[gateway]
+  # enable gateway
+  remoteEnable = true
+  # gateway token, generate by auth server
+  token = ""
+  # gateway url
+  url = "/ip4/127.0.0.1/tcp/45132"
+
+  [gateway.cfg]
+    RequestQueueSize = 30
+    RequestTimeout = "5m0s"
+
+[jwt]
+  # auth server url, not connect when empty
+  authURL = "http://127.0.0.1:8989"
+
+  [jwt.local]
+    # JWT token, generate by secret
+    secret = ""
+    # hex JWT secret, randam generate first init
+    token = ""
+
+[log]
+  # default log level
+  level = "info"
+  # log output file
+  path = "messager.log"
+
+[messageService]
+  # skip process head
+  skipProcessHead = false
+  # skip push message
+  skipPushMessage = false
+  # file used to store tipset
+  tipsetFilePath = "./tipset.json"
+
+[messageState]
+  CleanupInterval = 86400
+  DefaultExpiration = 259200
+  backTime = 86400
+
+[node]
+  # node token, generate by auth server
+  token = ""
+  # node url
+  url = "/ip4/127.0.0.1/tcp/3453"
+
+[rateLimit]
+  redis = "" # eg. 127.0.0.1:6379
+
+[tracing]
+  JaegerEndpoint = "" # eg. 1270.0.0.1:6831
+  # enable trace
+  JaegerTracingEnabled = false
+  ProbabilitySampler = 1.0
+  ServerName = "venus-messenger"
+```
+
+## Run
 
 ```sh
-./venus-messager -config ./messager.toml
+./venus-messager run --auth-url=http://127.0.0.1:8989 --node-url=/ip4/127.0.0.1/tcp/3453 --gateway-url=/ip4/127.0.0.1/tcp/45132 --auth-token=<auth-token>
 ```

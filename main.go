@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/filecoin-project/venus-messager/metrics"
 	"net"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+
+	"github.com/filecoin-project/venus-messager/metrics"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -206,7 +207,7 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Wallet, &cfg.Gateway, &cfg.RateLimit, &cfg.Trace),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, &cfg.Trace),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(walletClient),
