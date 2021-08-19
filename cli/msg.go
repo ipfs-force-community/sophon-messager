@@ -41,6 +41,7 @@ var MsgCmds = &cli.Command{
 		republishCmd,
 		markBadCmd,
 		clearUnFillMessageCmd,
+		recoverFailedMsgCmd,
 	},
 }
 
@@ -583,9 +584,10 @@ var markBadCmd = &cli.Command{
 					if msg.Receipt != nil && len(msg.Receipt.ReturnValue) > 0 {
 						_, err = client.MarkBadMessage(cctx.Context, msg.ID)
 						if err != nil {
-							fmt.Printf("mark msg %s as bad fail %v\n", msg.ID, err)
+							fmt.Printf("mark msg %s as bad failed: %v\n", msg.ID, err)
 							continue
 						}
+						fmt.Printf("mark msg %s as bad successful\n", msg.ID)
 					}
 				}
 			}
@@ -596,8 +598,76 @@ var markBadCmd = &cli.Command{
 			for _, id := range cctx.Args().Slice() {
 				_, err = client.MarkBadMessage(cctx.Context, id)
 				if err != nil {
-					fmt.Printf("mark msg %s as bad fail %v\n", id, err)
+					fmt.Printf("mark msg %s as bad failed: %v\n", id, err)
 					continue
+				}
+				fmt.Printf("mark msg %s as bad successful\n", id)
+			}
+		}
+
+		return nil
+	},
+}
+
+var recoverFailedMsgCmd = &cli.Command{
+	Name:  "recover-failed-msg",
+	Usage: "recover failed messages",
+	Flags: []cli.Flag{
+		ReallyDoItFlag,
+		&cli.StringFlag{
+			Name:  "from",
+			Usage: "mark unfill message as bad message if specify this flag",
+		},
+	},
+	ArgsUsage: "id slice",
+	Action: func(cctx *cli.Context) error {
+		client, closer, err := getAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if !cctx.Bool("really-do-it") {
+			return errors.New("confirm to exec this command, specify --really-do-it")
+		}
+
+		if cctx.IsSet("from") {
+			fromAddr, err := address.NewFromString(cctx.String("from"))
+			if err != nil {
+				return err
+			}
+			msgIDs, err := client.RecoverFailedMsg(cctx.Context, fromAddr)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("recover failed messages success: %v \n", msgIDs)
+		} else {
+			if cctx.NArg() == 0 {
+				return xerrors.New("must has id argument")
+			}
+			for _, id := range cctx.Args().Slice() {
+				msg, err := client.GetMessageByUid(cctx.Context, id)
+				if err != nil {
+					return err
+				}
+				if msg.State != types.FailedMsg {
+					fmt.Printf("need failed msg: %v", id)
+					continue
+				}
+				if msg.Nonce != 0 && msg.Signature != nil {
+					_, err = client.UpdateMessageStateByID(cctx.Context, id, types.FillMsg)
+					if err != nil {
+						fmt.Printf("recover msg %s failed: %v", id, err)
+						continue
+					}
+					fmt.Printf("recover msg %s success, current state: %v, after recover msg state: %v\n", id, msg.State, types.FillMsg)
+				} else {
+					_, err = client.UpdateMessageStateByID(cctx.Context, id, types.UnFillMsg)
+					if err != nil {
+						fmt.Printf("recover msg %s failed: %v", id, err)
+						continue
+					}
+					fmt.Printf("recover msg %s success, current state: %v, after recover msg state: %v\n", id, msg.State, types.UnFillMsg)
 				}
 			}
 		}

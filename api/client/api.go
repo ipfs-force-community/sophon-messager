@@ -35,6 +35,7 @@ type IMessager interface {
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) //perm:admin
 	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                             //perm:admin
 	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                               //perm:admin
+	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)                                                                  //perm:admin
 
 	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                                          //perm:admin
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                                         //perm:admin
@@ -92,6 +93,7 @@ type Message struct {
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
 		RepublishMessage         func(ctx context.Context, id string) (struct{}, error)
 		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
+		RecoverFailedMsg         func(ctx context.Context, addr address.Address) ([]string, error)
 
 		SaveAddress        func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress         func(ctx context.Context, addr address.Address) (*types.Address, error)
@@ -204,6 +206,10 @@ func (message *Message) MarkBadMessage(ctx context.Context, id string) (struct{}
 
 func (message *Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
 	return message.Internal.WaitMessage(ctx, id, confidence)
+}
+
+func (message *Message) RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error) {
+	return message.Internal.RecoverFailedMsg(ctx, addr)
 }
 
 ///////  address ///////

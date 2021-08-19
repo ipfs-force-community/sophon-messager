@@ -386,6 +386,19 @@ func (m *mysqlMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*t
 	return result, nil
 }
 
+func (m *mysqlMessageRepo) GetSignedMessageFromFailedMsg(addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*mysqlMessage
+	if err := m.DB.Where("state = ? and from_addr = ? and signed_data is not null", types.FailedMsg, addr.String()).Find(&sqlMsgs).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+
+	return result, nil
+}
+
 func (m *mysqlMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg mysqlMessage
 	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Take(&msg).Error; err != nil {

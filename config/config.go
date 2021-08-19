@@ -63,8 +63,8 @@ type JWTConfig struct {
 }
 
 const MinWaitingChainHeadStableDuration,
-MaxWaitingChainHeadStableDuration,
-DefWaitingChainHeadStableDuration = time.Second * 2, time.Second * 25, time.Second * 8
+	MaxWaitingChainHeadStableDuration,
+	DefWaitingChainHeadStableDuration = time.Second * 2, time.Second * 25, time.Second * 8
 
 type MessageServiceConfig struct {
 	WaitingChainHeadStableDuration time.Duration `toml:"WaitingChainHeadStableDuration"`
@@ -83,7 +83,7 @@ type MessageStateConfig struct {
 type GatewayConfig struct {
 	RemoteEnable bool                `toml:"remoteEnable"`
 	Token        string              `toml:"token"`
-	Url          []string              `toml:"url"`
+	Url          []string            `toml:"url"`
 	Cfg          gatewayTypes.Config `toml:"cfg"`
 }
 
