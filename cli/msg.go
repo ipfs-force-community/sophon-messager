@@ -583,9 +583,10 @@ var markBadCmd = &cli.Command{
 					if msg.Receipt != nil && len(msg.Receipt.ReturnValue) > 0 {
 						_, err = client.MarkBadMessage(cctx.Context, msg.ID)
 						if err != nil {
-							fmt.Printf("mark msg %s as bad fail %v\n", msg.ID, err)
+							fmt.Printf("mark msg %s as bad failed: %v\n", msg.ID, err)
 							continue
 						}
+						fmt.Printf("mark msg %s as bad successful\n", msg.ID)
 					}
 				}
 			}
@@ -596,9 +597,10 @@ var markBadCmd = &cli.Command{
 			for _, id := range cctx.Args().Slice() {
 				_, err = client.MarkBadMessage(cctx.Context, id)
 				if err != nil {
-					fmt.Printf("mark msg %s as bad fail %v\n", id, err)
+					fmt.Printf("mark msg %s as bad failed: %v\n", id, err)
 					continue
 				}
+				fmt.Printf("mark msg %s as bad successful\n", id)
 			}
 		}
 

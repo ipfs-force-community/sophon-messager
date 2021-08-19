@@ -943,6 +943,13 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 }
 
 func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+	msg, err := ms.repo.MessageRepo().GetMessageByUid(id)
+	if err != nil {
+		return struct{}{}, err
+	}
+	if msg.State != types.UnFillMsg {
+		return struct{}{}, xerrors.Errorf("only support mark UnFillMsg, but got %s", types.MsgStateToString(msg.State))
+	}
 	return ms.repo.MessageRepo().MarkBadMessage(id)
 }
 
