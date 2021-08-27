@@ -7,7 +7,7 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
-func ConfigExit(path string) (bool, error) {
+func ConfigExist(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err != nil {
 		if !os.IsExist(err) {
@@ -26,6 +26,18 @@ func ReadConfig(path string) (*Config, error) {
 	if err := toml.Unmarshal(configBytes, config); err != nil {
 		return nil, err
 	}
+	dur := config.MessageService.WaitingChainHeadStableDuration
+
+	if dur == 0 {
+		dur = DefWaitingChainHeadStableDuration
+	} else if dur < MinWaitingChainHeadStableDuration {
+		dur = MinWaitingChainHeadStableDuration
+	} else if dur > MaxWaitingChainHeadStableDuration {
+		dur = MaxWaitingChainHeadStableDuration
+	}
+
+	config.MessageService.WaitingChainHeadStableDuration = dur
+
 	return config, nil
 }
 

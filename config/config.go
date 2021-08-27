@@ -62,7 +62,13 @@ type JWTConfig struct {
 	} `toml:"local"`
 }
 
+const MinWaitingChainHeadStableDuration,
+MaxWaitingChainHeadStableDuration,
+DefWaitingChainHeadStableDuration = time.Second * 2, time.Second * 25, time.Second * 8
+
 type MessageServiceConfig struct {
+	WaitingChainHeadStableDuration time.Duration `toml:"WaitingChainHeadStableDuration"`
+
 	TipsetFilePath  string `toml:"tipsetFilePath"`
 	SkipProcessHead bool   `toml:"skipProcessHead"`
 	SkipPushMessage bool   `toml:"skipPushMessage"`
@@ -118,6 +124,8 @@ func DefaultConfig() *Config {
 			CleanupInterval:   3600 * 24,
 		},
 		MessageService: MessageServiceConfig{
+			WaitingChainHeadStableDuration: DefWaitingChainHeadStableDuration,
+
 			TipsetFilePath:  "./tipset.json",
 			SkipProcessHead: false,
 			SkipPushMessage: false,
