@@ -20,7 +20,7 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 		for {
 			select {
 			case h := <-ms.headChans:
-				//跳过这个检查可以更精准的推送，但是会增加系统负担
+				// 跳过这个检查可以更精准的推送，但是会增加系统负担
 				/*	if len(h.apply) == 1 && len(h.revert) == 1 {
 					ms.tsCache.AddTs(&tipsetFormat{Key: h.apply[0].Key().String(), Height: int64(h.apply[0].Height())})
 					ms.log.Warnf("revert at same height %d just update cache and skip process %s", h.apply[0].Height(), h.apply[0].String())
@@ -110,7 +110,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	if ms.preCancel != nil {
 		ms.preCancel()
 	}
-	if !h.isReconnect { //reconnect do not push messager avoid wrong gas estimate
+	if !h.isReconnect { // reconnect do not push messager avoid wrong gas estimate
 		var triggerCtx context.Context
 		triggerCtx, ms.preCancel = context.WithCancel(context.Background())
 		go ms.delayTrigger(triggerCtx, h.apply[0])
@@ -137,7 +137,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 			tsKey := tsKeys[msg.height]
 			if localMsg.UnsignedCid == nil || *localMsg.UnsignedCid != msg.cid {
 				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
-				//replace msg
+				// replace msg
 				unsignedCid := msg.msg.Cid()
 				localMsg.UnsignedMessage = *msg.msg
 				localMsg.UnsignedCid = &unsignedCid
@@ -161,10 +161,10 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 	})
 }
 
-//delayTrigger wait for stable ts
+// delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
-	case <-time.After(8 * time.Second):
+	case <-time.After(ms.cfg.WaitingChainHeadStableDuration):
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():

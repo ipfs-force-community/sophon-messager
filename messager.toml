@@ -29,14 +29,15 @@
   authURL = "http://127.0.0.1:8989"
 
   [jwt.local]
-    secret = ""
-    token = ""
+    secret = "b0b574ef3a1433df96dd0696879df4b273631e4620a56c7ab990ac6e3874c319"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidmVudXMtbWVzc2FnZXItYWRtaW4iLCJwZXJtIjoiYWRtaW4iLCJleHQiOiIifQ.sn5UvOXIITenKt9_hnMiXY0Ib9-aLmxt8itIx4KnmIM"
 
 [log]
   level = "info"
   path = "messager.log"
 
 [messageService]
+  WaitingChainHeadStableDuration = "8s"
   skipProcessHead = false
   skipPushMessage = false
   tipsetFilePath = "./tipset.json"

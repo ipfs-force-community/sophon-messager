@@ -117,13 +117,13 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	exit, err := config.ConfigExit(path)
+	exist, err := config.ConfigExist(path)
 	if err != nil {
 		return err
 	}
 
 	var cfg *config.Config
-	if !exit {
+	if !exist {
 		cfg = config.DefaultConfig()
 		err = updateFlag(cfg, ctx)
 		if err != nil {
