@@ -72,8 +72,18 @@ func Mul(a, b Int) Int {
 	return Int{big.NewInt(0).Mul(a.Int, b.Int)}
 }
 
+func MulFloat(a Int, b float64) Int {
+	res, _ := new(big.Float).Mul(new(big.Float).SetInt(a.Int), new(big.Float).SetFloat64(b)).Int(nil)
+	return Int{res}
+}
+
 func Div(a, b Int) Int {
 	return Int{big.NewInt(0).Div(a.Int, b.Int)}
+}
+
+func DivFloat(num, den Int) float64 {
+	res, _ := new(big.Rat).SetFrac(num.Int, den.Int).Float64()
+	return res
 }
 
 func Mod(a, b Int) Int {
