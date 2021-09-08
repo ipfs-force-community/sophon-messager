@@ -83,7 +83,7 @@ type MessageStateConfig struct {
 type GatewayConfig struct {
 	RemoteEnable bool                `toml:"remoteEnable"`
 	Token        string              `toml:"token"`
-	Url          string              `toml:"url"`
+	Url          []string              `toml:"url"`
 	Cfg          gatewayTypes.Config `toml:"cfg"`
 }
 
@@ -133,7 +133,7 @@ func DefaultConfig() *Config {
 		Gateway: GatewayConfig{
 			RemoteEnable: true,
 			Token:        "",
-			Url:          "/ip4/127.0.0.1/tcp/45132",
+			Url:          []string{"/ip4/127.0.0.1/tcp/45132"},
 			Cfg: gatewayTypes.Config{
 				RequestQueueSize: 30,
 				RequestTimeout:   time.Minute * 5,

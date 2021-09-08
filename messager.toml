@@ -19,7 +19,7 @@
 [gateway]
   remoteEnable = true
   token = ""
-  url = "/ip4/127.0.0.1/tcp/45132"
+  url = ["/ip4/127.0.0.1/tcp/45132"]
 
   [gateway.cfg]
     RequestQueueSize = 30

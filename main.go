@@ -187,7 +187,7 @@ func runAction(ctx *cli.Context) error {
 		walletClient = &gateway.IWalletCli{IWalletClient: gatewayService}
 		gatewayProvider = fx.Options(fx.Supply(gatewayService))
 	} else {
-		walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway)
+		walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway, log)
 		walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
 		if err != nil {
 			return err
@@ -269,7 +269,7 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 
 	if ctx.IsSet("gateway-url") {
 		cfg.Gateway.RemoteEnable = true
-		cfg.Gateway.Url = ctx.String("gateway-url")
+		cfg.Gateway.Url = ctx.StringSlice("gateway-url")
 	}
 
 	if ctx.IsSet("auth-token") {
