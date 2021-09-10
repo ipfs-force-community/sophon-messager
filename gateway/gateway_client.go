@@ -173,7 +173,8 @@ func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProx
 		avaliabeClientCache: make(map[cacheKey]*WalletClient),
 		logger:              logger}
 	var ctx = context.Background()
-	var closer jsonrpc.ClientCloser
+
+	var closers []jsonrpc.ClientCloser
 
 	for _, url := range cfg.Url {
 		c, cls, err := newWalletClient(ctx, cfg.Token, url)
@@ -183,21 +184,20 @@ func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProx
 		}
 
 		proxy.clients[url] = c
-
-		if closer == nil {
-			closer = cls
-		} else {
-			closer = func() {
-				closer()
-				cls()
-			}
-		}
+		closers = append(closers, cls)
 	}
 
 	if len(proxy.clients) == 0 {
 		return nil, nil, fmt.Errorf("can't create any gateway client, please check 'GatewayConfig'")
 	}
-	return proxy, closer, nil
+
+	totalCloser := func() {
+		for _, closer := range closers {
+			closer()
+		}
+	}
+
+	return proxy, totalCloser, nil
 }
 
 func newWalletClient(ctx context.Context, token, url string) (*WalletClient, jsonrpc.ClientCloser, error) {
