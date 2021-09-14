@@ -253,6 +253,40 @@ func TestGetSignedMessageByHeight(t *testing.T) {
 	})
 }
 
+func TestGetSignedMessageFromFailedMsg(t *testing.T) {
+	sqliteRepo, mysqlRepo := setupRepo(t)
+
+	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
+		signedMsgs := NewSignedMessages(10)
+		addrs := make([]address.Address, len(signedMsgs))
+		for i, msg := range signedMsgs {
+			if i%2 == 0 {
+				msg.State = types.FailedMsg
+			}
+			addrs[i] = msg.From
+			assert.NoError(t, messageRepo.CreateMessage(msg))
+		}
+		for i, addr := range addrs {
+			msgs, err := messageRepo.GetSignedMessageFromFailedMsg(addr)
+			assert.NoError(t, err)
+			if i%2 == 0 {
+				assert.Len(t, msgs, 1)
+			} else {
+				assert.Len(t, msgs, 0)
+			}
+		}
+	}
+	t.Run("GetSignedMessageFromFailedMsg", func(t *testing.T) {
+		t.Run("sqlite", func(t *testing.T) {
+			messageRepoTest(t, sqliteRepo.MessageRepo())
+		})
+		t.Run("mysql", func(t *testing.T) {
+			t.SkipNow()
+			messageRepoTest(t, mysqlRepo.MessageRepo())
+		})
+	})
+}
+
 func TestGetMessageByFromAndNonce(t *testing.T) {
 	sqliteRepo, mysqlRepo := setupRepo(t)
 

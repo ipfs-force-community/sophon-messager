@@ -27,6 +27,7 @@ type MessageRepo interface {
 	GetMessageBySignedCid(signedCid cid.Cid) (*types.Message, error)
 	GetSignedMessageByTime(start time.Time) ([]*types.Message, error)
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
+	GetSignedMessageFromFailedMsg(addr address.Address) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
 	ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)

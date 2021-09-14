@@ -363,6 +363,20 @@ func (m *sqliteMessageRepo) GetSignedMessageByHeight(height abi.ChainEpoch) ([]*
 	return result, nil
 }
 
+func (m *sqliteMessageRepo) GetSignedMessageFromFailedMsg(addr address.Address) ([]*types.Message, error) {
+	var sqlMsgs []*sqliteMessage
+	if err := m.DB.Where("state = ? and from_addr = ? and signed_data is not null", types.FailedMsg, addr.String()).
+		Find(&sqlMsgs).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+
+	return result, nil
+}
+
 func (m *sqliteMessageRepo) GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error) {
 	var msg sqliteMessage
 	if err := m.DB.Where("from_addr = ? and nonce = ?", from.String(), nonce).Take(&msg).Error; err != nil {
@@ -409,7 +423,7 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 	query := m.DB.Debug().Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
 
 	if from != address.Undef {
-		query = query.Where("from_addr=?", from)
+		query = query.Where("from_addr=?", from.String())
 	}
 	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
 		query.Order("created_at")

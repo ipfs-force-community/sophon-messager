@@ -46,4 +46,5 @@ var AuthMap = map[string]string{
 	"UpdateAllFilledMessage":   "admin",
 	"SetSelectMsgNum":          "admin",
 	"Send":                     "admin",
+	"RecoverFailedMsg":         "admin",
 }

@@ -708,7 +708,6 @@ type nodeClient struct {
 
 func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusTypes.SignedMessage) {
 	if len(msgs) == 0 {
-		ms.log.Warnf("no broadcast node config")
 		return
 	}
 
@@ -729,7 +728,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgs []*venusType
 	}
 
 	if len(nc) == 0 {
-		ms.log.Warnf("no available broadcast node config")
+		ms.log.Infof("no available broadcast node config")
 		return
 	}
 
@@ -944,6 +943,35 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 
 func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
 	return ms.repo.MessageRepo().MarkBadMessage(id)
+}
+
+func (ms *MessageService) RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error) {
+	recoverIDs := make([]string, 0)
+	actor, err := ms.nodeClient.StateGetActor(ctx, addr, venusTypes.EmptyTSK)
+	if err != nil {
+		return nil, err
+	}
+	addrInfo, err := ms.repo.AddressRepo().GetAddress(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	if addrInfo.Nonce < actor.Nonce {
+		return recoverIDs, nil
+	}
+	msgs, err := ms.repo.MessageRepo().GetSignedMessageFromFailedMsg(addr)
+	if err != nil {
+		return nil, err
+	}
+	for _, msg := range msgs {
+		if msg.Nonce >= actor.Nonce {
+			if err = ms.repo.MessageRepo().UpdateMessageStateByID(msg.ID, types.FillMsg); err != nil {
+				return nil, err
+			}
+			recoverIDs = append(recoverIDs, msg.ID)
+		}
+	}
+
+	return recoverIDs, nil
 }
 
 func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
