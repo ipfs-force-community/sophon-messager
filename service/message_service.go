@@ -449,7 +449,7 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 	} else {
 		apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
 		if err != nil {
-			ms.log.Errorf("look ancestor error from %s and %s", smallestTs, tsList[0].Key())
+			ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
 			return nil
 		}
 
