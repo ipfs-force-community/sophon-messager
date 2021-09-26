@@ -59,11 +59,11 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		return xerrors.Errorf("process apply failed %v", err)
 	}
 
-	var tsList tipsetList
+	var tsList []*venustypes.TipSet
 	tsKeys := make(map[abi.ChainEpoch]venustypes.TipSetKey)
 	for _, ts := range h.apply {
 		height := ts.Height()
-		tsList = append(tsList, &tipsetFormat{Key: ts.Key().String(), Height: int64(height)})
+		tsList = append(tsList, ts)
 		tsKeys[height] = ts.Key()
 	}
 
@@ -239,25 +239,9 @@ type tipsetFormat struct {
 }
 
 func (ms *MessageService) storeTipset() error {
-	if len(ms.tsCache.Cache) > maxStoreTipsetCount {
-		ms.tsCache.ReduceTs()
-	}
+	ms.tsCache.ReduceTs()
 
 	return updateTipsetFile(ms.cfg.TipsetFilePath, ms.tsCache)
-}
-
-type tipsetList []*tipsetFormat
-
-func (tl tipsetList) Len() int {
-	return len(tl)
-}
-
-func (tl tipsetList) Swap(i, j int) {
-	tl[i], tl[j] = tl[j], tl[i]
-}
-
-func (tl tipsetList) Less(i, j int) bool {
-	return tl[i].Height > tl[j].Height
 }
 
 func readTipsetFile(filePath string) (*TipsetCache, error) {
@@ -267,7 +251,7 @@ func readTipsetFile(filePath string) (*TipsetCache, error) {
 	}
 	if len(b) < 3 { // skip empty content
 		return &TipsetCache{
-			Cache:      map[int64]*tipsetFormat{},
+			Cache:      map[int64]*venustypes.TipSet{},
 			CurrHeight: 0,
 		}, nil
 	}
