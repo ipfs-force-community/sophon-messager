@@ -203,7 +203,7 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 		query = query.Where("from_addr=?", from.String())
 	}
 	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
-		query.Order("created_at")
+		query = query.Order("created_at")
 	}
 	query = query.Where("state=?", state)
 
