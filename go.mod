@@ -7,16 +7,16 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
-	github.com/filecoin-project/go-state-types v0.1.1-0.20210506134452-99b279731c48
-	github.com/filecoin-project/venus v1.0.1-0.20210707073618-62e8cf9a7834
-	github.com/filecoin-project/venus-auth v1.2.2-0.20210716071053-565a8999f9e5
+	github.com/filecoin-project/go-state-types v0.1.1-0.20210915140513-d354ccf10379
+	github.com/filecoin-project/venus v1.0.5-0.20211011024058-17dd9ff40cf4
+	github.com/filecoin-project/venus-auth v1.3.1-0.20210809053831-012d55d5f578
 	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/metrics v1.0.0
-	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913
+	github.com/ipfs-force-community/metrics v1.0.1-0.20210827074542-cc8db7683f13
+	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759
 	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
 	github.com/ipfs/go-cid v0.0.7
 	github.com/multiformats/go-multiaddr v0.3.3
@@ -36,6 +36,6 @@ require (
 	modernc.org/mathutil v1.1.1
 )
 
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721083944-2d3bf5f194b8
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210731021807-68e5207079bc
 
 replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
