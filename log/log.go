@@ -47,12 +47,3 @@ func (logger *Logger) SetLogLevel(ctx context.Context, levelStr string) error {
 
 	return nil
 }
-
-// 2016-09-27 09:38:21.541541811 +0200 CEST
-// 127.0.0.1 - frank [2021-04-09 15:58:00]
-// "GET /apache_pb.gif HTTP/1.0" 200 2326
-// "http://www.example.com/start.html"
-// "Mozilla/4.08 [en] (Win98; I ;Nav)"
-// copy from https://github.com/toorop/gin-logrus/blob/master/logger.go
-
-var timeFormat = "2006-01-02 15:04:05"
