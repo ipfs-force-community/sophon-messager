@@ -12,7 +12,6 @@ require (
 	github.com/filecoin-project/venus-auth v1.2.2-0.20210716071053-565a8999f9e5
 	github.com/filecoin-project/venus-wallet v1.1.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
-	github.com/gin-gonic/gin v1.6.3
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
