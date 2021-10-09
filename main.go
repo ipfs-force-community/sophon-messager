@@ -90,8 +90,7 @@ var runCmd = &cli.Command{
 			Name:  "mysql-dsn",
 			Usage: "mysql connection string",
 		},
-
-		&cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:  "gateway-url",
 			Usage: "gateway url",
 		},
