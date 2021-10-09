@@ -2,6 +2,8 @@ package service
 
 import (
 	"sync"
+
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
 )
 
 func (tsCache *TipsetCache) RemoveTs(list []*tipsetFormat) {
@@ -12,11 +14,11 @@ func (tsCache *TipsetCache) RemoveTs(list []*tipsetFormat) {
 	}
 }
 
-func (tsCache *TipsetCache) AddTs(list ...*tipsetFormat) {
+func (tsCache *TipsetCache) AddTs(list ...*venusTypes.TipSet) {
 	tsCache.l.Lock()
 	defer tsCache.l.Unlock()
 	for _, ts := range list {
-		tsCache.Cache[ts.Height] = ts
+		tsCache.Cache[int64(ts.Height())] = ts
 	}
 }
 
@@ -31,18 +33,21 @@ func (tsCache *TipsetCache) ExistTs(height int64) bool {
 func (tsCache *TipsetCache) ReduceTs() {
 	tsCache.l.Lock()
 	defer tsCache.l.Unlock()
+	if len(tsCache.Cache) < maxStoreTipsetCount {
+		return
+	}
 	minHeight := tsCache.CurrHeight - maxStoreTipsetCount
 	for _, v := range tsCache.Cache {
-		if v.Height < minHeight {
-			delete(tsCache.Cache, v.Height)
+		if int64(v.Height()) < minHeight {
+			delete(tsCache.Cache, int64(v.Height()))
 		}
 	}
 }
 
-func (tsCache *TipsetCache) ListTs() tipsetList {
+func (tsCache *TipsetCache) ListTs() []*venusTypes.TipSet {
 	tsCache.l.Lock()
 	defer tsCache.l.Unlock()
-	var list tipsetList
+	list := make([]*venusTypes.TipSet, 0, len(tsCache.Cache))
 	for _, ts := range tsCache.Cache {
 		list = append(list, ts)
 	}

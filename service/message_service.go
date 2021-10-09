@@ -25,7 +25,6 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
@@ -36,7 +35,7 @@ const (
 
 	LookBackLimit = 900
 
-	maxStoreTipsetCount = 3000
+	maxStoreTipsetCount = 900
 )
 
 type MessageService struct {
@@ -72,7 +71,7 @@ type headChan struct {
 }
 
 type TipsetCache struct {
-	Cache      map[int64]*tipsetFormat
+	Cache      map[int64]*venusTypes.TipSet
 	CurrHeight int64
 
 	l sync.Mutex
@@ -105,7 +104,7 @@ func NewMessageService(repo repo.Repo,
 		addressService: addressService,
 		walletClient:   walletClient,
 		tsCache: &TipsetCache{
-			Cache:      make(map[int64]*tipsetFormat, maxStoreTipsetCount),
+			Cache:      make(map[int64]*venusTypes.TipSet, maxStoreTipsetCount),
 			CurrHeight: 0,
 		},
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
@@ -430,13 +429,15 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		return nil
 	}
 
-	ts := ms.tsCache.ListTs()
-	sort.Sort(ts)
+	tsList := ms.tsCache.ListTs()
+	sort.Slice(tsList, func(i, j int) bool {
+		return tsList[i].Height() > tsList[j].Height()
+	})
 	smallestTs := apply[len(apply)-1]
 
 	defer ms.log.Infof("%d head wait to process", len(ms.headChans))
 
-	if ts == nil || smallestTs.Parents().String() == ts[0].Key {
+	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
 		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
 		ms.headChans <- &headChan{
@@ -446,9 +447,9 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		}
 		return <-done
 	} else {
-		apply, revertTipset, err := ms.lookAncestors(ctx, ts, smallestTs)
+		apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
 		if err != nil {
-			ms.log.Errorf("look ancestor error from %s and %s", smallestTs, ts[0].Key)
+			ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
 			return nil
 		}
 
@@ -475,23 +476,30 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 	})
 
 	if len(ms.tsCache.Cache) == 0 {
-		return nil
-	}
-
-	tsList := ms.tsCache.ListTs()
-	sort.Sort(tsList)
-
-	// long time not use
-	if int64(head.Height())-tsList[0].Height >= LookBackLimit {
 		count, err := ms.UpdateAllFilledMessage(ctx)
 		if err != nil {
 			return err
 		}
-		ms.log.Infof("gap height %v, update filled message count %v", int64(head.Height())-tsList[0].Height, count)
+		ms.log.Infof("update filled message count %v", count)
 		return nil
 	}
 
-	if tsList[0].Height == int64(head.Height()) && tsList[0].Key == head.String() {
+	tsList := ms.tsCache.ListTs()
+	sort.Slice(tsList, func(i, j int) bool {
+		return tsList[i].Height() > tsList[j].Height()
+	})
+
+	// long time not use
+	if head.Height()-tsList[0].Height() >= LookBackLimit {
+		count, err := ms.UpdateAllFilledMessage(ctx)
+		if err != nil {
+			return err
+		}
+		ms.log.Infof("gap height %v, update filled message count %v", head.Height()-tsList[0].Height(), count)
+		return nil
+	}
+
+	if tsList[0].Height() == head.Height() && tsList[0].Equals(head) {
 		ms.log.Infof("The head does not change and returns directly.")
 		return nil
 	}
@@ -512,7 +520,7 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 	return <-done
 }
 
-func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetList, head *venusTypes.TipSet) ([]*venusTypes.TipSet, []*venusTypes.TipSet, error) {
+func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venusTypes.TipSet, head *venusTypes.TipSet) ([]*venusTypes.TipSet, []*venusTypes.TipSet, error) {
 	var err error
 
 	ts := &venusTypes.TipSet{}
@@ -535,10 +543,10 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 		if ts.Height() == 0 {
 			break
 		}
-		if localTs.Height > int64(ts.Height()) {
+		if localTs.Height() > ts.Height() {
 			idx++
-		} else if localTs.Height == int64(ts.Height()) {
-			if localTs.Key == ts.String() {
+		} else if localTs.Height() == ts.Height() {
+			if localTs.Equals(ts) {
 				break
 			}
 			idx++
@@ -552,40 +560,12 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset tipsetL
 		loopCount++
 	}
 
-	var revertTsf []*tipsetFormat
 	if idx >= localTsLen {
 		idx = localTsLen
 	}
-	revertTsf = localTipset[:idx]
-
-	revertTs, err := ms.convertTipsetFormatToTipset(revertTsf)
+	revertTs := localTipset[:idx]
 
 	return gapTipset, revertTs, err
-}
-
-func (ms *MessageService) convertTipsetFormatToTipset(tf []*tipsetFormat) ([]*venusTypes.TipSet, error) {
-	var tsList []*venusTypes.TipSet
-	var err error
-	for _, t := range tf {
-		key, err := utils.StringToTipsetKey(t.Key)
-		if err != nil {
-			return nil, err
-		}
-		blocks := make([]*venusTypes.BlockHeader, len(key.Cids()))
-		for i, cid := range key.Cids() {
-			blocks[i], err = ms.nodeClient.ChainGetBlock(context.TODO(), cid)
-			if err != nil {
-				return nil, err
-			}
-		}
-		ts, err := venusTypes.NewTipSet(blocks...)
-		if err != nil {
-			return nil, err
-		}
-		tsList = append(tsList, ts)
-	}
-
-	return tsList, err
 }
 
 ///   Message push    ////

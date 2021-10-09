@@ -276,7 +276,7 @@ func (m *sqliteMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]
 
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Order("created_at").Limit(topN).Error
+	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 		query = query.Where("from_addr=?", from.String())
 	}
 	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
-		query.Order("created_at")
+		query = query.Order("created_at")
 	}
 	query = query.Where("state=?", state)
 
