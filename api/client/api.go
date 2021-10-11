@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/ipfs-force-community/venus-gateway/walletevent"
-
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/google/uuid"
 	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
+	"github.com/ipfs-force-community/venus-gateway/walletevent"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/venus-messager/types"
@@ -62,7 +62,7 @@ type IMessager interface {
 
 	ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                                             //perm:write
 	ListenWalletEvent(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error) //perm:write
-	SupportNewAccount(ctx context.Context, channelId string, account string) error                                         //perm:write
+	SupportNewAccount(ctx context.Context, channelId uuid.UUID, account string) error                                      //perm:write
 
 	SetLogLevel(ctx context.Context, level string) error //perm:admin
 
@@ -120,7 +120,7 @@ type Message struct {
 
 		ResponseEvent     func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
 		ListenWalletEvent func(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error)
-		SupportNewAccount func(ctx context.Context, channelId string, account string) error
+		SupportNewAccount func(ctx context.Context, channelId uuid.UUID, account string) error
 
 		SetLogLevel func(ctx context.Context, level string) error
 
@@ -308,7 +308,7 @@ func (message *Message) ListenWalletEvent(ctx context.Context, wrp *walletevent.
 	return message.Internal.ListenWalletEvent(ctx, wrp)
 }
 
-func (message *Message) SupportNewAccount(ctx context.Context, channelId string, account string) error {
+func (message *Message) SupportNewAccount(ctx context.Context, channelId uuid.UUID, account string) error {
 	return message.Internal.SupportNewAccount(ctx, channelId, account)
 }
 
