@@ -77,6 +77,10 @@ func (addressService *AddressService) ListAddress(ctx context.Context) ([]*types
 	return addressService.repo.AddressRepo().ListAddress(ctx)
 }
 
+func (addressService *AddressService) ListActiveAddress(ctx context.Context) ([]*types.Address, error) {
+	return addressService.repo.AddressRepo().ListActiveAddress(ctx)
+}
+
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
 	return addr, addressService.repo.AddressRepo().DelAddress(ctx, addr)
 }
@@ -140,9 +144,9 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	return addr, addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
-func (addressService *AddressService) Addresses() map[address.Address]struct{} {
+func (addressService *AddressService) ActiveAddresses() map[address.Address]struct{} {
 	addrs := make(map[address.Address]struct{})
-	addrList, err := addressService.ListAddress(context.Background())
+	addrList, err := addressService.ListActiveAddress(context.Background())
 	if err != nil {
 		addressService.log.Errorf("list address %v", err)
 		return addrs

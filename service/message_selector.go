@@ -69,12 +69,12 @@ func NewMessageSelector(repo repo.Repo,
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
-	allAddrs, err := messageSelector.addressService.ListAddress(ctx)
+	activeAddrs, err := messageSelector.addressService.ListActiveAddress(ctx)
 	if err != nil {
 		return nil, err
 	}
-	addrList := messageSelector.uniqAddresses(allAddrs)
-	addrSelMsgNum := messageSelector.addrSelectMsgNum(allAddrs)
+	addrList := messageSelector.uniqAddresses(activeAddrs)
+	addrSelMsgNum := messageSelector.addrSelectMsgNum(activeAddrs)
 
 	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
 	if err != nil {
@@ -125,11 +125,6 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 }
 
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
-	if addr.State != types.Alive && addr.State != types.Forbiden {
-		messageSelector.log.Infof("address %v state is %s, skip select unchain message", addr.Addr, types.StateToString(addr.State))
-		return nil, nil
-	}
-
 	var toPushMessage []*venusTypes.SignedMessage
 
 	//判断是否需要推送消息

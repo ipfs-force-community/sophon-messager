@@ -146,6 +146,24 @@ func (s sqliteAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, e
 	return result, nil
 }
 
+func (s sqliteAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Address, error) {
+	var list []*sqliteAddress
+	if err := s.DB.Find(&list, "is_deleted = ? and state = ?", -1, types.Alive).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Address, len(list))
+	for index, r := range list {
+		addr, err := r.Address()
+		if err != nil {
+			return nil, err
+		}
+		result[index] = addr
+	}
+
+	return result, nil
+}
+
 func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
 	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
 		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
