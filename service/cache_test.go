@@ -2,7 +2,6 @@ package service
 
 import (
 	"os"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -129,33 +128,19 @@ func TestReadAndWriteTipset(t *testing.T) {
 
 	ts := &venusTypes.TipSet{}
 	assert.Nil(t, ts.UnmarshalJSON([]byte(oneTsStr)))
-	tsCache.Cache[int64(ts.Blocks()[0].Height)] = ts
-
 	ts2 := &venusTypes.TipSet{}
 	assert.Nil(t, ts2.UnmarshalJSON([]byte(TwoTsStr)))
-	tsCache.Cache[int64(ts2.Blocks()[0].Height)] = ts2
-	tsCache.CurrHeight = int64(ts2.Blocks()[0].Height)
+	tsCache.Add(ts, ts2)
 
 	filePath := "./test_read_write_tipset.json"
 	defer func() {
 		assert.NoError(t, os.Remove(filePath))
 	}()
-	err := updateTipsetFile(filePath, tsCache)
+	err := tsCache.Save(filePath)
 	assert.NoError(t, err)
 
-	result, err := readTipsetFile(filePath)
+	cache2 := newTipsetCache()
+	err = cache2.Load(filePath)
 	assert.NoError(t, err)
-	assert.Len(t, result.Cache, 2)
-
-	var tsList []*venusTypes.TipSet
-	for _, c := range result.Cache {
-		tsList = append(tsList, c)
-	}
-	t.Logf("before sort %+v", tsList)
-
-	sort.Slice(tsList, func(i int, j int) bool {
-		return tsList[i].Height() > tsList[j].Height()
-	})
-	t.Logf("after sort %+v", tsList)
-	assert.Greater(t, tsList[0].Height(), tsList[1].Height())
+	assert.Equal(t, tsCache, cache2)
 }

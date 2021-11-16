@@ -50,6 +50,8 @@ type NodeClient struct {
 	//broadcast interface
 	MpoolPublishByAddr  func(ctx context.Context, addr address.Address) error
 	MpoolPublishMessage func(ctx context.Context, smsg *types.SignedMessage) error
+
+	StateNetworkName func(ctx context.Context) (apitypes.NetworkName, error)
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {

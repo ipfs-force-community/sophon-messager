@@ -48,15 +48,3 @@ func WriteConfig(path string, cfg *Config) error {
 	}
 	return ioutil.WriteFile(path, cfgBytes, 0666)
 }
-
-func CheckFile(cfg *Config) error {
-	if _, err := os.Stat(cfg.MessageService.TipsetFilePath); err != nil {
-		if os.IsNotExist(err) {
-			_, err := os.Create(cfg.MessageService.TipsetFilePath)
-			return err
-		}
-		return err
-	}
-
-	return nil
-}
