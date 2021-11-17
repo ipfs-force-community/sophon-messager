@@ -172,6 +172,12 @@ func TestAddress(t *testing.T) {
 			assert.NoError(t, err)
 			assert.LessOrEqual(t, 1, len(rs))
 		})
+
+		t.Run("ListActiveAddress", func(t *testing.T) {
+			rs, err := addressRepo.ListActiveAddress(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, len(rs))
+		})
 	}
 
 	t.Run("TestAddress", func(t *testing.T) {

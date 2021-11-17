@@ -16,6 +16,7 @@ type AddressRepo interface {
 	GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error)
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 	ListAddress(ctx context.Context) ([]*types.Address, error)
+	ListActiveAddress(ctx context.Context) ([]*types.Address, error)
 	DelAddress(ctx context.Context, addr address.Address) error
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
 	UpdateState(ctx context.Context, addr address.Address, state types.State) error

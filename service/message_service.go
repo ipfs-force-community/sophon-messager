@@ -381,7 +381,7 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.A
 	if addr != address.Undef {
 		msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr, d)
 	} else {
-		addrList, err := ms.addressService.ListAddress(ctx)
+		addrList, err := ms.addressService.ListActiveAddress(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -792,7 +792,7 @@ func (ms *MessageService) tryClearUnFillMsg() {
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
 
-	for addr := range ms.addressService.Addresses() {
+	for addr := range ms.addressService.ActiveAddresses() {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)

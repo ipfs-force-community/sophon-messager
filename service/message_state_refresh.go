@@ -180,7 +180,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			return nil, xerrors.Errorf("found filled message at height %d error %v", ts.Height(), err)
 		}
 
-		addrs := ms.addressService.Addresses()
+		addrs := ms.addressService.ActiveAddresses()
 		for _, msg := range msgs {
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
@@ -200,7 +200,7 @@ type pendingMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, error) {
 	var applyMsgs []pendingMessage
-	addrs := ms.addressService.Addresses()
+	addrs := ms.addressService.ActiveAddresses()
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
 		height := ts.Height()

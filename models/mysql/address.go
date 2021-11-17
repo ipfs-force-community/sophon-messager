@@ -145,6 +145,24 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 	return result, nil
 }
 
+func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Address, error) {
+	var list []*mysqlAddress
+	if err := s.DB.Find(&list, "is_deleted = ? and state = ?", -1, types.Alive).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*types.Address, len(list))
+	for index, r := range list {
+		addr, err := r.Address()
+		if err != nil {
+			return nil, err
+		}
+		result[index] = addr
+	}
+
+	return result, nil
+}
+
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
 	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.Removed, "updated_at": time.Now()}).Error
