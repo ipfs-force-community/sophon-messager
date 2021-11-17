@@ -6,11 +6,11 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/fatih/color v1.10.0
 	github.com/filecoin-project/go-address v0.0.5
+	github.com/filecoin-project/go-fil-commcid v0.1.0 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.1-0.20210915140513-d354ccf10379
 	github.com/filecoin-project/venus v1.1.2-rc2
 	github.com/filecoin-project/venus-auth v1.3.1
-	github.com/filecoin-project/venus-wallet v1.3.1-rc1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.2.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
@@ -18,7 +18,12 @@ require (
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211022060227-11142a08b729
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759
 	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20210731031356-770f19abfbcb
+	github.com/ipfs/go-blockservice v0.1.5 // indirect
 	github.com/ipfs/go-cid v0.1.0
+	github.com/ipfs/go-ipfs-blockstore v1.0.4 // indirect
+	github.com/ipld/go-car v0.3.2-0.20211001225732-32d0d9933823 // indirect
+	github.com/ipld/go-ipld-prime v0.12.3 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.8 // indirect
 	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.6.0
@@ -28,6 +33,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210713220151-be142a5ae1a8
 	go.uber.org/fx v1.13.1
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gorm.io/driver/mysql v1.1.1

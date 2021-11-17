@@ -9,7 +9,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-gateway/types/wallet"
@@ -252,7 +251,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
 		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), wallet.MsgMeta{
-			Type:  wallet.MsgType(core.MTChainMsg),
+			Type:  wallet.MsgType(types.MTChainMsg),
 			Extra: data.RawData(),
 		}})
 		cancel()

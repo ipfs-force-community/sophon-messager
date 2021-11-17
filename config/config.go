@@ -62,9 +62,11 @@ type JWTConfig struct {
 	} `toml:"local"`
 }
 
-const MinWaitingChainHeadStableDuration,
-	MaxWaitingChainHeadStableDuration,
-	DefWaitingChainHeadStableDuration = time.Second * 2, time.Second * 25, time.Second * 8
+const (
+	MinWaitingChainHeadStableDuration = time.Second * 2
+	MaxWaitingChainHeadStableDuration = time.Second * 25
+	DefWaitingChainHeadStableDuration = time.Second * 8
+)
 
 type MessageServiceConfig struct {
 	WaitingChainHeadStableDuration time.Duration `toml:"WaitingChainHeadStableDuration"`
@@ -81,10 +83,9 @@ type MessageStateConfig struct {
 }
 
 type GatewayConfig struct {
-	RemoteEnable bool                `toml:"remoteEnable"`
-	Token        string              `toml:"token"`
-	Url          []string            `toml:"url"`
-	Cfg          gatewayTypes.Config `toml:"cfg"`
+	Token string              `toml:"token"`
+	Url   []string            `toml:"url"`
+	Cfg   gatewayTypes.Config `toml:"cfg"`
 }
 
 type RateLimitConfig struct {
@@ -131,9 +132,8 @@ func DefaultConfig() *Config {
 			SkipPushMessage: false,
 		},
 		Gateway: GatewayConfig{
-			RemoteEnable: true,
-			Token:        "",
-			Url:          []string{"/ip4/127.0.0.1/tcp/45132"},
+			Token: "",
+			Url:   []string{"/ip4/127.0.0.1/tcp/45132"},
 			Cfg: gatewayTypes.Config{
 				RequestQueueSize: 30,
 				RequestTimeout:   time.Minute * 5,

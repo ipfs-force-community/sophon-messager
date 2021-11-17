@@ -2,8 +2,6 @@ package controller
 
 var AuthMap = map[string]string{
 	"ListNode":                 "admin",
-	"ListenWalletEvent":        "write",
-	"SupportNewAccount":        "write",
 	"PushMessageWithId":        "write",
 	"UpdateFilledMessageByID":  "admin",
 	"UpdateNonce":              "admin",
@@ -31,7 +29,6 @@ var AuthMap = map[string]string{
 	"GetMessageByCid":          "read",
 	"ListBlockedMessage":       "admin",
 	"HasNode":                  "admin",
-	"ResponseEvent":            "write",
 	"SetLogLevel":              "admin",
 	"GetAddress":               "admin",
 	"WalletHas":                "read",

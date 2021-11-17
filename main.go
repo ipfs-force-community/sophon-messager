@@ -166,7 +166,7 @@ func runAction(ctx *cli.Context) error {
 
 	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
-	log.Infof("gateway info enable: %v, url: %s, token: %s\n", cfg.Gateway.RemoteEnable, cfg.Gateway.Url, cfg.Node.Token)
+	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
@@ -180,19 +180,12 @@ func runAction(ctx *cli.Context) error {
 	}
 
 	var walletClient *gateway.IWalletCli
-	gatewayProvider := fx.Options()
-	if !cfg.Gateway.RemoteEnable { // use local gateway
-		gatewayService := gateway.NewGatewayService(&cfg.Gateway)
-		walletClient = &gateway.IWalletCli{IWalletClient: gatewayService}
-		gatewayProvider = fx.Options(fx.Supply(gatewayService))
-	} else {
-		walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway, log)
-		walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
-		if err != nil {
-			return err
-		}
-		defer walletCliCloser()
+	walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway, log)
+	walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
+	if err != nil {
+		return err
 	}
+	defer walletCliCloser()
 
 	// Listen on the configured address in order to bind the port number in case it has
 	// been configured as zero (i.e. OS-provided)
@@ -236,7 +229,7 @@ func runAction(ctx *cli.Context) error {
 		fx.Invoke(metrics.SetupJaeger),
 		fx.Invoke(api.RunAPI),
 	)
-	app := fx.New(gatewayProvider, provider, invoker)
+	app := fx.New(provider, invoker)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
 		return xerrors.Errorf("starting node: %w", err)
@@ -267,7 +260,6 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 	}
 
 	if ctx.IsSet("gateway-url") {
-		cfg.Gateway.RemoteEnable = true
 		cfg.Gateway.Url = ctx.StringSlice("gateway-url")
 	}
 

@@ -13,7 +13,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
-	"github.com/filecoin-project/venus-wallet/core"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-gateway/types/wallet"
@@ -987,7 +986,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
 	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
-		Type:  wallet.MsgType(core.MTChainMsg),
+		Type:  wallet.MsgType(types.MTChainMsg),
 		Extra: data.RawData(),
 	})
 	if err != nil {

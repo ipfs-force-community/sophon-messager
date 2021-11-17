@@ -46,8 +46,6 @@ make
     file = "./message.db"
 
 [gateway]
-  # enable gateway
-  remoteEnable = true
   # gateway token, generate by auth server
   token = ""
   # gateway url
