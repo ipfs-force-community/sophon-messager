@@ -18,7 +18,6 @@ import (
 	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
 )
@@ -77,7 +76,6 @@ type ImplParams struct {
 	MessageService      *service.MessageService
 	NodeService         *service.NodeService
 	SharedParamsService *service.SharedParamsService
-	GatewayService      *gateway.GatewayService `optional:"true"`
 	Logger              *log.Logger
 }
 
@@ -86,7 +84,6 @@ type MessageImp struct {
 	*service.MessageService
 	*service.NodeService
 	*service.SharedParamsService
-	*gateway.GatewayService
 	*log.Logger
 }
 
@@ -98,7 +95,6 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		MessageService:      implParams.MessageService,
 		NodeService:         implParams.NodeService,
 		SharedParamsService: implParams.SharedParamsService,
-		GatewayService:      implParams.GatewayService,
 		Logger:              implParams.Logger,
 	}
 }

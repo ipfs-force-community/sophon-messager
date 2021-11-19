@@ -6,9 +6,6 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/google/uuid"
-	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
-	"github.com/ipfs-force-community/venus-gateway/walletevent"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/venus-messager/types"
@@ -59,10 +56,6 @@ type IMessager interface {
 	HasNode(ctx context.Context, name string) (bool, error)           //perm:admin
 	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
 	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
-
-	ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error                                             //perm:write
-	ListenWalletEvent(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error) //perm:write
-	SupportNewAccount(ctx context.Context, channelId uuid.UUID, account string) error                                      //perm:write
 
 	SetLogLevel(ctx context.Context, level string) error //perm:admin
 
@@ -117,10 +110,6 @@ type Message struct {
 		HasNode    func(ctx context.Context, name string) (bool, error)
 		ListNode   func(ctx context.Context) ([]*types.Node, error)
 		DeleteNode func(ctx context.Context, name string) (struct{}, error)
-
-		ResponseEvent     func(ctx context.Context, resp *gatewayTypes.ResponseEvent) error
-		ListenWalletEvent func(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error)
-		SupportNewAccount func(ctx context.Context, channelId uuid.UUID, account string) error
 
 		SetLogLevel func(ctx context.Context, level string) error
 
@@ -296,20 +285,6 @@ func (message *Message) ListNode(ctx context.Context) ([]*types.Node, error) {
 
 func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, error) {
 	return message.Internal.DeleteNode(ctx, name)
-}
-
-/////// wallet event ///////
-
-func (message *Message) ResponseEvent(ctx context.Context, resp *gatewayTypes.ResponseEvent) error {
-	return message.Internal.ResponseEvent(ctx, resp)
-}
-
-func (message *Message) ListenWalletEvent(ctx context.Context, wrp *walletevent.WalletRegisterPolicy) (chan *gatewayTypes.RequestEvent, error) {
-	return message.Internal.ListenWalletEvent(ctx, wrp)
-}
-
-func (message *Message) SupportNewAccount(ctx context.Context, channelId uuid.UUID, account string) error {
-	return message.Internal.SupportNewAccount(ctx, channelId, account)
 }
 
 /////// log ///////
