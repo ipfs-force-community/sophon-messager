@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-gateway/types/wallet"
@@ -184,17 +183,8 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
-func ipAccountFromContext(ctx context.Context) (string, string) {
-	ip, _ := jwtclient.CtxGetTokenLocation(ctx)
-	account, _ := jwtclient.CtxGetName(ctx)
-
-	return ip, account
-}
-
-func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	newId := types.NewUUID()
-	_, account := ipAccountFromContext(ctx)
-
 	if err := ms.pushMessage(ctx, &types.Message{
 		ID:              newId.String(),
 		UnsignedMessage: *msg,
@@ -210,8 +200,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Unsig
 	return newId.String(), nil
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	_, account := ipAccountFromContext(ctx)
+func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	if err := ms.pushMessage(ctx, &types.Message{
 		ID:              id,
 		UnsignedMessage: *msg,

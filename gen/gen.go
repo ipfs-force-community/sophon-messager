@@ -62,11 +62,15 @@ func main() {
 	v := &Visitor{make(map[string]metaInfo)}
 	ast.Walk(v, src)
 	cmap := ast.NewCommentMap(fset, src, src.Comments)
+
+	var methods []string //for code diff
+	for name, _ := range v.Methods {
+		methods = append(methods, name)
+	}
+
 	var methodInfos []methodInfo
-	for name, metaInfo := range v.Methods {
-		if name == "WaitMessage" {
-			fmt.Println()
-		}
+	for _, name := range methods {
+		metaInfo := v.Methods[name]
 		filteredComments := cmap.Filter(metaInfo.node).Comments()
 		mInfo := methodInfo{
 			Name: metaInfo.node.Names[0].Name,

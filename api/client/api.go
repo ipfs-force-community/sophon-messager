@@ -14,6 +14,7 @@ import (
 type IMessager interface {
 	HasMessageByUid(ctx context.Context, id string) (bool, error)                                                                                  //perm:read
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)                                                         //perm:read
+	ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                    //perm:admin
 	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                                         //perm:write
 	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                        //perm:write
 	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)                                                                        //perm:read
@@ -68,6 +69,7 @@ type Message struct {
 	Internal struct {
 		HasMessageByUid          func(ctx context.Context, id string) (bool, error)
 		WaitMessage              func(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+		ForcePushMessage         func(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		GetMessageByUid          func(ctx context.Context, id string) (*types.Message, error)
@@ -115,6 +117,10 @@ type Message struct {
 
 		Send func(ctx context.Context, params types.SendParams) (string, error)
 	}
+}
+
+func (message *Message) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.ForcePushMessage(ctx, account, msg, meta)
 }
 
 func (message *Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {
