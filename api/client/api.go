@@ -120,7 +120,7 @@ type Message struct {
 }
 
 func (message *Message) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	return message.ForcePushMessage(ctx, account, msg, meta)
+	return message.Internal.ForcePushMessage(ctx, account, msg, meta)
 }
 
 func (message *Message) HasMessageByUid(ctx context.Context, id string) (bool, error) {
