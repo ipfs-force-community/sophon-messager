@@ -64,8 +64,7 @@ func (addressService *AddressService) GetAddress(ctx context.Context, addr addre
 	return addressService.repo.AddressRepo().GetAddress(ctx, addr)
 }
 
-func (addressService *AddressService) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	_, account := ipAccountFromContext(ctx)
+func (addressService *AddressService) WalletHas(ctx context.Context, account string, addr address.Address) (bool, error) {
 	return addressService.walletClient.WalletHas(ctx, account, addr)
 }
 
