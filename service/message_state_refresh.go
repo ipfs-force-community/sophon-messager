@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
@@ -27,7 +25,7 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 					ms.triggerPush <- h.apply[0]
 					continue
 				}*/
-				ms.log.Infof("start refresh message state apply %d, revert apply %d", len(h.apply), len(h.revert))
+				ms.log.Infof("start refresh message state, apply %d, revert %d", len(h.apply), len(h.revert))
 				now := time.Now()
 				if err := ms.doRefreshMessageState(ctx, h); err != nil {
 					h.done <- err
@@ -46,6 +44,7 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 
 func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan) error {
 	if len(h.apply) == 0 {
+		ms.log.Infof("apply is empty")
 		return nil
 	}
 
@@ -100,8 +99,8 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
-	ms.tsCache.AddTs(tsList...)
-	if err := ms.storeTipset(); err != nil {
+	ms.tsCache.Add(tsList...)
+	if err := ms.tsCache.Save(ms.cfg.TipsetFilePath); err != nil {
 		ms.log.Errorf("store tipsetkey failed %v", err)
 	}
 
@@ -231,39 +230,4 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 		}
 	}
 	return applyMsgs, nil
-}
-
-type tipsetFormat struct {
-	Key    string
-	Height int64
-}
-
-func (ms *MessageService) storeTipset() error {
-	ms.tsCache.ReduceTs()
-
-	return updateTipsetFile(ms.cfg.TipsetFilePath, ms.tsCache)
-}
-
-func readTipsetFile(filePath string) (*TipsetCache, error) {
-	b, err := utils.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	if len(b) < 3 { // skip empty content
-		return &TipsetCache{
-			Cache:      map[int64]*venustypes.TipSet{},
-			CurrHeight: 0,
-		}, nil
-	}
-	var tsCache TipsetCache
-	if err := json.Unmarshal(b, &tsCache); err != nil {
-		return nil, err
-	}
-
-	return &tsCache, nil
-}
-
-// original data will be cleared
-func updateTipsetFile(filePath string, tsCache *TipsetCache) error {
-	return utils.WriteFile(filePath, tsCache)
 }

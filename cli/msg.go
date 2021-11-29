@@ -361,24 +361,23 @@ var tw = tablewriter.New(
 	tablewriter.Col("State"),
 	tablewriter.Col("ExitCode"),
 	tablewriter.Col("Return"),
-	tablewriter.Col("Height"),
 	tablewriter.Col("CreateAt"),
 )
 
 func outputWithTable(msgs []*types.Message, verbose bool) error {
 	for _, msgT := range msgs {
 		msg := transformMessage(msgT)
+		val := venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String() + "attofil").String()
 		row := map[string]interface{}{
 			"ID":         msg.ID,
 			"To":         msg.UnsignedMessage.To,
 			"From":       msg.UnsignedMessage.From,
 			"Nonce":      msg.UnsignedMessage.Nonce,
-			"Value":      venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String() + "attofil"),
+			"Value":      val,
 			"GasLimit":   msg.UnsignedMessage.GasLimit,
 			"GasFeeCap":  msg.UnsignedMessage.GasFeeCap,
 			"GasPremium": msg.UnsignedMessage.GasPremium,
 			"Method":     msg.UnsignedMessage.Method,
-			"Height":     msg.Height,
 			"State":      msg.State,
 			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -388,6 +387,12 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 			}
 			if to := msg.UnsignedMessage.To.String(); len(to) > 9 {
 				row["To"] = to[:9] + "..."
+			}
+			if len(msg.ID) > 36 {
+				row["ID"] = msg.ID[:36] + "..."
+			}
+			if len(val) > 6 {
+				row["Value"] = val[:6] + "..."
 			}
 		}
 		if msg.Receipt != nil {

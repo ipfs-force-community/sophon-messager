@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -34,8 +33,6 @@ const (
 	MaxHeadChangeProcess = 5
 
 	LookBackLimit = 900
-
-	maxStoreTipsetCount = 900
 )
 
 type MessageService struct {
@@ -50,8 +47,7 @@ type MessageService struct {
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
 
-	readFileOnce sync.Once
-	tsCache      *TipsetCache
+	tsCache *TipsetCache
 
 	messageSelector *MessageSelector
 
@@ -68,13 +64,6 @@ type headChan struct {
 	apply, revert []*venusTypes.TipSet
 	isReconnect   bool
 	done          chan error
-}
-
-type TipsetCache struct {
-	Cache      map[int64]*venusTypes.TipSet
-	CurrHeight int64
-
-	l sync.Mutex
 }
 
 type cleanUnFillMsgResult struct {
@@ -100,13 +89,10 @@ func NewMessageService(repo repo.Repo,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
-		messageState:   messageState,
-		addressService: addressService,
-		walletClient:   walletClient,
-		tsCache: &TipsetCache{
-			Cache:      make(map[int64]*venusTypes.TipSet, maxStoreTipsetCount),
-			CurrHeight: 0,
-		},
+		messageState:       messageState,
+		addressService:     addressService,
+		walletClient:       walletClient,
+		tsCache:            newTipsetCache(),
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
 		sps:                sps,
 		nodeService:        nodeService,
@@ -114,8 +100,28 @@ func NewMessageService(repo repo.Repo,
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 	}
 	ms.refreshMessageState(context.TODO())
+	if err := ms.tsCache.Load(ms.cfg.TipsetFilePath); err != nil {
+		ms.log.Infof("load tipset file failed: %v", err)
+	}
 
-	return ms, nil
+	return ms, ms.verifyNetworkName()
+}
+
+func (ms *MessageService) verifyNetworkName() error {
+	networkName, err := ms.nodeClient.StateNetworkName(context.Background())
+	if err != nil {
+		return err
+	}
+	if len(ms.tsCache.NetworkName) != 0 {
+		if ms.tsCache.NetworkName != string(networkName) {
+			return xerrors.Errorf("network name not match, need %s, had %s, please remove `%s`",
+				networkName, ms.tsCache.NetworkName, ms.cfg.TipsetFilePath)
+		}
+		return nil
+	}
+	ms.tsCache.NetworkName = string(networkName)
+
+	return ms.tsCache.Save(ms.cfg.TipsetFilePath)
 }
 
 func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) error {
@@ -434,7 +440,7 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		return nil
 	}
 
-	tsList := ms.tsCache.ListTs()
+	tsList := ms.tsCache.List()
 	sort.Slice(tsList, func(i, j int) bool {
 		return tsList[i].Height() > tsList[j].Height()
 	})
@@ -471,15 +477,6 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
 	ms.log.Infof("reconnect to node")
 
-	ms.readFileOnce.Do(func() {
-		tsCache, err := readTipsetFile(ms.cfg.TipsetFilePath)
-		if err != nil {
-			ms.log.Errorf("read tipset file failed %v", err)
-		} else {
-			ms.tsCache = tsCache
-		}
-	})
-
 	if len(ms.tsCache.Cache) == 0 {
 		count, err := ms.UpdateAllFilledMessage(ctx)
 		if err != nil {
@@ -489,7 +486,7 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		return nil
 	}
 
-	tsList := ms.tsCache.ListTs()
+	tsList := ms.tsCache.List()
 	sort.Slice(tsList, func(i, j int) bool {
 		return tsList[i].Height() > tsList[j].Height()
 	})

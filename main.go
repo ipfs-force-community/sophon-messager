@@ -155,10 +155,6 @@ func runAction(ctx *cli.Context) error {
 		}
 	}
 
-	if err := config.CheckFile(cfg); err != nil {
-		return err
-	}
-
 	log, err := log.SetLogger(&cfg.Log)
 	if err != nil {
 		return err
