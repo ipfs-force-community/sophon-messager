@@ -133,6 +133,11 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
+	_, err := ms.nodeClient.StateGetActor(ctx, msg.From, venusTypes.EmptyTSK)
+	if err != nil {
+		return err
+	}
+
 	has, err := ms.walletClient.WalletHas(ctx, msg.WalletName, msg.From)
 	if err != nil {
 		return err
