@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	"strconv"
 	"time"
 
@@ -101,11 +102,40 @@ var searchCmd = &cli.Command{
 			return xerrors.Errorf("value of query must be entered")
 		}
 
-		bytes, err := json.MarshalIndent(transformMessage(msg), " ", "\t")
+		bytes, err := json.MarshalIndent(transformMessage(msg), "", "\t")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(bytes))
+		fmt.Printf("- message information:\n%s\n", string(bytes))
+
+		getter, closer, err := getActorGetter(ctx)
+		if err != nil {
+			return nil
+		}
+		defer closer()
+		paser, err := actor_parser.NewMessageParser(getter)
+		if err != nil {
+			return nil
+		}
+		params, rets, err := paser.ParseMessage(ctx.Context, msg.VMMessage(), msg.Receipt)
+		if err != nil {
+			return err
+		}
+
+		if params != nil {
+			bytes, _ := json.MarshalIndent(params, "", "\t")
+			if len(bytes) != 0 {
+				fmt.Printf("- params information:\n%s\n", string(bytes))
+			}
+		}
+
+		if rets != nil {
+			bytes, _ := json.MarshalIndent(rets, "", "\t")
+			if len(bytes) != 0 {
+				fmt.Printf("- returns information:\n%s\n", string(bytes))
+			}
+		}
+
 		return nil
 	},
 }
