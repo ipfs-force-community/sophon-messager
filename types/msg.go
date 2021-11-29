@@ -47,7 +47,6 @@ type Message struct {
 	Receipt    *venusTypes.MessageReceipt
 	TipSetKey  venusTypes.TipSetKey
 	Meta       *MsgMeta
-	WalletName string
 	FromUser   string
 
 	State MessageState

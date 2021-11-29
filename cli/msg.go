@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	"strconv"
 	"time"
+
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -721,8 +722,7 @@ type message struct {
 
 	Meta *types.MsgMeta
 
-	WalletName string
-	FromUser   string
+	FromUser string
 
 	State string
 
@@ -751,7 +751,6 @@ func transformMessage(msg *types.Message) *message {
 		Confidence:      msg.Confidence,
 		TipSetKey:       msg.TipSetKey,
 		Meta:            msg.Meta,
-		WalletName:      msg.WalletName,
 		FromUser:        msg.FromUser,
 		State:           types.MsgStateToString(msg.State),
 		UpdatedAt:       msg.UpdatedAt,

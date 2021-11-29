@@ -135,15 +135,16 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 
 	_, err := ms.nodeClient.StateGetActor(ctx, msg.From, venusTypes.EmptyTSK)
 	if err != nil {
+		ms.log.Errorf("not found actor: message id %s, from %s, error: %s", msg.ID, msg.From.String(), err.Error())
 		return err
 	}
 
-	has, err := ms.walletClient.WalletHas(ctx, msg.WalletName, msg.From)
+	has, err := ms.walletClient.WalletHas(ctx, msg.FromUser, msg.From)
 	if err != nil {
 		return err
 	}
 	if !has {
-		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
+		return xerrors.Errorf("wallet(%s) address %s not exists", msg.FromUser, msg.From)
 	}
 	var addrInfo *types.Address
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
@@ -199,7 +200,6 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Unsig
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      account,
 		FromUser:        account,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", newId.String(), err)
@@ -216,7 +216,6 @@ func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg 
 		UnsignedMessage: *msg,
 		Meta:            meta,
 		State:           types.UnFillMsg,
-		WalletName:      account,
 		FromUser:        account,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", id, err)
@@ -990,7 +989,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	if err != nil {
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
+	sig, err := walletCli.WalletSign(ctx, msg.FromUser, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
 		Type:  wallet.MsgType(types.MTChainMsg),
 		Extra: data.RawData(),
 	})

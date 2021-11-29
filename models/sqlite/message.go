@@ -44,8 +44,7 @@ type sqliteMessage struct {
 
 	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
-	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
-	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
+	FromUser string `gorm:"column:from_user;type:varchar(256)"`
 
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
@@ -71,15 +70,14 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
-		Height:     sqlMsg.Height,
-		Receipt:    sqlMsg.Receipt.MsgReceipt(),
-		Signature:  (*crypto.Signature)(sqlMsg.Signature),
-		Meta:       sqlMsg.Meta.Meta(),
-		State:      sqlMsg.State,
-		WalletName: sqlMsg.WalletName,
-		FromUser:   sqlMsg.FromUser,
-		UpdatedAt:  sqlMsg.UpdatedAt,
-		CreatedAt:  sqlMsg.CreatedAt,
+		Height:    sqlMsg.Height,
+		Receipt:   sqlMsg.Receipt.MsgReceipt(),
+		Signature: (*crypto.Signature)(sqlMsg.Signature),
+		Meta:      sqlMsg.Meta.Meta(),
+		State:     sqlMsg.State,
+		FromUser:  sqlMsg.FromUser,
+		UpdatedAt: sqlMsg.UpdatedAt,
+		CreatedAt: sqlMsg.CreatedAt,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -100,22 +98,21 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 
 func FromMessage(srcMsg *types.Message) *sqliteMessage {
 	destMsg := &sqliteMessage{
-		ID:         srcMsg.ID,
-		Version:    srcMsg.Version,
-		To:         srcMsg.To.String(),
-		From:       srcMsg.From.String(),
-		Nonce:      srcMsg.Nonce,
-		GasLimit:   srcMsg.GasLimit,
-		Method:     int(srcMsg.Method),
-		Params:     srcMsg.Params,
-		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
-		Height:     srcMsg.Height,
-		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
-		Meta:       FromMeta(srcMsg.Meta),
-		WalletName: srcMsg.WalletName,
-		FromUser:   srcMsg.FromUser,
-		State:      srcMsg.State,
-		IsDeleted:  repo.NotDeleted,
+		ID:        srcMsg.ID,
+		Version:   srcMsg.Version,
+		To:        srcMsg.To.String(),
+		From:      srcMsg.From.String(),
+		Nonce:     srcMsg.Nonce,
+		GasLimit:  srcMsg.GasLimit,
+		Method:    int(srcMsg.Method),
+		Params:    srcMsg.Params,
+		Signature: (*repo.SqlSignature)(srcMsg.Signature),
+		Height:    srcMsg.Height,
+		Receipt:   repo.FromMsgReceipt(srcMsg.Receipt),
+		Meta:      FromMeta(srcMsg.Meta),
+		FromUser:  srcMsg.FromUser,
+		State:     srcMsg.State,
+		IsDeleted: repo.NotDeleted,
 	}
 
 	if srcMsg.UnsignedCid != nil {

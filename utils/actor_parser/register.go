@@ -1,12 +1,11 @@
 package actor_parser
 
 import (
+	"reflect"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
-	"reflect"
 )
-
-var actors = make(map[cid.Cid]Actor)
 
 type Method struct {
 	Name    string
@@ -21,7 +20,7 @@ type Actor struct {
 	methods map[abi.MethodNum]*Method
 }
 
-func (actor *Actor)lookUpMethod(num int) (*Method, bool) {
+func (actor *Actor) lookUpMethod(num int) (*Method, bool) {
 	method, exist := actor.methods[abi.MethodNum(num)]
 	return method, exist
 }

@@ -3,6 +3,9 @@ package actor_parser
 import (
 	"bytes"
 	"context"
+	"reflect"
+	"strings"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/cbor"
@@ -17,8 +20,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
-	"reflect"
-	"strings"
 )
 
 type ActorGetter interface {
@@ -130,13 +131,13 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 		return nil, nil, xerrors.Errorf("get actor(%s) failed:%w", msg.To.String(), err)
 	}
 
-	var actorType, method, find = (*Actor)(nil), (*Method)(nil), false
-
-	if actorType, find = ms.lookUpActor(actor.Code); !find {
+	actorType, find := ms.lookUpActor(actor.Code)
+	if !find {
 		return nil, nil, xerrors.Errorf("actor code(%s) not registed", actor.Code.String())
 	}
 
-	if method, find = actorType.lookUpMethod(int(msg.Method)); !find {
+	method, find := actorType.lookUpMethod(int(msg.Method))
+	if !find {
 		return nil, nil, xerrors.Errorf("actor:%s method(%d) not exist", actorType.Name, msg.Method)
 	}
 

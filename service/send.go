@@ -53,9 +53,8 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 			Method: params.Method,
 			Params: decParams,
 		},
-		State:      types.UnFillMsg,
-		WalletName: params.Account,
-		FromUser:   params.Account,
+		State:    types.UnFillMsg,
+		FromUser: params.Account,
 	}
 
 	if params.GasPremium != nil {
