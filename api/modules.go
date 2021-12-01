@@ -104,6 +104,10 @@ func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *v
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
 }
 
+func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
+}
+
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
