@@ -64,7 +64,7 @@ func main() {
 	cmap := ast.NewCommentMap(fset, src, src.Comments)
 
 	var methods []string //for code diff
-	for name, _ := range v.Methods {
+	for name := range v.Methods {
 		methods = append(methods, name)
 	}
 

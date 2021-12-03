@@ -6,8 +6,6 @@ import (
 	"reflect"
 )
 
-var actors = make(map[cid.Cid]Actor)
-
 type Method struct {
 	Name    string
 	Num     int
@@ -21,7 +19,7 @@ type Actor struct {
 	methods map[abi.MethodNum]*Method
 }
 
-func (actor *Actor)lookUpMethod(num int) (*Method, bool) {
+func (actor *Actor) lookUpMethod(num int) (*Method, bool) {
 	method, exist := actor.methods[abi.MethodNum(num)]
 	return method, exist
 }

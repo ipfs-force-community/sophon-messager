@@ -264,7 +264,7 @@ func (m MessageImp) ListNode(ctx context.Context) ([]*types.Node, error) {
 }
 
 func (m MessageImp) DeleteNode(ctx context.Context, name string) (struct{}, error) {
-	return m.DeleteNode(ctx, name)
+	return m.NodeSrv.DeleteNode(ctx, name)
 }
 
 func (m MessageImp) SetLogLevel(ctx context.Context, level string) error {
