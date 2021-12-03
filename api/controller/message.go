@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -17,12 +18,18 @@ type Message struct {
 	MsgService *service.MessageService
 }
 
+func (message Message) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+	return message.MsgService.PushMessage(ctx, account, msg, meta)
+}
+
 func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	return message.MsgService.PushMessage(ctx, msg, meta)
+	_, account := ipAccountFromContext(ctx)
+	return message.MsgService.PushMessage(ctx, account, msg, meta)
 }
 
 func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	return message.MsgService.PushMessageWithId(ctx, id, msg, meta)
+	_, account := ipAccountFromContext(ctx)
+	return message.MsgService.PushMessageWithId(ctx, account, id, msg, meta)
 }
 
 func (message Message) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
@@ -99,4 +106,11 @@ func (message Message) RepublishMessage(ctx context.Context, id string) (struct{
 
 func (message Message) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
 	return message.MsgService.MarkBadMessage(ctx, id)
+}
+
+func ipAccountFromContext(ctx context.Context) (string, string) {
+	ip, _ := jwtclient.CtxGetTokenLocation(ctx)
+	account, _ := jwtclient.CtxGetName(ctx)
+
+	return ip, account
 }

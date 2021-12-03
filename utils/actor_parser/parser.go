@@ -130,7 +130,9 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 		return nil, nil, xerrors.Errorf("get actor(%s) failed:%w", msg.To.String(), err)
 	}
 
-	var actorType, method, find = (*Actor)(nil), (*Method)(nil), false
+	var actorType *Actor
+	var method *Method
+	var find bool
 
 	if actorType, find = ms.lookUpActor(actor.Code); !find {
 		return nil, nil, xerrors.Errorf("actor code(%s) not registed", actor.Code.String())
