@@ -212,19 +212,25 @@ func TestMessagePaser_ParseMessage(t *testing.T) {
 		t.Run(tt.name(t), func(t *testing.T) {
 			msgId := tt.msgid()
 			msg := tt.message(t)
-			gotArgs, gotRets, err := ms.ParseMessage(ctx, msg, tt.receipt(t))
+			gotArgs, err := ms.ParseParams(ctx, msg.VMMessage())
 			if (err != nil) != tt.wantErr() {
 				t.Errorf("ParseMessage(%s) error = %v, wantErr %v\n%#v",
 					tt.msgid(), err, tt.wantErr(), msg)
 				return
 			}
-
 			if tt.wantErr() {
 				return
 			}
 			wantArgs := tt.wantArgs(t, reflect.TypeOf(gotArgs))
 			if !reflect.DeepEqual(gotArgs, wantArgs) {
 				t.Errorf("ParseMessage(%v) gotArgs = %v, want %v", msgId, gotArgs, wantArgs)
+			}
+
+			gotRets, err := ms.ParseReturn(ctx, msg.VMMessage(), tt.receipt(t))
+			if (err != nil) != tt.wantErr() {
+				t.Errorf("ParseMessage(%s) error = %v, wantErr %v\n%#v",
+					tt.msgid(), err, tt.wantErr(), msg)
+				return
 			}
 
 			wantRets := tt.wantRet(t, reflect.TypeOf(gotRets))

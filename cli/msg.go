@@ -107,18 +107,28 @@ var searchCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("- message information:\n%s\n", string(bytes))
+		fmt.Printf("-- message information:\n%s\n", string(bytes))
+
+		message := msg.VMMessage()
+		if message.Method == 0 {
+			fmt.Printf("-- this is a send value message\n")
+			return nil
+		}
 
 		getter, closer, err := getActorGetter(ctx)
 		if err != nil {
+			fmt.Printf("May connect to venus node failed, cann't parse message params, please check configurations.\n")
 			return nil
 		}
 		defer closer()
-		paser, err := actor_parser.NewMessageParser(getter)
+
+		parser, err := actor_parser.NewMessageParser(getter)
 		if err != nil {
+			fmt.Printf("new message parser failed: %s\n", err.Error())
 			return nil
 		}
-		params, rets, err := paser.ParseMessage(ctx.Context, msg.VMMessage(), msg.Receipt)
+
+		params, err := parser.ParseParams(ctx.Context, message)
 		if err != nil {
 			return err
 		}
@@ -126,17 +136,20 @@ var searchCmd = &cli.Command{
 		if params != nil {
 			bytes, _ := json.MarshalIndent(params, "", "\t")
 			if len(bytes) != 0 {
-				fmt.Printf("- params information:\n%s\n", string(bytes))
+				fmt.Printf("-- params information:\n%s\n", string(bytes))
 			}
 		}
 
-		if rets != nil {
-			bytes, _ := json.MarshalIndent(rets, "", "\t")
+		ret, err := parser.ParseReturn(ctx.Context, message, msg.Receipt)
+		if err != nil {
+			return err
+		}
+		if ret != nil {
+			bytes, _ := json.MarshalIndent(ret, "", "\t")
 			if len(bytes) != 0 {
-				fmt.Printf("- returns information:\n%s\n", string(bytes))
+				fmt.Printf("-- returns information:\n%s\n", string(bytes))
 			}
 		}
-
 		return nil
 	},
 }

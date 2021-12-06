@@ -297,7 +297,8 @@
     "args": null,
     "return": "",
     "returns": null,
-    "epoch": 1314580
+    "epoch": 1314580,
+    "is_err": true
   },
   {
     "cid": "bafy2bzacecmsrcizhqk3q3ay2elv46eu67nfa2okw7krzkdwya7yrjy2oklpc",
