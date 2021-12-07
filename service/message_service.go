@@ -403,8 +403,8 @@ func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid strin
 	return cid, ms.repo.MessageRepo().UpdateMessageStateByCid(cid, state)
 }
 
-func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
-	return id, ms.repo.MessageRepo().UpdateMessageStateByID(id, state)
+func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
+	return ms.repo.MessageRepo().UpdateMessageStateByID(id, state)
 }
 
 func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *venusTypes.MessageReceipt,
@@ -907,7 +907,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	return signedMsg.Cid(), err
 }
 
-func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) error {
 	return ms.repo.MessageRepo().MarkBadMessage(id)
 }
 
@@ -940,27 +940,27 @@ func (ms *MessageService) RecoverFailedMsg(ctx context.Context, addr address.Add
 	return recoverIDs, nil
 }
 
-func (ms *MessageService) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error {
 	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
-		return struct{}{}, nil
+		return nil
 	}
 	if msg.State == types.OnChainMsg {
-		return struct{}{}, xerrors.Errorf("message already on chain")
+		return xerrors.Errorf("message already on chain")
 	}
 	if msg.State != types.FillMsg {
-		return struct{}{}, xerrors.Errorf("need FillMsg got %s", types.MsgStateToString(msg.State))
+		return xerrors.Errorf("need FillMsg got %s", types.MsgStateToString(msg.State))
 	}
 	signedMsg := &venusTypes.SignedMessage{
 		Message:   msg.UnsignedMessage,
 		Signature: *msg.Signature,
 	}
 	if _, err := ms.nodeClient.MpoolPush(ctx, signedMsg); err != nil {
-		return struct{}{}, err
+		return err
 	}
 	ms.multiNodeToPush(ctx, []*venusTypes.SignedMessage{signedMsg})
 
-	return struct{}{}, nil
+	return nil
 }
 
 func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
@@ -1001,7 +1001,7 @@ func (ms *MessageService) clearUnFillMessage(ctx context.Context, addr address.A
 			return err
 		}
 		for _, msg := range unFillMsgs {
-			if _, err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
+			if err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
 				return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
 			}
 			count++

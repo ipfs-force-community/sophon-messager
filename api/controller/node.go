@@ -12,7 +12,7 @@ type NodeController struct {
 	NodeService *service.NodeService
 }
 
-func (nodeController NodeController) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
+func (nodeController NodeController) SaveNode(ctx context.Context, node *types.Node) error {
 	return nodeController.NodeService.SaveNode(ctx, node)
 }
 
@@ -28,6 +28,6 @@ func (nodeController NodeController) ListNode(ctx context.Context) ([]*types.Nod
 	return nodeController.NodeService.ListNode(ctx)
 }
 
-func (nodeController NodeController) DeleteNode(ctx context.Context, name string) (struct{}, error) {
+func (nodeController NodeController) DeleteNode(ctx context.Context, name string) error {
 	return nodeController.NodeService.DeleteNode(ctx, name)
 }

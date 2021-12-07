@@ -541,12 +541,12 @@ func (m *sqliteMessageRepo) UpdateMessageStateByID(id string, state types.Messag
 		Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *sqliteMessageRepo) MarkBadMessage(id string) (struct{}, error) {
+func (m *sqliteMessageRepo) MarkBadMessage(id string) error {
 	updateColumns := map[string]interface{}{
 		"state":      types.FailedMsg,
 		"updated_at": time.Now(),
 	}
-	return struct{}{}, m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
+	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *sqliteMessageRepo) UpdateReturnValue(id string, returnVal string) error {

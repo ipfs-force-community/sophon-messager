@@ -388,7 +388,7 @@ func TestMarkBadMessage(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		_, err := messageRepo.MarkBadMessage(msgs[0].ID)
+		err := messageRepo.MarkBadMessage(msgs[0].ID)
 		assert.NoError(t, err)
 
 		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)

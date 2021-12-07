@@ -66,7 +66,7 @@ var addNodeCmd = &cli.Command{
 
 		}
 
-		_, err = client.SaveNode(ctx.Context, &node)
+		err = client.SaveNode(ctx.Context, &node)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ var deleteNodeCmd = &cli.Command{
 		}
 		name := ctx.Args().First()
 
-		_, err = client.DeleteNode(ctx.Context, name)
+		err = client.DeleteNode(ctx.Context, name)
 		if err != nil {
 			return err
 		}

@@ -18,19 +18,19 @@ func NewNodeService(repo repo.Repo, logger *log.Logger) *NodeService {
 	return &NodeService{repo: repo, log: logger}
 }
 
-func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
+func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	// try connect node
 	_, close, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
 	if err != nil {
-		return struct{}{}, err
+		return err
 	}
 	close()
 	if err := ns.repo.NodeRepo().SaveNode(node); err != nil {
-		return struct{}{}, err
+		return err
 	}
 	ns.log.Infof("add node %s", node.Name)
 
-	return struct{}{}, nil
+	return nil
 }
 
 func (ns *NodeService) GetNode(ctx context.Context, name string) (*types.Node, error) {
@@ -45,11 +45,11 @@ func (ns *NodeService) ListNode(ctx context.Context) ([]*types.Node, error) {
 	return ns.repo.NodeRepo().ListNode()
 }
 
-func (ns *NodeService) DeleteNode(ctx context.Context, name string) (struct{}, error) {
+func (ns *NodeService) DeleteNode(ctx context.Context, name string) error {
 	if err := ns.repo.NodeRepo().DelNode(name); err != nil {
-		return struct{}{}, err
+		return err
 	}
 	ns.log.Infof("delete node %s", name)
 
-	return struct{}{}, nil
+	return nil
 }

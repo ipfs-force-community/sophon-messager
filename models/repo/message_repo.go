@@ -43,6 +43,6 @@ type MessageRepo interface {
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) error
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageStateByID(id string, state types.MessageState) error
-	MarkBadMessage(id string) (struct{}, error)
+	MarkBadMessage(id string) error
 	UpdateReturnValue(id string, returnVal string) error
 }

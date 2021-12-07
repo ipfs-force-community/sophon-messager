@@ -74,7 +74,7 @@ var setSharedParamsCmd = &cli.Command{
 			params.SelMsgNum = ctx.Uint64("sel-msg-num")
 		}
 
-		_, err = api.SetSharedParams(ctx.Context, params)
+		err = api.SetSharedParams(ctx.Context, params)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ var refreshSharedParamCmd = &cli.Command{
 		}
 		defer closer()
 
-		_, err = client.RefreshSharedParams(ctx.Context)
+		err = client.RefreshSharedParams(ctx.Context)
 		if err != nil {
 			return err
 		}

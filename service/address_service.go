@@ -56,8 +56,8 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 	return address.ID, err
 }
 
-func (addressService *AddressService) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
-	return addr, addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
+func (addressService *AddressService) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
+	return addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
 }
 
 func (addressService *AddressService) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
@@ -80,44 +80,44 @@ func (addressService *AddressService) ListActiveAddress(ctx context.Context) ([]
 	return addressService.repo.AddressRepo().ListActiveAddress(ctx)
 }
 
-func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
-	return addr, addressService.repo.AddressRepo().DelAddress(ctx, addr)
+func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) error {
+	return addressService.repo.AddressRepo().DelAddress(ctx, addr)
 }
 
-func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) error {
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Forbiden); err != nil {
-		return address.Undef, err
+		return err
 	}
 	addressService.log.Infof("forbidden address %v success", addr.String())
 
-	return addr, nil
+	return nil
 }
 
-func (addressService *AddressService) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (addressService *AddressService) ActiveAddress(ctx context.Context, addr address.Address) error {
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Alive); err != nil {
-		return address.Undef, err
+		return err
 	}
 	addressService.log.Infof("active address %v success", addr.String())
 
-	return addr, nil
+	return nil
 }
 
-func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
 	if err := addressService.repo.AddressRepo().UpdateSelectMsgNum(ctx, addr, num); err != nil {
-		return addr, err
+		return err
 	}
 	addressService.log.Infof("set select msg num: %s %d", addr.String(), num)
 
-	return addr, nil
+	return nil
 }
 
-func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFeeStr, maxFeeCapStr string) (address.Address, error) {
+func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFeeStr, maxFeeCapStr string) error {
 	has, err := addressService.repo.AddressRepo().HasAddress(ctx, addr)
 	if err != nil {
-		return address.Undef, err
+		return err
 	}
 	if !has {
-		return address.Undef, errAddressNotExists
+		return errAddressNotExists
 	}
 
 	var needUpdate bool
@@ -125,22 +125,22 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	if len(maxFeeStr) != 0 {
 		maxFee, err = venusTypes.BigFromString(maxFeeStr)
 		if err != nil {
-			return address.Undef, xerrors.Errorf("parsing max-spend: %v", err)
+			return xerrors.Errorf("parsing max-spend: %v", err)
 		}
 		needUpdate = true
 	}
 	if len(maxFeeCapStr) != 0 {
 		maxFeeCap, err = venusTypes.BigFromString(maxFeeCapStr)
 		if err != nil {
-			return address.Undef, xerrors.Errorf("parsing max-feecap: %v", err)
+			return xerrors.Errorf("parsing max-feecap: %v", err)
 		}
 		needUpdate = true
 	}
 	if !needUpdate && gasOverEstimation == 0 {
-		return addr, nil
+		return nil
 	}
 
-	return addr, addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
+	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
 func (addressService *AddressService) ActiveAddresses() map[address.Address]struct{} {

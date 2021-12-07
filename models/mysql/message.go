@@ -541,12 +541,12 @@ func (m *mysqlMessageRepo) UpdateMessageStateByID(id string, state types.Message
 		Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *mysqlMessageRepo) MarkBadMessage(id string) (struct{}, error) {
+func (m *mysqlMessageRepo) MarkBadMessage(id string) error {
 	updateColumns := map[string]interface{}{
 		"state":      types.FailedMsg,
 		"updated_at": time.Now(),
 	}
-	return struct{}{}, m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
+	return m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
 func (m *mysqlMessageRepo) UpdateReturnValue(id string, returnVal string) error {

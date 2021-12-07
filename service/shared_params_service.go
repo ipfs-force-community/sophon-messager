@@ -55,7 +55,7 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 		if !xerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		if _, err = sps.SetSharedParams(ctx, defParams); err != nil {
+		if err = sps.SetSharedParams(ctx, defParams); err != nil {
 			return nil, err
 		}
 		params = defParams
@@ -71,15 +71,15 @@ func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.Sha
 	return sps.repo.SharedParamsRepo().GetSharedParams(ctx)
 }
 
-func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
+func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
 	id, err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
 	if err != nil {
-		return struct{}{}, err
+		return err
 	}
 	params.ID = id
 	sps.SetParams(params)
 
-	return struct{}{}, err
+	return err
 }
 
 func (sps *SharedParamsService) GetParams() *Params {
@@ -103,13 +103,13 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedParams) {
 	sps.log.Infof("new params %v", sharedParams)
 }
 
-func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) (struct{}, error) {
+func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) error {
 	params, err := sps.GetSharedParams(ctx)
 	if err != nil {
-		return struct{}{}, err
+		return err
 	}
 	sps.SetParams(params)
-	return struct{}{}, nil
+	return nil
 }
 
 func (sps *SharedParamsService) refreshParamsLoop() {
