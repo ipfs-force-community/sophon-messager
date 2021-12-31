@@ -68,8 +68,8 @@ func (message Message) ListMessage(ctx context.Context) ([]*types.Message, error
 	return message.MsgService.ListMessage(ctx)
 }
 
-func (message Message) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
-	return message.MsgService.ListMessageByFromState(ctx, from, state, pageIndex, pageSize)
+func (message Message) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
+	return message.MsgService.ListMessageByFromState(ctx, from, state, isAsc, pageIndex, pageSize)
 }
 
 func (message Message) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {

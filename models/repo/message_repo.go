@@ -29,7 +29,7 @@ type MessageRepo interface {
 	GetSignedMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	GetSignedMessageFromFailedMsg(addr address.Address) ([]*types.Message, error)
 	ListMessage() ([]*types.Message, error)
-	ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error)
+	ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFailedMessage() ([]*types.Message, error)
 	ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error)

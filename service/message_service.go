@@ -312,8 +312,8 @@ func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from add
 	return ms.repo.MessageRepo().GetMessageByFromAndNonce(from, nonce)
 }
 
-func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListMessageByFromState(from, state, pageIndex, pageSize)
+func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {

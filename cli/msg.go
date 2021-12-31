@@ -220,7 +220,7 @@ state:
 		pageIndex := ctx.Int("page-index")
 		pageSize := ctx.Int("page-size")
 
-		msgs, err := client.ListMessageByFromState(ctx.Context, from, state, pageIndex, pageSize)
+		msgs, err := client.ListMessageByFromState(ctx.Context, from, state, false, pageIndex, pageSize)
 		if err != nil {
 			return err
 		}
@@ -360,7 +360,6 @@ var tw = tablewriter.New(
 	tablewriter.Col("Method"),
 	tablewriter.Col("State"),
 	tablewriter.Col("ExitCode"),
-	tablewriter.Col("Return"),
 	tablewriter.Col("CreateAt"),
 )
 
@@ -397,7 +396,6 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 		}
 		if msg.Receipt != nil {
 			row["ExitCode"] = msg.Receipt.ExitCode
-			row["Return"] = msg.Receipt.ReturnValue
 		}
 		tw.Write(row)
 	}
