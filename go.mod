@@ -24,9 +24,9 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/metrics v1.0.1-0.20211022060227-11142a08b729
-	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759
-	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20210731031356-770f19abfbcb
+	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
+	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
+	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220106054726-04b7fc958e07
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/multiformats/go-multiaddr v0.4.0
