@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	"strconv"
 	"time"
+
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -573,7 +574,7 @@ var republishCmd = &cli.Command{
 		}
 
 		id := cctx.Args().Get(0)
-		_, err = client.RepublishMessage(cctx.Context, id)
+		err = client.RepublishMessage(cctx.Context, id)
 		if err != nil {
 			return err
 		}
@@ -615,7 +616,7 @@ var markBadCmd = &cli.Command{
 			for _, msg := range msgs {
 				if msg.State == types.UnFillMsg {
 					if msg.Receipt != nil && len(msg.Receipt.ReturnValue) > 0 {
-						_, err = client.MarkBadMessage(cctx.Context, msg.ID)
+						err = client.MarkBadMessage(cctx.Context, msg.ID)
 						if err != nil {
 							fmt.Printf("mark msg %s as bad failed: %v\n", msg.ID, err)
 							continue
@@ -629,7 +630,7 @@ var markBadCmd = &cli.Command{
 				return xerrors.New("must has id argument")
 			}
 			for _, id := range cctx.Args().Slice() {
-				_, err = client.MarkBadMessage(cctx.Context, id)
+				err = client.MarkBadMessage(cctx.Context, id)
 				if err != nil {
 					fmt.Printf("mark msg %s as bad failed: %v\n", id, err)
 					continue
@@ -688,14 +689,14 @@ var recoverFailedMsgCmd = &cli.Command{
 					continue
 				}
 				if msg.Nonce != 0 && msg.Signature != nil {
-					_, err = client.UpdateMessageStateByID(cctx.Context, id, types.FillMsg)
+					err = client.UpdateMessageStateByID(cctx.Context, id, types.FillMsg)
 					if err != nil {
 						fmt.Printf("recover msg %s failed: %v", id, err)
 						continue
 					}
 					fmt.Printf("recover msg %s success, current state: %v, after recover msg state: %v\n", id, msg.State, types.FillMsg)
 				} else {
-					_, err = client.UpdateMessageStateByID(cctx.Context, id, types.UnFillMsg)
+					err = client.UpdateMessageStateByID(cctx.Context, id, types.UnFillMsg)
 					if err != nil {
 						fmt.Printf("recover msg %s failed: %v", id, err)
 						continue

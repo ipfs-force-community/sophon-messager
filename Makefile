@@ -1,4 +1,4 @@
-gengit=$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
+git=$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
 
 ldflags=-X=github.com/filecoin-project/venus-messager/version.GitCommit=${git}
 ifneq ($(strip $(LDFLAGS)),)

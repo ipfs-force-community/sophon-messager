@@ -108,7 +108,7 @@ var updateNonceCmd = &cli.Command{
 		}
 
 		nonce := ctx.Uint64("nonce")
-		if _, err := client.UpdateNonce(ctx.Context, addr, nonce); err != nil {
+		if err := client.UpdateNonce(ctx.Context, addr, nonce); err != nil {
 			return err
 		}
 
@@ -135,7 +135,7 @@ var deleteAddrCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		_, err = client.DeleteAddress(ctx.Context, addr)
+		err = client.DeleteAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ var forbiddenAddrCmd = &cli.Command{
 			return xerrors.Errorf("address not exist")
 		}
 
-		_, err = client.ForbiddenAddress(ctx.Context, addr)
+		err = client.ForbiddenAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -210,7 +210,7 @@ var activeAddrCmd = &cli.Command{
 			return xerrors.Errorf("address not exist")
 		}
 
-		_, err = client.ActiveAddress(ctx.Context, addr)
+		err = client.ActiveAddress(ctx.Context, addr)
 		if err != nil {
 			return err
 		}
@@ -244,7 +244,7 @@ var setAddrSelMsgNumCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if _, err := client.SetSelectMsgNum(ctx.Context, addr, ctx.Uint64("num")); err != nil {
+		if err := client.SetSelectMsgNum(ctx.Context, addr, ctx.Uint64("num")); err != nil {
 			return err
 		}
 
@@ -286,7 +286,7 @@ var setFeeParamsCmd = &cli.Command{
 			return err
 		}
 
-		_, err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.String("max-fee"), ctx.String("max-feecap"))
+		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.String("max-fee"), ctx.String("max-feecap"))
 
 		return err
 	},

@@ -16,10 +16,10 @@ func (spc SharedParamsCtrl) GetSharedParams(ctx context.Context) (*types.SharedP
 	return spc.SharedParamsService.GetSharedParams(ctx)
 }
 
-func (spc SharedParamsCtrl) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
+func (spc SharedParamsCtrl) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
 	return spc.SharedParamsService.SetSharedParams(ctx, params)
 }
 
-func (spc SharedParamsCtrl) RefreshSharedParams(ctx context.Context) (struct{}, error) {
+func (spc SharedParamsCtrl) RefreshSharedParams(ctx context.Context) error {
 	return spc.SharedParamsService.RefreshSharedParams(ctx)
 }

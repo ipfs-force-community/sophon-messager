@@ -3,14 +3,15 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-messager/types"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs/go-cid"
 	"net"
 	"net/http"
 	"reflect"
 	"time"
+
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus-messager/types"
+	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
@@ -122,10 +123,6 @@ func (m MessageImp) GetMessageByUid(ctx context.Context, id string) (*types.Mess
 	return m.MessageSrv.GetMessageByUid(ctx, id)
 }
 
-func (m MessageImp) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
-	return m.MessageSrv.GetMessageByCid(ctx, id)
-}
-
 func (m MessageImp) GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error) {
 	return m.MessageSrv.GetMessageBySignedCid(ctx, cid)
 }
@@ -158,7 +155,7 @@ func (m MessageImp) ListBlockedMessage(ctx context.Context, addr address.Address
 	return m.MessageSrv.ListBlockedMessage(ctx, addr, d)
 }
 
-func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
+func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
 	return m.MessageSrv.UpdateMessageStateByID(ctx, id, state)
 }
 
@@ -174,20 +171,16 @@ func (m MessageImp) ReplaceMessage(ctx context.Context, id string, auto bool, ma
 	return m.MessageSrv.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
 
-func (m MessageImp) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
 	return m.MessageSrv.RepublishMessage(ctx, id)
 }
 
-func (m MessageImp) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+func (m MessageImp) MarkBadMessage(ctx context.Context, id string) error {
 	return m.MessageSrv.MarkBadMessage(ctx, id)
 }
 
 func (m MessageImp) RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error) {
 	return m.MessageSrv.RecoverFailedMsg(ctx, addr)
-}
-
-func (m MessageImp) SaveAddress(ctx context.Context, addr *types.Address) (types.UUID, error) {
-	return m.AddressSrv.SaveAddress(ctx, addr)
 }
 
 func (m MessageImp) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
@@ -207,27 +200,27 @@ func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	return m.AddressSrv.ListAddress(ctx)
 }
 
-func (m MessageImp) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
+func (m MessageImp) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
 	return m.AddressSrv.UpdateNonce(ctx, addr, nonce)
 }
 
-func (m MessageImp) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (m MessageImp) DeleteAddress(ctx context.Context, addr address.Address) error {
 	return m.AddressSrv.DeleteAddress(ctx, addr)
 }
 
-func (m MessageImp) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (m MessageImp) ForbiddenAddress(ctx context.Context, addr address.Address) error {
 	return m.AddressSrv.ForbiddenAddress(ctx, addr)
 }
 
-func (m MessageImp) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (m MessageImp) ActiveAddress(ctx context.Context, addr address.Address) error {
 	return m.AddressSrv.ActiveAddress(ctx, addr)
 }
 
-func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
-func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) {
+func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error {
 	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
@@ -239,15 +232,15 @@ func (m MessageImp) GetSharedParams(ctx context.Context) (*types.SharedParams, e
 	return m.ParamsSrv.GetSharedParams(ctx)
 }
 
-func (m MessageImp) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
+func (m MessageImp) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
 	return m.ParamsSrv.SetSharedParams(ctx, params)
 }
 
-func (m MessageImp) RefreshSharedParams(ctx context.Context) (struct{}, error) {
+func (m MessageImp) RefreshSharedParams(ctx context.Context) error {
 	return m.ParamsSrv.RefreshSharedParams(ctx)
 }
 
-func (m MessageImp) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
+func (m MessageImp) SaveNode(ctx context.Context, node *types.Node) error {
 	return m.NodeSrv.SaveNode(ctx, node)
 }
 
@@ -263,7 +256,7 @@ func (m MessageImp) ListNode(ctx context.Context) ([]*types.Node, error) {
 	return m.NodeSrv.ListNode(ctx)
 }
 
-func (m MessageImp) DeleteNode(ctx context.Context, name string) (struct{}, error) {
+func (m MessageImp) DeleteNode(ctx context.Context, name string) error {
 	return m.NodeSrv.DeleteNode(ctx, name)
 }
 

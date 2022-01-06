@@ -19,7 +19,6 @@ type IMessager interface {
 	PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                                                     //perm:write
 	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)                                    //perm:write
 	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)                                                                                    //perm:read
-	GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error)                                                                                   //perm:read
 	GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                                            //perm:read
 	GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error)                                                                          //perm:read
 	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)                                                  //perm:read
@@ -28,36 +27,35 @@ type IMessager interface {
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)                                                                  //perm:admin
 	ListFailedMessage(ctx context.Context) ([]*types.Message, error)                                                                                           //perm:admin
 	ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)                                                   //perm:admin
-	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error)                                                           //perm:admin
+	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error                                                                     //perm:admin
 	UpdateAllFilledMessage(ctx context.Context) (int, error)                                                                                                   //perm:admin
 	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)                                                                                    //perm:admin
 	ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)             //perm:admin
-	RepublishMessage(ctx context.Context, id string) (struct{}, error)                                                                                         //perm:admin
-	MarkBadMessage(ctx context.Context, id string) (struct{}, error)                                                                                           //perm:admin
+	RepublishMessage(ctx context.Context, id string) error                                                                                                     //perm:admin
+	MarkBadMessage(ctx context.Context, id string) error                                                                                                       //perm:admin
 	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)                                                                              //perm:admin
 
-	SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error)                                                          //perm:admin
-	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                                         //perm:admin
-	HasAddress(ctx context.Context, addr address.Address) (bool, error)                                                                   //perm:read
-	WalletHas(ctx context.Context, addr address.Address) (bool, error)                                                                    //perm:read
-	ListAddress(ctx context.Context) ([]*types.Address, error)                                                                            //perm:admin
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)                                         //perm:admin
-	DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
-	ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                  //perm:admin
-	ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error)                                                     //perm:admin
-	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error)                                       //perm:admin
-	SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) //perm:admin
-	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)                                                            //perm:admin
+	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)                                      //perm:admin
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)                                                //perm:read
+	WalletHas(ctx context.Context, addr address.Address) (bool, error)                                                 //perm:read
+	ListAddress(ctx context.Context) ([]*types.Address, error)                                                         //perm:admin
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error                                         //perm:admin
+	DeleteAddress(ctx context.Context, addr address.Address) error                                                     //perm:admin
+	ForbiddenAddress(ctx context.Context, addr address.Address) error                                                  //perm:admin
+	ActiveAddress(ctx context.Context, addr address.Address) error                                                     //perm:admin
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error                                       //perm:admin
+	SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error //perm:admin
+	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)                                         //perm:admin
 
-	GetSharedParams(ctx context.Context) (*types.SharedParams, error)                  //perm:admin
-	SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) //perm:admin
-	RefreshSharedParams(ctx context.Context) (struct{}, error)                         //perm:admin
+	GetSharedParams(ctx context.Context) (*types.SharedParams, error)      //perm:admin
+	SetSharedParams(ctx context.Context, params *types.SharedParams) error //perm:admin
+	RefreshSharedParams(ctx context.Context) error                         //perm:admin
 
-	SaveNode(ctx context.Context, node *types.Node) (struct{}, error) //perm:admin
-	GetNode(ctx context.Context, name string) (*types.Node, error)    //perm:admin
-	HasNode(ctx context.Context, name string) (bool, error)           //perm:admin
-	ListNode(ctx context.Context) ([]*types.Node, error)              //perm:admin
-	DeleteNode(ctx context.Context, name string) (struct{}, error)    //perm:admin
+	SaveNode(ctx context.Context, node *types.Node) error          //perm:admin
+	GetNode(ctx context.Context, name string) (*types.Node, error) //perm:admin
+	HasNode(ctx context.Context, name string) (bool, error)        //perm:admin
+	ListNode(ctx context.Context) ([]*types.Node, error)           //perm:admin
+	DeleteNode(ctx context.Context, name string) error             //perm:admin
 
 	SetLogLevel(ctx context.Context, level string) error //perm:admin
 
@@ -75,7 +73,6 @@ type Message struct {
 		PushMessage              func(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		PushMessageWithId        func(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error)
 		GetMessageByUid          func(ctx context.Context, id string) (*types.Message, error)
-		GetMessageByCid          func(ctx context.Context, id cid.Cid) (*types.Message, error)
 		GetMessageBySignedCid    func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByUnsignedCid  func(ctx context.Context, cid cid.Cid) (*types.Message, error)
 		GetMessageByFromAndNonce func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
@@ -84,36 +81,35 @@ type Message struct {
 		ListMessageByFromState   func(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
 		ListFailedMessage        func(ctx context.Context) ([]*types.Message, error)
 		ListBlockedMessage       func(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error)
-		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) (string, error)
+		UpdateMessageStateByID   func(ctx context.Context, id string, state types.MessageState) error
 		UpdateAllFilledMessage   func(ctx context.Context) (int, error)
 		UpdateFilledMessageByID  func(ctx context.Context, id string) (string, error)
 		ReplaceMessage           func(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error)
-		RepublishMessage         func(ctx context.Context, id string) (struct{}, error)
-		MarkBadMessage           func(ctx context.Context, id string) (struct{}, error)
+		RepublishMessage         func(ctx context.Context, id string) error
+		MarkBadMessage           func(ctx context.Context, id string) error
 		RecoverFailedMsg         func(ctx context.Context, addr address.Address) ([]string, error)
 
-		SaveAddress        func(ctx context.Context, address *types.Address) (types.UUID, error)
 		GetAddress         func(ctx context.Context, addr address.Address) (*types.Address, error)
 		HasAddress         func(ctx context.Context, addr address.Address) (bool, error)
 		WalletHas          func(ctx context.Context, addr address.Address) (bool, error)
 		ListAddress        func(ctx context.Context) ([]*types.Address, error)
-		UpdateNonce        func(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error)
-		DeleteAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
-		ForbiddenAddress   func(ctx context.Context, addr address.Address) (address.Address, error)
-		ActiveAddress      func(ctx context.Context, addr address.Address) (address.Address, error)
-		SetSelectMsgNum    func(ctx context.Context, addr address.Address, num uint64) (address.Address, error)
-		SetFeeParams       func(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error)
+		UpdateNonce        func(ctx context.Context, addr address.Address, nonce uint64) error
+		DeleteAddress      func(ctx context.Context, addr address.Address) error
+		ForbiddenAddress   func(ctx context.Context, addr address.Address) error
+		ActiveAddress      func(ctx context.Context, addr address.Address) error
+		SetSelectMsgNum    func(ctx context.Context, addr address.Address, num uint64) error
+		SetFeeParams       func(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error
 		ClearUnFillMessage func(ctx context.Context, addr address.Address) (int, error)
 
 		GetSharedParams     func(context.Context) (*types.SharedParams, error)
-		SetSharedParams     func(context.Context, *types.SharedParams) (struct{}, error)
-		RefreshSharedParams func(ctx context.Context) (struct{}, error)
+		SetSharedParams     func(context.Context, *types.SharedParams) error
+		RefreshSharedParams func(ctx context.Context) error
 
-		SaveNode   func(ctx context.Context, node *types.Node) (struct{}, error)
+		SaveNode   func(ctx context.Context, node *types.Node) error
 		GetNode    func(ctx context.Context, name string) (*types.Node, error)
 		HasNode    func(ctx context.Context, name string) (bool, error)
 		ListNode   func(ctx context.Context) ([]*types.Node, error)
-		DeleteNode func(ctx context.Context, name string) (struct{}, error)
+		DeleteNode func(ctx context.Context, name string) error
 
 		SetLogLevel func(ctx context.Context, level string) error
 
@@ -143,10 +139,6 @@ func (message *Message) PushMessageWithId(ctx context.Context, id string, msg *v
 
 func (message *Message) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
 	return message.Internal.GetMessageByUid(ctx, id)
-}
-
-func (message *Message) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
-	return message.Internal.GetMessageByCid(ctx, id)
 }
 
 func (message *Message) GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*types.Message, error) {
@@ -181,7 +173,7 @@ func (message *Message) ListBlockedMessage(ctx context.Context, addr address.Add
 	return message.Internal.ListBlockedMessage(ctx, addr, d)
 }
 
-func (message *Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
+func (message *Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
 	return message.Internal.UpdateMessageStateByID(ctx, id, state)
 }
 
@@ -197,11 +189,11 @@ func (message *Message) ReplaceMessage(ctx context.Context, id string, auto bool
 	return message.Internal.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
 
-func (message *Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+func (message *Message) RepublishMessage(ctx context.Context, id string) error {
 	return message.Internal.RepublishMessage(ctx, id)
 }
 
-func (message *Message) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+func (message *Message) MarkBadMessage(ctx context.Context, id string) error {
 	return message.Internal.MarkBadMessage(ctx, id)
 }
 
@@ -214,10 +206,6 @@ func (message *Message) RecoverFailedMsg(ctx context.Context, addr address.Addre
 }
 
 ///////  address ///////
-
-func (message *Message) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
-	return message.Internal.SaveAddress(ctx, address)
-}
 
 func (message *Message) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	return message.Internal.GetAddress(ctx, addr)
@@ -235,23 +223,23 @@ func (message *Message) ListAddress(ctx context.Context) ([]*types.Address, erro
 	return message.Internal.ListAddress(ctx)
 }
 
-func (message *Message) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) (address.Address, error) {
+func (message *Message) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
 	return message.Internal.UpdateNonce(ctx, addr, nonce)
 }
 
-func (message *Message) DeleteAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (message *Message) DeleteAddress(ctx context.Context, addr address.Address) error {
 	return message.Internal.DeleteAddress(ctx, addr)
 }
 
-func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (message *Message) ForbiddenAddress(ctx context.Context, addr address.Address) error {
 	return message.Internal.ForbiddenAddress(ctx, addr)
 }
 
-func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+func (message *Message) ActiveAddress(ctx context.Context, addr address.Address) error {
 	return message.Internal.ActiveAddress(ctx, addr)
 }
 
-func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) (address.Address, error) {
+func (message *Message) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
 	return message.Internal.SetSelectMsgNum(ctx, addr, num)
 }
 
@@ -259,7 +247,7 @@ func (message *Message) ClearUnFillMessage(ctx context.Context, addr address.Add
 	return message.Internal.ClearUnFillMessage(ctx, addr)
 }
 
-func (message *Message) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) (address.Address, error) {
+func (message *Message) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error {
 	return message.Internal.SetFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
 }
 
@@ -269,17 +257,17 @@ func (message *Message) GetSharedParams(ctx context.Context) (*types.SharedParam
 	return message.Internal.GetSharedParams(ctx)
 }
 
-func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) (struct{}, error) {
+func (message *Message) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
 	return message.Internal.SetSharedParams(ctx, params)
 }
 
-func (message *Message) RefreshSharedParams(ctx context.Context) (struct{}, error) {
+func (message *Message) RefreshSharedParams(ctx context.Context) error {
 	return message.Internal.RefreshSharedParams(ctx)
 }
 
 /////// node info ///////
 
-func (message *Message) SaveNode(ctx context.Context, node *types.Node) (struct{}, error) {
+func (message *Message) SaveNode(ctx context.Context, node *types.Node) error {
 	return message.Internal.SaveNode(ctx, node)
 }
 
@@ -295,7 +283,7 @@ func (message *Message) ListNode(ctx context.Context) ([]*types.Node, error) {
 	return message.Internal.ListNode(ctx)
 }
 
-func (message *Message) DeleteNode(ctx context.Context, name string) (struct{}, error) {
+func (message *Message) DeleteNode(ctx context.Context, name string) error {
 	return message.Internal.DeleteNode(ctx, name)
 }
 

@@ -2,8 +2,9 @@ package controller
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"time"
+
+	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 
 	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/pkg/types"
@@ -84,7 +85,7 @@ func (message Message) ListBlockedMessage(ctx context.Context, addr address.Addr
 	return message.MsgService.ListBlockedMessage(ctx, addr, d)
 }
 
-func (message Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) (string, error) {
+func (message Message) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
 	return message.MsgService.UpdateMessageStateByID(ctx, id, state)
 }
 
@@ -100,11 +101,11 @@ func (message Message) ReplaceMessage(ctx context.Context, id string, auto bool,
 	return message.MsgService.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
 }
 
-func (message Message) RepublishMessage(ctx context.Context, id string) (struct{}, error) {
+func (message Message) RepublishMessage(ctx context.Context, id string) error {
 	return message.MsgService.RepublishMessage(ctx, id)
 }
 
-func (message Message) MarkBadMessage(ctx context.Context, id string) (struct{}, error) {
+func (message Message) MarkBadMessage(ctx context.Context, id string) error {
 	return message.MsgService.MarkBadMessage(ctx, id)
 }
 
