@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 

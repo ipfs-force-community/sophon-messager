@@ -14,7 +14,8 @@ import (
 	exported4 "github.com/filecoin-project/specs-actors/v4/actors/builtin/exported"
 	exported5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/exported"
 	exported6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/exported"
-	"github.com/filecoin-project/venus/pkg/types"
+	exported7 "github.com/filecoin-project/specs-actors/v7/actors/builtin/exported"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"reflect"
@@ -118,6 +119,9 @@ func NewMessageParser(getter ActorGetter) (*MessagePaser, error) {
 	if err = parser.registActors(exported6.BuiltinActors()...); err != nil {
 		return nil, xerrors.Errorf("registerActors actors v5 failed:%w", err)
 	}
+	if err = parser.registActors(exported7.BuiltinActors()...); err != nil {
+		return nil, xerrors.Errorf("registerActors actors v5 failed:%w", err)
+	}
 	return parser, nil
 }
 
@@ -154,7 +158,7 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 	if receipt != nil {
 		out = reflect.New(method.outType).Interface()
 		if unmarshaler, isok := out.(cbor.Unmarshaler); isok {
-			if err = unmarshaler.UnmarshalCBOR(bytes.NewReader(receipt.ReturnValue)); err != nil {
+			if err = unmarshaler.UnmarshalCBOR(bytes.NewReader(receipt.Return)); err != nil {
 				return nil, nil, xerrors.Errorf("unmarshalerCBOR msg returns failed:%w", err)
 			}
 		}

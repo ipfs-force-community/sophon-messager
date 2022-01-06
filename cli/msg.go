@@ -14,7 +14,7 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/venus/pkg/constants"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -166,7 +166,7 @@ var waitMessagerCmd = &cli.Command{
 		fmt.Println("Tipset:", msg.TipSetKey.String())
 		fmt.Println("exitcode:", msg.Receipt.ExitCode)
 		fmt.Println("gas_used:", msg.Receipt.GasUsed)
-		fmt.Println("return_value:", string(msg.Receipt.ReturnValue))
+		fmt.Println("return_value:", string(msg.Receipt.Return))
 		return nil
 	},
 }
@@ -367,25 +367,25 @@ var tw = tablewriter.New(
 func outputWithTable(msgs []*types.Message, verbose bool) error {
 	for _, msgT := range msgs {
 		msg := transformMessage(msgT)
-		val := venusTypes.MustParseFIL(msg.UnsignedMessage.Value.String() + "attofil").String()
+		val := venusTypes.MustParseFIL(msg.Message.Value.String() + "attofil").String()
 		row := map[string]interface{}{
 			"ID":         msg.ID,
-			"To":         msg.UnsignedMessage.To,
-			"From":       msg.UnsignedMessage.From,
-			"Nonce":      msg.UnsignedMessage.Nonce,
+			"To":         msg.Message.To,
+			"From":       msg.Message.From,
+			"Nonce":      msg.Message.Nonce,
 			"Value":      val,
-			"GasLimit":   msg.UnsignedMessage.GasLimit,
-			"GasFeeCap":  msg.UnsignedMessage.GasFeeCap,
-			"GasPremium": msg.UnsignedMessage.GasPremium,
-			"Method":     msg.UnsignedMessage.Method,
+			"GasLimit":   msg.Message.GasLimit,
+			"GasFeeCap":  msg.Message.GasFeeCap,
+			"GasPremium": msg.Message.GasPremium,
+			"Method":     msg.Message.Method,
 			"State":      msg.State,
 			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		if !verbose {
-			if from := msg.UnsignedMessage.From.String(); len(from) > 9 {
+			if from := msg.Message.From.String(); len(from) > 9 {
 				row["From"] = from[:9] + "..."
 			}
-			if to := msg.UnsignedMessage.To.String(); len(to) > 9 {
+			if to := msg.Message.To.String(); len(to) > 9 {
 				row["To"] = to[:9] + "..."
 			}
 			if len(msg.ID) > 36 {
@@ -397,6 +397,7 @@ func outputWithTable(msgs []*types.Message, verbose bool) error {
 		}
 		if msg.Receipt != nil {
 			row["ExitCode"] = msg.Receipt.ExitCode
+			row["Return"] = msg.Receipt.Return
 		}
 		tw.Write(row)
 	}
@@ -615,7 +616,7 @@ var markBadCmd = &cli.Command{
 			}
 			for _, msg := range msgs {
 				if msg.State == types.UnFillMsg {
-					if msg.Receipt != nil && len(msg.Receipt.ReturnValue) > 0 {
+					if msg.Receipt != nil && len(msg.Receipt.Return) > 0 {
 						err = client.MarkBadMessage(cctx.Context, msg.ID)
 						if err != nil {
 							fmt.Printf("mark msg %s as bad failed: %v\n", msg.ID, err)
@@ -715,7 +716,7 @@ type message struct {
 
 	UnsignedCid *cid.Cid
 	SignedCid   *cid.Cid
-	venusTypes.UnsignedMessage
+	venusTypes.Message
 	Signature *crypto.Signature
 
 	Height     int64
@@ -735,9 +736,9 @@ type message struct {
 }
 
 type receipt struct {
-	ExitCode    exitcode.ExitCode
-	ReturnValue string
-	GasUsed     int64
+	ExitCode exitcode.ExitCode
+	Return   string
+	GasUsed  int64
 }
 
 func transformMessage(msg *types.Message) *message {
@@ -746,26 +747,26 @@ func transformMessage(msg *types.Message) *message {
 	}
 
 	m := &message{
-		ID:              msg.ID,
-		UnsignedCid:     msg.UnsignedCid,
-		SignedCid:       msg.SignedCid,
-		UnsignedMessage: msg.UnsignedMessage,
-		Signature:       msg.Signature,
-		Height:          msg.Height,
-		Confidence:      msg.Confidence,
-		TipSetKey:       msg.TipSetKey,
-		Meta:            msg.Meta,
-		WalletName:      msg.WalletName,
-		FromUser:        msg.FromUser,
-		State:           types.MsgStateToString(msg.State),
-		UpdatedAt:       msg.UpdatedAt,
-		CreatedAt:       msg.CreatedAt,
+		ID:          msg.ID,
+		UnsignedCid: msg.UnsignedCid,
+		SignedCid:   msg.SignedCid,
+		Message:     msg.Message,
+		Signature:   msg.Signature,
+		Height:      msg.Height,
+		Confidence:  msg.Confidence,
+		TipSetKey:   msg.TipSetKey,
+		Meta:        msg.Meta,
+		WalletName:  msg.WalletName,
+		FromUser:    msg.FromUser,
+		State:       types.MsgStateToString(msg.State),
+		UpdatedAt:   msg.UpdatedAt,
+		CreatedAt:   msg.CreatedAt,
 	}
 	if msg.Receipt != nil {
 		m.Receipt = &receipt{
-			ExitCode:    msg.Receipt.ExitCode,
-			ReturnValue: string(msg.Receipt.ReturnValue),
-			GasUsed:     msg.Receipt.GasUsed,
+			ExitCode: msg.Receipt.ExitCode,
+			Return:   string(msg.Receipt.Return),
+			GasUsed:  msg.Receipt.GasUsed,
 		}
 	}
 

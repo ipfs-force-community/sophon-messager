@@ -11,7 +11,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
@@ -102,7 +102,7 @@ func main() {
 			}
 			uid, err := client.PushMessageWithId(context.Background(),
 				types.NewUUID().String(),
-				&venustypes.UnsignedMessage{
+				&venustypes.Message{
 					Version: 0,
 					To:      to,
 					From:    from,

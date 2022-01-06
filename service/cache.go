@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-messager/utils"
 )

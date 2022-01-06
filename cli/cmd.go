@@ -6,7 +6,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/utils/actor_parser"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/urfave/cli/v2"
 

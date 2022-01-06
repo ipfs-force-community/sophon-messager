@@ -9,7 +9,7 @@ import (
 	cbor "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-actors/v6/actors/builtin"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
 	"io/ioutil"
@@ -137,12 +137,12 @@ func (c testCase) msgid() string {
 func (c testCase) receipt(t *testing.T) *types.MessageReceipt {
 	// doesn't care about other filed
 	return &types.MessageReceipt{
-		ReturnValue: c.base64Field(t, "return"),
+		Return: c.base64Field(t, "return"),
 	}
 }
 
-func (c testCase) message(t *testing.T) *types.UnsignedMessage {
-	return &types.UnsignedMessage{
+func (c testCase) message(t *testing.T) *types.Message {
+	return &types.Message{
 		Version: 0,
 		To:      c.addressFiled(t, "to"),
 		Method:  abi.MethodNum(c.numField(t, "method")),

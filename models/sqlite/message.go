@@ -10,7 +10,7 @@ import (
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-messager/utils"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 )
@@ -61,7 +61,7 @@ func (sqlMsg *sqliteMessage) TableName() string {
 func (sqlMsg *sqliteMessage) Message() *types.Message {
 	var destMsg = &types.Message{
 		ID: sqlMsg.ID,
-		UnsignedMessage: venustypes.UnsignedMessage{
+		Message: venustypes.Message{
 			Version:    sqlMsg.Version,
 			Nonce:      sqlMsg.Nonce,
 			Value:      big.NewFromGo(sqlMsg.Value.Int),
@@ -512,7 +512,7 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),
 		"receipt_exit_code":    rcp.ExitCode,
-		"receipt_return_value": rcp.ReturnValue,
+		"receipt_return_value": rcp.Return,
 		"receipt_gas_used":     rcp.GasUsed,
 		"state":                state,
 		"tipset_key":           tsKey.String(),

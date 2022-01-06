@@ -9,7 +9,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"golang.org/x/xerrors"
 )
 
