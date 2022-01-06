@@ -196,15 +196,19 @@ func newMysqlMessageRepo(db *gorm.DB) *mysqlMessageRepo {
 	return &mysqlMessageRepo{DB: db}
 }
 
-func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
+func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
 	query := m.DB.Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
 
 	if from != address.Undef {
 		query = query.Where("from_addr=?", from.String())
 	}
-	if state != types.OnChainMsg { // too much OnChainMsg, do not sort
-		query = query.Order("created_at")
+
+	if isAsc {
+		query = query.Order("created_at ASC")
+	} else {
+		query = query.Order("created_at DESC")
 	}
+
 	query = query.Where("state=?", state)
 
 	var sqlMsgs []*mysqlMessage

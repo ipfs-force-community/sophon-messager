@@ -142,8 +142,8 @@ func (m MessageImp) ListMessage(ctx context.Context) ([]*types.Message, error) {
 	return m.MessageSrv.ListMessage(ctx)
 }
 
-func (m MessageImp) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, pageIndex, pageSize int) ([]*types.Message, error) {
-	return m.MessageSrv.ListMessageByFromState(ctx, from, state, pageIndex, pageSize)
+func (m MessageImp) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
+	return m.MessageSrv.ListMessageByFromState(ctx, from, state, isAsc, pageIndex, pageSize)
 }
 
 func (m MessageImp) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
