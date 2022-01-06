@@ -9,7 +9,7 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/ipfs/go-cid"
 )
@@ -25,7 +25,7 @@ type EstimateResult struct {
 }
 
 type NodeClient struct {
-	ChainNotify              func(context.Context) (<-chan []*chain.HeadChange, error)
+	ChainNotify              func(context.Context) (<-chan []*types.HeadChange, error)
 	ChainHead                func(context.Context) (*types.TipSet, error)
 	ChainGetTipSet           func(context.Context, types.TipSetKey) (*types.TipSet, error)
 	ChainGetBlock            func(context.Context, cid.Cid) (*types.BlockHeader, error)
@@ -38,10 +38,10 @@ type NodeClient struct {
 	StateGetActor            func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)
 	StateLookupID            func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
 
-	GasEstimateMessageGas      func(context.Context, *types.UnsignedMessage, *types.MessageSendSpec, types.TipSetKey) (*types.UnsignedMessage, error)
-	GasEstimateFeeCap          func(context.Context, *types.UnsignedMessage, int64, types.TipSetKey) (big.Int, error)
+	GasEstimateMessageGas      func(context.Context, *types.Message, *types.MessageSendSpec, types.TipSetKey) (*types.Message, error)
+	GasEstimateFeeCap          func(context.Context, *types.Message, int64, types.TipSetKey) (big.Int, error)
 	GasEstimateGasPremium      func(context.Context, uint64, address.Address, int64, types.TipSetKey) (big.Int, error)
-	GasEstimateGasLimit        func(ctx context.Context, msgIn *types.UnsignedMessage, tsk types.TipSetKey) (int64, error)
+	GasEstimateGasLimit        func(ctx context.Context, msgIn *types.Message, tsk types.TipSetKey) (int64, error)
 	GasBatchEstimateMessageGas func(ctx context.Context, estimateMessages []*EstimateMessage, fromNonce uint64, tsk types.TipSetKey) ([]*EstimateResult, error)
 
 	MpoolPush      func(context.Context, *types.SignedMessage) (cid.Cid, error)

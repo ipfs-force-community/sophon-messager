@@ -7,7 +7,7 @@ import (
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 
 	"github.com/filecoin-project/go-address"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/venus-messager/service"
@@ -19,16 +19,16 @@ type Message struct {
 	MsgService *service.MessageService
 }
 
-func (message Message) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (message Message) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	return message.MsgService.PushMessage(ctx, account, msg, meta)
 }
 
-func (message Message) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (message Message) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return message.MsgService.PushMessage(ctx, account, msg, meta)
 }
 
-func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (message Message) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return message.MsgService.PushMessageWithId(ctx, account, id, msg, meta)
 }

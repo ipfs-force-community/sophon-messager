@@ -10,8 +10,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	types2 "github.com/filecoin-project/venus/pkg/types"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -27,10 +27,10 @@ func NewSignedMessages(count int) []*types.Message {
 		msg := NewMessage()
 		msg.Nonce = uint64(i)
 		msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())}
-		unsignedCid := msg.UnsignedMessage.Cid()
+		unsignedCid := msg.Message.Cid()
 		msg.UnsignedCid = &unsignedCid
 		signedCid := (&venustypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		}).Cid()
 		msg.SignedCid = &signedCid
@@ -51,8 +51,8 @@ func NewMessages(count int) []*types.Message {
 
 func NewMessage() *types.Message {
 	return &types.Message{
-		ID:              types.NewUUID().String(),
-		UnsignedMessage: NewUnsignedMessage(),
+		ID:      types.NewUUID().String(),
+		Message: NewUnsignedMessage(),
 		Meta: &types.MsgMeta{
 			ExpireEpoch:       100,
 			MaxFee:            big.NewInt(10),
@@ -63,13 +63,13 @@ func NewMessage() *types.Message {
 	}
 }
 
-func NewUnsignedMessage() types2.UnsignedMessage {
+func NewUnsignedMessage() types2.Message {
 	rand.Seed(time.Now().Unix())
 	uid, _ := uuid.NewUUID()
 	from, _ := address.NewActorAddress(uid[:])
 	uid, _ = uuid.NewUUID()
 	to, _ := address.NewActorAddress(uid[:])
-	return types2.UnsignedMessage{
+	return types2.Message{
 		From:       from,
 		To:         to,
 		Value:      big.NewInt(rand.Int63n(1024)),

@@ -7,7 +7,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type NodeEvents struct {

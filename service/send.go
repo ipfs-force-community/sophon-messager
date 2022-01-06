@@ -6,13 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"reflect"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/venus/pkg/chain"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 
@@ -45,7 +45,7 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	uuid := types.NewUUID().String()
 	msg := &types.Message{
 		ID: uuid,
-		UnsignedMessage: venusTypes.UnsignedMessage{
+		Message: venusTypes.Message{
 			From:  params.From,
 			To:    params.To,
 			Value: params.Val,
@@ -59,19 +59,19 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	}
 
 	if params.GasPremium != nil {
-		msg.GasPremium = *params.GasPremium
+		msg.Message.GasPremium = *params.GasPremium
 	} else {
-		msg.UnsignedMessage.GasPremium = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasPremium = abi.TokenAmount{Int: types.NewInt(0).Int}
 	}
 	if params.GasFeeCap != nil {
-		msg.UnsignedMessage.GasFeeCap = *params.GasFeeCap
+		msg.Message.GasFeeCap = *params.GasFeeCap
 	} else {
-		msg.UnsignedMessage.GasFeeCap = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasFeeCap = abi.TokenAmount{Int: types.NewInt(0).Int}
 	}
 	if params.GasLimit != nil {
-		msg.UnsignedMessage.GasLimit = *params.GasLimit
+		msg.Message.GasLimit = *params.GasLimit
 	} else {
-		msg.UnsignedMessage.GasLimit = 0
+		msg.Message.GasLimit = 0
 	}
 
 	err = ms.pushMessage(ctx, msg)

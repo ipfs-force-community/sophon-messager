@@ -5,8 +5,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 

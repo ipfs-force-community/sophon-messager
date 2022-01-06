@@ -10,7 +10,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-messager/types"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-jsonrpc"
@@ -101,20 +101,20 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
-func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
 }
 
-func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
 }
 
-func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
 }
 
-func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
 }

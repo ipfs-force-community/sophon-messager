@@ -10,7 +10,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/crypto"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-gateway/types/wallet"
 	"golang.org/x/xerrors"
 	"modernc.org/mathutil"
@@ -159,7 +159,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		})
 	}
@@ -205,7 +205,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		// global msg meta
 		newMsgMeta := messageSelector.messageMeta(msg.Meta, addr)
 		estimateMesssages[index] = &EstimateMessage{
-			Msg: &msg.UnsignedMessage,
+			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,
 				GasOverEstimation: newMsgMeta.GasOverEstimation,
@@ -242,10 +242,10 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		msg.GasPremium = estimateMsg.GasPremium
 		msg.GasLimit = estimateMsg.GasLimit
 
-		unsignedCid := msg.UnsignedMessage.Cid()
+		unsignedCid := msg.Message.Cid()
 		msg.UnsignedCid = &unsignedCid
 		//签名
-		data, err := msg.UnsignedMessage.ToStorageBlock()
+		data, err := msg.Message.ToStorageBlock()
 		if err != nil {
 			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 			continue
@@ -269,7 +269,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		//signed cid for t1 address
 		signedMsg := venusTypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		}
 		signedCid := signedMsg.Cid()
@@ -367,7 +367,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 
 	return applied, nil
 }
-func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
+func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.Message, error) {
 	if msg.GasLimit == 0 {
 		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
@@ -433,7 +433,7 @@ func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Addre
 	return selMsgNum
 }
 
-func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {
+func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 	if maxFee.NilOrZero() {
 		return
 	}

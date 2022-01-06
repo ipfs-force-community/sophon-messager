@@ -6,7 +6,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 )
 
@@ -30,7 +30,7 @@ const (
 //
 
 type MessageWithUID struct {
-	UnsignedMessage venusTypes.UnsignedMessage
+	UnsignedMessage venusTypes.Message
 	ID              string
 }
 
@@ -39,7 +39,7 @@ type Message struct {
 
 	UnsignedCid *cid.Cid
 	SignedCid   *cid.Cid
-	venusTypes.UnsignedMessage
+	venusTypes.Message
 	Signature *crypto.Signature
 
 	Height     int64
@@ -56,9 +56,9 @@ type Message struct {
 	UpdatedAt time.Time
 }
 
-func FromUnsignedMessage(unsignedMsg venusTypes.UnsignedMessage) *Message {
+func FromUnsignedMessage(unsignedMsg venusTypes.Message) *Message {
 	return &Message{
-		UnsignedMessage: unsignedMsg,
+		Message: unsignedMsg,
 	}
 }
 

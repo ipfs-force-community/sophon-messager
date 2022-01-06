@@ -10,7 +10,7 @@ import (
 	"github.com/filecoin-project/go-address"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -75,9 +75,9 @@ func TestUpdateMessageInfoByCid(t *testing.T) {
 		assert.NoError(t, err)
 
 		rec := &venustypes.MessageReceipt{
-			ExitCode:    0,
-			ReturnValue: []byte{'g', 'd'},
-			GasUsed:     34,
+			ExitCode: 0,
+			Return:   []byte{'g', 'd'},
+			GasUsed:  34,
 		}
 		tsKeyStr := "{ bafy2bzacec7ymsvmwjgew5whbhs4c3gg5k76pu6y7tun67lqw6unt6xo2nn62 bafy2bzacediq3wdlglhbc6ezlmnks46hdl2kyc3alghiov3c6jpt5qcf76s32 bafy2bzacebjjsg2vqadraxippg46rkysbyucgl27qzu6p6bgepcn7ybgjmqxs }"
 		tsKey, err := utils.StringToTipsetKey(tsKeyStr)
@@ -112,7 +112,7 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 	messageRepoTest := func(t *testing.T, messageRepo repo.MessageRepo) {
 		msg := NewSignedMessages(1)[0]
 		msg.State = types.FillMsg
-		cid := msg.UnsignedMessage.Cid()
+		cid := msg.Message.Cid()
 		msg.UnsignedCid = &cid
 
 		err := messageRepo.CreateMessage(msg)
@@ -421,7 +421,7 @@ func TestUpdateReturnValue(t *testing.T) {
 		assert.NoError(t, err)
 		msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 		assert.NoError(t, err)
-		assert.Equal(t, failedInfo, string(msg.Receipt.ReturnValue))
+		assert.Equal(t, failedInfo, string(msg.Receipt.Return))
 
 		failedMsgs, err := messageRepo.ListFailedMessage()
 		assert.NoError(t, err)
