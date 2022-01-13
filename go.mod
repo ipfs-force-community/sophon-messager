@@ -26,7 +26,7 @@ require (
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220113034500-827d4971ea63
+	github.com/ipfs-force-community/venus-gateway v1.2.0-rc1
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/multiformats/go-multiaddr v0.4.0
