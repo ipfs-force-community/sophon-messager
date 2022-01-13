@@ -367,25 +367,25 @@ var tw = tablewriter.New(
 func outputWithTable(msgs []*types.Message, verbose bool) error {
 	for _, msgT := range msgs {
 		msg := transformMessage(msgT)
-		val := venusTypes.MustParseFIL(msg.Message.Value.String() + "attofil").String()
+		val := venusTypes.MustParseFIL(msg.Msg.Value.String() + "attofil").String()
 		row := map[string]interface{}{
 			"ID":         msg.ID,
-			"To":         msg.Message.To,
-			"From":       msg.Message.From,
-			"Nonce":      msg.Message.Nonce,
+			"To":         msg.Msg.To,
+			"From":       msg.Msg.From,
+			"Nonce":      msg.Msg.Nonce,
 			"Value":      val,
-			"GasLimit":   msg.Message.GasLimit,
-			"GasFeeCap":  msg.Message.GasFeeCap,
-			"GasPremium": msg.Message.GasPremium,
-			"Method":     msg.Message.Method,
+			"GasLimit":   msg.Msg.GasLimit,
+			"GasFeeCap":  msg.Msg.GasFeeCap,
+			"GasPremium": msg.Msg.GasPremium,
+			"Method":     msg.Msg.Method,
 			"State":      msg.State,
 			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		if !verbose {
-			if from := msg.Message.From.String(); len(from) > 9 {
+			if from := msg.Msg.From.String(); len(from) > 9 {
 				row["From"] = from[:9] + "..."
 			}
-			if to := msg.Message.To.String(); len(to) > 9 {
+			if to := msg.Msg.To.String(); len(to) > 9 {
 				row["To"] = to[:9] + "..."
 			}
 			if len(msg.ID) > 36 {
@@ -716,8 +716,8 @@ type message struct {
 
 	UnsignedCid *cid.Cid
 	SignedCid   *cid.Cid
-	venusTypes.Message
-	Signature *crypto.Signature
+	Msg         venusTypes.Message
+	Signature   *crypto.Signature
 
 	Height     int64
 	Confidence int64
@@ -750,7 +750,7 @@ func transformMessage(msg *types.Message) *message {
 		ID:          msg.ID,
 		UnsignedCid: msg.UnsignedCid,
 		SignedCid:   msg.SignedCid,
-		Message:     msg.Message,
+		Msg:         msg.Message,
 		Signature:   msg.Signature,
 		Height:      msg.Height,
 		Confidence:  msg.Confidence,
