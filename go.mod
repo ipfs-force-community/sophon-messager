@@ -10,15 +10,15 @@ require (
 	github.com/filecoin-project/go-cbor-util v0.0.0-20201016124514-d0bbec7bfcc4
 	github.com/filecoin-project/go-fil-commcid v0.1.0 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
-	github.com/filecoin-project/go-state-types v0.1.1
+	github.com/filecoin-project/go-state-types v0.1.3
 	github.com/filecoin-project/specs-actors v0.9.14
 	github.com/filecoin-project/specs-actors/v2 v2.3.6
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v4 v4.0.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
-	github.com/filecoin-project/specs-actors/v7 v7.0.0-20211118013026-3dce48197cec
-	github.com/filecoin-project/venus v1.1.3-rc1.0.20220106012727-c89f464b4c35
+	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
+	github.com/filecoin-project/venus v1.2.0-rc1
 	github.com/filecoin-project/venus-auth v1.3.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.3.0
@@ -26,7 +26,7 @@ require (
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220106054726-04b7fc958e07
+	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220113034500-827d4971ea63
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/multiformats/go-multiaddr v0.4.0
