@@ -2,6 +2,8 @@
 
 messager is a component used to manage local messages, with the purpose of saving address messages, managing message status, and controlling the frequency of push messages.
 
+Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporting issues about this repository.
+
 ## Work
 
 - ✅ Remote wallet support: One messenger support multiple wallets to manage their keys separately
@@ -10,11 +12,13 @@ messager is a component used to manage local messages, with the purpose of savin
 - ✅ Scan the address of the miner's wallet, monitor the actor status of address on the chain, maintain the address's nonce information,
 - ✅ Fill on fly: gas related parameters and nonce are to be filled out when sending a message on chain according to gas policy, to make sure the gas-estimation and other seeting are valid
 - ✅ Maintain message status, including whether the message is chained and replaced. Save the results of the execution.
-- 🚧 Global Gas estimate paraters, address push quantity configuration.
-- 🚧 Multi-point message delivery (directly to the blockchain network with libp2p, push to the node by Mpool API), to make sure that messages are propagation over the network
+- ✅ Global Gas estimate paraters, address push quantity configuration.
+- ✅ Message-delivery assuring: Auto replace parameters and resend messages whenever there is a failure
+- ✅ Multi-point message delivery through daemon program
+- 🚧 broadcast message through libp2p
 - 🔲 Enhanced API Security
 - 🔲 Rich and flexible message sorting options
-- 🔲 Message-delivery assuring: Auto replace parameters and resend messages whenever there is a failure
+
 
 ## Getting Start
 
