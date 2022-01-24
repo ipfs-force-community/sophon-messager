@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -14,9 +15,9 @@ import (
 type sqliteSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:INT unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	GasOverEstimation float64   `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
-	MaxFee            types.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         types.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
+	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
+	MaxFeeCap         mtypes.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
 
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 }
@@ -25,8 +26,8 @@ func FromSharedParams(sp types.SharedParams) *sqliteSharedParams {
 	return &sqliteSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
-		MaxFee:            types.Int{Int: sp.MaxFee.Int},
-		MaxFeeCap:         types.Int{Int: sp.MaxFeeCap.Int},
+		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
+		MaxFeeCap:         mtypes.Int{Int: sp.MaxFeeCap.Int},
 		SelMsgNum:         sp.SelMsgNum,
 	}
 }
@@ -79,8 +80,8 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 	}
 
 	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.MaxFeeCap = types.Int{Int: params.MaxFeeCap.Int}
-	ssp.MaxFee = types.Int{Int: params.MaxFee.Int}
+	ssp.MaxFeeCap = mtypes.Int{Int: params.MaxFeeCap.Int}
+	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
 
 	ssp.SelMsgNum = params.SelMsgNum
 

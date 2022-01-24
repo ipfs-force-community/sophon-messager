@@ -61,12 +61,12 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	if params.GasPremium != nil {
 		msg.Message.GasPremium = *params.GasPremium
 	} else {
-		msg.Message.GasPremium = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasPremium = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasFeeCap != nil {
 		msg.Message.GasFeeCap = *params.GasFeeCap
 	} else {
-		msg.Message.GasFeeCap = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasFeeCap = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasLimit != nil {
 		msg.Message.GasLimit = *params.GasLimit

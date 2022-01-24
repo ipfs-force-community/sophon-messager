@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
 )
@@ -20,8 +21,8 @@ type mysqlAddress struct {
 	SelMsgNum         uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
 	State             types.State `gorm:"column:state;type:int;index;default:1"`
 	GasOverEstimation float64     `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            types.Int   `gorm:"column:max_fee;type:varchar(256);"`
-	MaxFeeCap         types.Int   `gorm:"column:max_fee_cap;type:varchar(256);"`
+	MaxFee            mtypes.Int  `gorm:"column:max_fee;type:varchar(256);"`
+	MaxFeeCap         mtypes.Int  `gorm:"column:max_fee_cap;type:varchar(256);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -47,10 +48,10 @@ func FromAddress(addr *types.Address) *mysqlAddress {
 	}
 
 	if !addr.MaxFee.Nil() {
-		mysqlAddr.MaxFee = types.NewFromGo(addr.MaxFee.Int)
+		mysqlAddr.MaxFee = mtypes.NewFromGo(addr.MaxFee.Int)
 	}
 	if !addr.MaxFeeCap.Nil() {
-		mysqlAddr.MaxFeeCap = types.NewFromGo(addr.MaxFeeCap.Int)
+		mysqlAddr.MaxFeeCap = mtypes.NewFromGo(addr.MaxFeeCap.Int)
 	}
 
 	return mysqlAddr
@@ -189,10 +190,10 @@ func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Addr
 		updateColumns["gas_over_estimation"] = gasOverEstimation
 	}
 	if !maxFee.Nil() {
-		updateColumns["max_fee"] = types.NewFromGo(maxFee.Int)
+		updateColumns["max_fee"] = mtypes.NewFromGo(maxFee.Int)
 	}
 	if !maxFeeCap.Nil() {
-		updateColumns["max_fee_cap"] = types.NewFromGo(maxFeeCap.Int)
+		updateColumns["max_fee_cap"] = mtypes.NewFromGo(maxFeeCap.Int)
 	}
 	updateColumns["updated_at"] = time.Now()
 
