@@ -20,6 +20,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 const (
@@ -123,7 +124,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	//判断是否需要推送消息
@@ -336,8 +337,8 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInf
 	return newMsgMeta
 }
 
-func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*types.NonceMap, error) {
-	applied := types.NewNonceMap()
+func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
+	applied := utils.NewNonceMap()
 	//todo change with venus/lotus message for tipset
 	selectMsg := func(m *venusTypes.Message) error {
 		// The first match for a sender is guaranteed to have correct nonce -- the block isn't valid otherwise
