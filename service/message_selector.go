@@ -310,7 +310,7 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInfo *types.Address) *types.MsgMeta {
 	newMsgMeta := &types.MsgMeta{}
 	*newMsgMeta = *meta
-	globalMeta := messageSelector.sps.GetParams().GetMsgMeta()
+	globalMeta := messageSelector.sps.GetParams().GetSendSpec()
 
 	if meta.GasOverEstimation == 0 {
 		if addrInfo.GasOverEstimation != 0 {

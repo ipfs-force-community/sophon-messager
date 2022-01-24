@@ -92,7 +92,7 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedParams) {
 		return
 	}
 	sps.log.Infof("old params %v ", sps.params.SharedParams)
-	if sharedParams.GetMsgMeta() != nil {
+	if sharedParams.GetSendSpec() != nil {
 		sps.params.GasOverEstimation = sharedParams.GasOverEstimation
 		sps.params.MaxFee = sharedParams.MaxFee
 		sps.params.MaxFeeCap = sharedParams.MaxFeeCap

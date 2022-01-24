@@ -1,18 +1,14 @@
 package types
 
-type NodeType int
-
-const (
-	_ NodeType = iota
-	FullNode
-	LightNode
+import (
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-type Node struct {
-	ID UUID
+type NodeType = messager.NodeType
 
-	Name  string
-	URL   string
-	Token string
-	Type  NodeType
-}
+const (
+	FullNode  = messager.FullNode
+	LightNode = messager.LightNode
+)
+
+type Node = messager.Node

@@ -1,26 +1,12 @@
 package types
 
 import (
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const (
-	ParamsJSON = "json"
-	ParamsHex  = "hex"
+	ParamsJSON = messager.QuickSendParamsCodecJSON
+	ParamsHex  = messager.QuickSendParamsCodecHex
 )
 
-type SendParams struct {
-	To      address.Address
-	From    address.Address
-	Val     abi.TokenAmount
-	Account string
-
-	GasPremium *abi.TokenAmount
-	GasFeeCap  *abi.TokenAmount
-	GasLimit   *int64
-
-	Method     abi.MethodNum
-	Params     string
-	ParamsType string // json or hex
-}
+type SendParams = messager.QuickSendParams

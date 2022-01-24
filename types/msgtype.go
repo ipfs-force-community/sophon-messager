@@ -1,10 +1,14 @@
 package types
 
-type MsgType string
+import (
+	"github.com/filecoin-project/venus/venus-shared/types"
+)
+
+type MsgType = types.MsgType
 
 const (
-	MTUnknown = MsgType("unknown")
+	MTUnknown = types.MTUnknown
 
 	// Signing message CID. MsgMeta.Extra contains raw cbor message bytes
-	MTChainMsg = MsgType("message")
+	MTChainMsg = types.MTChainMsg
 )
