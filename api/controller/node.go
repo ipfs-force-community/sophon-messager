@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type NodeController struct {

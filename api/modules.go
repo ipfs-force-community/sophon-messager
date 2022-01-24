@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 
@@ -101,20 +101,20 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
-func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
 }
 
-func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
 }
 
-func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
 }
 
-func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	_, account := ipAccountFromContext(ctx)
 	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
 }
@@ -228,11 +228,11 @@ func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address
 	return m.MessageSrv.ClearUnFillMessage(ctx, addr)
 }
 
-func (m MessageImp) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (m MessageImp) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	return m.ParamsSrv.GetSharedParams(ctx)
 }
 
-func (m MessageImp) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
+func (m MessageImp) SetSharedParams(ctx context.Context, params *types.SharedSpec) error {
 	return m.ParamsSrv.SetSharedParams(ctx, params)
 }
 
@@ -264,7 +264,7 @@ func (m MessageImp) SetLogLevel(ctx context.Context, level string) error {
 	return m.log.SetLogLevel(ctx, level)
 }
 
-func (m MessageImp) Send(ctx context.Context, params types.SendParams) (string, error) {
+func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
 	return m.MessageSrv.Send(ctx, params)
 }
 

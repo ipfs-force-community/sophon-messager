@@ -9,7 +9,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type sqliteSharedParams struct {
@@ -22,7 +22,7 @@ type sqliteSharedParams struct {
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedParams) *sqliteSharedParams {
+func FromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
 	return &sqliteSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
@@ -32,8 +32,8 @@ func FromSharedParams(sp types.SharedParams) *sqliteSharedParams {
 	}
 }
 
-func (ssp sqliteSharedParams) SharedParams() *types.SharedParams {
-	return &types.SharedParams{
+func (ssp sqliteSharedParams) SharedParams() *types.SharedSpec {
+	return &types.SharedSpec{
 		ID:                ssp.ID,
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
@@ -56,7 +56,7 @@ func newSqliteSharedParamsRepo(db *gorm.DB) sqliteSharedParamsRepo {
 	return sqliteSharedParamsRepo{DB: db}
 }
 
-func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	var ssp sqliteSharedParams
 	if err := s.DB.Take(&ssp).Error; err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Sha
 	return ssp.SharedParams(), nil
 }
 
-func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) (uint, error) {
+func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedSpec) (uint, error) {
 	var ssp sqliteSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {

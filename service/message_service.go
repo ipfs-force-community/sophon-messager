@@ -22,7 +22,7 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
@@ -153,10 +153,10 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		}
 		if xerrors.Is(err, gorm.ErrRecordNotFound) {
 			if err = txRepo.AddressRepo().SaveAddress(ctx, &types.Address{
-				ID:        types.NewUUID(),
+				ID:        venusTypes.NewUUID(),
 				Addr:      msg.From,
 				Nonce:     0,
-				State:     types.Alive,
+				State:     types.AddressStateAlive,
 				IsDeleted: repo.NotDeleted,
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
@@ -169,7 +169,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}); err != nil {
 		return err
 	}
-	if addrInfo != nil && addrInfo.State == types.Forbiden {
+	if addrInfo != nil && addrInfo.State == types.AddressStateForbbiden {
 		ms.log.Errorf("address(%s) is forbidden", msg.From.String())
 		return xerrors.Errorf("address(%s) is forbidden", msg.From.String())
 	}
@@ -183,8 +183,8 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
-	newId := types.NewUUID()
+func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	newId := venusTypes.NewUUID()
 	if err := ms.pushMessage(ctx, &types.Message{
 		ID:         newId.String(),
 		Message:    *msg,
@@ -200,7 +200,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *
 	return newId.String(), nil
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.MsgMeta) (string, error) {
+func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	if err := ms.pushMessage(ctx, &types.Message{
 		ID:         id,
 		Message:    *msg,
@@ -949,7 +949,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		return xerrors.Errorf("message already on chain")
 	}
 	if msg.State != types.FillMsg {
-		return xerrors.Errorf("need FillMsg got %s", types.MsgStateToString(msg.State))
+		return xerrors.Errorf("need FillMsg got %s", msg.State)
 	}
 	signedMsg := &venusTypes.SignedMessage{
 		Message:   msg.Message,
@@ -972,7 +972,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
 	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
-		Type:  wallet.MsgType(types.MTChainMsg),
+		Type:  wallet.MsgType(venusTypes.MTChainMsg),
 		Extra: data.RawData(),
 	})
 	if err != nil {

@@ -3,10 +3,10 @@ package repo
 import (
 	"context"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type SharedParamsRepo interface {
-	GetSharedParams(ctx context.Context) (*types.SharedParams, error)
-	SetSharedParams(ctx context.Context, params *types.SharedParams) (uint, error)
+	GetSharedParams(ctx context.Context) (*types.SharedSpec, error)
+	SetSharedParams(ctx context.Context, params *types.SharedSpec) (uint, error)
 }

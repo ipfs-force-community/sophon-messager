@@ -15,7 +15,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func main() {
@@ -95,7 +95,7 @@ func main() {
 
 	for range ticker.C {
 		for i := 0; i < count; i++ {
-			msgMate := &types.MsgMeta{
+			msgMate := &types.SendSpec{
 				GasOverEstimation: 1.25,
 				MaxFee:            big.NewInt(10000000000000000),
 				MaxFeeCap:         big.NewInt(10000000000000000),

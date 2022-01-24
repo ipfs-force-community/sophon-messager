@@ -19,8 +19,8 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const (
@@ -254,7 +254,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
 		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), wallet.MsgMeta{
-			Type:  wallet.MsgType(types.MTChainMsg),
+			Type:  wallet.MsgType(venusTypes.MTChainMsg),
 			Extra: data.RawData(),
 		}})
 		cancel()
@@ -307,8 +307,8 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 	return result, expireMsg
 }
 
-func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInfo *types.Address) *types.MsgMeta {
-	newMsgMeta := &types.MsgMeta{}
+func (messageSelector *MessageSelector) messageMeta(meta *types.SendSpec, addrInfo *types.Address) *types.SendSpec {
+	newMsgMeta := &types.SendSpec{}
 	*newMsgMeta = *meta
 	globalMeta := messageSelector.sps.GetParams().GetSendSpec()
 
@@ -368,7 +368,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 
 	return applied, nil
 }
-func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.Message, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.Message, error) {
+func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec, tsk venusTypes.TipSetKey) (*venusTypes.Message, error) {
 	if msg.GasLimit == 0 {
 		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
@@ -415,7 +415,7 @@ func (messageSelector *MessageSelector) uniqAddresses(addrList []*types.Address)
 
 func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Address) map[address.Address]uint64 {
 	var defSelMsgNum uint64
-	if messageSelector.sps.GetParams().SharedParams != nil {
+	if messageSelector.sps.GetParams().SharedSpec != nil {
 		defSelMsgNum = messageSelector.sps.GetParams().SelMsgNum
 	}
 	selMsgNum := make(map[address.Address]uint64)

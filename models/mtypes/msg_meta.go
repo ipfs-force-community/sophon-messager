@@ -4,7 +4,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type MsgMeta struct {
@@ -14,8 +14,8 @@ type MsgMeta struct {
 	MaxFeeCap         Int            `gorm:"column:max_fee_cap;type:varchar(256);"`
 }
 
-func (meta *MsgMeta) Meta() *types.MsgMeta {
-	return &types.MsgMeta{
+func (meta *MsgMeta) Meta() *types.SendSpec {
+	return &types.SendSpec{
 		ExpireEpoch:       meta.ExpireEpoch,
 		GasOverEstimation: meta.GasOverEstimation,
 		MaxFee:            big.NewFromGo(meta.MaxFee.Int),
@@ -23,7 +23,7 @@ func (meta *MsgMeta) Meta() *types.MsgMeta {
 	}
 }
 
-func FromMeta(srcMeta *types.MsgMeta) *MsgMeta {
+func FromMeta(srcMeta *types.SendSpec) *MsgMeta {
 	if srcMeta == nil {
 		return &MsgMeta{
 			ExpireEpoch:       0,

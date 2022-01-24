@@ -6,23 +6,24 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type mysqlAddress struct {
-	ID                types.UUID  `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr              string      `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
-	Nonce             uint64      `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
-	Weight            int64       `gorm:"column:weight;type:bigint;index;NOT NULL"`
-	SelMsgNum         uint64      `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
-	State             types.State `gorm:"column:state;type:int;index;default:1"`
-	GasOverEstimation float64     `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            mtypes.Int  `gorm:"column:max_fee;type:varchar(256);"`
-	MaxFeeCap         mtypes.Int  `gorm:"column:max_fee_cap;type:varchar(256);"`
+	ID                shared.UUID        `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr              string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
+	Nonce             uint64             `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
+	Weight            int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	SelMsgNum         uint64             `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
+	State             types.AddressState `gorm:"column:state;type:int;index;default:1"`
+	GasOverEstimation float64            `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
+	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);"`
+	MaxFeeCap         mtypes.Int         `gorm:"column:max_fee_cap;type:varchar(256);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -101,7 +102,7 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) 
 	return a.Address()
 }
 
-func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id types.UUID) (*types.Address, error) {
+func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (*types.Address, error) {
 	var a mysqlAddress
 	if err := s.DB.Where("id = ? and is_deleted = -1", id).First(&a).Error; err != nil {
 		return nil, err
@@ -148,7 +149,7 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 
 func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Address, error) {
 	var list []*mysqlAddress
-	if err := s.DB.Find(&list, "is_deleted = ? and state = ?", -1, types.Alive).Error; err != nil {
+	if err := s.DB.Find(&list, "is_deleted = ? and state = ?", -1, types.AddressStateAlive).Error; err != nil {
 		return nil, err
 	}
 
@@ -166,7 +167,7 @@ func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addre
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
 	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.Removed, "updated_at": time.Now()}).Error
+		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
 }
 
 func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
@@ -174,7 +175,7 @@ func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address,
 		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
 }
 
-func (s mysqlAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.State) error {
+func (s mysqlAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error {
 	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = -1", addr.String()).
 		UpdateColumns(map[string]interface{}{"state": state, "updated_at": time.Now()}).Error
 }

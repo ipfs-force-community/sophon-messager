@@ -20,7 +20,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/cli/tablewriter"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var ReallyDoItFlag = &cli.BoolFlag{
@@ -724,7 +724,7 @@ type message struct {
 	Receipt    *receipt
 	TipSetKey  venusTypes.TipSetKey
 
-	Meta *types.MsgMeta
+	Meta *types.SendSpec
 
 	WalletName string
 	FromUser   string
@@ -758,7 +758,7 @@ func transformMessage(msg *types.Message) *message {
 		Meta:        msg.Meta,
 		WalletName:  msg.WalletName,
 		FromUser:    msg.FromUser,
-		State:       types.MsgStateToString(msg.State),
+		State:       msg.State.String(),
 		UpdatedAt:   msg.UpdatedAt,
 		CreatedAt:   msg.CreatedAt,
 	}
