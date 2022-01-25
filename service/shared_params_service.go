@@ -12,14 +12,14 @@ import (
 
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const referParamsInterval = time.Second * 10
 
 var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
-var defParams = &types.SharedParams{
+var defParams = &types.SharedSpec{
 	ID:                0,
 	GasOverEstimation: 1.25,
 	MaxFee:            big.Int{Int: DefaultMaxFee.Int},
@@ -35,7 +35,7 @@ type SharedParamsService struct {
 }
 
 type Params struct {
-	*types.SharedParams
+	*types.SharedSpec
 
 	ScanIntervalChan chan time.Duration
 }
@@ -45,7 +45,7 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 		repo: repo,
 		log:  logger,
 		params: &Params{
-			SharedParams:     &types.SharedParams{},
+			SharedSpec:       &types.SharedSpec{},
 			ScanIntervalChan: make(chan time.Duration, 5),
 		},
 	}
@@ -61,17 +61,17 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 		params = defParams
 	}
 
-	sps.params.SharedParams = params
+	sps.params.SharedSpec = params
 	sps.refreshParamsLoop()
 
 	return sps, nil
 }
 
-func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	return sps.repo.SharedParamsRepo().GetSharedParams(ctx)
 }
 
-func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
+func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedSpec) error {
 	id, err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
 	if err != nil {
 		return err
@@ -86,13 +86,13 @@ func (sps *SharedParamsService) GetParams() *Params {
 	return sps.params
 }
 
-func (sps *SharedParamsService) SetParams(sharedParams *types.SharedParams) {
+func (sps *SharedParamsService) SetParams(sharedParams *types.SharedSpec) {
 	if sharedParams == nil {
 		sps.log.Warnf("params is nil")
 		return
 	}
-	sps.log.Infof("old params %v ", sps.params.SharedParams)
-	if sharedParams.GetMsgMeta() != nil {
+	sps.log.Infof("old params %v ", sps.params.SharedSpec)
+	if sharedParams.GetSendSpec() != nil {
 		sps.params.GasOverEstimation = sharedParams.GasOverEstimation
 		sps.params.MaxFee = sharedParams.MaxFee
 		sps.params.MaxFeeCap = sharedParams.MaxFeeCap
@@ -123,7 +123,7 @@ func (sps *SharedParamsService) refreshParamsLoop() {
 				sps.log.Warnf("get shared params %v", err)
 				continue
 			}
-			if !reflect.DeepEqual(sps.params.SharedParams, params) {
+			if !reflect.DeepEqual(sps.params.SharedSpec, params) {
 				sps.SetParams(params)
 			}
 		}

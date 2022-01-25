@@ -16,10 +16,10 @@ import (
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (string, error) {
+func (ms *MessageService) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
 	var decParams []byte
 	var err error
 
@@ -28,12 +28,12 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	}
 
 	switch params.ParamsType {
-	case types.ParamsJSON:
+	case types.QuickSendParamsCodecJSON:
 		decParams, err = ms.decodeTypedParamsFromJSON(ctx, params.To, params.Method, params.Params)
 		if err != nil {
 			return "", xerrors.Errorf("failed to decode json params: %w", err)
 		}
-	case types.ParamsHex:
+	case types.QuickSendParamsCodecHex:
 		decParams, err = hex.DecodeString(params.Params)
 		if err != nil {
 			return "", xerrors.Errorf("failed to decode hex params: %w", err)
@@ -42,7 +42,7 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 		return "", xerrors.Errorf("unexpected param type %s", params.ParamsType)
 	}
 
-	uuid := types.NewUUID().String()
+	uuid := venusTypes.NewUUID().String()
 	msg := &types.Message{
 		ID: uuid,
 		Message: venusTypes.Message{
@@ -61,12 +61,12 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	if params.GasPremium != nil {
 		msg.Message.GasPremium = *params.GasPremium
 	} else {
-		msg.Message.GasPremium = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasPremium = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasFeeCap != nil {
 		msg.Message.GasFeeCap = *params.GasFeeCap
 	} else {
-		msg.Message.GasFeeCap = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasFeeCap = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasLimit != nil {
 		msg.Message.GasLimit = *params.GasLimit

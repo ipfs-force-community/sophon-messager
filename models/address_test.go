@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestAddress(t *testing.T) {

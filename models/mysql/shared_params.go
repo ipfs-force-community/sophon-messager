@@ -7,31 +7,32 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type mysqlSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:SMALLINT(2) unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	GasOverEstimation float64   `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
-	MaxFee            types.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         types.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
-	SelMsgNum         uint64    `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
+	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
+	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
+	MaxFeeCap         mtypes.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	SelMsgNum         uint64     `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedParams) *mysqlSharedParams {
+func FromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
 	return &mysqlSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
-		MaxFee:            types.Int{Int: sp.MaxFee.Int},
-		MaxFeeCap:         types.Int{Int: sp.MaxFeeCap.Int},
+		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
+		MaxFeeCap:         mtypes.Int{Int: sp.MaxFeeCap.Int},
 		SelMsgNum:         sp.SelMsgNum,
 	}
 }
 
-func (ssp mysqlSharedParams) SharedParams() *types.SharedParams {
-	return &types.SharedParams{
+func (ssp mysqlSharedParams) SharedParams() *types.SharedSpec {
+	return &types.SharedSpec{
 		ID:                ssp.ID,
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
@@ -54,7 +55,7 @@ func newMysqlSharedParamsRepo(db *gorm.DB) mysqlSharedParamsRepo {
 	return mysqlSharedParamsRepo{DB: db}
 }
 
-func (s mysqlSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (s mysqlSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	var ssp mysqlSharedParams
 	if err := s.DB.Take(&ssp).Error; err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func (s mysqlSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Shar
 	return ssp.SharedParams(), nil
 }
 
-func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) (uint, error) {
+func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedSpec) (uint, error) {
 	var ssp mysqlSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -78,8 +79,8 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 	}
 
 	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.MaxFeeCap = types.Int{Int: params.MaxFeeCap.Int}
-	ssp.MaxFee = types.Int{Int: params.MaxFee.Int}
+	ssp.MaxFeeCap = mtypes.Int{Int: params.MaxFeeCap.Int}
+	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
 
 	ssp.SelMsgNum = params.SelMsgNum
 

@@ -4,15 +4,16 @@ import (
 	"reflect"
 	"time"
 
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/hunjixin/automapper"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type sqliteNode struct {
-	ID types.UUID `gorm:"column:id;type:varchar(256);primary_key;"` // 主键
+	ID shared.UUID `gorm:"column:id;type:varchar(256);primary_key;"` // 主键
 
 	Name  string         `gorm:"column:name;type:varchar(256);NOT NULL"`
 	URL   string         `gorm:"column:url;type:varchar(256);NOT NULL"`

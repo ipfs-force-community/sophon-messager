@@ -10,15 +10,14 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	types2 "github.com/filecoin-project/venus/venus-shared/types"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func NewSignedMessages(count int) []*types.Message {
@@ -29,7 +28,7 @@ func NewSignedMessages(count int) []*types.Message {
 		msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())}
 		unsignedCid := msg.Message.Cid()
 		msg.UnsignedCid = &unsignedCid
-		signedCid := (&venustypes.SignedMessage{
+		signedCid := (&shared.SignedMessage{
 			Message:   msg.Message,
 			Signature: *msg.Signature,
 		}).Cid()
@@ -51,25 +50,25 @@ func NewMessages(count int) []*types.Message {
 
 func NewMessage() *types.Message {
 	return &types.Message{
-		ID:      types.NewUUID().String(),
+		ID:      shared.NewUUID().String(),
 		Message: NewUnsignedMessage(),
-		Meta: &types.MsgMeta{
+		Meta: &types.SendSpec{
 			ExpireEpoch:       100,
 			MaxFee:            big.NewInt(10),
 			GasOverEstimation: 0.5,
 		},
-		Receipt: &venustypes.MessageReceipt{ExitCode: -1},
+		Receipt: &shared.MessageReceipt{ExitCode: -1},
 		State:   types.UnFillMsg,
 	}
 }
 
-func NewUnsignedMessage() types2.Message {
+func NewUnsignedMessage() shared.Message {
 	rand.Seed(time.Now().Unix())
 	uid, _ := uuid.NewUUID()
 	from, _ := address.NewActorAddress(uid[:])
 	uid, _ = uuid.NewUUID()
 	to, _ := address.NewActorAddress(uid[:])
-	return types2.Message{
+	return shared.Message{
 		From:       from,
 		To:         to,
 		Value:      big.NewInt(rand.Int63n(1024)),

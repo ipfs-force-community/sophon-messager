@@ -4,9 +4,10 @@ import (
 	"context"
 
 	"github.com/filecoin-project/go-address"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/types"
 )
 
 type Address struct {
@@ -14,7 +15,7 @@ type Address struct {
 	AddressService *service.AddressService
 }
 
-func (a Address) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
+func (a Address) SaveAddress(ctx context.Context, address *types.Address) (shared.UUID, error) {
 	return a.AddressService.SaveAddress(ctx, address)
 }
 

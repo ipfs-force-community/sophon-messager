@@ -7,7 +7,6 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
@@ -29,9 +28,9 @@ type NodeClient struct {
 	ChainHead                func(context.Context) (*types.TipSet, error)
 	ChainGetTipSet           func(context.Context, types.TipSetKey) (*types.TipSet, error)
 	ChainGetBlock            func(context.Context, cid.Cid) (*types.BlockHeader, error)
-	ChainGetBlockMessages    func(context.Context, cid.Cid) (*apitypes.BlockMessages, error)
-	ChainGetMessagesInTipset func(context.Context, types.TipSetKey) ([]apitypes.Message, error)
-	ChainGetParentMessages   func(ctx context.Context, bcid cid.Cid) ([]apitypes.Message, error)
+	ChainGetBlockMessages    func(context.Context, cid.Cid) (*types.BlockMessages, error)
+	ChainGetMessagesInTipset func(context.Context, types.TipSetKey) ([]types.MessageCID, error)
+	ChainGetParentMessages   func(ctx context.Context, bcid cid.Cid) ([]types.MessageCID, error)
 	ChainGetParentReceipts   func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)
 	StateAccountKey          func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
 	StateSearchMsg           func(context.Context, cid.Cid) (*chain.MsgLookup, error)
@@ -51,7 +50,7 @@ type NodeClient struct {
 	MpoolPublishByAddr  func(ctx context.Context, addr address.Address) error
 	MpoolPublishMessage func(ctx context.Context, smsg *types.SignedMessage) error
 
-	StateNetworkName func(ctx context.Context) (apitypes.NetworkName, error)
+	StateNetworkName func(ctx context.Context) (types.NetworkName, error)
 }
 
 func NewNodeClient(ctx context.Context, cfg *config.NodeConfig) (*NodeClient, jsonrpc.ClientCloser, error) {

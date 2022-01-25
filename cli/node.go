@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var NodeCmds = &cli.Command{
@@ -47,7 +48,7 @@ var addNodeCmd = &cli.Command{
 
 		var node types.Node
 		node.Name = ctx.String("name")
-		node.ID = types.NewUUID()
+		node.ID = shared.NewUUID()
 		node.URL = ctx.String("url")
 		if len(node.URL) == 0 {
 			return xerrors.Errorf("url cannot be empty")

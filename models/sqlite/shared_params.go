@@ -7,32 +7,33 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type sqliteSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:INT unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
-	GasOverEstimation float64   `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
-	MaxFee            types.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         types.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
+	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
+	MaxFeeCap         mtypes.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
 
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedParams) *sqliteSharedParams {
+func FromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
 	return &sqliteSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
-		MaxFee:            types.Int{Int: sp.MaxFee.Int},
-		MaxFeeCap:         types.Int{Int: sp.MaxFeeCap.Int},
+		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
+		MaxFeeCap:         mtypes.Int{Int: sp.MaxFeeCap.Int},
 		SelMsgNum:         sp.SelMsgNum,
 	}
 }
 
-func (ssp sqliteSharedParams) SharedParams() *types.SharedParams {
-	return &types.SharedParams{
+func (ssp sqliteSharedParams) SharedParams() *types.SharedSpec {
+	return &types.SharedSpec{
 		ID:                ssp.ID,
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
@@ -55,7 +56,7 @@ func newSqliteSharedParamsRepo(db *gorm.DB) sqliteSharedParamsRepo {
 	return sqliteSharedParamsRepo{DB: db}
 }
 
-func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	var ssp sqliteSharedParams
 	if err := s.DB.Take(&ssp).Error; err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Sha
 	return ssp.SharedParams(), nil
 }
 
-func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedParams) (uint, error) {
+func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedSpec) (uint, error) {
 	var ssp sqliteSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -79,8 +80,8 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 	}
 
 	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.MaxFeeCap = types.Int{Int: params.MaxFeeCap.Int}
-	ssp.MaxFee = types.Int{Int: params.MaxFee.Int}
+	ssp.MaxFeeCap = mtypes.Int{Int: params.MaxFeeCap.Int}
+	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
 
 	ssp.SelMsgNum = params.SelMsgNum
 

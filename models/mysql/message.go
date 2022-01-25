@@ -11,8 +11,9 @@ import (
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 
+	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/filecoin-project/venus-messager/utils"
 )
 
@@ -24,11 +25,11 @@ type mysqlMessage struct {
 	Nonce uint64 `gorm:"column:nonce;type:bigint unsigned;index:msg_nonce;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
-	Value types.Int `gorm:"column:value;type:varchar(256);"`
+	Value mtypes.Int `gorm:"column:value;type:varchar(256);"`
 
-	GasLimit   int64     `gorm:"column:gas_limit;type:bigint"`
-	GasFeeCap  types.Int `gorm:"column:gas_fee_cap;type:varchar(256);"`
-	GasPremium types.Int `gorm:"column:gas_premium;type:varchar(256);"`
+	GasLimit   int64      `gorm:"column:gas_limit;type:bigint"`
+	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);"`
+	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);"`
 
 	Method int `gorm:"column:method;type:int"`
 
@@ -43,7 +44,7 @@ type mysqlMessage struct {
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 
-	Meta *MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
+	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
 	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
@@ -112,7 +113,7 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
 		Height:     srcMsg.Height,
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
-		Meta:       FromMeta(srcMsg.Meta),
+		Meta:       mtypes.FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
 		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
@@ -128,15 +129,15 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 	}
 
 	if srcMsg.Value.Int != nil {
-		destMsg.Value = types.Int{Int: srcMsg.Value.Int}
+		destMsg.Value = mtypes.Int{Int: srcMsg.Value.Int}
 	}
 
 	if srcMsg.GasFeeCap.Int != nil {
-		destMsg.GasFeeCap = types.Int{Int: srcMsg.GasFeeCap.Int}
+		destMsg.GasFeeCap = mtypes.Int{Int: srcMsg.GasFeeCap.Int}
 	}
 
 	if srcMsg.GasPremium.Int != nil {
-		destMsg.GasPremium = types.Int{Int: srcMsg.GasPremium.Int}
+		destMsg.GasPremium = mtypes.Int{Int: srcMsg.GasPremium.Int}
 	}
 
 	if !srcMsg.TipSetKey.IsEmpty() {
@@ -144,46 +145,6 @@ func FromMessage(srcMsg *types.Message) *mysqlMessage {
 	}
 
 	return destMsg
-}
-
-type MsgMeta struct {
-	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;"`
-	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            types.Int      `gorm:"column:max_fee;type:varchar(256);"`
-	MaxFeeCap         types.Int      `gorm:"column:max_fee_cap;type:varchar(256);"`
-}
-
-func (meta *MsgMeta) Meta() *types.MsgMeta {
-	return &types.MsgMeta{
-		ExpireEpoch:       meta.ExpireEpoch,
-		GasOverEstimation: meta.GasOverEstimation,
-		MaxFee:            big.NewFromGo(meta.MaxFee.Int),
-		MaxFeeCap:         big.NewFromGo(meta.MaxFeeCap.Int),
-	}
-}
-
-func FromMeta(srcMeta *types.MsgMeta) *MsgMeta {
-	if srcMeta == nil {
-		return &MsgMeta{
-			ExpireEpoch:       0,
-			GasOverEstimation: 0,
-			MaxFee:            types.Int{},
-			MaxFeeCap:         types.Int{},
-		}
-	}
-	meta := &MsgMeta{
-		ExpireEpoch:       srcMeta.ExpireEpoch,
-		GasOverEstimation: srcMeta.GasOverEstimation,
-	}
-
-	if srcMeta.MaxFee.Int != nil {
-		meta.MaxFee = types.Int{Int: srcMeta.MaxFee.Int}
-	}
-
-	if srcMeta.MaxFeeCap.Int != nil {
-		meta.MaxFeeCap = types.Int{Int: srcMeta.MaxFeeCap.Int}
-	}
-	return meta
 }
 
 var _ repo.MessageRepo = (*mysqlMessageRepo)(nil)

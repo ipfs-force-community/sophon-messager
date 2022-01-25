@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var SendCmd = &cli.Command{
@@ -68,7 +68,7 @@ var SendCmd = &cli.Command{
 		}
 		defer close()
 
-		var params types.SendParams
+		var params types.QuickSendParams
 
 		params.To, err = address.NewFromString(ctx.Args().Get(0))
 		if err != nil {
@@ -114,14 +114,14 @@ var SendCmd = &cli.Command{
 
 		if ctx.IsSet("params-json") {
 			params.Params = ctx.String("params-json")
-			params.ParamsType = types.ParamsJSON
+			params.ParamsType = types.QuickSendParamsCodecJSON
 		}
 		if ctx.IsSet("params-hex") {
 			if len(params.Params) != 0 {
 				return fmt.Errorf("can only specify one of 'params-json' and 'params-hex'")
 			}
 			params.Params = ctx.String("params-hex")
-			params.ParamsType = types.ParamsHex
+			params.ParamsType = types.QuickSendParamsCodecHex
 		}
 
 		uuid, err := client.Send(ctx.Context, params)
