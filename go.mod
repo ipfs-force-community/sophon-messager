@@ -18,7 +18,7 @@ require (
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
-	github.com/filecoin-project/venus v1.2.0-rc4.0.20220124015621-371fc68dd427
+	github.com/filecoin-project/venus v1.2.0-rc5
 	github.com/filecoin-project/venus-auth v1.3.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.3.0
@@ -26,7 +26,7 @@ require (
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.2.0-rc1
+	github.com/ipfs-force-community/venus-gateway v1.2.0-rc2
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/multiformats/go-multiaddr v0.4.0
