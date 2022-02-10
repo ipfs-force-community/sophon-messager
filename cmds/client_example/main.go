@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"log"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
@@ -101,7 +101,7 @@ func main() {
 				MaxFeeCap:         big.NewInt(10000000000000000),
 			}
 			uid, err := client.PushMessageWithId(context.Background(),
-				types.NewUUID().String(),
+				venustypes.NewUUID().String(),
 				&venustypes.Message{
 					Version: 0,
 					To:      to,
