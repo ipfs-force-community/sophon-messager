@@ -8,8 +8,8 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/crypto"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
-	"github.com/ipfs-force-community/venus-gateway/types/wallet"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
@@ -18,7 +18,7 @@ import (
 
 type IWalletClient interface {
 	WalletHas(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
-	WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta wallet.MsgMeta) (*crypto.Signature, error)
+	WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error)
 }
 
 // *api.MessageImp and *gateway.WalletClient both implement IWalletClient, so injection will fail
@@ -29,7 +29,7 @@ type IWalletCli struct {
 type WalletClient struct {
 	Internal struct {
 		WalletHas  func(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
-		WalletSign func(ctx context.Context, account string, addr address.Address, toSign []byte, meta wallet.MsgMeta) (*crypto.Signature, error)
+		WalletSign func(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error)
 	}
 }
 
@@ -114,7 +114,7 @@ func (w *WalletProxy) WalletHas(ctx context.Context, supportAccount string, addr
 }
 
 func (w *WalletProxy) WalletSign(ctx context.Context, account string,
-	addr address.Address, toSign []byte, meta wallet.MsgMeta) (*crypto.Signature, error) {
+	addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error) {
 	var err error
 	var useCachedClient bool
 
@@ -152,7 +152,7 @@ func (w *WalletClient) WalletHas(ctx context.Context, supportAccount string, add
 	return w.Internal.WalletHas(ctx, supportAccount, addr)
 }
 
-func (w *WalletClient) WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta wallet.MsgMeta) (*crypto.Signature, error) {
+func (w *WalletClient) WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error) {
 	return w.Internal.WalletSign(ctx, account, addr, toSign, meta)
 }
 

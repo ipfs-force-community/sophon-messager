@@ -13,7 +13,6 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs-force-community/venus-gateway/types/wallet"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
@@ -971,8 +970,8 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	if err != nil {
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
-		Type:  wallet.MsgType(venusTypes.MTChainMsg),
+	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	})
 	if err != nil {
