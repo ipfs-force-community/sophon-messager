@@ -12,8 +12,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/messagepool"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-gateway/types/wallet"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
@@ -22,7 +21,7 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
@@ -153,10 +152,10 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		}
 		if xerrors.Is(err, gorm.ErrRecordNotFound) {
 			if err = txRepo.AddressRepo().SaveAddress(ctx, &types.Address{
-				ID:        types.NewUUID(),
+				ID:        venusTypes.NewUUID(),
 				Addr:      msg.From,
 				Nonce:     0,
-				State:     types.Alive,
+				State:     types.AddressStateAlive,
 				IsDeleted: repo.NotDeleted,
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
@@ -169,7 +168,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}); err != nil {
 		return err
 	}
-	if addrInfo != nil && addrInfo.State == types.Forbiden {
+	if addrInfo != nil && addrInfo.State == types.AddressStateForbbiden {
 		ms.log.Errorf("address(%s) is forbidden", msg.From.String())
 		return xerrors.Errorf("address(%s) is forbidden", msg.From.String())
 	}
@@ -183,15 +182,15 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return err
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	newId := types.NewUUID()
+func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	newId := venusTypes.NewUUID()
 	if err := ms.pushMessage(ctx, &types.Message{
-		ID:              newId.String(),
-		UnsignedMessage: *msg,
-		Meta:            meta,
-		State:           types.UnFillMsg,
-		WalletName:      account,
-		FromUser:        account,
+		ID:         newId.String(),
+		Message:    *msg,
+		Meta:       meta,
+		State:      types.UnFillMsg,
+		WalletName: account,
+		FromUser:   account,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", newId.String(), err)
 		return newId.String(), err
@@ -200,14 +199,14 @@ func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *
 	return newId.String(), nil
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	if err := ms.pushMessage(ctx, &types.Message{
-		ID:              id,
-		UnsignedMessage: *msg,
-		Meta:            meta,
-		State:           types.UnFillMsg,
-		WalletName:      account,
-		FromUser:        account,
+		ID:         id,
+		Message:    *msg,
+		Meta:       meta,
+		State:      types.UnFillMsg,
+		WalletName: account,
+		FromUser:   account,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", id, err)
 		return id, err
@@ -606,19 +605,19 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	//update cache
 	for _, msg := range selectResult.SelectMsg {
 		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		})
 		//update cache
 		err := ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
 			message.SignedCid = msg.SignedCid
 			message.UnsignedCid = msg.UnsignedCid
-			message.UnsignedMessage = msg.UnsignedMessage
+			message.Message = msg.Message
 			message.State = msg.State
 			message.Signature = msg.Signature
 			message.Nonce = msg.Nonce
 			if message.Receipt != nil {
-				message.Receipt.ReturnValue = nil //cover data for err before
+				message.Receipt.Return = nil //cover data for err before
 			}
 			return nil
 		})
@@ -630,9 +629,9 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	for _, m := range selectResult.ErrMsg {
 		err := ms.messageState.MutatorMessage(m.id, func(message *types.Message) error {
 			if message.Receipt != nil {
-				message.Receipt.ReturnValue = []byte(m.err)
+				message.Receipt.Return = []byte(m.err)
 			} else {
-				message.Receipt = &venusTypes.MessageReceipt{ReturnValue: []byte(m.err)}
+				message.Receipt = &venusTypes.MessageReceipt{Return: []byte(m.err)}
 			}
 			return nil
 		})
@@ -850,7 +849,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
 		msg.GasFeeCap = abi.NewTokenAmount(0)
 		msg.GasPremium = abi.NewTokenAmount(0)
-		retm, err := ms.nodeClient.GasEstimateMessageGas(ctx, &msg.UnsignedMessage, mss, venusTypes.EmptyTSK)
+		retm, err := ms.nodeClient.GasEstimateMessageGas(ctx, &msg.Message, mss, venusTypes.EmptyTSK)
 		if err != nil {
 			return cid.Undef, fmt.Errorf("failed to estimate gas values: %w", err)
 		}
@@ -862,7 +861,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 			return abi.TokenAmount(DefaultMaxFee), nil
 		}
 
-		messagepool.CapGasFee(mff, &msg.UnsignedMessage, mss)
+		messagepool.CapGasFee(mff, &msg.Message, mss)
 	} else {
 		if gasLimit > 0 {
 			msg.GasLimit = gasLimit
@@ -892,7 +891,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		message.GasPremium = msg.GasPremium
 		message.GasFeeCap = msg.GasFeeCap
 		message.UnsignedCid = msg.UnsignedCid
-		message.UnsignedMessage = msg.UnsignedMessage
+		message.Message = msg.Message
 		message.State = msg.State
 		message.Signature = msg.Signature
 		message.Nonce = msg.Nonce
@@ -949,10 +948,10 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		return xerrors.Errorf("message already on chain")
 	}
 	if msg.State != types.FillMsg {
-		return xerrors.Errorf("need FillMsg got %s", types.MsgStateToString(msg.State))
+		return xerrors.Errorf("need FillMsg got %s", msg.State)
 	}
 	signedMsg := &venusTypes.SignedMessage{
-		Message:   msg.UnsignedMessage,
+		Message:   msg.Message,
 		Signature: *msg.Signature,
 	}
 	if _, err := ms.nodeClient.MpoolPush(ctx, signedMsg); err != nil {
@@ -964,15 +963,15 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 }
 
 func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
-	unsignedCid := msg.UnsignedMessage.Cid()
+	unsignedCid := msg.Message.Cid()
 	msg.UnsignedCid = &unsignedCid
 	//签名
-	data, err := msg.UnsignedMessage.ToStorageBlock()
+	data, err := msg.Message.ToStorageBlock()
 	if err != nil {
 		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), wallet.MsgMeta{
-		Type:  wallet.MsgType(types.MTChainMsg),
+	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	})
 	if err != nil {
@@ -984,7 +983,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	msg.State = types.FillMsg
 
 	signedMsg := venusTypes.SignedMessage{
-		Message:   msg.UnsignedMessage,
+		Message:   msg.Message,
 		Signature: *msg.Signature,
 	}
 	signedCid := signedMsg.Cid()

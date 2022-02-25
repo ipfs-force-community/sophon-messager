@@ -11,13 +11,12 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - name: Deps
-        env:
-          GOPROXY: "https://proxy.golang.org,direct"
-          GO111MODULE: "on"
-        run: |
-          sudo apt-get install ocl-icd-opencl-dev libhwloc-dev
-          go mod download
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
       - name: golangci-lint
         env:
           GOPROXY: "https://proxy.golang.org,direct"
@@ -29,6 +28,3 @@ jobs:
           args: --timeout=30m --skip-dirs='[extern]'
           skip-pkg-cache: true
           skip-build-cache: true
-
-
-

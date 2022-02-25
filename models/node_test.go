@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 )
 
 func randNode() *types.Node {
 	return &types.Node{
-		ID:    types.NewUUID(),
-		Name:  types.NewUUID().String(),
-		URL:   types.NewUUID().String(),
-		Token: types.NewUUID().String(),
+		ID:    venustypes.NewUUID(),
+		Name:  venustypes.NewUUID().String(),
+		URL:   venustypes.NewUUID().String(),
+		Token: venustypes.NewUUID().String(),
 		Type:  0,
 	}
 }

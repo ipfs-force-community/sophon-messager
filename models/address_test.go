@@ -13,7 +13,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestAddress(t *testing.T) {
@@ -27,12 +28,12 @@ func TestAddress(t *testing.T) {
 		assert.NoError(t, err)
 
 		addrInfo := &types.Address{
-			ID:                types.NewUUID(),
+			ID:                venustypes.NewUUID(),
 			Addr:              addr,
 			Nonce:             3,
 			Weight:            100,
 			SelMsgNum:         1,
-			State:             types.Alive,
+			State:             types.AddressStateAlive,
 			GasOverEstimation: 1.25,
 			MaxFee:            big.NewInt(10),
 			MaxFeeCap:         big.NewInt(1),
@@ -42,10 +43,10 @@ func TestAddress(t *testing.T) {
 		}
 
 		addrInfo2 := &types.Address{
-			ID:        types.NewUUID(),
+			ID:        venustypes.NewUUID(),
 			Addr:      addr2,
 			SelMsgNum: 10,
-			State:     types.Alive,
+			State:     types.AddressStateAlive,
 			MaxFee:    big.NewInt(110),
 			MaxFeeCap: big.NewInt(11),
 			Nonce:     2,
@@ -55,12 +56,12 @@ func TestAddress(t *testing.T) {
 		}
 
 		addrInfo3 := &types.Address{
-			ID:        types.NewUUID(),
+			ID:        venustypes.NewUUID(),
 			Addr:      addr,
 			Nonce:     3,
 			Weight:    1000,
 			SelMsgNum: 10,
-			State:     types.Alive,
+			State:     types.AddressStateAlive,
 			IsDeleted: -1,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -114,7 +115,7 @@ func TestAddress(t *testing.T) {
 		})
 
 		t.Run("UpdateState", func(t *testing.T) {
-			state := types.Forbiden
+			state := types.AddressStateForbbiden
 			assert.NoError(t, addressRepo.UpdateState(ctx, addrInfo.Addr, state))
 			r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 			assert.NoError(t, err)
@@ -153,7 +154,7 @@ func TestAddress(t *testing.T) {
 			assert.NoError(t, err)
 			newAddrInfo := &types.Address{}
 			*newAddrInfo = *addrInfo2
-			newAddrInfo.State = types.Removed
+			newAddrInfo.State = types.AddressStateRemoved
 			checkField(t, newAddrInfo, r)
 		})
 

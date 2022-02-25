@@ -6,8 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type NodeEvents struct {
@@ -27,7 +26,7 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 			return xerrors.Errorf("expect hccurrent length 1 but for %d", len(noti))
 		}
 
-		if noti[0].Type != chain.HCCurrent {
+		if noti[0].Type != types.HCCurrent {
 			return xerrors.Errorf("expect hccurrent event but got %s ", noti[0].Type)
 		}
 		//todo do some check or repaire for the first connect
@@ -44,9 +43,9 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 
 		for _, change := range notif {
 			switch change.Type {
-			case chain.HCApply:
+			case types.HCApply:
 				apply = append(apply, change.Val)
-			case chain.HCRevert:
+			case types.HCRevert:
 				revert = append(revert, change.Val)
 			}
 		}

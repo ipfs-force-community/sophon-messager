@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type SharedParamsCtrl struct {
@@ -12,11 +12,11 @@ type SharedParamsCtrl struct {
 	SharedParamsService *service.SharedParamsService
 }
 
-func (spc SharedParamsCtrl) GetSharedParams(ctx context.Context) (*types.SharedParams, error) {
+func (spc SharedParamsCtrl) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	return spc.SharedParamsService.GetSharedParams(ctx)
 }
 
-func (spc SharedParamsCtrl) SetSharedParams(ctx context.Context, params *types.SharedParams) error {
+func (spc SharedParamsCtrl) SetSharedParams(ctx context.Context, params *types.SharedSpec) error {
 	return spc.SharedParamsService.SetSharedParams(ctx, params)
 }
 

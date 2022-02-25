@@ -4,18 +4,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"log"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
 	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func main() {
@@ -95,14 +95,14 @@ func main() {
 
 	for range ticker.C {
 		for i := 0; i < count; i++ {
-			msgMate := &types.MsgMeta{
+			msgMate := &types.SendSpec{
 				GasOverEstimation: 1.25,
 				MaxFee:            big.NewInt(10000000000000000),
 				MaxFeeCap:         big.NewInt(10000000000000000),
 			}
 			uid, err := client.PushMessageWithId(context.Background(),
-				types.NewUUID().String(),
-				&venustypes.UnsignedMessage{
+				venustypes.NewUUID().String(),
+				&venustypes.Message{
 					Version: 0,
 					To:      to,
 					From:    from,

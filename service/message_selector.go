@@ -10,8 +10,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/crypto"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-gateway/types/wallet"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"golang.org/x/xerrors"
 	"modernc.org/mathutil"
 
@@ -19,7 +18,8 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const (
@@ -123,7 +123,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *types.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	//判断是否需要推送消息
@@ -159,7 +159,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 		toPushMessage = append(toPushMessage, &venusTypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		})
 	}
@@ -205,7 +205,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		// global msg meta
 		newMsgMeta := messageSelector.messageMeta(msg.Meta, addr)
 		estimateMesssages[index] = &EstimateMessage{
-			Msg: &msg.UnsignedMessage,
+			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,
 				GasOverEstimation: newMsgMeta.GasOverEstimation,
@@ -242,18 +242,18 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		msg.GasPremium = estimateMsg.GasPremium
 		msg.GasLimit = estimateMsg.GasLimit
 
-		unsignedCid := msg.UnsignedMessage.Cid()
+		unsignedCid := msg.Message.Cid()
 		msg.UnsignedCid = &unsignedCid
 		//签名
-		data, err := msg.UnsignedMessage.ToStorageBlock()
+		data, err := msg.Message.ToStorageBlock()
 		if err != nil {
 			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 			continue
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), wallet.MsgMeta{
-			Type:  wallet.MsgType(types.MTChainMsg),
+		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})
 		cancel()
@@ -269,7 +269,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 
 		//signed cid for t1 address
 		signedMsg := venusTypes.SignedMessage{
-			Message:   msg.UnsignedMessage,
+			Message:   msg.Message,
 			Signature: *msg.Signature,
 		}
 		signedCid := signedMsg.Cid()
@@ -306,10 +306,10 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 	return result, expireMsg
 }
 
-func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInfo *types.Address) *types.MsgMeta {
-	newMsgMeta := &types.MsgMeta{}
+func (messageSelector *MessageSelector) messageMeta(meta *types.SendSpec, addrInfo *types.Address) *types.SendSpec {
+	newMsgMeta := &types.SendSpec{}
 	*newMsgMeta = *meta
-	globalMeta := messageSelector.sps.GetParams().GetMsgMeta()
+	globalMeta := messageSelector.sps.GetParams().GetSendSpec()
 
 	if meta.GasOverEstimation == 0 {
 		if addrInfo.GasOverEstimation != 0 {
@@ -336,8 +336,8 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.MsgMeta, addrInf
 	return newMsgMeta
 }
 
-func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*types.NonceMap, error) {
-	applied := types.NewNonceMap()
+func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
+	applied := utils.NewNonceMap()
 	//todo change with venus/lotus message for tipset
 	selectMsg := func(m *venusTypes.Message) error {
 		// The first match for a sender is guaranteed to have correct nonce -- the block isn't valid otherwise
@@ -367,7 +367,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 
 	return applied, nil
 }
-func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.UnsignedMessage, meta *types.MsgMeta, tsk venusTypes.TipSetKey) (*venusTypes.UnsignedMessage, error) {
+func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec, tsk venusTypes.TipSetKey) (*venusTypes.Message, error) {
 	if msg.GasLimit == 0 {
 		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
@@ -414,7 +414,7 @@ func (messageSelector *MessageSelector) uniqAddresses(addrList []*types.Address)
 
 func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Address) map[address.Address]uint64 {
 	var defSelMsgNum uint64
-	if messageSelector.sps.GetParams().SharedParams != nil {
+	if messageSelector.sps.GetParams().SharedSpec != nil {
 		defSelMsgNum = messageSelector.sps.GetParams().SelMsgNum
 	}
 	selMsgNum := make(map[address.Address]uint64)
@@ -433,7 +433,7 @@ func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Addre
 	return selMsgNum
 }
 
-func CapGasFee(msg *venusTypes.UnsignedMessage, maxFee abi.TokenAmount) {
+func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 	if maxFee.NilOrZero() {
 		return
 	}

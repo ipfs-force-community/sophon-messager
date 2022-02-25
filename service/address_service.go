@@ -8,8 +8,8 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"
 )
 
@@ -41,7 +41,7 @@ func NewAddressService(repo repo.Repo,
 	return addressService
 }
 
-func (addressService *AddressService) SaveAddress(ctx context.Context, address *types.Address) (types.UUID, error) {
+func (addressService *AddressService) SaveAddress(ctx context.Context, address *types.Address) (venusTypes.UUID, error) {
 	err := addressService.repo.Transaction(func(txRepo repo.TxRepo) error {
 		has, err := txRepo.AddressRepo().HasAddress(ctx, address.Addr)
 		if err != nil {
@@ -85,7 +85,7 @@ func (addressService *AddressService) DeleteAddress(ctx context.Context, addr ad
 }
 
 func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) error {
-	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Forbiden); err != nil {
+	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.AddressStateForbbiden); err != nil {
 		return err
 	}
 	addressService.log.Infof("forbidden address %v success", addr.String())
@@ -94,7 +94,7 @@ func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr
 }
 
 func (addressService *AddressService) ActiveAddress(ctx context.Context, addr address.Address) error {
-	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.Alive); err != nil {
+	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.AddressStateAlive); err != nil {
 		return err
 	}
 	addressService.log.Infof("active address %v success", addr.String())

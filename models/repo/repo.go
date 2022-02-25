@@ -7,7 +7,7 @@ import (
 
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"gorm.io/gorm"
 )
 
@@ -56,9 +56,9 @@ func (s *SqlSignature) Value() (driver.Value, error) {
 }
 
 type SqlMsgReceipt struct {
-	ExitCode    exitcode.ExitCode `gorm:"column:exit_code;default:-1"`
-	ReturnValue []byte            `gorm:"column:return_value;type:blob;"`
-	GasUsed     int64             `gorm:"column:gas_used;type:bigint;"`
+	ExitCode exitcode.ExitCode `gorm:"column:exit_code;default:-1"`
+	Return   []byte            `gorm:"column:return_value;type:blob;"`
+	GasUsed  int64             `gorm:"column:gas_used;type:bigint;"`
 }
 
 func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
@@ -67,9 +67,9 @@ func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
 	}
 
 	return &types.MessageReceipt{
-		ExitCode:    s.ExitCode,
-		ReturnValue: s.ReturnValue,
-		GasUsed:     s.GasUsed,
+		ExitCode: s.ExitCode,
+		Return:   s.Return,
+		GasUsed:  s.GasUsed,
 	}
 }
 
@@ -80,7 +80,7 @@ func FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
 	}
 
 	s.GasUsed = receipt.GasUsed
-	s.ReturnValue = receipt.ReturnValue
+	s.Return = receipt.Return
 	s.ExitCode = receipt.ExitCode
 	return &s
 }

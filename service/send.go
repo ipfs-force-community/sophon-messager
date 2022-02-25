@@ -6,20 +6,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"reflect"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/venus/pkg/chain"
-	venusTypes "github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (string, error) {
+func (ms *MessageService) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
 	var decParams []byte
 	var err error
 
@@ -28,12 +28,12 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	}
 
 	switch params.ParamsType {
-	case types.ParamsJSON:
+	case types.QuickSendParamsCodecJSON:
 		decParams, err = ms.decodeTypedParamsFromJSON(ctx, params.To, params.Method, params.Params)
 		if err != nil {
 			return "", xerrors.Errorf("failed to decode json params: %w", err)
 		}
-	case types.ParamsHex:
+	case types.QuickSendParamsCodecHex:
 		decParams, err = hex.DecodeString(params.Params)
 		if err != nil {
 			return "", xerrors.Errorf("failed to decode hex params: %w", err)
@@ -42,10 +42,10 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 		return "", xerrors.Errorf("unexpected param type %s", params.ParamsType)
 	}
 
-	uuid := types.NewUUID().String()
+	uuid := venusTypes.NewUUID().String()
 	msg := &types.Message{
 		ID: uuid,
-		UnsignedMessage: venusTypes.UnsignedMessage{
+		Message: venusTypes.Message{
 			From:  params.From,
 			To:    params.To,
 			Value: params.Val,
@@ -59,19 +59,19 @@ func (ms *MessageService) Send(ctx context.Context, params types.SendParams) (st
 	}
 
 	if params.GasPremium != nil {
-		msg.GasPremium = *params.GasPremium
+		msg.Message.GasPremium = *params.GasPremium
 	} else {
-		msg.UnsignedMessage.GasPremium = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasPremium = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasFeeCap != nil {
-		msg.UnsignedMessage.GasFeeCap = *params.GasFeeCap
+		msg.Message.GasFeeCap = *params.GasFeeCap
 	} else {
-		msg.UnsignedMessage.GasFeeCap = abi.TokenAmount{Int: types.NewInt(0).Int}
+		msg.Message.GasFeeCap = abi.TokenAmount{Int: venusTypes.NewInt(0).Int}
 	}
 	if params.GasLimit != nil {
-		msg.UnsignedMessage.GasLimit = *params.GasLimit
+		msg.Message.GasLimit = *params.GasLimit
 	} else {
-		msg.UnsignedMessage.GasLimit = 0
+		msg.Message.GasLimit = 0
 	}
 
 	err = ms.pushMessage(ctx, msg)

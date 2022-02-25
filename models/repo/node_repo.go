@@ -1,6 +1,6 @@
 package repo
 
-import "github.com/filecoin-project/venus-messager/types"
+import types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 type NodeRepo interface {
 	CreateNode(node *types.Node) error

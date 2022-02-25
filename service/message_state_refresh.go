@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
@@ -138,7 +138,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 				ms.log.Warnf("replace message old msg cid %s new msg cid %s", localMsg.UnsignedCid, msg.cid)
 				// replace msg
 				unsignedCid := msg.msg.Cid()
-				localMsg.UnsignedMessage = *msg.msg
+				localMsg.Message = *msg.msg
 				localMsg.UnsignedCid = &unsignedCid
 				localMsg.SignedCid = &msg.cid
 				localMsg.State = types.ReplacedMsg
@@ -192,7 +192,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 
 type pendingMessage struct {
 	cid     cid.Cid
-	msg     *venustypes.UnsignedMessage
+	msg     *venustypes.Message
 	height  abi.ChainEpoch
 	receipt *venustypes.MessageReceipt
 }

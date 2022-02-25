@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/filecoin-project/venus-messager/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 var TMessage = reflect.TypeOf(&types.Message{})
@@ -14,7 +14,7 @@ var TAddress = reflect.TypeOf(&types.Address{})
 var TSqliteAddress = reflect.TypeOf(&sqliteAddress{})
 
 var TSqliteSharedParams = reflect.TypeOf(&sqliteSharedParams{})
-var TSharedParams = reflect.TypeOf(&types.SharedParams{})
+var TSharedParams = reflect.TypeOf(&types.SharedSpec{})
 
 var TNode = reflect.TypeOf(&types.Node{})
 var TSqliteNode = reflect.TypeOf(&sqliteNode{})
