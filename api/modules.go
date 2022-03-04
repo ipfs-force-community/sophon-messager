@@ -2,35 +2,30 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/filecoin-project/venus/venus-shared/api/permission"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
-	"github.com/ipfs-force-community/metrics/ratelimit"
-	"go.uber.org/fx"
-	"golang.org/x/xerrors"
-
 	"github.com/filecoin-project/venus-messager/api/client"
-	"github.com/filecoin-project/venus-messager/api/controller"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
+	"github.com/ipfs-force-community/metrics/ratelimit"
+	"go.uber.org/fx"
 )
 
 func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp, rateLimitCfg *config.RateLimitConfig) error {
 	var msgAPI client.Message
-	PermissionedProxy(controller.AuthMap, msgImp, &msgAPI.Internal)
+	permission.PermissionProxy(msgImp, &msgAPI)
 
 	srv := jsonrpc.NewServer()
 	if len(rateLimitCfg.Redis) != 0 && jwtCli.Remote != nil && jwtCli.Remote.Cli != nil {
@@ -284,43 +279,5 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		NodeSrv:    implParams.NodeService,
 		ParamsSrv:  implParams.SharedParamsService,
 		log:        implParams.Logger,
-	}
-}
-
-var AllPermissions = []auth.Permission{"read", "write", "sign", "admin"}
-var defaultPerms = []auth.Permission{"read"}
-
-func PermissionedProxy(permMap map[string]string, in interface{}, out interface{}) {
-	rint := reflect.ValueOf(out).Elem()
-	ra := reflect.ValueOf(in)
-
-	for f := 0; f < rint.NumField(); f++ {
-		field := rint.Type().Field(f)
-
-		fn := ra.MethodByName(field.Name)
-		requiredPerm, ok := permMap[field.Name]
-		if !ok {
-			panic(fmt.Sprintf("'%s' not found perm", field.Name))
-		}
-
-		rint.Field(f).Set(reflect.MakeFunc(field.Type, func(args []reflect.Value) (results []reflect.Value) {
-			ctx := args[0].Interface().(context.Context)
-			if auth.HasPerm(ctx, defaultPerms, requiredPerm) {
-				return fn.Call(args)
-			}
-
-			err := xerrors.Errorf("missing permission to invoke '%s', need '%s'", field.Name, requiredPerm)
-			rerr := reflect.ValueOf(&err).Elem()
-
-			if field.Type.NumOut() == 2 {
-				return []reflect.Value{
-					reflect.Zero(field.Type.Out(0)),
-					rerr,
-				}
-			} else {
-				return []reflect.Value{rerr}
-			}
-		}))
-
 	}
 }
