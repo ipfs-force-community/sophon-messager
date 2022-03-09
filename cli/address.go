@@ -80,42 +80,6 @@ var listAddrCmd = &cli.Command{
 	},
 }
 
-//nolint
-var updateNonceCmd = &cli.Command{
-	Name:      "update-nonce",
-	Usage:     "update address nonce",
-	ArgsUsage: "address",
-	Flags: []cli.Flag{
-		&cli.Uint64Flag{
-			Name:  "nonce",
-			Usage: "address nonce",
-		},
-	},
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
-		}
-
-		addr, err := address.NewFromString(ctx.Args().First())
-		if err != nil {
-			return err
-		}
-
-		nonce := ctx.Uint64("nonce")
-		if err := client.UpdateNonce(ctx.Context, addr, nonce); err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
 var deleteAddrCmd = &cli.Command{
 	Name:      "del",
 	Usage:     "delete address",

@@ -46,7 +46,7 @@ func (bi *Int) Scan(value interface{}) error {
 	case string:
 		bi.SetString(t, 10)
 	default:
-		return fmt.Errorf("Could not scan type %T into BigInt ", t)
+		return fmt.Errorf("could not scan type %T into BigInt ", t)
 	}
 	return nil
 }
