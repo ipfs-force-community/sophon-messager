@@ -1,7 +1,6 @@
 package sqlite
 
 import (
-	"fmt"
 	"reflect"
 
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -18,5 +17,3 @@ var TSharedParams = reflect.TypeOf(&types.SharedSpec{})
 
 var TNode = reflect.TypeOf(&types.Node{})
 var TSqliteNode = reflect.TypeOf(&sqliteNode{})
-
-var ERRUnspportedMappingType = fmt.Errorf("unsupported mapping type")
