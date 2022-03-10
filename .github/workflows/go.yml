@@ -46,6 +46,6 @@ jobs:
           token:
           files: ./coverage.txt
           flags: unittests
-          name: codecov-umbrella
+          name: venus-messager
           fail_ci_if_error: true
           verbose: true
