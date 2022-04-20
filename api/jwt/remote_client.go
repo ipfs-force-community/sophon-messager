@@ -12,14 +12,14 @@ import (
 )
 
 type RemoteAuthClient struct {
-	Cli *jwtclient.JWTClient
+	Cli *jwtclient.AuthClient
 }
 
 func newRemoteJwtClient(jwtCfg *config.JWTConfig) *RemoteAuthClient {
 	var remote *RemoteAuthClient
 	if len(jwtCfg.AuthURL) > 0 {
 		remote = &RemoteAuthClient{}
-		remote.Cli = jwtclient.NewJWTClient(jwtCfg.AuthURL)
+		remote.Cli, _ = jwtclient.NewAuthClient(jwtCfg.AuthURL)
 	}
 
 	return remote
