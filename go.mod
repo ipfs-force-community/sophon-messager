@@ -16,8 +16,8 @@ require (
 	github.com/filecoin-project/specs-actors/v4 v4.0.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
-	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
-	github.com/filecoin-project/venus v1.2.0
+	github.com/filecoin-project/specs-actors/v7 v7.0.0
+	github.com/filecoin-project/venus v1.2.4-0.20220420072943-4d565663fa60
 	github.com/filecoin-project/venus-auth v1.3.2
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/google/uuid v1.3.0
@@ -28,7 +28,7 @@ require (
 	github.com/ipfs-force-community/venus-gateway v1.2.0
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
-	github.com/multiformats/go-multiaddr v0.4.1
+	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.9.4
@@ -38,9 +38,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/whyrusleeping/cbor-gen v0.0.0-20210713220151-be142a5ae1a8
-	go.uber.org/fx v1.13.1
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	github.com/whyrusleeping/cbor-gen v0.0.0-20220302191723-37c43cae8e14
+	go.uber.org/fx v1.15.0
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/tools v0.1.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
