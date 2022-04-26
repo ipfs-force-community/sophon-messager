@@ -656,7 +656,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		}
 		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for addr, msgs := range pushMsgByAddr {
-			//use batchpush insteam push one by one, batch push may cause messsage send to different nodes when through chain-co
+			//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
 			//issue https://github.com/filecoin-project/venus/issues/4860
 			if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
 				if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
@@ -711,7 +711,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	for _, node := range nc {
 		for addr, msgs := range msgsByAddr {
-			//use batchpush insteam push one by one, batch push may cause messsage send to different nodes when through chain-co
+			//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
 			//issue https://github.com/filecoin-project/venus/issues/4860
 			if _, err := node.cli.MpoolBatchPush(ctx, msgs); err != nil {
 				//skip error
