@@ -6,11 +6,12 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/log"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type NodeEvents struct {
-	client     *NodeClient
+	client     v1.FullNode
 	log        *log.Logger
 	msgService *MessageService
 }

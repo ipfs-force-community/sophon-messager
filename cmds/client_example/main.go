@@ -13,8 +13,9 @@ import (
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
-	"github.com/filecoin-project/venus-messager/api/client"
 	"github.com/filecoin-project/venus-messager/config"
+
+	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -83,7 +84,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, closer, err := client.NewMessageRPC(context.Background(), addr, apiInfo.AuthHeader())
+	client, closer, err := messager.NewIMessagerRPC(context.Background(), addr, apiInfo.AuthHeader())
 	if err != nil {
 		log.Fatal(err)
 		return
