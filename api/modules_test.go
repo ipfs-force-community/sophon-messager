@@ -19,15 +19,10 @@ import (
 // if ok, all member function in 'ratelimitAPI' is not nil
 func TestLimitWrap(t *testing.T) {
 	//todo make test injection more generic
-	cfg := &config.RateLimitConfig{
-		Redis: "test url",
-	}
-	mlog := log.New()
-	//	limiter, err := ratelimit.NewRateLimitHandler(
-	//		"", nil, &jwtclient.ValueFromCtx{}, jwtclient.WarpLimitFinder(cli), nil)
-
 	provider := fx.Options(
-		fx.Supply(cfg),
+		fx.Supply(&config.RateLimitConfig{
+			Redis: "test url",
+		}),
 		fx.Provide(func() *jwt.JwtClient {
 			return &jwt.JwtClient{
 				Remote: &jwt.RemoteAuthClient{
@@ -35,7 +30,7 @@ func TestLimitWrap(t *testing.T) {
 				},
 			}
 		}),
-		fx.Supply(mlog),
+		fx.Supply(log.New()),
 		fx.Supply(&api.MessageImp{}),
 		fx.Provide(api.BindRateLimit),
 	)
