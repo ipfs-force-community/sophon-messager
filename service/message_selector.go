@@ -10,6 +10,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/crypto"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"golang.org/x/xerrors"
 	"modernc.org/mathutil"
@@ -31,7 +32,7 @@ type MessageSelector struct {
 	repo           repo.Repo
 	log            *log.Logger
 	cfg            *config.MessageServiceConfig
-	nodeClient     *NodeClient
+	nodeClient     v1.FullNode
 	addressService *AddressService
 	sps            *SharedParamsService
 	walletClient   gateway.IWalletClient
@@ -53,7 +54,7 @@ type msgErrInfo struct {
 func NewMessageSelector(repo repo.Repo,
 	logger *log.Logger,
 	cfg *config.MessageServiceConfig,
-	nodeClient *NodeClient,
+	nodeClient v1.FullNode,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	walletClient *gateway.IWalletCli) *MessageSelector {
@@ -200,11 +201,11 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var selectMsg []*types.Message
 	var errMsg []msgErrInfo
 
-	estimateMesssages := make([]*EstimateMessage, len(messages))
+	estimateMesssages := make([]*venusTypes.EstimateMessage, len(messages))
 	for index, msg := range messages {
 		// global msg meta
 		newMsgMeta := messageSelector.messageMeta(msg.Meta, addr)
-		estimateMesssages[index] = &EstimateMessage{
+		estimateMesssages[index] = &venusTypes.EstimateMessage{
 			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,

@@ -109,12 +109,12 @@ var searchCmd = &cli.Command{
 		}
 		fmt.Printf("- message information:\n%s\n", string(bytes))
 
-		getter, closer, err := getActorGetter(ctx)
+		nodeAPI, closer, err := getNodeAPI(ctx)
 		if err != nil {
-			return nil
+			return err
 		}
 		defer closer()
-		paser, err := actor_parser.NewMessageParser(getter)
+		paser, err := actor_parser.NewMessageParser(nodeAPI)
 		if err != nil {
 			return nil
 		}

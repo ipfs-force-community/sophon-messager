@@ -13,8 +13,8 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type sqliteMessage struct {

@@ -11,7 +11,9 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/messagepool"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
@@ -37,7 +39,7 @@ type MessageService struct {
 	repo           repo.Repo
 	log            *log.Logger
 	cfg            *config.MessageServiceConfig
-	nodeClient     *NodeClient
+	nodeClient     v1.FullNode
 	messageState   *MessageState
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
@@ -70,7 +72,7 @@ type cleanUnFillMsgResult struct {
 }
 
 func NewMessageService(repo repo.Repo,
-	nc *NodeClient,
+	nc v1.FullNode,
 	logger *log.Logger,
 	cfg *config.MessageServiceConfig,
 	messageState *MessageState,
@@ -667,7 +669,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 type nodeClient struct {
 	name  string
-	cli   *NodeClient
+	cli   v1.FullNode
 	close jsonrpc.ClientCloser
 }
 
@@ -801,7 +803,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Message) error {
 	cid := msg.SignedCid
 	if cid != nil {
-		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, *cid)
+		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, abi.ChainEpoch(constants.LookbackNoLimit), true)
 		if err != nil || msgLookup == nil {
 			return xerrors.Errorf("search message %s from node %v", cid.String(), err)
 		}

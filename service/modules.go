@@ -9,21 +9,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/log"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 )
-
-type ServiceMap map[reflect.Type]interface{}
-
-func MakeServiceMap(msgService *MessageService,
-	addressService *AddressService,
-	sps *SharedParamsService,
-	nodeService *NodeService) ServiceMap {
-	sMap := make(ServiceMap)
-	sMap[reflect.TypeOf(msgService)] = msgService
-	sMap[reflect.TypeOf(addressService)] = addressService
-	sMap[reflect.TypeOf(sps)] = sps
-	sMap[reflect.TypeOf(nodeService)] = nodeService
-	return sMap
-}
 
 func MessagerService() fx.Option {
 	return fx.Options(
@@ -32,11 +19,10 @@ func MessagerService() fx.Option {
 		fx.Provide(NewAddressService),
 		fx.Provide(NewSharedParamsService),
 		fx.Provide(NewNodeService),
-		fx.Provide(MakeServiceMap),
 	)
 }
 
-func StartNodeEvents(lc fx.Lifecycle, client *NodeClient, msgService *MessageService, log *log.Logger) *NodeEvents {
+func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageService, log *log.Logger) *NodeEvents {
 	nd := &NodeEvents{
 		client:     client,
 		log:        log,

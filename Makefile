@@ -22,7 +22,7 @@ deps:
 	./extern/filecoin-ffi/install-filcrypto
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint run
+	golangci-lint run
 
 test:
 	rm -rf models/test_sqlite_db*
