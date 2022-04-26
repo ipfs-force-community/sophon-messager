@@ -964,8 +964,9 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 	if _, err := ms.nodeClient.MpoolPush(ctx, signedMsg); err != nil {
 		return err
 	}
-	ms.multiNodeToPush(ctx, []*venusTypes.SignedMessage{signedMsg})
-
+	toPush := make(map[address.Address][]*venusTypes.SignedMessage)
+	toPush[signedMsg.Message.From] = []*venusTypes.SignedMessage{signedMsg}
+	ms.multiNodeToPush(ctx, toPush)
 	return nil
 }
 
