@@ -34,7 +34,7 @@ func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.L
 			return err
 		}
 		var rateLimitAPI messager.IMessagerStruct
-		limiter.WraperLimiter(&msgAPI, &rateLimitAPI.Internal)
+		limiter.WraperLimiter(&msgAPI.Internal, &rateLimitAPI.Internal)
 		srv.Register("Message", &rateLimitAPI)
 	} else {
 		srv.Register("Message", &msgAPI)

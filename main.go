@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/metrics"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -199,6 +200,9 @@ func runAction(ctx *cli.Context) error {
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(walletClient),
+		fx.Provide(func() v1.FullNode {
+			return client
+		}),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),
