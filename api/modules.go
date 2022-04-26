@@ -17,11 +17,10 @@ import (
 	"go.uber.org/fx"
 )
 
-func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp *MessageImp, rateLimitCfg *config.RateLimitConfig) error {
+func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.JwtClient, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
-	srv := jsonrpc.NewServer()
 	if len(rateLimitCfg.Redis) != 0 && jwtCli.Remote != nil && jwtCli.Remote.Cli != nil {
 		limiter, err := ratelimit.NewRateLimitHandler(
 			rateLimitCfg.Redis,
@@ -31,15 +30,20 @@ func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.L
 			log,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var rateLimitAPI messager.IMessagerStruct
-		limiter.WraperLimiter(&msgAPI.Internal, &rateLimitAPI.Internal)
-		srv.Register("Message", &rateLimitAPI)
-	} else {
-		srv.Register("Message", &msgAPI)
+		limiter.WraperLimiter(msgAPI.Internal, &rateLimitAPI.Internal)
+		msgAPI = rateLimitAPI
 	}
+	return &msgAPI, nil
+}
 
+// RunAPI bind rpc call and start rpc
+// todo
+func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
+	srv := jsonrpc.NewServer()
+	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()
 	handler.Handle("/rpc/v0", srv)
 	authMux := jwtclient.NewAuthMux(jwtCli.Local, jwtCli.Remote, handler, log)

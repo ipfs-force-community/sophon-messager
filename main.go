@@ -227,9 +227,14 @@ func runAction(ctx *cli.Context) error {
 		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(metrics.SetupJaeger),
+	)
+
+	apiOption := fx.Options(
+		fx.Provide(api.BindRateLimit),
 		fx.Invoke(api.RunAPI),
 	)
-	app := fx.New(provider, invoker)
+
+	app := fx.New(provider, invoker, apiOption)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
 		return xerrors.Errorf("starting node: %w", err)
