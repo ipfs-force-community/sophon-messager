@@ -97,7 +97,7 @@ func (w *WalletProxy) fastSelectAvaClient(ctx context.Context, account string, a
 
 	c, isok := <-ch
 	if !isok || c == nil {
-		return nil, fmt.Errorf("can't find a wallet with(account:%s wallet:%s)", account, addr.String())
+		return nil, fmt.Errorf("can't find a wallet, account: %s address: %s", account, addr.String())
 	}
 
 	w.putCache(account, addr, c)
@@ -169,7 +169,7 @@ func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProx
 		c, cls, err := newWalletClient(ctx, cfg.Token, url)
 
 		if err != nil {
-			return nil, nil, xerrors.Errorf("create wallet client with url:%s failed:%w", url, err)
+			return nil, nil, xerrors.Errorf("create geteway client with url:%s failed:%w", url, err)
 		}
 
 		proxy.clients[url] = c
