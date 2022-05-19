@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"reflect"
 
 	"github.com/filecoin-project/go-address"
@@ -16,6 +15,7 @@ import (
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -88,13 +88,16 @@ func (ms *MessageService) decodeTypedParamsFromJSON(ctx context.Context, to addr
 		return nil, err
 	}
 
-	methodMeta, found := chain.MethodsMap[act.Code][method]
+	parser, err := actor_parser.NewMessageParser(ms.nodeClient)
+	if err != nil {
+		return nil, err
+	}
+	methodMeta, found := parser.GetMethodMeta(act.Code, method)
 	if !found {
 		return nil, fmt.Errorf("method %d not found on actor %s", method, act.Code)
 	}
 
-	p := reflect.New(methodMeta.Params.Elem()).Interface().(cbg.CBORMarshaler)
-
+	p := reflect.New(methodMeta.InType).Interface().(cbg.CBORMarshaler)
 	if err := json.Unmarshal([]byte(paramStr), p); err != nil {
 		return nil, fmt.Errorf("unmarshaling input into params type: %w", err)
 	}

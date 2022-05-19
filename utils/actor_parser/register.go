@@ -1,16 +1,17 @@
 package actor_parser
 
 import (
+	"reflect"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
-	"reflect"
 )
 
 type Method struct {
 	Name    string
 	Num     int
-	inType  reflect.Type
-	outType reflect.Type
+	InType  reflect.Type
+	OutType reflect.Type
 }
 
 type Actor struct {

@@ -5,6 +5,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
+	"reflect"
+	"testing"
+
 	"github.com/filecoin-project/go-address"
 	cbor "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -12,9 +16,6 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
-	"io/ioutil"
-	"reflect"
-	"testing"
 )
 
 func init() {

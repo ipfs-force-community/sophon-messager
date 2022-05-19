@@ -12,7 +12,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/constants"
-	"github.com/filecoin-project/venus/pkg/messagepool"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
@@ -26,7 +25,7 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-var errAlreadyInMpool = xerrors.Errorf("already in mpool: %v", messagepool.ErrSoftValidationFailure)
+var errAlreadyInMpool = xerrors.Errorf("already in mpool: validation failure")
 var errMinimumNonce = xerrors.New("minimum expected nonce")
 
 const (
@@ -840,7 +839,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	}
 
 	if auto {
-		minRBF := messagepool.ComputeMinRBF(msg.GasPremium)
+		minRBF := computeMinRBF(msg.GasPremium)
 
 		var mss *venusTypes.MessageSendSpec
 		if len(maxFee) > 0 {
@@ -864,11 +863,21 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		msg.GasPremium = big.Max(retm.GasPremium, minRBF)
 		msg.GasFeeCap = big.Max(retm.GasFeeCap, msg.GasPremium)
 
-		mff := func() (abi.TokenAmount, error) {
-			return abi.TokenAmount(DefaultMaxFee), nil
+		if mss == nil {
+			addrInfo, err := ms.addressService.GetAddress(ctx, msg.From)
+			if err != nil {
+				return cid.Undef, err
+			}
+			maxFee := addrInfo.MaxFee
+			if maxFee.NilOrZero() {
+				maxFee = ms.sps.GetParams().MaxFee
+			}
+			mss = &venusTypes.MessageSendSpec{
+				MaxFee: maxFee,
+			}
 		}
 
-		messagepool.CapGasFee(mff, &msg.Message, mss)
+		CapGasFee(&msg.Message, mss.MaxFee)
 	} else {
 		if gasLimit > 0 {
 			msg.GasLimit = gasLimit
@@ -1036,4 +1045,17 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 	case <-ctx.Done():
 		return 0, ctx.Err()
 	}
+}
+
+const (
+	ReplaceByFeeRatioDefault = 1.25
+	RbfDenom                 = 256
+)
+
+var rbfNumBig = big.NewInt(int64((ReplaceByFeeRatioDefault - 1) * RbfDenom))
+var rbfDenomBig = big.NewInt(RbfDenom)
+
+func computeMinRBF(curPrem abi.TokenAmount) abi.TokenAmount {
+	minPrice := big.Add(curPrem, big.Div(big.Mul(curPrem, rbfNumBig), rbfDenomBig))
+	return big.Add(minPrice, big.NewInt(1))
 }
