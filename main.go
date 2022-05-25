@@ -9,7 +9,10 @@ import (
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/metrics"
+	"github.com/filecoin-project/venus/pkg/util/blockstoreutil"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -50,6 +53,18 @@ func main() {
 			runCmd,
 		},
 	}
+	for _, cmd := range app.Commands {
+		before := cmd.Before
+		cmd.Before = func(cctx *cli.Context) error {
+			if before != nil {
+				if err := before(cctx); err != nil {
+					return err
+				}
+			}
+			return loadBuiltinActors(cctx)
+		}
+	}
+
 	app.Version = version.Version + "--" + version.GitCommit
 	app.Setup()
 	if err := app.Run(os.Args); err != nil {
@@ -321,4 +336,55 @@ func genSecret(cfg *config.JWTConfig) error {
 	}
 
 	return nil
+}
+
+func loadBuiltinActors(cctx *cli.Context) error {
+	if cctx.Command.Name == "run" {
+		var err error
+		cfg := &config.Config{}
+		if err := updateFlag(cfg, cctx); err != nil {
+			return err
+		}
+		if len(cfg.Node.Url) == 0 || len(cfg.Node.Token) == 0 {
+			cfg, err = config.ReadConfig(cctx.String("config"))
+			if err != nil {
+				return err
+			}
+		}
+		full, closer, err := service.NewNodeClient(cctx.Context, &cfg.Node)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		networkName, err := full.StateNetworkName(cctx.Context)
+		if err != nil {
+			return err
+		}
+		builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
+		if err := os.Setenv(builtinactors.RepoPath, "./"); err != nil {
+			return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
+		}
+
+		bs := blockstoreutil.NewMemory()
+		if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
+			panic(fmt.Errorf("error loading actor manifest: %w", err))
+		}
+
+	}
+	return nil
+}
+
+func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
+	switch networkName {
+	case "mainnet":
+		return types.NetworkMainnet
+	case "calibrationnet":
+		return types.NetworkCalibnet
+	case "butterflynet":
+		return types.NetworkButterfly
+	case "interopnet":
+		return types.NetworkInterop
+	default:
+		return types.Network2k
+	}
 }
