@@ -103,7 +103,7 @@ func DefaultConfig() *Config {
 				ConnMaxLifeTime:  time.Second * 60,
 				Debug:            false,
 			},
-			Sqlite: SqliteConfig{File: "./message.db"},
+			Sqlite: SqliteConfig{File: "message.db"},
 		},
 		JWT: JWTConfig{
 			AuthURL: "http://127.0.0.1:8989",
@@ -127,7 +127,7 @@ func DefaultConfig() *Config {
 		MessageService: MessageServiceConfig{
 			WaitingChainHeadStableDuration: DefWaitingChainHeadStableDuration,
 
-			TipsetFilePath:  "./tipset.json",
+			TipsetFilePath:  "tipset.json",
 			SkipProcessHead: false,
 			SkipPushMessage: false,
 		},

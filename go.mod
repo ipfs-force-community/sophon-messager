@@ -28,6 +28,7 @@ require (
 	github.com/ipfs-force-community/venus-gateway v1.4.1-0.20220519100650-93b93a812508
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible

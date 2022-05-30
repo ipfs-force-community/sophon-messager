@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	_ "net/http/pprof"
@@ -13,6 +15,7 @@ import (
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/mitchellh/go-homedir"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -25,6 +28,7 @@ import (
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
@@ -43,6 +47,10 @@ func main() {
 				Value:   "./messager.toml",
 				Usage:   "specify config file",
 			},
+			&cli.StringFlag{
+				Name:  "repo",
+				Value: "~/.venus-messager",
+			},
 		},
 		Commands: []*cli.Command{ccli.MsgCmds,
 			ccli.AddrCmds,
@@ -52,17 +60,6 @@ func main() {
 			ccli.SendCmd,
 			runCmd,
 		},
-	}
-	for _, cmd := range app.Commands {
-		before := cmd.Before
-		cmd.Before = func(cctx *cli.Context) error {
-			if before != nil {
-				if err := before(cctx); err != nil {
-					return err
-				}
-			}
-			return loadBuiltinActors(cctx)
-		}
 	}
 
 	app.Version = version.Version + "--" + version.GitCommit
@@ -137,8 +134,24 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	var fsRepo filestore.FSRepo
+	repoPath, err := homedir.Expand(ctx.String("repo"))
+	if err != nil {
+		return err
+	}
+	hasFSRepo, err := hasFSRepo(repoPath)
+	if err != nil {
+		return err
+	}
+	if hasFSRepo {
+		fsRepo, err = filestore.NewFSRepo(repoPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	var cfg *config.Config
-	if !exist {
+	if !exist && !hasFSRepo {
 		cfg = config.DefaultConfig()
 		err = updateFlag(cfg, ctx)
 		if err != nil {
@@ -147,28 +160,44 @@ func runAction(ctx *cli.Context) error {
 		if err := genSecret(&cfg.JWT); err != nil {
 			return xerrors.Errorf("failed to generate secret %v", err)
 		}
-		err = config.WriteConfig(path, cfg)
-		if err != nil {
-			return err
-		}
 	} else {
-		cfg, err = config.ReadConfig(path)
-		if err != nil {
-			return err
+		if hasFSRepo {
+			cfg = fsRepo.Config()
+		} else {
+			cfg, err = config.ReadConfig(path)
+			if err != nil {
+				return err
+			}
 		}
 		if len(cfg.JWT.Local.Secret) == 0 {
 			if err := genSecret(&cfg.JWT); err != nil {
 				return xerrors.Errorf("failed to generate secret %v", err)
 			}
-			err = config.WriteConfig(path, cfg)
-			if err != nil {
-				return err
+			if hasFSRepo {
+				if err := fsRepo.ReplaceConfig(cfg); err != nil {
+					return err
+				}
+			} else {
+				if err = config.WriteConfig(path, cfg); err != nil {
+					return err
+				}
 			}
 		}
-		err = updateFlag(cfg, ctx)
+	}
+	if !hasFSRepo {
+		fsRepo, err = filestore.InitFSRepo(repoPath, cfg)
 		if err != nil {
 			return err
 		}
+	}
+	cfg = fsRepo.Config()
+
+	if err = updateFlag(cfg, ctx); err != nil {
+		return err
+	}
+
+	if err := loadBuiltinActors(ctx.Context, repoPath, cfg); err != nil {
+		return err
 	}
 
 	log, err := log.SetLogger(&cfg.Log)
@@ -338,40 +367,24 @@ func genSecret(cfg *config.JWTConfig) error {
 	return nil
 }
 
-func loadBuiltinActors(cctx *cli.Context) error {
-	if cctx.Command.Name == "run" {
-		var err error
-		cfg := &config.Config{}
-		if err := updateFlag(cfg, cctx); err != nil {
-			return err
-		}
-		if len(cfg.Node.Url) == 0 || len(cfg.Node.Token) == 0 {
-			cfg, err = config.ReadConfig(cctx.String("config"))
-			if err != nil {
-				return err
-			}
-		}
-		full, closer, err := service.NewNodeClient(cctx.Context, &cfg.Node)
-		if err != nil {
-			return err
-		}
-		defer closer()
-		networkName, err := full.StateNetworkName(cctx.Context)
-		if err != nil {
-			return err
-		}
-		builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
-		if err := os.Setenv(builtinactors.RepoPath, "./"); err != nil {
-			return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
-		}
-
-		bs := blockstoreutil.NewMemory()
-		if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
-			panic(fmt.Errorf("error loading actor manifest: %w", err))
-		}
-
+func loadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config) error {
+	full, closer, err := service.NewNodeClient(ctx, &cfg.Node)
+	if err != nil {
+		return err
 	}
-	return nil
+	defer closer()
+	networkName, err := full.StateNetworkName(ctx)
+	if err != nil {
+		return err
+	}
+	builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
+	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
+		return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
+	}
+
+	bs := blockstoreutil.NewMemory()
+
+	return builtinactors.FetchAndLoadBundles(ctx, bs, builtinactors.BuiltinActorReleases)
 }
 
 func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
@@ -387,4 +400,16 @@ func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
 	default:
 		return types.Network2k
 	}
+}
+
+func hasFSRepo(repoPath string) (bool, error) {
+	_, err := os.Stat(repoPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
