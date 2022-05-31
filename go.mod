@@ -17,7 +17,7 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.2-0.20220511204807-569c6d12432b
 	github.com/filecoin-project/specs-actors/v7 v7.0.1-0.20220511223846-637436c27154
 	github.com/filecoin-project/specs-actors/v8 v8.0.0-20220422153930-0afe155bfffa
-	github.com/filecoin-project/venus v1.3.0-rc2.0.20220519092823-e23c57ef8426
+	github.com/filecoin-project/venus v1.3.0-rc2.0.20220530152607-c0a964715602
 	github.com/filecoin-project/venus-auth v1.4.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/google/uuid v1.3.0
@@ -25,10 +25,10 @@ require (
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.4.1-0.20220519100650-93b93a812508
+	github.com/ipfs-force-community/venus-gateway v1.4.1-0.20220531014242-13e9dcacfc80
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
