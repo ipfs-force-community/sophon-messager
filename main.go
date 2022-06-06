@@ -46,6 +46,7 @@ func main() {
 				Aliases: []string{"c"},
 				Value:   "./messager.toml",
 				Usage:   "specify config file",
+				Hidden:  true,
 			},
 			&cli.StringFlag{
 				Name:  "repo",
