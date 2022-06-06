@@ -19,6 +19,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -37,7 +38,7 @@ const (
 type MessageService struct {
 	repo           repo.Repo
 	log            *log.Logger
-	cfg            *config.MessageServiceConfig
+	fsRepo         filestore.FSRepo
 	nodeClient     v1.FullNode
 	messageState   *MessageState
 	addressService *AddressService
@@ -73,18 +74,18 @@ type cleanUnFillMsgResult struct {
 func NewMessageService(repo repo.Repo,
 	nc v1.FullNode,
 	logger *log.Logger,
-	cfg *config.MessageServiceConfig,
+	fsRepo filestore.FSRepo,
 	messageState *MessageState,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
 	walletClient *gateway.IWalletCli) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, cfg, nc, addressService, sps, walletClient)
+	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
 		log:             logger,
 		nodeClient:      nc,
-		cfg:             cfg,
+		fsRepo:          fsRepo,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
@@ -99,7 +100,7 @@ func NewMessageService(repo repo.Repo,
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 	}
 	ms.refreshMessageState(context.TODO())
-	if err := ms.tsCache.Load(ms.cfg.TipsetFilePath); err != nil {
+	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
 		ms.log.Infof("load tipset file failed: %v", err)
 	}
 
@@ -114,13 +115,13 @@ func (ms *MessageService) verifyNetworkName() error {
 	if len(ms.tsCache.NetworkName) != 0 {
 		if ms.tsCache.NetworkName != string(networkName) {
 			return xerrors.Errorf("network name not match, need %s, had %s, please remove `%s`",
-				networkName, ms.tsCache.NetworkName, ms.cfg.TipsetFilePath)
+				networkName, ms.tsCache.NetworkName, ms.fsRepo.TipsetFile())
 		}
 		return nil
 	}
 	ms.tsCache.NetworkName = string(networkName)
 
-	return ms.tsCache.Save(ms.cfg.TipsetFilePath)
+	return ms.tsCache.Save(ms.fsRepo.TipsetFile())
 }
 
 func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) error {
@@ -414,7 +415,7 @@ func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *ve
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
 	ms.log.Infof("receive new head from chain")
-	if ms.cfg.SkipProcessHead {
+	if ms.fsRepo.Config().MessageService.SkipProcessHead {
 		ms.log.Infof("skip process new head")
 		return nil
 	}

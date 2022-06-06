@@ -5,7 +5,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/models/repo"
 )
 
@@ -76,18 +76,18 @@ func (d SqlLiteRepo) DbClose() error {
 	return nil
 }
 
-func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
+func OpenSqlite(fsRepo filestore.FSRepo) (repo.Repo, error) {
 	//cache=shared&_journal_mode=wal&sync=normal
 	//cache=shared&sync=full
-	db, err := gorm.Open(sqlite.Open(cfg.File+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(fsRepo.SqliteFile()+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
-		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.File, err)
+		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", fsRepo.SqliteFile(), err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
-	if cfg.Debug {
+	if fsRepo.Config().DB.Sqlite.Debug {
 		db = db.Debug()
 	}
 

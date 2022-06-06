@@ -10,12 +10,16 @@ import (
 
 const (
 	ConfigFile = "config.toml"
+	TipsetFile = "tipset.json"
+	SqliteFile = "message.db"
 )
 
 type FSRepo interface {
 	Path() string
 	Config() *config.Config
 	ReplaceConfig(cfg *config.Config) error
+	TipsetFile() string
+	SqliteFile() string
 }
 
 type fsRepo struct {
@@ -58,10 +62,8 @@ func InitFSRepo(repoPath string, cfg *config.Config) (FSRepo, error) {
 				return nil, err
 			}
 		}
-		cfg.DB.Sqlite.File = filepath.Join(repoPath, fileName)
-	} else {
-		cfg.DB.Sqlite.File = filepath.Join(repoPath, filepath.Base(cfg.DB.Sqlite.File))
 	}
+	cfg.DB.Sqlite.File = ""
 
 	tsFile := filepath.Base(cfg.MessageService.TipsetFilePath)
 	_, err := os.Stat(cfg.MessageService.TipsetFilePath)
@@ -70,7 +72,7 @@ func InitFSRepo(repoPath string, cfg *config.Config) (FSRepo, error) {
 			return nil, err
 		}
 	}
-	cfg.MessageService.TipsetFilePath = filepath.Join(repoPath, tsFile)
+	cfg.MessageService.TipsetFilePath = ""
 
 	if err := config.WriteConfig(filepath.Join(repoPath, ConfigFile), cfg); err != nil {
 		return nil, err
@@ -85,6 +87,14 @@ func (r *fsRepo) Path() string {
 
 func (r *fsRepo) Config() *config.Config {
 	return r.cfg
+}
+
+func (r *fsRepo) TipsetFile() string {
+	return filepath.Join(r.path, TipsetFile)
+}
+
+func (r *fsRepo) SqliteFile() string {
+	return filepath.Join(r.path, SqliteFile)
 }
 
 func (r *fsRepo) ReplaceConfig(cfg *config.Config) error {

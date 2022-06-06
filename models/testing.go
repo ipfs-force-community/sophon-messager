@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -84,7 +84,8 @@ func ObjectToString(i interface{}) string {
 }
 
 func setupRepo(t *testing.T) (repo.Repo, repo.Repo) {
-	sqliteRepo, err := sqlite.OpenSqlite(&config.SqliteConfig{File: "./test_sqlite_db", Debug: true})
+	fs := filestore.NewMockFileStore(nil)
+	sqliteRepo, err := sqlite.OpenSqlite(fs)
 	assert.NoError(t, err)
 
 	//mysqlRepo, err := mysql.OpenMysql(&config.MySqlConfig{

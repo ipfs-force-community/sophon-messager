@@ -247,6 +247,9 @@ func runAction(ctx *cli.Context) error {
 		fx.Provide(func() v1.FullNode {
 			return client
 		}),
+		fx.Provide(func() filestore.FSRepo {
+			return fsRepo
+		}),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),

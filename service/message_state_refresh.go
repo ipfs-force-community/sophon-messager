@@ -100,7 +100,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 	ms.tsCache.Add(tsList...)
-	if err := ms.tsCache.Save(ms.cfg.TipsetFilePath); err != nil {
+	if err := ms.tsCache.Save(ms.fsRepo.TipsetFile()); err != nil {
 		ms.log.Errorf("store tipsetkey failed %v", err)
 	}
 
@@ -163,7 +163,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 // delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
-	case <-time.After(ms.cfg.WaitingChainHeadStableDuration):
+	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():

@@ -34,23 +34,23 @@ func TestNewFSRepo(t *testing.T) {
 func TestInitFSRepo(t *testing.T) {
 	defCfg := config.DefaultConfig()
 	path := t.TempDir()
-	defCfg.DB.Sqlite.File = filepath.Join(path, "message.db")
+	defCfg.DB.Sqlite.File = filepath.Join(path, SqliteFile)
 	assert.Nil(t, randFile(defCfg.DB.Sqlite.File))
 	assert.Nil(t, randFile(filepath.Join(path, "message.db-shm")))
 	assert.Nil(t, randFile(filepath.Join(path, "message.db-wal")))
-	defCfg.MessageService.TipsetFilePath = filepath.Join(path, "tipset.json")
+	defCfg.MessageService.TipsetFilePath = filepath.Join(path, TipsetFile)
 	assert.Nil(t, randFile(defCfg.MessageService.TipsetFilePath))
 
 	fsPath := t.TempDir()
 	fsRepo, err := InitFSRepo(fsPath, defCfg)
 	assert.Nil(t, err)
 	cfg := fsRepo.Config()
-	assert.Equal(t, filepath.Join(fsPath, "message.db"), cfg.DB.Sqlite.File)
-	compareFile(t, filepath.Join(path, "message.db"), cfg.DB.Sqlite.File)
+	assert.Equal(t, "", cfg.DB.Sqlite.File)
+	compareFile(t, filepath.Join(path, SqliteFile), fsRepo.SqliteFile())
 	compareFile(t, filepath.Join(path, "message.db-shm"), filepath.Join(fsPath, "message.db-shm"))
 	compareFile(t, filepath.Join(path, "message.db-wal"), filepath.Join(fsPath, "message.db-wal"))
-	assert.Equal(t, filepath.Join(fsPath, "tipset.json"), cfg.MessageService.TipsetFilePath)
-	compareFile(t, filepath.Join(path, "tipset.json"), cfg.MessageService.TipsetFilePath)
+	assert.Equal(t, "", cfg.MessageService.TipsetFilePath)
+	compareFile(t, filepath.Join(path, TipsetFile), fsRepo.TipsetFile())
 
 	defCfg2 := config.DefaultConfig()
 	path2 := t.TempDir()
@@ -61,8 +61,8 @@ func TestInitFSRepo(t *testing.T) {
 	fsRepo2, err := InitFSRepo(fsPath2, defCfg2)
 	assert.Nil(t, err)
 	cfg2 := fsRepo2.Config()
-	assert.Equal(t, filepath.Join(fsPath2, "message.db"), cfg2.DB.Sqlite.File)
-	assert.Equal(t, filepath.Join(fsPath2, "tipset.json"), cfg2.MessageService.TipsetFilePath)
+	assert.Equal(t, "", cfg2.DB.Sqlite.File)
+	assert.Equal(t, "", cfg2.MessageService.TipsetFilePath)
 }
 
 func randFile(path string) error {
