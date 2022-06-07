@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
 	"go.uber.org/fx"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/log"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -58,7 +58,7 @@ func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageSer
 // In order to resolve the timeout does not work
 func handleTimeout(f interface{}, ctx context.Context, args []interface{}) (interface{}, error) {
 	if reflect.ValueOf(f).Kind() != reflect.Func {
-		return nil, xerrors.Errorf("first parameter must be method")
+		return nil, fmt.Errorf("first parameter must be method")
 	}
 
 	var out []reflect.Value
@@ -85,5 +85,5 @@ func handleTimeout(f interface{}, ctx context.Context, args []interface{}) (inte
 		return nil, out[1].Interface().(error)
 	}
 
-	return nil, xerrors.Errorf("method must has 2 return as result")
+	return nil, fmt.Errorf("method must has 2 return as result")
 }

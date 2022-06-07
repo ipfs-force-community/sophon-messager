@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
@@ -11,10 +13,9 @@ import (
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
-	"golang.org/x/xerrors"
 )
 
-var errAddressNotExists = xerrors.New("address not exists")
+var errAddressNotExists = errors.New("address not exists")
 
 type AddressService struct {
 	repo repo.Repo
@@ -49,7 +50,7 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 			return err
 		}
 		if has {
-			return xerrors.Errorf("address already exists")
+			return fmt.Errorf("address already exists")
 		}
 		return txRepo.AddressRepo().SaveAddress(ctx, address)
 	})
@@ -126,14 +127,14 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	if len(maxFeeStr) != 0 {
 		maxFee, err = venusTypes.BigFromString(maxFeeStr)
 		if err != nil {
-			return xerrors.Errorf("parsing max-spend: %v", err)
+			return fmt.Errorf("parsing max-spend: %v", err)
 		}
 		needUpdate = true
 	}
 	if len(maxFeeCapStr) != 0 {
 		maxFeeCap, err = venusTypes.BigFromString(maxFeeCapStr)
 		if err != nil {
-			return xerrors.Errorf("parsing max-feecap: %v", err)
+			return fmt.Errorf("parsing max-feecap: %v", err)
 		}
 		needUpdate = true
 	}

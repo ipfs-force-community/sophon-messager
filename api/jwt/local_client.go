@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/filecoin-project/venus-auth/auth"
 	"github.com/filecoin-project/venus-auth/core"
 	jwt3 "github.com/gbrlsnchs/jwt/v3"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
 )
@@ -26,11 +26,11 @@ func newLocalJWTClient(cfg *config.JWTConfig) (jwtclient.IJwtAuthClient, error) 
 	lc := &localJwtClient{}
 
 	if len(cfg.Local.Secret) == 0 {
-		return nil, xerrors.Errorf("secret is empty")
+		return nil, fmt.Errorf("secret is empty")
 	}
 	b, err := hex.DecodeString(cfg.Local.Secret)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to decode secret %v", err)
+		return nil, fmt.Errorf("failed to decode secret %v", err)
 	}
 	lc.alg = jwt3.NewHS256(b)
 

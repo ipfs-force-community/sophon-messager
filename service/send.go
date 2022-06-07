@@ -13,7 +13,6 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	cbg "github.com/whyrusleeping/cbor-gen"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -24,22 +23,22 @@ func (ms *MessageService) Send(ctx context.Context, params types.QuickSendParams
 	var err error
 
 	if params.Method == builtin.MethodSend {
-		return "", xerrors.Errorf("do not use it to send funds")
+		return "", fmt.Errorf("do not use it to send funds")
 	}
 
 	switch params.ParamsType {
 	case types.QuickSendParamsCodecJSON:
 		decParams, err = ms.decodeTypedParamsFromJSON(ctx, params.To, params.Method, params.Params)
 		if err != nil {
-			return "", xerrors.Errorf("failed to decode json params: %w", err)
+			return "", fmt.Errorf("failed to decode json params: %w", err)
 		}
 	case types.QuickSendParamsCodecHex:
 		decParams, err = hex.DecodeString(params.Params)
 		if err != nil {
-			return "", xerrors.Errorf("failed to decode hex params: %w", err)
+			return "", fmt.Errorf("failed to decode hex params: %w", err)
 		}
 	default:
-		return "", xerrors.Errorf("unexpected param type %s", params.ParamsType)
+		return "", fmt.Errorf("unexpected param type %s", params.ParamsType)
 	}
 
 	uuid := venusTypes.NewUUID().String()

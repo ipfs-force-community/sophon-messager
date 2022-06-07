@@ -22,7 +22,6 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/api"
 	"github.com/filecoin-project/venus-messager/api/jwt"
@@ -159,7 +158,7 @@ func runAction(ctx *cli.Context) error {
 			return err
 		}
 		if err := genSecret(&cfg.JWT); err != nil {
-			return xerrors.Errorf("failed to generate secret %v", err)
+			return fmt.Errorf("failed to generate secret %v", err)
 		}
 	} else {
 		if hasFSRepo {
@@ -172,7 +171,7 @@ func runAction(ctx *cli.Context) error {
 		}
 		if len(cfg.JWT.Local.Secret) == 0 {
 			if err := genSecret(&cfg.JWT); err != nil {
-				return xerrors.Errorf("failed to generate secret %v", err)
+				return fmt.Errorf("failed to generate secret %v", err)
 			}
 			if hasFSRepo {
 				if err := fsRepo.ReplaceConfig(cfg); err != nil {
@@ -212,7 +211,7 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
-		return xerrors.Errorf("connect to node failed %v", err)
+		return fmt.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
 
@@ -285,7 +284,7 @@ func runAction(ctx *cli.Context) error {
 	app := fx.New(provider, invoker, apiOption)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
-		return xerrors.Errorf("starting node: %w", err)
+		return fmt.Errorf("starting node: %w", err)
 	}
 
 	go func() {
@@ -341,7 +340,7 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 				cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
 			}
 		default:
-			return xerrors.Errorf("unexpected db type %s", cfg.DB.Type)
+			return fmt.Errorf("unexpected db type %s", cfg.DB.Type)
 		}
 	}
 	if ctx.IsSet("rate-limit-redis") {
@@ -383,7 +382,7 @@ func loadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config)
 	}
 	builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
 	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
-		return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
+		return fmt.Errorf("failed to set env %s", builtinactors.RepoPath)
 	}
 
 	bs := blockstoreutil.NewMemory()

@@ -3,6 +3,7 @@ package actor_parser
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -22,7 +23,6 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 )
 
 type ActorGetter interface {
@@ -122,28 +122,28 @@ func NewMessageParser(getter ActorGetter) (*MessagePaser, error) {
 	parser := &MessagePaser{getter: getter}
 	var err error
 	if err = parser.registActors(actors.Version0, exported0.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v0 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v0 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version2, exported2.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v2 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v2 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version3, exported3.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v3 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v3 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version4, exported4.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v4 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v4 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version5, exported5.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v5 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v5 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version6, exported6.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v6 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v6 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version7, exported7.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v7 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v7 failed:%w", err)
 	}
 	if err = parser.registActors(actors.Version8, exported8.BuiltinActors()...); err != nil {
-		return nil, xerrors.Errorf("registerActors actors v8 failed:%w", err)
+		return nil, fmt.Errorf("registerActors actors v8 failed:%w", err)
 	}
 	return parser, nil
 }
@@ -154,7 +154,7 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 	}
 	var actor *types.Actor
 	if actor, err = ms.getter.StateGetActor(ctx, msg.To, types.EmptyTSK); err != nil {
-		return nil, nil, xerrors.Errorf("get actor(%s) failed:%w", msg.To.String(), err)
+		return nil, nil, fmt.Errorf("get actor(%s) failed:%w", msg.To.String(), err)
 	}
 
 	var actorType *Actor
@@ -162,18 +162,18 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 	var find bool
 
 	if actorType, find = ms.lookUpActor(actor.Code); !find {
-		return nil, nil, xerrors.Errorf("actor code(%s) not registed", actor.Code.String())
+		return nil, nil, fmt.Errorf("actor code(%s) not registed", actor.Code.String())
 	}
 
 	if method, find = actorType.lookUpMethod(int(msg.Method)); !find {
-		return nil, nil, xerrors.Errorf("actor:%s method(%d) not exist", actorType.Name, msg.Method)
+		return nil, nil, fmt.Errorf("actor:%s method(%d) not exist", actorType.Name, msg.Method)
 	}
 
 	in := reflect.New(method.InType).Interface()
 
 	if unmarshaler, isok := in.(cbor.Unmarshaler); isok {
 		if err = unmarshaler.UnmarshalCBOR(bytes.NewReader(msg.Params)); err != nil {
-			return nil, nil, xerrors.Errorf("unmarshalerCBOR msg params failed:%w", err)
+			return nil, nil, fmt.Errorf("unmarshalerCBOR msg params failed:%w", err)
 		}
 	}
 
@@ -182,7 +182,7 @@ func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, re
 		out = reflect.New(method.OutType).Interface()
 		if unmarshaler, isok := out.(cbor.Unmarshaler); isok {
 			if err = unmarshaler.UnmarshalCBOR(bytes.NewReader(receipt.Return)); err != nil {
-				return nil, nil, xerrors.Errorf("unmarshalerCBOR msg returns failed:%w", err)
+				return nil, nil, fmt.Errorf("unmarshalerCBOR msg returns failed:%w", err)
 			}
 		}
 	}

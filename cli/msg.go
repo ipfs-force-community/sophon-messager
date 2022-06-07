@@ -17,7 +17,6 @@ import (
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/cli/tablewriter"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -100,7 +99,7 @@ var searchCmd = &cli.Command{
 				return err
 			}
 		} else {
-			return xerrors.Errorf("value of query must be entered")
+			return fmt.Errorf("value of query must be entered")
 		}
 
 		bytes, err := json.MarshalIndent(transformMessage(msg), "", "\t")
@@ -152,7 +151,7 @@ var waitMessagerCmd = &cli.Command{
 		defer closer()
 
 		if cctx.NArg() == 0 {
-			return xerrors.New("must has id argument")
+			return errors.New("must has id argument")
 		}
 
 		id := cctx.Args().Get(0)
@@ -480,7 +479,7 @@ var updateFilledMessageCmd = &cli.Command{
 			}
 			id = msg.ID
 		} else {
-			return xerrors.Errorf("value of query must be entered")
+			return fmt.Errorf("value of query must be entered")
 		}
 
 		_, err = client.UpdateFilledMessageByID(ctx.Context, id)
@@ -571,7 +570,7 @@ var republishCmd = &cli.Command{
 		defer closer()
 
 		if cctx.NArg() == 0 {
-			return xerrors.New("must has id argument")
+			return errors.New("must has id argument")
 		}
 
 		id := cctx.Args().Get(0)
@@ -628,7 +627,7 @@ var markBadCmd = &cli.Command{
 			}
 		} else {
 			if cctx.NArg() == 0 {
-				return xerrors.New("must has id argument")
+				return errors.New("must has id argument")
 			}
 			for _, id := range cctx.Args().Slice() {
 				err = client.MarkBadMessage(cctx.Context, id)
@@ -678,7 +677,7 @@ var recoverFailedMsgCmd = &cli.Command{
 			fmt.Printf("recover failed messages success: %v \n", msgIDs)
 		} else {
 			if cctx.NArg() == 0 {
-				return xerrors.New("must has id argument")
+				return errors.New("must has id argument")
 			}
 			for _, id := range cctx.Args().Slice() {
 				msg, err := client.GetMessageByUid(cctx.Context, id)
@@ -788,10 +787,10 @@ var clearUnFillMessageCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Bool("really-do-it") {
-			return xerrors.New("confirm to exec this command, specify --really-do-it")
+			return errors.New("confirm to exec this command, specify --really-do-it")
 		}
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())

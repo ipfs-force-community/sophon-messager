@@ -1,7 +1,7 @@
 package models
 
 import (
-	"golang.org/x/xerrors"
+	"fmt"
 
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/models/mysql"
@@ -16,7 +16,7 @@ func SetDataBase(fsRepo filestore.FSRepo) (repo.Repo, error) {
 	case "mysql":
 		return mysql.OpenMysql(&fsRepo.Config().DB.MySql)
 	default:
-		return nil, xerrors.Errorf("unexpected db type %s (want 'sqlite' or 'mysql')", fsRepo.Config().DB.Type)
+		return nil, fmt.Errorf("unexpected db type %s (want 'sqlite' or 'mysql')", fsRepo.Config().DB.Type)
 	}
 }
 

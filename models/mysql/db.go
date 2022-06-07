@@ -1,9 +1,9 @@
 package mysql
 
 import (
+	"fmt"
 	"time"
 
-	"golang.org/x/xerrors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -85,7 +85,7 @@ func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {
 	})
 
 	if err != nil {
-		return nil, xerrors.Errorf("[db connection failed] Database name: %s %w", cfg.ConnectionString, err)
+		return nil, fmt.Errorf("[db connection failed] Database name: %s %w", cfg.ConnectionString, err)
 	}
 
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")

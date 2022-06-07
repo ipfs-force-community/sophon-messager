@@ -1,7 +1,8 @@
 package sqlite
 
 import (
-	"golang.org/x/xerrors"
+	"fmt"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
@@ -83,7 +84,7 @@ func OpenSqlite(fsRepo filestore.FSRepo) (repo.Repo, error) {
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
-		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", fsRepo.SqliteFile(), err)
+		return nil, fmt.Errorf("fail to connect sqlite: %s %w", fsRepo.SqliteFile(), err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 

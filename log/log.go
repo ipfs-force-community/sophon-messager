@@ -2,9 +2,10 @@ package log
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
+	"fmt"
 	"os"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/filecoin-project/venus-messager/config"
 )
@@ -33,7 +34,7 @@ func SetLogger(logCfg *config.LogConfig) (*Logger, error) {
 	if err == nil {
 		logrus.SetOutput(file)
 	} else {
-		return nil, xerrors.Errorf("open log file fail %v", err)
+		return nil, fmt.Errorf("open log file fail %v", err)
 	}
 	return logger, nil
 }

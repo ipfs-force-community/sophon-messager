@@ -6,7 +6,6 @@ import (
 
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -51,11 +50,11 @@ var addNodeCmd = &cli.Command{
 		node.ID = shared.NewUUID()
 		node.URL = ctx.String("url")
 		if len(node.URL) == 0 {
-			return xerrors.Errorf("url cannot be empty")
+			return fmt.Errorf("url cannot be empty")
 		}
 		node.Token = ctx.String("token")
 		if len(node.Token) == 0 {
-			return xerrors.Errorf("token cannot be empty")
+			return fmt.Errorf("token cannot be empty")
 		}
 
 		has, err := client.HasNode(ctx.Context, node.Name)
@@ -63,7 +62,7 @@ var addNodeCmd = &cli.Command{
 			return err
 		}
 		if has {
-			return xerrors.Errorf("node exist")
+			return fmt.Errorf("node exist")
 
 		}
 
@@ -87,7 +86,7 @@ var searchNodeCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass node name")
+			return fmt.Errorf("must pass node name")
 		}
 
 		node, err := client.GetNode(ctx.Context, ctx.Args().First())
@@ -140,7 +139,7 @@ var deleteNodeCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass name")
+			return fmt.Errorf("must pass name")
 		}
 		name := ctx.Args().First()
 

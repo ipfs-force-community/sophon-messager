@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/crypto"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"golang.org/x/xerrors"
 	"modernc.org/mathutil"
 
 	"github.com/filecoin-project/venus-messager/config"
@@ -147,7 +147,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		addr.UpdatedAt = time.Now()
 		err := messageSelector.repo.AddressRepo().UpdateNonce(ctx, addr.Addr, addr.Nonce)
 		if err != nil {
-			return nil, xerrors.Errorf("update address %s nonce failed %v", addr.Addr, err)
+			return nil, fmt.Errorf("update address %s nonce failed %v", addr.Addr, err)
 		}
 	}
 
@@ -179,7 +179,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	selectCount := mathutil.MinUint64(wantCount*2, 100)
 	messages, err := messageSelector.repo.MessageRepo().ListUnChainMessageByAddress(addr.Addr, int(selectCount))
 	if err != nil {
-		return nil, xerrors.Errorf("list %s unpackage message error %v", addr.Addr, err)
+		return nil, fmt.Errorf("list %s unpackage message error %v", addr.Addr, err)
 	}
 
 	//exclude expire message
@@ -357,12 +357,12 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 
 	msgs, err := messageSelector.nodeClient.ChainGetMessagesInTipset(ctx, ts.Key())
 	if err != nil {
-		return nil, xerrors.Errorf("failed to get message in tipset %v", err)
+		return nil, fmt.Errorf("failed to get message in tipset %v", err)
 	}
 	for _, msg := range msgs {
 		err := selectMsg(msg.Message)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to decide whether to select message for block: %w", err)
+			return nil, fmt.Errorf("failed to decide whether to select message for block: %w", err)
 		}
 	}
 
@@ -372,7 +372,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	if msg.GasLimit == 0 {
 		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
-			return nil, xerrors.Errorf("estimating gas used: %w", err)
+			return nil, fmt.Errorf("estimating gas used: %w", err)
 		}
 		gasLimit := gasLimitI.(int64)
 		//GasOverEstimation default value should be 1.25
@@ -382,7 +382,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
 		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, venusTypes.EmptyTSK})
 		if err != nil {
-			return nil, xerrors.Errorf("estimating gas price: %w", err)
+			return nil, fmt.Errorf("estimating gas price: %w", err)
 		}
 		msg.GasPremium = gasPremiumI.(big.Int)
 	}
@@ -390,7 +390,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	if msg.GasFeeCap == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasFeeCap, venusTypes.NewInt(0)) == 0 {
 		feeCapI, err := handleTimeout(messageSelector.nodeClient.GasEstimateFeeCap, ctx, []interface{}{msg, int64(20), venusTypes.EmptyTSK})
 		if err != nil {
-			return nil, xerrors.Errorf("estimating fee cap: %w", err)
+			return nil, fmt.Errorf("estimating fee cap: %w", err)
 		}
 		msg.GasFeeCap = feeCapI.(big.Int)
 	}

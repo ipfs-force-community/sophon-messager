@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
@@ -26,8 +26,8 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-var errAlreadyInMpool = xerrors.Errorf("already in mpool: validation failure")
-var errMinimumNonce = xerrors.New("minimum expected nonce")
+var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
+var errMinimumNonce = errors.New("minimum expected nonce")
 
 const (
 	MaxHeadChangeProcess = 5
@@ -114,7 +114,7 @@ func (ms *MessageService) verifyNetworkName() error {
 	}
 	if len(ms.tsCache.NetworkName) != 0 {
 		if ms.tsCache.NetworkName != string(networkName) {
-			return xerrors.Errorf("network name not match, need %s, had %s, please remove `%s`",
+			return fmt.Errorf("network name not match, need %s, had %s, please remove `%s`",
 				networkName, ms.tsCache.NetworkName, ms.fsRepo.TipsetFile())
 		}
 		return nil
@@ -126,14 +126,14 @@ func (ms *MessageService) verifyNetworkName() error {
 
 func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) error {
 	if len(msg.ID) == 0 {
-		return xerrors.New("empty uid")
+		return errors.New("empty uid")
 	}
 
 	//replace address
 	if msg.From.Protocol() == address.ID {
 		fromA, err := ms.nodeClient.StateAccountKey(ctx, msg.From, venusTypes.EmptyTSK)
 		if err != nil {
-			return xerrors.Errorf("getting key address: %w", err)
+			return fmt.Errorf("getting key address: %w", err)
 		}
 		ms.log.Warnf("Push from ID address (%s), adjusting to %s", msg.From, fromA)
 		msg.From = fromA
@@ -144,7 +144,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		return err
 	}
 	if !has {
-		return xerrors.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
+		return fmt.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
 	}
 	var addrInfo *types.Address
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
@@ -152,7 +152,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		if err == nil {
 			return nil
 		}
-		if xerrors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			if err = txRepo.AddressRepo().SaveAddress(ctx, &types.Address{
 				ID:        venusTypes.NewUUID(),
 				Addr:      msg.From,
@@ -162,7 +162,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
 			}); err != nil {
-				return xerrors.Errorf("save address %s failed %v", msg.From.String(), err)
+				return fmt.Errorf("save address %s failed %v", msg.From.String(), err)
 			}
 			ms.log.Infof("add new address %s", msg.From.String())
 		}
@@ -172,7 +172,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}
 	if addrInfo != nil && addrInfo.State == types.AddressStateForbbiden {
 		ms.log.Errorf("address(%s) is forbidden", msg.From.String())
-		return xerrors.Errorf("address(%s) is forbidden", msg.From.String())
+		return fmt.Errorf("address(%s) is forbidden", msg.From.String())
 	}
 
 	msg.Nonce = 0
@@ -252,13 +252,13 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			case types.FailedMsg:
 				return msg, nil
 			case types.NoWalletMsg:
-				return nil, xerrors.New("msg failed due to wallet disappear")
+				return nil, errors.New("msg failed due to wallet disappear")
 			}
 
 		case <-tm.C:
 			doneCh <- struct{}{}
 		case <-ctx.Done():
-			return nil, xerrors.New("exit by client ")
+			return nil, errors.New("exit by client ")
 		}
 	}
 }
@@ -541,7 +541,7 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venu
 			gapTipset = append(gapTipset, ts)
 			ts, err = ms.nodeClient.ChainGetTipSet(ctx, ts.Parents())
 			if err != nil {
-				return nil, nil, xerrors.Errorf("got tipset(%s) failed %v", ts.Parents(), err)
+				return nil, nil, fmt.Errorf("got tipset(%s) failed %v", ts.Parents(), err)
 			}
 		}
 		loopCount++
@@ -810,7 +810,7 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 	if cid != nil {
 		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, abi.ChainEpoch(constants.LookbackNoLimit), true)
 		if err != nil || msgLookup == nil {
-			return xerrors.Errorf("search message %s from node %v", cid.String(), err)
+			return fmt.Errorf("search message %s from node %v", cid.String(), err)
 		}
 		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet); err != nil {
 			return err
@@ -833,10 +833,10 @@ func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string
 func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
 	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
-		return cid.Undef, xerrors.Errorf("found message %v", err)
+		return cid.Undef, fmt.Errorf("found message %v", err)
 	}
 	if msg.State == types.OnChainMsg {
-		return cid.Undef, xerrors.Errorf("message already on chain")
+		return cid.Undef, fmt.Errorf("message already on chain")
 	}
 
 	if auto {
@@ -962,10 +962,10 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		return nil
 	}
 	if msg.State == types.OnChainMsg {
-		return xerrors.Errorf("message already on chain")
+		return fmt.Errorf("message already on chain")
 	}
 	if msg.State != types.FillMsg {
-		return xerrors.Errorf("need FillMsg got %s", msg.State)
+		return fmt.Errorf("need FillMsg got %s", msg.State)
 	}
 	signedMsg := &venusTypes.SignedMessage{
 		Message:   msg.Message,
@@ -986,14 +986,14 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	//签名
 	data, err := msg.Message.ToStorageBlock()
 	if err != nil {
-		return venusTypes.SignedMessage{}, xerrors.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
+		return venusTypes.SignedMessage{}, fmt.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
 	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
 		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	})
 	if err != nil {
-		return venusTypes.SignedMessage{}, xerrors.Errorf("wallet sign failed %s fail %v", msg.ID, err)
+		return venusTypes.SignedMessage{}, fmt.Errorf("wallet sign failed %s fail %v", msg.ID, err)
 	}
 
 	msg.Signature = sig
@@ -1019,7 +1019,7 @@ func (ms *MessageService) clearUnFillMessage(ctx context.Context, addr address.A
 		}
 		for _, msg := range unFillMsgs {
 			if err := txRepo.MessageRepo().MarkBadMessage(msg.ID); err != nil {
-				return xerrors.Errorf("mark bad message %s failed %v", msg.ID, err)
+				return fmt.Errorf("mark bad message %s failed %v", msg.ID, err)
 			}
 			count++
 		}
@@ -1039,7 +1039,7 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 	select {
 	case r, ok := <-ms.cleanUnFillMsgRes:
 		if !ok {
-			return 0, xerrors.Errorf("unexpect error")
+			return 0, fmt.Errorf("unexpect error")
 		}
 		ms.log.Infof("clear unfill messages success, address: %v, count: %d", addr.String(), r.count)
 		return r.count, r.err

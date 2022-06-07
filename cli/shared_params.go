@@ -6,7 +6,6 @@ import (
 
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 )
 
 var SharedParamsCmds = &cli.Command{
@@ -61,13 +60,13 @@ var setSharedParamsCmd = &cli.Command{
 		if ctx.IsSet("max-fee") {
 			params.MaxFee, err = big.FromString(ctx.String("max-fee"))
 			if err != nil {
-				return xerrors.Errorf("parse max-fee failed %v", err)
+				return fmt.Errorf("parse max-fee failed %v", err)
 			}
 		}
 		if ctx.IsSet("max-feecap") {
 			params.MaxFeeCap, err = big.FromString(ctx.String("max-feecap"))
 			if err != nil {
-				return xerrors.Errorf("parse max-feecap failed %v", err)
+				return fmt.Errorf("parse max-feecap failed %v", err)
 			}
 		}
 		if ctx.IsSet("sel-msg-num") {
