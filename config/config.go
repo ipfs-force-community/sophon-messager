@@ -134,10 +134,7 @@ func DefaultConfig() *Config {
 		Gateway: GatewayConfig{
 			Token: "",
 			Url:   []string{"/ip4/127.0.0.1/tcp/45132"},
-			Cfg: gatewayTypes.Config{
-				RequestQueueSize: 30,
-				RequestTimeout:   time.Minute * 5,
-			},
+			Cfg:   gatewayTypes.Config{},
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace: metrics.TraceConfig{

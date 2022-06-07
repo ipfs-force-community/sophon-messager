@@ -46,7 +46,7 @@ func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.L
 	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()
 	handler.Handle("/rpc/v0", srv)
-	authMux := jwtclient.NewAuthMux(jwtCli.Local, jwtCli.Remote, handler, log)
+	authMux := jwtclient.NewAuthMux(jwtCli.Local, jwtCli.Remote, handler)
 	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
 
 	apiserv := &http.Server{

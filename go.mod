@@ -17,15 +17,15 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.2-0.20220511204807-569c6d12432b
 	github.com/filecoin-project/specs-actors/v7 v7.0.1-0.20220511223846-637436c27154
 	github.com/filecoin-project/specs-actors/v8 v8.0.0-20220422153930-0afe155bfffa
-	github.com/filecoin-project/venus v1.3.0-rc2.0.20220530152607-c0a964715602
-	github.com/filecoin-project/venus-auth v1.4.0
+	github.com/filecoin-project/venus v1.6.0-pre-rc1
+	github.com/filecoin-project/venus-auth v1.6.0-pre-rc1
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/google/uuid v1.3.0
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.4.1-0.20220531014242-13e9dcacfc80
+	github.com/ipfs-force-community/venus-gateway v1.6.0-pre-rc1
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -41,8 +41,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20220323183124-98fa8256a799
 	go.uber.org/fx v1.15.0
-	golang.org/x/mod v0.5.0 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.12
