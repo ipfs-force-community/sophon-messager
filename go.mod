@@ -41,7 +41,6 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20220323183124-98fa8256a799
 	go.uber.org/fx v1.15.0
-	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.12

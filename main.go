@@ -96,10 +96,6 @@ var runCmd = &cli.Command{
 			Usage: "which db to use. sqlite/mysql",
 		},
 		&cli.StringFlag{
-			Name:  "sqlite-file",
-			Usage: "the path and file name of SQLite, eg. ~/sqlite/message.db",
-		},
-		&cli.StringFlag{
 			Name:  "mysql-dsn",
 			Usage: "mysql connection string",
 		},
@@ -332,9 +328,6 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 		cfg.DB.Type = ctx.String("db-type")
 		switch cfg.DB.Type {
 		case "sqlite":
-			if ctx.IsSet("sqlite-file") {
-				cfg.DB.Sqlite.File = ctx.String("sqlite-file")
-			}
 		case "mysql":
 			if ctx.IsSet("mysql-dsn") {
 				cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
