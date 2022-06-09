@@ -34,6 +34,3 @@ COPY ./docker/script  /script
 EXPOSE 39812
 
 ENTRYPOINT ["/app/venus-messager","run"]
-
-
-
