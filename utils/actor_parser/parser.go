@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/cbor"
 	"github.com/filecoin-project/go-state-types/rt"
-	"github.com/filecoin-project/specs-actors/actors/builtin"
 	exported0 "github.com/filecoin-project/specs-actors/actors/builtin/exported"
 	exported2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/exported"
 	exported3 "github.com/filecoin-project/specs-actors/v3/actors/builtin/exported"
@@ -21,6 +20,7 @@ import (
 	exported7 "github.com/filecoin-project/specs-actors/v7/actors/builtin/exported"
 	exported8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/exported"
 	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 )

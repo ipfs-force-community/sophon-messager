@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -14,7 +15,10 @@ import (
 	cbor "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-actors/v6/actors/builtin"
+	"github.com/filecoin-project/venus/pkg/util/blockstoreutil"
+	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/require"
 )
 
@@ -197,12 +201,28 @@ func (c testCase) wantErr() bool {
 	return false
 }
 
+func loadBuiltinActors(t *testing.T) {
+	repoPath, err := homedir.Expand("~/.venus-messager")
+	require.Nil(t, err)
+	_, err = os.Stat(repoPath)
+	if err != nil && os.IsNotExist(err) {
+		repoPath = t.TempDir()
+	}
+	builtinactors.SetNetworkBundle(types.NetworkButterfly)
+	require.Nil(t, os.Setenv(builtinactors.RepoPath, repoPath))
+	bs := blockstoreutil.NewMemory()
+
+	require.Nil(t, builtinactors.FetchAndLoadBundles(context.Background(), bs, builtinactors.BuiltinActorReleases))
+}
+
 func TestMessagePaser_ParseMessage(t *testing.T) {
 	var tests []testCase
 	file := "./test_cases_parsing_message.json"
 	data, err := ioutil.ReadFile(file)
 	require.NoErrorf(t, err, "read file:%s failed:%v", file, err)
 	require.NoErrorf(t, json.Unmarshal(data, &tests), "unamrshal data to test cases failed")
+
+	loadBuiltinActors(t)
 
 	ms, err := NewMessageParser(newMockActorGetter(t))
 	require.NoError(t, err)

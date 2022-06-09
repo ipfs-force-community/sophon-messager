@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -11,10 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus/pkg/util/blockstoreutil"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
-	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/mitchellh/go-homedir"
 
 	ma "github.com/multiformats/go-multiaddr"
@@ -192,7 +188,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := loadBuiltinActors(ctx.Context, repoPath, cfg); err != nil {
+	if err := ccli.LoadBuiltinActors(ctx.Context, repoPath, cfg); err != nil {
 		return err
 	}
 
@@ -361,41 +357,6 @@ func genSecret(cfg *config.JWTConfig) error {
 	}
 
 	return nil
-}
-
-func loadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config) error {
-	full, closer, err := service.NewNodeClient(ctx, &cfg.Node)
-	if err != nil {
-		return err
-	}
-	defer closer()
-	networkName, err := full.StateNetworkName(ctx)
-	if err != nil {
-		return err
-	}
-	builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
-	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
-		return fmt.Errorf("failed to set env %s", builtinactors.RepoPath)
-	}
-
-	bs := blockstoreutil.NewMemory()
-
-	return builtinactors.FetchAndLoadBundles(ctx, bs, builtinactors.BuiltinActorReleases)
-}
-
-func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
-	switch networkName {
-	case "mainnet":
-		return types.NetworkMainnet
-	case "calibrationnet":
-		return types.NetworkCalibnet
-	case "butterflynet":
-		return types.NetworkButterfly
-	case "interopnet":
-		return types.NetworkInterop
-	default:
-		return types.Network2k
-	}
 }
 
 func hasFSRepo(repoPath string) (bool, error) {
