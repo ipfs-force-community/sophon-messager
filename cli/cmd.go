@@ -2,14 +2,11 @@ package cli
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus/pkg/util/blockstoreutil"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
@@ -56,7 +53,7 @@ func getConfig(ctx *cli.Context) (*config.Config, error) {
 	return config.ReadConfig(filepath.Join(repoPath, filestore.ConfigFile))
 }
 
-func LoadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config) error {
+func LoadBuiltinActors(ctx context.Context, cfg *config.Config) error {
 	full, closer, err := service.NewNodeClient(ctx, &cfg.Node)
 	if err != nil {
 		return err
@@ -66,14 +63,7 @@ func LoadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config)
 	if err != nil {
 		return err
 	}
-	builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
-	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
-		return fmt.Errorf("failed to set env %s", builtinactors.RepoPath)
-	}
-
-	bs := blockstoreutil.NewMemory()
-
-	return builtinactors.FetchAndLoadBundles(ctx, bs, builtinactors.BuiltinActorReleases)
+	return builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
 }
 
 func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {

@@ -188,7 +188,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := ccli.LoadBuiltinActors(ctx.Context, repoPath, cfg); err != nil {
+	if err := ccli.LoadBuiltinActors(ctx.Context, cfg); err != nil {
 		return err
 	}
 

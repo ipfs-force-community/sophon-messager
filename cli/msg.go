@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/filecoin-project/venus-messager/utils/actor_parser"
-	"github.com/mitchellh/go-homedir"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -78,15 +77,11 @@ var searchCmd = &cli.Command{
 		},
 	},
 	Before: func(ctx *cli.Context) error {
-		repoPath, err := homedir.Expand(ctx.String("repo"))
-		if err != nil {
-			return err
-		}
 		cfg, err := getConfig(ctx)
 		if err != nil {
 			return err
 		}
-		return LoadBuiltinActors(ctx.Context, repoPath, cfg)
+		return LoadBuiltinActors(ctx.Context, cfg)
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
