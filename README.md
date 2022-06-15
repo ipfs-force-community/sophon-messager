@@ -141,7 +141,3 @@ We will find three files in ~/.venus-messager
 * message.db
 * message.db-shm
 * message.db-wal
-
-### Builtin actors
-
-We need to fetch the actor bundles according to the network versions. You will find two files, builtin-actors-xxx.car and builtin-actors-xxx.sha256 in ~/venus-messager/builtin-actors.
