@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"reflect"
 
 	"github.com/filecoin-project/go-address"
@@ -14,8 +13,8 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	cbg "github.com/whyrusleeping/cbor-gen"
-	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -24,22 +23,22 @@ func (ms *MessageService) Send(ctx context.Context, params types.QuickSendParams
 	var err error
 
 	if params.Method == builtin.MethodSend {
-		return "", xerrors.Errorf("do not use it to send funds")
+		return "", fmt.Errorf("do not use it to send funds")
 	}
 
 	switch params.ParamsType {
 	case types.QuickSendParamsCodecJSON:
 		decParams, err = ms.decodeTypedParamsFromJSON(ctx, params.To, params.Method, params.Params)
 		if err != nil {
-			return "", xerrors.Errorf("failed to decode json params: %w", err)
+			return "", fmt.Errorf("failed to decode json params: %w", err)
 		}
 	case types.QuickSendParamsCodecHex:
 		decParams, err = hex.DecodeString(params.Params)
 		if err != nil {
-			return "", xerrors.Errorf("failed to decode hex params: %w", err)
+			return "", fmt.Errorf("failed to decode hex params: %w", err)
 		}
 	default:
-		return "", xerrors.Errorf("unexpected param type %s", params.ParamsType)
+		return "", fmt.Errorf("unexpected param type %s", params.ParamsType)
 	}
 
 	uuid := venusTypes.NewUUID().String()
@@ -88,13 +87,16 @@ func (ms *MessageService) decodeTypedParamsFromJSON(ctx context.Context, to addr
 		return nil, err
 	}
 
-	methodMeta, found := chain.MethodsMap[act.Code][method]
+	parser, err := actor_parser.NewMessageParser(ms.nodeClient)
+	if err != nil {
+		return nil, err
+	}
+	methodMeta, found := parser.GetMethodMeta(act.Code, method)
 	if !found {
 		return nil, fmt.Errorf("method %d not found on actor %s", method, act.Code)
 	}
 
-	p := reflect.New(methodMeta.Params.Elem()).Interface().(cbg.CBORMarshaler)
-
+	p := reflect.New(methodMeta.InType).Interface().(cbg.CBORMarshaler)
 	if err := json.Unmarshal([]byte(paramStr), p); err != nil {
 		return nil, fmt.Errorf("unmarshaling input into params type: %w", err)
 	}

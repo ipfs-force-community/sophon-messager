@@ -2,11 +2,11 @@ package jwt
 
 import (
 	"context"
+	"errors"
 
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"github.com/filecoin-project/venus-auth/core"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
 )
@@ -35,5 +35,5 @@ func (c *RemoteAuthClient) Verify(ctx context.Context, token string) ([]auth.Per
 		return core.AdaptOldStrategy(res.Perm), nil
 	}
 
-	return nil, xerrors.New("remote client is nil")
+	return nil, errors.New("remote client is nil")
 }

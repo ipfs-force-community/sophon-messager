@@ -1,8 +1,9 @@
 package cli
 
 import (
+	"errors"
+
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 )
 
 var LogCmds = &cli.Command{
@@ -25,7 +26,7 @@ var setLevelCmd = &cli.Command{
 		defer closer()
 
 		if ctx.NArg() == 0 {
-			return xerrors.New("must has level argument")
+			return errors.New("must has level argument")
 		}
 
 		err = client.SetLogLevel(ctx.Context, ctx.Args().Get(0))

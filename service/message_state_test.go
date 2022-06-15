@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
@@ -14,12 +15,13 @@ import (
 )
 
 func TestMessageStateCache(t *testing.T) {
-	db, err := sqlite.OpenSqlite(&config.SqliteConfig{File: "message_state.db"})
+	fs := filestore.NewMockFileStore(nil)
+	db, err := sqlite.OpenSqlite(fs)
 	assert.NoError(t, err)
 	defer func() {
-		assert.NoError(t, os.Remove("message_state.db"))
-		assert.NoError(t, os.Remove("message_state.db-shm"))
-		assert.NoError(t, os.Remove("message_state.db-wal"))
+		assert.NoError(t, os.Remove("message.db"))
+		assert.NoError(t, os.Remove("message.db-shm"))
+		assert.NoError(t, os.Remove("message.db-wal"))
 	}()
 	assert.NoError(t, db.AutoMigrate())
 

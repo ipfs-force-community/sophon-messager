@@ -8,7 +8,6 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -59,7 +58,7 @@ var SendCmd = &cli.Command{
 	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() != 2 {
-			return xerrors.Errorf("'send' expects two arguments, target and amount")
+			return fmt.Errorf("'send' expects two arguments, target and amount")
 		}
 
 		client, close, err := getAPI(ctx)
@@ -72,18 +71,18 @@ var SendCmd = &cli.Command{
 
 		params.To, err = address.NewFromString(ctx.Args().Get(0))
 		if err != nil {
-			return xerrors.Errorf("failed to parse target address: %w", err)
+			return fmt.Errorf("failed to parse target address: %w", err)
 		}
 
 		val, err := venusTypes.ParseFIL(ctx.Args().Get(1))
 		if err != nil {
-			return xerrors.Errorf("failed to parse amount: %w", err)
+			return fmt.Errorf("failed to parse amount: %w", err)
 		}
 		params.Val = abi.TokenAmount(val)
 
 		addr, err := address.NewFromString(ctx.String("from"))
 		if err != nil {
-			return xerrors.Errorf("failed to parse from address: %w", err)
+			return fmt.Errorf("failed to parse from address: %w", err)
 		}
 		params.From = addr
 

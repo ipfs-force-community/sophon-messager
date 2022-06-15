@@ -10,7 +10,6 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
@@ -169,7 +168,7 @@ func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProx
 		c, cls, err := newWalletClient(ctx, cfg.Token, url)
 
 		if err != nil {
-			return nil, nil, xerrors.Errorf("create geteway client with url:%s failed:%w", url, err)
+			return nil, nil, fmt.Errorf("create geteway client with url:%s failed:%w", url, err)
 		}
 
 		proxy.clients[url] = c

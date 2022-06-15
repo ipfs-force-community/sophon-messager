@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	_ "net/http/pprof"
@@ -9,19 +11,23 @@ import (
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/metrics"
+	"github.com/filecoin-project/venus/pkg/util/blockstoreutil"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
+	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/mitchellh/go-homedir"
 
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/api"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
@@ -39,6 +45,11 @@ func main() {
 				Aliases: []string{"c"},
 				Value:   "./messager.toml",
 				Usage:   "specify config file",
+				Hidden:  true,
+			},
+			&cli.StringFlag{
+				Name:  "repo",
+				Value: "~/.venus-messager",
 			},
 		},
 		Commands: []*cli.Command{ccli.MsgCmds,
@@ -50,6 +61,7 @@ func main() {
 			runCmd,
 		},
 	}
+
 	app.Version = version.Version + "--" + version.GitCommit
 	app.Setup()
 	if err := app.Run(os.Args); err != nil {
@@ -122,38 +134,70 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
+	var fsRepo filestore.FSRepo
+	repoPath, err := homedir.Expand(ctx.String("repo"))
+	if err != nil {
+		return err
+	}
+	hasFSRepo, err := hasFSRepo(repoPath)
+	if err != nil {
+		return err
+	}
+	if hasFSRepo {
+		fsRepo, err = filestore.NewFSRepo(repoPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	var cfg *config.Config
-	if !exist {
+	if !exist && !hasFSRepo {
 		cfg = config.DefaultConfig()
 		err = updateFlag(cfg, ctx)
 		if err != nil {
 			return err
 		}
 		if err := genSecret(&cfg.JWT); err != nil {
-			return xerrors.Errorf("failed to generate secret %v", err)
-		}
-		err = config.WriteConfig(path, cfg)
-		if err != nil {
-			return err
+			return fmt.Errorf("failed to generate secret %v", err)
 		}
 	} else {
-		cfg, err = config.ReadConfig(path)
-		if err != nil {
-			return err
-		}
-		if len(cfg.JWT.Local.Secret) == 0 {
-			if err := genSecret(&cfg.JWT); err != nil {
-				return xerrors.Errorf("failed to generate secret %v", err)
-			}
-			err = config.WriteConfig(path, cfg)
+		if hasFSRepo {
+			cfg = fsRepo.Config()
+		} else {
+			cfg, err = config.ReadConfig(path)
 			if err != nil {
 				return err
 			}
 		}
-		err = updateFlag(cfg, ctx)
+		if len(cfg.JWT.Local.Secret) == 0 {
+			if err := genSecret(&cfg.JWT); err != nil {
+				return fmt.Errorf("failed to generate secret %v", err)
+			}
+			if hasFSRepo {
+				if err := fsRepo.ReplaceConfig(cfg); err != nil {
+					return err
+				}
+			} else {
+				if err = config.WriteConfig(path, cfg); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if !hasFSRepo {
+		fsRepo, err = filestore.InitFSRepo(repoPath, cfg)
 		if err != nil {
 			return err
 		}
+	}
+	cfg = fsRepo.Config()
+
+	if err = updateFlag(cfg, ctx); err != nil {
+		return err
+	}
+
+	if err := loadBuiltinActors(ctx.Context, repoPath, cfg); err != nil {
+		return err
 	}
 
 	log, err := log.SetLogger(&cfg.Log)
@@ -167,7 +211,7 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
 	if err != nil {
-		return xerrors.Errorf("connect to node failed %v", err)
+		return fmt.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
 
@@ -203,6 +247,9 @@ func runAction(ctx *cli.Context) error {
 		fx.Provide(func() v1.FullNode {
 			return client
 		}),
+		fx.Provide(func() filestore.FSRepo {
+			return fsRepo
+		}),
 		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),
@@ -237,7 +284,7 @@ func runAction(ctx *cli.Context) error {
 	app := fx.New(provider, invoker, apiOption)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
-		return xerrors.Errorf("starting node: %w", err)
+		return fmt.Errorf("starting node: %w", err)
 	}
 
 	go func() {
@@ -293,7 +340,7 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 				cfg.DB.MySql.ConnectionString = ctx.String("mysql-dsn")
 			}
 		default:
-			return xerrors.Errorf("unexpected db type %s", cfg.DB.Type)
+			return fmt.Errorf("unexpected db type %s", cfg.DB.Type)
 		}
 	}
 	if ctx.IsSet("rate-limit-redis") {
@@ -321,4 +368,51 @@ func genSecret(cfg *config.JWTConfig) error {
 	}
 
 	return nil
+}
+
+func loadBuiltinActors(ctx context.Context, repoPath string, cfg *config.Config) error {
+	full, closer, err := service.NewNodeClient(ctx, &cfg.Node)
+	if err != nil {
+		return err
+	}
+	defer closer()
+	networkName, err := full.StateNetworkName(ctx)
+	if err != nil {
+		return err
+	}
+	builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
+	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
+		return fmt.Errorf("failed to set env %s", builtinactors.RepoPath)
+	}
+
+	bs := blockstoreutil.NewMemory()
+
+	return builtinactors.FetchAndLoadBundles(ctx, bs, builtinactors.BuiltinActorReleases)
+}
+
+func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
+	switch networkName {
+	case "mainnet":
+		return types.NetworkMainnet
+	case "calibrationnet":
+		return types.NetworkCalibnet
+	case "butterflynet":
+		return types.NetworkButterfly
+	case "interopnet":
+		return types.NetworkInterop
+	default:
+		return types.Network2k
+	}
+}
+
+func hasFSRepo(repoPath string) (bool, error) {
+	_, err := os.Stat(repoPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

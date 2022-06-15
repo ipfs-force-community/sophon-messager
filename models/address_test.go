@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"testing"
 	"time"
@@ -9,7 +10,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -91,7 +91,7 @@ func TestAddress(t *testing.T) {
 			checkField(t, addrInfo, r)
 
 			r2, err2 := addressRepo.GetAddress(ctx, address.Undef)
-			assert.True(t, xerrors.Is(err2, gorm.ErrRecordNotFound))
+			assert.True(t, errors.Is(err2, gorm.ErrRecordNotFound))
 			assert.Contains(t, err2.Error(), gorm.ErrRecordNotFound.Error())
 			assert.Nil(t, r2)
 		})

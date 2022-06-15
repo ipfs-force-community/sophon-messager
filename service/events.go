@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-
-	"golang.org/x/xerrors"
+	"fmt"
 
 	"github.com/filecoin-project/venus-messager/log"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -24,15 +23,15 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 	select {
 	case noti := <-notifs:
 		if len(noti) != 1 {
-			return xerrors.Errorf("expect hccurrent length 1 but for %d", len(noti))
+			return fmt.Errorf("expect hccurrent length 1 but for %d", len(noti))
 		}
 
 		if noti[0].Type != types.HCCurrent {
-			return xerrors.Errorf("expect hccurrent event but got %s ", noti[0].Type)
+			return fmt.Errorf("expect hccurrent event but got %s ", noti[0].Type)
 		}
 		//todo do some check or repaire for the first connect
 		if err := nd.msgService.ReconnectCheck(ctx, noti[0].Val); err != nil {
-			return xerrors.Errorf("reconnect check error: %v", err)
+			return fmt.Errorf("reconnect check error: %v", err)
 		}
 	case <-ctx.Done():
 		return ctx.Err()
@@ -52,7 +51,7 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 		}
 
 		if err := nd.msgService.ProcessNewHead(ctx, apply, revert); err != nil {
-			return xerrors.Errorf("process new head error: %v", err)
+			return fmt.Errorf("process new head error: %v", err)
 		}
 	}
 	return nil

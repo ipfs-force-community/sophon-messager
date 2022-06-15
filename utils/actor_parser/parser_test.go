@@ -5,16 +5,17 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"reflect"
+	"testing"
+
 	"github.com/filecoin-project/go-address"
 	cbor "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-actors/v6/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/xerrors"
-	"io/ioutil"
-	"reflect"
-	"testing"
 )
 
 func init() {
@@ -28,7 +29,7 @@ type mockActorGetter struct {
 func (x *mockActorGetter) StateGetActor(ctx context.Context, addr address.Address, _ types.TipSetKey) (*types.Actor, error) {
 	actor, isok := x.actors[addr.String()]
 	if !isok {
-		return nil, xerrors.Errorf("address:%s not found", addr.String())
+		return nil, fmt.Errorf("address:%s not found", addr.String())
 	}
 	return actor, nil
 }

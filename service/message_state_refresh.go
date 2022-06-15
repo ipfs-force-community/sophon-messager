@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -55,7 +55,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	applyMsgs, err := ms.processBlockParentMessages(ctx, h.apply)
 	if err != nil {
-		return xerrors.Errorf("process apply failed %v", err)
+		return fmt.Errorf("process apply failed %v", err)
 	}
 
 	var tsList []*venustypes.TipSet
@@ -100,7 +100,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 	ms.tsCache.Add(tsList...)
-	if err := ms.tsCache.Save(ms.cfg.TipsetFilePath); err != nil {
+	if err := ms.tsCache.Save(ms.fsRepo.TipsetFile()); err != nil {
 		ms.log.Errorf("store tipsetkey failed %v", err)
 	}
 
@@ -146,12 +146,12 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 				localMsg.Height = int64(msg.height)
 				localMsg.TipSetKey = tsKey
 				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
 				replaceMsg[localMsg.ID] = localMsg
 			} else {
 				if err = txRepo.MessageRepo().UpdateMessageInfoByCid(msg.cid.String(), msg.receipt, msg.height, types.OnChainMsg, tsKey); err != nil {
-					return xerrors.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
+					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.cid.String(), err)
 				}
 			}
 			delete(revertMsgs, msg.cid)
@@ -163,7 +163,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 // delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
 	select {
-	case <-time.After(ms.cfg.WaitingChainHeadStableDuration):
+	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():
@@ -176,7 +176,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 	for _, ts := range h.revert {
 		msgs, err := ms.repo.MessageRepo().ListFilledMessageByHeight(ts.Height())
 		if err != nil {
-			return nil, xerrors.Errorf("found filled message at height %d error %v", ts.Height(), err)
+			return nil, fmt.Errorf("found filled message at height %d error %v", ts.Height(), err)
 		}
 
 		addrs := ms.addressService.ActiveAddresses()
@@ -205,16 +205,16 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 		height := ts.Height()
 		msgs, err := ms.nodeClient.ChainGetParentMessages(ctx, bcid)
 		if err != nil {
-			return nil, xerrors.Errorf("got parent message failed %w", err)
+			return nil, fmt.Errorf("got parent message failed %w", err)
 		}
 
 		receipts, err := ms.nodeClient.ChainGetParentReceipts(ctx, bcid)
 		if err != nil {
-			return nil, xerrors.Errorf("got parent receipt failed %w", err)
+			return nil, fmt.Errorf("got parent receipt failed %w", err)
 		}
 
 		if len(msgs) != len(receipts) {
-			return nil, xerrors.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
+			return nil, fmt.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
 		}
 
 		for i := range receipts {

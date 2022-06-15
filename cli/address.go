@@ -6,7 +6,6 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 )
 
 var AddrCmds = &cli.Command{
@@ -36,7 +35,7 @@ var searchAddrCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())
@@ -92,7 +91,7 @@ var deleteAddrCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())
@@ -120,7 +119,7 @@ var forbiddenAddrCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())
@@ -133,7 +132,7 @@ var forbiddenAddrCmd = &cli.Command{
 			return err
 		}
 		if !hasAddr {
-			return xerrors.Errorf("address not exist")
+			return fmt.Errorf("address not exist")
 		}
 
 		err = client.ForbiddenAddress(ctx.Context, addr)
@@ -158,7 +157,7 @@ var activeAddrCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())
@@ -171,7 +170,7 @@ var activeAddrCmd = &cli.Command{
 			return err
 		}
 		if !hasAddr {
-			return xerrors.Errorf("address not exist")
+			return fmt.Errorf("address not exist")
 		}
 
 		err = client.ActiveAddress(ctx.Context, addr)
@@ -202,7 +201,7 @@ var setAddrSelMsgNumCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 		addr, err := address.NewFromString(ctx.Args().First())
 		if err != nil {
@@ -242,7 +241,7 @@ var setFeeParamsCmd = &cli.Command{
 		defer closer()
 
 		if !ctx.Args().Present() {
-			return xerrors.Errorf("must pass address")
+			return fmt.Errorf("must pass address")
 		}
 
 		addr, err := address.NewFromString(ctx.Args().First())

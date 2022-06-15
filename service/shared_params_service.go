@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/log"
@@ -52,7 +52,7 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 	ctx := context.TODO()
 	params, err := sps.GetSharedParams(ctx)
 	if err != nil {
-		if !xerrors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
 		if err = sps.SetSharedParams(ctx, defParams); err != nil {
