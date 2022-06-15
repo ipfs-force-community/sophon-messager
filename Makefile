@@ -28,3 +28,10 @@ test:
 	rm -rf models/test_sqlite_db*
 	go test -race ./...
 
+
+.PHONY: docker
+
+
+
+docker:
+	docker build --build-arg https_proxy=$(BUILD_DOCKER_PROXY) -t venus-messager .
