@@ -96,7 +96,7 @@ func (ms *MessageService) decodeTypedParamsFromJSON(ctx context.Context, to addr
 		return nil, fmt.Errorf("method %d not found on actor %s", method, act.Code)
 	}
 
-	p := reflect.New(methodMeta.InType).Interface().(cbg.CBORMarshaler)
+	p := reflect.New(methodMeta.Params.Elem()).Interface().(cbg.CBORMarshaler)
 	if err := json.Unmarshal([]byte(paramStr), p); err != nil {
 		return nil, fmt.Errorf("unmarshaling input into params type: %w", err)
 	}
