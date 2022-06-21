@@ -10,6 +10,7 @@ import (
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/venus/venus-shared/utils"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
@@ -63,7 +64,12 @@ func LoadBuiltinActors(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	return builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName))
+	if err := builtinactors.SetNetworkBundle(networkNameToNetworkType(networkName)); err != nil {
+		return err
+	}
+	utils.ReloadMethodsMap()
+
+	return nil
 }
 
 func networkNameToNetworkType(networkName types.NetworkName) types.NetworkType {
