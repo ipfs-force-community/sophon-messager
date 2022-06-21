@@ -38,7 +38,23 @@ make
 ### Run
 
 ```sh
-# db user mysql
+./venus-messager run \
+--node-url=/ip4/127.0.0.1/tcp/3453 \
+--gateway-url=/ip4/127.0.0.1/tcp/45132 \
+--auth-url=http://127.0.0.1:8989 \
+--auth-token=<auth-token> \
+--db-type=sqlite
+```
+
+We will find three files in ~/.venus-messager
+
+* message.db
+* message.db-shm
+* message.db-wal
+
+#### db use mysql
+
+```sh
 ./venus-messager run \
 --node-url=/ip4/127.0.0.1/tcp/3453 \
 --gateway-url=/ip4/127.0.0.1/tcp/45132 \
@@ -46,13 +62,6 @@ make
 --auth-token=<auth-token> \
 --db-type=mysql \
 --mysql-dsn="user:password@(127.0.0.1:3306)/messager?parseTime=true&loc=Local"
-# or db user sqlite
-./venus-messager run \
---node-url=/ip4/127.0.0.1/tcp/3453 \
---gateway-url=/ip4/127.0.0.1/tcp/45132 \
---auth-url=http://127.0.0.1:8989 \
---auth-token=<auth-token> \
---db-type=sqlite
 ```
 
 ### Config
@@ -133,11 +142,3 @@ make
   ProbabilitySampler = 1.0
   ServerName = "venus-messenger"
 ```
-
-### Use sqlite database
-
-We will find three files in ~/.venus-messager
-
-* message.db
-* message.db-shm
-* message.db-wal
