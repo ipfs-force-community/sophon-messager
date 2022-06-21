@@ -76,19 +76,22 @@ var searchCmd = &cli.Command{
 			Usage: "message cid",
 		},
 	},
-	Before: func(ctx *cli.Context) error {
-		cfg, err := getConfig(ctx)
-		if err != nil {
-			return err
-		}
-		return LoadBuiltinActors(ctx.Context, cfg)
-	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
+
+		nodeAPI, closer, err := getNodeAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		if err := LoadBuiltinActors(ctx.Context, nodeAPI); err != nil {
+			return err
+		}
 
 		var msg *types.Message
 		if id := ctx.String("id"); len(id) > 0 {
@@ -115,11 +118,6 @@ var searchCmd = &cli.Command{
 		}
 		fmt.Printf("- message information:\n%s\n", string(bytes))
 
-		nodeAPI, closer, err := getNodeAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
 		paser, err := actor_parser.NewMessageParser(nodeAPI)
 		if err != nil {
 			return nil

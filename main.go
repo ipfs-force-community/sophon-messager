@@ -188,10 +188,6 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := ccli.LoadBuiltinActors(ctx.Context, cfg); err != nil {
-		return err
-	}
-
 	log, err := log.SetLogger(&cfg.Log)
 	if err != nil {
 		return err
@@ -206,6 +202,10 @@ func runAction(ctx *cli.Context) error {
 		return fmt.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
+
+	if err := ccli.LoadBuiltinActors(ctx.Context, client); err != nil {
+		return err
+	}
 
 	mAddr, err := ma.NewMultiaddr(cfg.API.Address)
 	if err != nil {
