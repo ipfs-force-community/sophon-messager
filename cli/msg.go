@@ -76,6 +76,13 @@ var searchCmd = &cli.Command{
 			Usage: "message cid",
 		},
 	},
+	Before: func(ctx *cli.Context) error {
+		cfg, err := getConfig(ctx)
+		if err != nil {
+			return err
+		}
+		return LoadBuiltinActors(ctx.Context, cfg)
+	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
 		if err != nil {

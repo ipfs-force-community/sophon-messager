@@ -4,7 +4,7 @@ messager is a component used to manage local messages, with the purpose of savin
 
 Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporting issues about this repository.
 
-## Work
+### Work
 
 - ✅ Remote wallet support: One messenger support multiple wallets to manage their keys separately
 - ✅ Message pool for multiple miners: As a service, Messenger provides API for miners to put messages on chain
@@ -20,7 +20,7 @@ Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporti
 - 🔲 Rich and flexible message sorting options
 
 
-## Getting Start
+### Getting Start
 
 build binary
 ```sh
@@ -28,7 +28,36 @@ git clone https://github.com/filecoin-project/venus-messager.git
 make
 ```
 
-## Config
+### Set repo path
+
+> The default path is ~/.venus-messager.
+```
+./venus-messager --repo=path_to_repo run 
+```
+
+### Run
+
+```sh
+# db user mysql
+./venus-messager run \
+--node-url=/ip4/127.0.0.1/tcp/3453 \
+--gateway-url=/ip4/127.0.0.1/tcp/45132 \
+--auth-url=http://127.0.0.1:8989 \
+--auth-token=<auth-token> \
+--db-type=mysql \
+--mysql-dsn="user:password@(127.0.0.1:3306)/messager?parseTime=true&loc=Local"
+# or db user sqlite
+./venus-messager run \
+--node-url=/ip4/127.0.0.1/tcp/3453 \
+--gateway-url=/ip4/127.0.0.1/tcp/45132 \
+--auth-url=http://127.0.0.1:8989 \
+--auth-token=<auth-token> \
+--db-type=sqlite
+```
+
+### Config
+
+> The configuration file is saved in ~/.venus-messager/config.toml
 
 ```
 [api]
@@ -40,14 +69,14 @@ make
 
   [db.mysql]
     connMaxLifeTime = "1m0s"
-    connectionString = "" # eg. root:password@(127.0.0.1:3306)/messager?parseTime=true&loc=Local
+    connectionString = ""
     debug = false
     maxIdleConn = 10
     maxOpenConn = 10
 
   [db.sqlite]
     debug = false
-    file = "./message.db"
+    file = ""
 
 [gateway]
   # gateway token, generate by auth server
@@ -105,8 +134,10 @@ make
   ServerName = "venus-messenger"
 ```
 
-## Run
+### Use sqlite database
 
-```sh
-./venus-messager run --auth-url=http://127.0.0.1:8989 --node-url=/ip4/127.0.0.1/tcp/3453 --gateway-url=/ip4/127.0.0.1/tcp/45132 --auth-token=<auth-token>
-```
+We will find three files in ~/.venus-messager
+
+* message.db
+* message.db-shm
+* message.db-wal
