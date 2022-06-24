@@ -34,10 +34,6 @@ func (x *mockActorGetter) StateGetActor(ctx context.Context, addr address.Addres
 	return actor, nil
 }
 
-func (x *mockActorGetter) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
-	panic("implement me")
-}
-
 func newMockActorGetter(t *testing.T) *mockActorGetter {
 	return &mockActorGetter{
 		actors: map[string]*types.Actor{
