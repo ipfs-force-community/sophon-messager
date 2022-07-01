@@ -654,6 +654,14 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 				pushMsgByAddr[msg.Message.From] = []*venusTypes.SignedMessage{msg}
 			}
 		}
+
+		for addr, msgs := range pushMsgByAddr {
+			sort.Slice(msgs, func(i, j int) bool {
+				return msgs[i].Message.Nonce < msgs[j].Message.Nonce
+			})
+			pushMsgByAddr[addr] = msgs
+		}
+
 		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 		for addr, msgs := range pushMsgByAddr {
 			//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
