@@ -18,11 +18,9 @@ make
 
 ### Run messager
 
-> ./venus-messager --config=xx.toml run [options]
-
-* Specify the directory of the configuration file by `--config=xxx.toml`，default: `./messager.toml`
-* If the specified configuration file does not exist at startup, a configuration file with the corresponding name will be generated and the value of the set parameter will be written to the configuration file
-* When the specified configuration file exists at startup, the values of the set parameters will be used, but will not be written to the configuration file. If the parameters are not set, the values of the parameters in the configuration file will be used
+```bash
+./venus-messager run [options]
+```
 
 ```bash
 options：
@@ -31,7 +29,6 @@ options：
   --node-url           url for connection lotus/venus
   --node-token         token auth for lotus/venus
   --db-type            which db to use. sqlite/mysql
-  --sqlite-path        sqlite db file. eg. ~/sqlite/message.db
   --mysql-dsn          mysql connection string
   --gateway-url        url for gateway server
   --gateway-token      token for gateway server
