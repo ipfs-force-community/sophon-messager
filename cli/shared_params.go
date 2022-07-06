@@ -38,6 +38,10 @@ var setSharedParamsCmd = &cli.Command{
 			Name:  "sel-msg-num",
 			Value: 20,
 		},
+		&cli.Float64Flag{
+			Name:  "gas-premium-ration",
+			Usage: "",
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() > 1 {
@@ -71,6 +75,9 @@ var setSharedParamsCmd = &cli.Command{
 		}
 		if ctx.IsSet("sel-msg-num") {
 			params.SelMsgNum = ctx.Uint64("sel-msg-num")
+		}
+		if ctx.IsSet("gas-premium-ration") {
+			params.GasPremiumRation = ctx.Float64("gas-premium-ration")
 		}
 
 		err = api.SetSharedParams(ctx.Context, params)

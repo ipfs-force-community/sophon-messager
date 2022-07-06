@@ -22,5 +22,5 @@ type AddressRepo interface {
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
 	UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error
 	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error
-	UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap big.Int) error
+	UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasPremiumRation float64, maxFee, maxFeeCap big.Int) error
 }

@@ -210,11 +210,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,
 				GasOverEstimation: newMsgMeta.GasOverEstimation,
+				GasPremiumRation:  newMsgMeta.GasPremiumRation,
 			},
 		}
 		messageSelector.log.Infof("estimate message %s, gas fee cap %s, gas limit %v, gas premium: %s, "+
-			"meta maxfee %s, max fee cap %s, over estimation %f", msg.ID, msg.GasFeeCap, msg.GasLimit, msg.GasPremium,
-			newMsgMeta.MaxFee, newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation)
+			"meta maxfee %s, max fee cap %s, over estimation %f, premium ration %f", msg.ID, msg.GasFeeCap, msg.GasLimit, msg.GasPremium,
+			newMsgMeta.MaxFee, newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation, newMsgMeta.GasPremiumRation)
 	}
 
 	timeOutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
@@ -331,6 +332,13 @@ func (messageSelector *MessageSelector) messageMeta(meta *types.SendSpec, addrIn
 			newMsgMeta.MaxFeeCap = addrInfo.MaxFeeCap
 		} else if globalMeta != nil {
 			newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
+		}
+	}
+	if meta.GasPremiumRation == 0 {
+		if addrInfo.GasPremiumRation != 0 {
+			newMsgMeta.GasPremiumRation = addrInfo.GasPremiumRation
+		} else if globalMeta.GasPremiumRation != 0 {
+			newMsgMeta.GasPremiumRation = globalMeta.GasPremiumRation
 		}
 	}
 
