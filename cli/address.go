@@ -232,6 +232,10 @@ var setFeeParamsCmd = &cli.Command{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for message",
 		},
+		&cli.Float64Flag{
+			Name:  "gas-premium-ration",
+			Usage: "",
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -249,7 +253,7 @@ var setFeeParamsCmd = &cli.Command{
 			return err
 		}
 
-		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.String("max-fee"), ctx.String("max-feecap"))
+		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64("gas-premium-ration"), ctx.String("max-fee"), ctx.String("max-feecap"))
 
 		return err
 	},
