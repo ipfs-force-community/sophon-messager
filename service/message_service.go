@@ -830,7 +830,7 @@ func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string
 	return id, ms.updateFilledMessage(ctx, msg)
 }
 
-func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
+func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee abi.TokenAmount, gasLimit int64, gasPremium abi.TokenAmount, gasFeecap abi.TokenAmount) (cid.Cid, error) {
 	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
 		return cid.Undef, xerrors.Errorf("found message %v", err)
@@ -842,15 +842,8 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	if auto {
 		minRBF := messagepool.ComputeMinRBF(msg.GasPremium)
 
-		var mss *venusTypes.MessageSendSpec
-		if len(maxFee) > 0 {
-			maxFee, err := venusTypes.BigFromString(maxFee)
-			if err != nil {
-				return cid.Undef, fmt.Errorf("parsing max-spend: %w", err)
-			}
-			mss = &venusTypes.MessageSendSpec{
-				MaxFee: maxFee,
-			}
+		mss := &venusTypes.MessageSendSpec{
+			MaxFee: maxFee,
 		}
 
 		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
@@ -873,15 +866,18 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		if gasLimit > 0 {
 			msg.GasLimit = gasLimit
 		}
-		msg.GasPremium, err = venusTypes.BigFromString(gasPremium)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parsing gas-premium: %w", err)
+		if big.Cmp(gasPremium, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas premium(%s) must bigger than zero", gasPremium)
 		}
+		if big.Cmp(gasFeecap, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger than zero", gasFeecap)
+		}
+		if big.Cmp(gasFeecap, gasPremium) < 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger or equal than gas premium (%s)", gasFeecap, gasPremium)
+		}
+		msg.GasPremium = gasPremium
 		// TODO: estimate fee cap here
-		msg.GasFeeCap, err = venusTypes.BigFromString(gasFeecap)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parsing gas-feecap: %w", err)
-		}
+		msg.GasFeeCap = gasFeecap
 	}
 
 	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)
