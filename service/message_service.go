@@ -364,7 +364,7 @@ func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr a
 		for _, msg := range msgs {
 			ids = append(ids, msg.ID)
 		}
-		ms.log.Warnf("list failed message by address %s %s", addr, strings.Join(ids, ","))
+		ms.log.Infof("list failed message by address %s %s", addr, strings.Join(ids, ","))
 	}
 
 	return msgs, err
@@ -394,7 +394,7 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.A
 		for _, msg := range msgs {
 			ids = append(ids, msg.ID)
 		}
-		ms.log.Warnf("list blocked message by address %s %s", addr, strings.Join(ids, ","))
+		ms.log.Infof("list blocked message by address %s %s", addr, strings.Join(ids, ","))
 	}
 
 	return msgs, err
@@ -837,8 +837,11 @@ func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string
 	return id, ms.updateFilledMessage(ctx, msg)
 }
 
-func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFeeStr string, gasLimit int64, gasPremiumStr, gasFeecapStr string) (cid.Cid, error) {
-	msg, err := ms.GetMessageByUid(ctx, id)
+func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error) {
+	if params == nil {
+		return cid.Undef, fmt.Errorf("params is nil")
+	}
+	msg, err := ms.GetMessageByUid(ctx, params.ID)
 	if err != nil {
 		return cid.Undef, fmt.Errorf("found message %v", err)
 	}
@@ -846,16 +849,12 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		return cid.Undef, fmt.Errorf("message already on chain")
 	}
 
-	if auto {
+	if params.Auto {
 		minRBF := computeMinRBF(msg.GasPremium)
 
-		mss := &venusTypes.MessageSendSpec{}
-		if len(maxFeeStr) > 0 {
-			maxFee, err := venusTypes.ParseFIL(maxFeeStr)
-			if err != nil {
-				return cid.Undef, err
-			}
-			mss.MaxFee = big.Int(maxFee)
+		mss := &venusTypes.MessageSendSpec{
+			MaxFee:         params.MaxFee,
+			GasOverPremium: params.GasOverPremium,
 		}
 
 		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
@@ -883,31 +882,21 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 
 		CapGasFee(&msg.Message, mss.MaxFee)
 	} else {
-		if gasLimit > 0 {
-			msg.GasLimit = gasLimit
+		if params.GasLimit > 0 {
+			msg.GasLimit = params.GasLimit
 		}
-
-		gasPremium, err := venusTypes.BigFromString(gasPremiumStr)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parse gas premium failed: %v", err)
+		if big.Cmp(params.GasPremium, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas premium(%s) must bigger than zero", params.GasPremium)
 		}
-		gasFeecap, err := venusTypes.BigFromString(gasFeecapStr)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parse gas feecap failed: %v", err)
+		if big.Cmp(params.GasFeecap, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger than zero", params.GasFeecap)
 		}
-
-		if big.Cmp(gasPremium, big.Zero()) <= 0 {
-			return cid.Undef, fmt.Errorf("gas premium(%s) must bigger than zero", gasPremium)
+		if big.Cmp(msg.GasFeeCap, msg.GasPremium) < 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger or equal than gas premium (%s)", msg.GasFeeCap, msg.GasPremium)
 		}
-		if big.Cmp(gasFeecap, big.Zero()) <= 0 {
-			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger than zero", gasFeecap)
-		}
-		if big.Cmp(gasFeecap, gasPremium) < 0 {
-			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger or equal than gas premium (%s)", gasFeecap, gasPremium)
-		}
-		msg.GasPremium = gasPremium
+		msg.GasPremium = params.GasPremium
 		// TODO: estimate fee cap here
-		msg.GasFeeCap = gasFeecap
+		msg.GasFeeCap = params.GasFeecap
 	}
 
 	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)
