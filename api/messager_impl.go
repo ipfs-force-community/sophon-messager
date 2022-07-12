@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/filecoin-project/go-state-types/abi"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -106,8 +107,20 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
 
-func (m MessageImp) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
-	return m.MessageSrv.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
+func (m MessageImp) ReplaceMessage(ctx context.Context, id string, auto bool, maxFeeStr string, gasLimit int64, gasPremiumStr string, gasFeecapStr string) (cid.Cid, error) {
+	maxFee, err := venusTypes.ParseFIL(maxFeeStr)
+	if err != nil {
+		return cid.Undef, err
+	}
+	gasPremium, err := venusTypes.BigFromString(gasPremiumStr)
+	if err != nil {
+		return cid.Undef, err
+	}
+	gasFeecap, err := venusTypes.BigFromString(gasFeecapStr)
+	if err != nil {
+		return cid.Undef, err
+	}
+	return m.MessageSrv.ReplaceMessage(ctx, id, auto, abi.TokenAmount(maxFee), gasLimit, gasPremium, gasFeecap)
 }
 
 func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
