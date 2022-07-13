@@ -172,8 +172,8 @@ func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, n
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
-func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error {
-	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
+func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, maxFeeCap string) error {
+	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap)
 }
 
 func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
