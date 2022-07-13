@@ -838,7 +838,7 @@ func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string
 	return id, ms.updateFilledMessage(ctx, msg)
 }
 
-func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee abi.TokenAmount, gasLimit int64, gasPremium abi.TokenAmount, gasFeecap abi.TokenAmount) (cid.Cid, error) {
+func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFeeStr string, gasLimit int64, gasPremiumStr, gasFeecapStr string) (cid.Cid, error) {
 	msg, err := ms.GetMessageByUid(ctx, id)
 	if err != nil {
 		return cid.Undef, fmt.Errorf("found message %v", err)
@@ -850,8 +850,13 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 	if auto {
 		minRBF := computeMinRBF(msg.GasPremium)
 
-		mss := &venusTypes.MessageSendSpec{
-			MaxFee: maxFee,
+		mss := &venusTypes.MessageSendSpec{}
+		if len(maxFeeStr) > 0 {
+			maxFee, err := venusTypes.ParseFIL(maxFeeStr)
+			if err != nil {
+				return cid.Undef, err
+			}
+			mss.MaxFee = big.Int(maxFee)
 		}
 
 		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
@@ -884,6 +889,16 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		if gasLimit > 0 {
 			msg.GasLimit = gasLimit
 		}
+
+		gasPremium, err := venusTypes.BigFromString(gasPremiumStr)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("parse gas premium failed: %v", err)
+		}
+		gasFeecap, err := venusTypes.BigFromString(gasFeecapStr)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("parse gas feecap failed: %v", err)
+		}
+
 		if big.Cmp(gasPremium, big.Zero()) <= 0 {
 			return cid.Undef, fmt.Errorf("gas premium(%s) must bigger than zero", gasPremium)
 		}
