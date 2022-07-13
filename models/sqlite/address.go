@@ -24,6 +24,7 @@ type sqliteAddress struct {
 	GasOverEstimation float64            `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);"`
 	MaxFeeCap         mtypes.Int         `gorm:"column:max_fee_cap;type:varchar(256);"`
+	GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -43,6 +44,7 @@ func FromAddress(addr *types.Address) *sqliteAddress {
 		SelMsgNum:         addr.SelMsgNum,
 		State:             addr.State,
 		GasOverEstimation: addr.GasOverEstimation,
+		GasOverPremium:    addr.GasOverPremium,
 		IsDeleted:         addr.IsDeleted,
 		CreatedAt:         addr.CreatedAt,
 		UpdatedAt:         addr.UpdatedAt,
@@ -72,6 +74,7 @@ func (s sqliteAddress) Address() (*types.Address, error) {
 		SelMsgNum:         s.SelMsgNum,
 		State:             s.State,
 		GasOverEstimation: s.GasOverEstimation,
+		GasOverPremium:    s.GasOverPremium,
 		MaxFee:            big.Int{Int: s.MaxFee.Int},
 		MaxFeeCap:         big.Int{Int: s.MaxFeeCap.Int},
 		IsDeleted:         s.IsDeleted,
@@ -179,7 +182,7 @@ func (s sqliteAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.
 		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
 }
 
-func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap big.Int) error {
+func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, maxFeeCap big.Int) error {
 	updateColumns := make(map[string]interface{})
 	if gasOverEstimation != 0 {
 		updateColumns["gas_over_estimation"] = gasOverEstimation
@@ -190,6 +193,10 @@ func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Add
 	if !maxFeeCap.Nil() {
 		updateColumns["max_fee_cap"] = mtypes.NewFromGo(maxFeeCap.Int)
 	}
+	if gasOverPremium != 0 {
+		updateColumns["gas_over_premium"] = gasOverPremium
+	}
+
 	updateColumns["updated_at"] = time.Now()
 
 	return s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).UpdateColumns(updateColumns).Error

@@ -24,6 +24,7 @@ var defParams = &types.SharedSpec{
 	GasOverEstimation: 1.25,
 	MaxFee:            big.Int{Int: DefaultMaxFee.Int},
 	MaxFeeCap:         big.NewInt(0),
+	GasOverPremium:    0,
 	SelMsgNum:         20,
 }
 
@@ -96,6 +97,7 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedSpec) {
 		sps.params.GasOverEstimation = sharedParams.GasOverEstimation
 		sps.params.MaxFee = sharedParams.MaxFee
 		sps.params.MaxFeeCap = sharedParams.MaxFeeCap
+		sps.params.GasOverPremium = sharedParams.GasOverPremium
 	}
 	if sharedParams.SelMsgNum > 0 {
 		sps.params.SelMsgNum = sharedParams.SelMsgNum

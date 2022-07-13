@@ -35,6 +35,7 @@ func TestAddress(t *testing.T) {
 			SelMsgNum:         1,
 			State:             types.AddressStateAlive,
 			GasOverEstimation: 1.25,
+			GasOverPremium:    1.6,
 			MaxFee:            big.NewInt(10),
 			MaxFeeCap:         big.NewInt(1),
 			IsDeleted:         -1,
@@ -43,16 +44,17 @@ func TestAddress(t *testing.T) {
 		}
 
 		addrInfo2 := &types.Address{
-			ID:        venustypes.NewUUID(),
-			Addr:      addr2,
-			SelMsgNum: 10,
-			State:     types.AddressStateAlive,
-			MaxFee:    big.NewInt(110),
-			MaxFeeCap: big.NewInt(11),
-			Nonce:     2,
-			IsDeleted: -1,
-			CreatedAt: time.Time{},
-			UpdatedAt: time.Time{},
+			ID:             venustypes.NewUUID(),
+			Addr:           addr2,
+			SelMsgNum:      10,
+			State:          types.AddressStateAlive,
+			GasOverPremium: 3.0,
+			MaxFee:         big.NewInt(110),
+			MaxFeeCap:      big.NewInt(11),
+			Nonce:          2,
+			IsDeleted:      -1,
+			CreatedAt:      time.Time{},
+			UpdatedAt:      time.Time{},
 		}
 
 		addrInfo3 := &types.Address{
@@ -81,6 +83,7 @@ func TestAddress(t *testing.T) {
 			assert.Equal(t, expect.SelMsgNum, actual.SelMsgNum)
 			assert.Equal(t, expect.State, actual.State)
 			assert.Equal(t, expect.GasOverEstimation, actual.GasOverEstimation)
+			assert.Equal(t, expect.GasOverPremium, actual.GasOverPremium)
 			assert.Equal(t, expect.MaxFee, actual.MaxFee)
 			assert.Equal(t, expect.MaxFeeCap, actual.MaxFeeCap)
 		}
@@ -134,13 +137,15 @@ func TestAddress(t *testing.T) {
 			gasOverEstimation := 1.5
 			maxFeeCap := big.NewInt(1000)
 			maxFee := big.NewInt(1000)
-			assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap))
+			gasOverPremium := 1.2
+			assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap))
 
 			r, err := addressRepo.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, gasOverEstimation, r.GasOverEstimation)
 			assert.Equal(t, maxFee, r.MaxFee)
 			assert.Equal(t, maxFeeCap, r.MaxFeeCap)
+			assert.Equal(t, gasOverPremium, r.GasOverPremium)
 		})
 
 		t.Run("DelAddress", func(t *testing.T) {
