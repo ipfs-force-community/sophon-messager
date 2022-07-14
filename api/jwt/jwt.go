@@ -8,14 +8,14 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 )
 
-type JwtClient struct {
+type Client struct {
 	Local  jwtclient.IJwtAuthClient
 	Remote *RemoteAuthClient
 }
 
-func NewJwtClient(jwtCfg *config.JWTConfig) (*JwtClient, error) {
+func NewJwtClient(jwtCfg *config.JWTConfig) (*Client, error) {
 	var err error
-	jc := &JwtClient{
+	jc := &Client{
 		Remote: newRemoteJwtClient(jwtCfg),
 	}
 	if jc.Local, err = newLocalJWTClient(jwtCfg); err != nil {

@@ -25,7 +25,7 @@ type sqliteNode struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
-func FromNode(node *types.Node) *sqliteNode {
+func fromNode(node *types.Node) *sqliteNode {
 	return automapper.MustMapper(node, TSqliteNode).(*sqliteNode)
 }
 
@@ -48,14 +48,14 @@ func newSqliteNodeRepo(db *gorm.DB) sqliteNodeRepo {
 }
 
 func (s sqliteNodeRepo) CreateNode(node *types.Node) error {
-	sNode := FromNode(node)
+	sNode := fromNode(node)
 	sNode.CreatedAt = time.Now()
 	sNode.UpdatedAt = time.Now()
 	return s.DB.Create(sNode).Error
 }
 
 func (s sqliteNodeRepo) SaveNode(node *types.Node) error {
-	sNode := FromNode(node)
+	sNode := fromNode(node)
 	sNode.UpdatedAt = time.Now()
 	return s.DB.Save(sNode).Error
 }

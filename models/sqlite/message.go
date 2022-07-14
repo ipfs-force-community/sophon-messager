@@ -100,7 +100,7 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 	return destMsg
 }
 
-func FromMessage(srcMsg *types.Message) *sqliteMessage {
+func fromMessage(srcMsg *types.Message) *sqliteMessage {
 	destMsg := &sqliteMessage{
 		ID:         srcMsg.ID,
 		Version:    srcMsg.Version,
@@ -261,7 +261,7 @@ func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 }
 
 func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.CreatedAt = time.Now()
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Create(sqlMsg).Error
@@ -269,7 +269,7 @@ func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 
 // SaveMessage used to update message and create message with CreateMessage
 func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 
 	return m.DB.Omit("created_at").Save(sqlMsg).Error

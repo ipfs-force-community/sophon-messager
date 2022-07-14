@@ -82,13 +82,13 @@ func ReadFile(filePath string) ([]byte, error) {
 	return b, err
 }
 
-// original data will be cleared
+// WriteFile original data will be cleared
 func WriteFile(filePath string, obj interface{}) error {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() // nolint
 
 	b, err := json.MarshalIndent(obj, " ", "\t")
 	if err != nil {
