@@ -22,7 +22,7 @@ type mysqlSharedParams struct {
 	SelMsgNum         uint64     `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
+func fromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
 	return &mysqlSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
@@ -73,7 +73,7 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 			if params.ID == 0 {
 				params.ID = 1
 			}
-			if err := s.DB.Save(FromSharedParams(*params)).Error; err != nil {
+			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}
 			return params.ID, nil

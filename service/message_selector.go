@@ -130,7 +130,8 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	//判断是否需要推送消息
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	actorI, err := handleTimeout(messageSelector.nodeClient.StateGetActor, timeoutCtx, []interface{}{addr.Addr, ts.Key()})
+	actorI, err := handleTimeout(timeoutCtx, messageSelector.nodeClient.StateGetActor, []interface{}{addr.Addr, ts.Key()})
+
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +255,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(messageSelector.walletClient.WalletSign, timeOutCtx, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		sigI, err := handleTimeout(timeOutCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})
@@ -378,7 +379,7 @@ func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts
 }
 func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec, tsk venusTypes.TipSetKey) (*venusTypes.Message, error) {
 	if msg.GasLimit == 0 {
-		gasLimitI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasLimit, ctx, []interface{}{msg, venusTypes.EmptyTSK})
+		gasLimitI, err := handleTimeout(ctx, messageSelector.nodeClient.GasEstimateGasLimit, []interface{}{msg, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, fmt.Errorf("estimating gas used: %w", err)
 		}
@@ -388,7 +389,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	}
 
 	if msg.GasPremium == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasPremium, venusTypes.NewInt(0)) == 0 {
-		gasPremiumI, err := handleTimeout(messageSelector.nodeClient.GasEstimateGasPremium, ctx, []interface{}{uint64(10), msg.From, msg.GasLimit, venusTypes.EmptyTSK})
+		gasPremiumI, err := handleTimeout(ctx, messageSelector.nodeClient.GasEstimateGasPremium, []interface{}{uint64(10), msg.From, msg.GasLimit, venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, fmt.Errorf("estimating gas price: %w", err)
 		}
@@ -396,7 +397,7 @@ func (messageSelector *MessageSelector) GasEstimateMessageGas(ctx context.Contex
 	}
 
 	if msg.GasFeeCap == venusTypes.EmptyInt || venusTypes.BigCmp(msg.GasFeeCap, venusTypes.NewInt(0)) == 0 {
-		feeCapI, err := handleTimeout(messageSelector.nodeClient.GasEstimateFeeCap, ctx, []interface{}{msg, int64(20), venusTypes.EmptyTSK})
+		feeCapI, err := handleTimeout(ctx, messageSelector.nodeClient.GasEstimateFeeCap, []interface{}{msg, int64(20), venusTypes.EmptyTSK})
 		if err != nil {
 			return nil, fmt.Errorf("estimating fee cap: %w", err)
 		}

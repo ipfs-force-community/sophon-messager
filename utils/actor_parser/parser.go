@@ -34,17 +34,17 @@ func (parser *MessagePaser) GetMethodMeta(code cid.Cid, m abi.MethodNum) (utils.
 	return meta, ok
 }
 
-func (ms *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, receipt *types.MessageReceipt) (args interface{}, ret interface{}, err error) {
+func (parser *MessagePaser) ParseMessage(ctx context.Context, msg *types.Message, receipt *types.MessageReceipt) (args interface{}, ret interface{}, err error) {
 	if int(msg.Method) == int(builtin.MethodSend) {
 		return nil, nil, nil
 	}
 
-	actor, err := ms.getter.StateGetActor(ctx, msg.To, types.EmptyTSK)
+	actor, err := parser.getter.StateGetActor(ctx, msg.To, types.EmptyTSK)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get actor(%s) failed:%w", msg.To.String(), err)
 	}
 
-	methodMeta, found := ms.GetMethodMeta(actor.Code, msg.Method)
+	methodMeta, found := parser.GetMethodMeta(actor.Code, msg.Method)
 	if !found {
 		return nil, nil, fmt.Errorf("actor:%v method(%d) not exist", actor, msg.Method)
 	}

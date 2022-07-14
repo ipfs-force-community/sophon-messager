@@ -160,7 +160,7 @@ var waitMessagerCmd = &cli.Command{
 		}
 
 		id := cctx.Args().Get(0)
-		msg, err := client.WaitMessage(cctx.Context, id, uint64(constants.MessageConfidence))
+		msg, err := client.WaitMessage(cctx.Context, id, constants.MessageConfidence)
 		if err != nil {
 			return err
 		}

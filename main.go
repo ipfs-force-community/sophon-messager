@@ -121,7 +121,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	exist, err := config.ConfigExist(path)
+	exist, err := config.Exist(path)
 	if err != nil {
 		return err
 	}

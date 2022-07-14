@@ -442,21 +442,20 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 			done:   done,
 		}
 		return <-done
-	} else {
-		apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
-		if err != nil {
-			ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
-			return nil
-		}
-
-		done := make(chan error)
-		ms.headChans <- &headChan{
-			apply:  apply,
-			revert: revertTipset,
-			done:   done,
-		}
-		return <-done
 	}
+	apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
+	if err != nil {
+		ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
+		return nil
+	}
+
+	done := make(chan error)
+	ms.headChans <- &headChan{
+		apply:  apply,
+		revert: revertTipset,
+		done:   done,
+	}
+	return <-done
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
@@ -816,7 +815,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Message) error {
 	cid := msg.SignedCid
 	if cid != nil {
-		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, abi.ChainEpoch(constants.LookbackNoLimit), true)
+		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, constants.LookbackNoLimit, true)
 		if err != nil || msgLookup == nil {
 			return fmt.Errorf("search message %s from node %v", cid.String(), err)
 		}
@@ -870,7 +869,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		msg.GasPremium = big.Max(retm.GasPremium, minRBF)
 		msg.GasFeeCap = big.Max(retm.GasFeeCap, msg.GasPremium)
 
-		if mss == nil {
+		if mss.MaxFee.NilOrZero() {
 			addrInfo, err := ms.addressService.GetAddress(ctx, msg.From)
 			if err != nil {
 				return cid.Undef, err
@@ -879,9 +878,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 			if maxFee.NilOrZero() {
 				maxFee = ms.sps.GetParams().MaxFee
 			}
-			mss = &venusTypes.MessageSendSpec{
-				MaxFee: maxFee,
-			}
+			mss.MaxFee = maxFee
 		}
 
 		CapGasFee(&msg.Message, mss.MaxFee)

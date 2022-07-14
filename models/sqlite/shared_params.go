@@ -23,7 +23,7 @@ type sqliteSharedParams struct {
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
+func fromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
 	return &sqliteSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
@@ -74,7 +74,7 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 			if params.ID == 0 {
 				params.ID = 1
 			}
-			if err := s.DB.Save(FromSharedParams(*params)).Error; err != nil {
+			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}
 			return params.ID, nil

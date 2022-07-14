@@ -100,7 +100,7 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 	return destMsg
 }
 
-func FromMessage(srcMsg *types.Message) *mysqlMessage {
+func fromMessage(srcMsg *types.Message) *mysqlMessage {
 	destMsg := &mysqlMessage{
 		ID:         srcMsg.ID,
 		Version:    srcMsg.Version,
@@ -289,14 +289,14 @@ func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 }
 
 func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.CreatedAt = time.Now()
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Create(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Omit("created_at").Save(sqlMsg).Error
 }

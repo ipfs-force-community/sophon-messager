@@ -11,27 +11,27 @@ import (
 	"github.com/filecoin-project/venus-messager/models/repo"
 )
 
-type MysqlRepo struct {
+type Repo struct {
 	*gorm.DB
 }
 
-func (d MysqlRepo) MessageRepo() repo.MessageRepo {
+func (d Repo) MessageRepo() repo.MessageRepo {
 	return newMysqlMessageRepo(d.DB)
 }
 
-func (d MysqlRepo) AddressRepo() repo.AddressRepo {
+func (d Repo) AddressRepo() repo.AddressRepo {
 	return newMysqlAddressRepo(d.DB)
 }
 
-func (d MysqlRepo) SharedParamsRepo() repo.SharedParamsRepo {
+func (d Repo) SharedParamsRepo() repo.SharedParamsRepo {
 	return newMysqlSharedParamsRepo(d.DB)
 }
 
-func (d MysqlRepo) NodeRepo() repo.NodeRepo {
+func (d Repo) NodeRepo() repo.NodeRepo {
 	return newMysqlNodeRepo(d.DB)
 }
 
-func (d MysqlRepo) AutoMigrate() error {
+func (d Repo) AutoMigrate() error {
 	err := d.GetDb().AutoMigrate(mysqlMessage{})
 	if err != nil {
 		return err
@@ -48,17 +48,17 @@ func (d MysqlRepo) AutoMigrate() error {
 	return d.GetDb().AutoMigrate(mysqlNode{})
 }
 
-func (d MysqlRepo) GetDb() *gorm.DB {
+func (d Repo) GetDb() *gorm.DB {
 	return d.DB
 }
 
-func (d MysqlRepo) DbClose() error {
+func (d Repo) DbClose() error {
 	// return d.DbClose()
 	// todo:
 	return nil
 }
 
-func (d MysqlRepo) Transaction(cb func(txRepo repo.TxRepo) error) error {
+func (d Repo) Transaction(cb func(txRepo repo.TxRepo) error) error {
 	return d.DB.Transaction(func(tx *gorm.DB) error {
 		txRepo := &TxMysqlRepo{tx}
 		return cb(txRepo)
@@ -104,7 +104,7 @@ func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {
 
 	// 使用插件
 	//db.Use(&TracePlugin{})
-	return &MysqlRepo{
+	return &Repo{
 		db,
 	}, nil
 }

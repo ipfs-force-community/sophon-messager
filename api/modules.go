@@ -17,7 +17,7 @@ import (
 	"go.uber.org/fx"
 )
 
-func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.JwtClient, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
+func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.Client, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
@@ -41,7 +41,7 @@ func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.JwtClient, log *log.Logger, r
 
 // RunAPI bind rpc call and start rpc
 // todo
-func RunAPI(lc fx.Lifecycle, jwtCli *jwt.JwtClient, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
+func RunAPI(lc fx.Lifecycle, jwtCli *jwt.Client, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()

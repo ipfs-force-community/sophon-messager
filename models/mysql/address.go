@@ -35,7 +35,7 @@ func (s mysqlAddress) TableName() string {
 	return "addresses"
 }
 
-func FromAddress(addr *types.Address) *mysqlAddress {
+func fromAddress(addr *types.Address) *mysqlAddress {
 	mysqlAddr := &mysqlAddress{
 		ID:                addr.ID,
 		Addr:              addr.Addr.String(),
@@ -93,7 +93,7 @@ func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
 }
 
 func (s mysqlAddressRepo) SaveAddress(ctx context.Context, a *types.Address) error {
-	return s.DB.Save(FromAddress(a)).Error
+	return s.DB.Save(fromAddress(a)).Error
 }
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
