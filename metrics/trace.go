@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+
 	"github.com/ipfs-force-community/metrics"
 	"go.uber.org/fx"
 

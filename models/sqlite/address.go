@@ -35,7 +35,7 @@ func (s sqliteAddress) TableName() string {
 	return "addresses"
 }
 
-func FromAddress(addr *types.Address) *sqliteAddress {
+func fromAddress(addr *types.Address) *sqliteAddress {
 	sqliteAddr := &sqliteAddress{
 		ID:                addr.ID,
 		Addr:              addr.Addr.String(),
@@ -92,7 +92,7 @@ func newSqliteAddressRepo(db *gorm.DB) *sqliteAddressRepo {
 }
 
 func (s sqliteAddressRepo) SaveAddress(ctx context.Context, addr *types.Address) error {
-	return s.DB.Save(FromAddress(addr)).Error
+	return s.DB.Save(fromAddress(addr)).Error
 }
 
 func (s sqliteAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {

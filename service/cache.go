@@ -78,7 +78,7 @@ func (tsCache *TipsetCache) List() []*venusTypes.TipSet {
 	return list
 }
 
-// original data will be cleared
+// Save original data will be cleared
 func (tsCache *TipsetCache) Save(filePath string) error {
 	tsCache.reduce()
 	return utils.WriteFile(filePath, tsCache)

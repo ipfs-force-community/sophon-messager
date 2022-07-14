@@ -56,7 +56,7 @@ func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageSer
 }
 
 // In order to resolve the timeout does not work
-func handleTimeout(f interface{}, ctx context.Context, args []interface{}) (interface{}, error) {
+func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (interface{}, error) {
 	if reflect.ValueOf(f).Kind() != reflect.Func {
 		return nil, fmt.Errorf("first parameter must be method")
 	}

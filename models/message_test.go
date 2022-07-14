@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestSaveAndGetMessage(t *testing.T) {

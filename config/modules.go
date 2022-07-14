@@ -7,7 +7,7 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
-func ConfigExist(path string) (bool, error) {
+func Exist(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -17,6 +17,7 @@ func ConfigExist(path string) (bool, error) {
 	}
 	return true, nil
 }
+
 func ReadConfig(path string) (*Config, error) {
 	configBytes, err := ioutil.ReadFile(path)
 	if err != nil {
