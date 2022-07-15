@@ -38,7 +38,6 @@ var MsgCmds = &cli.Command{
 		updateFilledMessageCmd,
 		updateAllFilledMessageCmd,
 		replaceCmd,
-		batchReplaceCmd,
 		waitMessagerCmd,
 		republishCmd,
 		markBadCmd,
@@ -521,7 +520,7 @@ var replaceCmd = &cli.Command{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
 		},
-		gasOverPremiumFlag,
+		GasOverPremiumFlag,
 	},
 	ArgsUsage: "<from nonce> | <id>",
 	Action: func(ctx *cli.Context) error {
@@ -554,7 +553,7 @@ var replaceCmd = &cli.Command{
 			return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 		}
 
-		params, err := parseFlagToReplaceMessaeParams(ctx)
+		params, err := ParseFlagToReplaceMessaeParams(ctx)
 		if err != nil {
 			return err
 		}

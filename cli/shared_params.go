@@ -38,7 +38,7 @@ var setSharedParamsCmd = &cli.Command{
 			Name:  "sel-msg-num",
 			Value: 20,
 		},
-		gasOverPremiumFlag,
+		GasOverPremiumFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() > 1 {
@@ -73,8 +73,8 @@ var setSharedParamsCmd = &cli.Command{
 		if ctx.IsSet("sel-msg-num") {
 			params.SelMsgNum = ctx.Uint64("sel-msg-num")
 		}
-		if ctx.IsSet(gasOverPremiumFlag.Name) {
-			params.GasOverPremium = ctx.Float64(gasOverPremiumFlag.Name)
+		if ctx.IsSet(GasOverPremiumFlag.Name) {
+			params.GasOverPremium = ctx.Float64(GasOverPremiumFlag.Name)
 		}
 
 		err = api.SetSharedParams(ctx.Context, params)

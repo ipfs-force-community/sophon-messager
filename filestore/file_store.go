@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 const (
@@ -29,7 +30,8 @@ type fsRepo struct {
 
 func NewFSRepo(repoPath string) (FSRepo, error) {
 	r := &fsRepo{path: repoPath}
-	cfg, err := config.ReadConfig(filepath.Join(repoPath, ConfigFile))
+	cfg := new(config.Config)
+	err := utils.ReadConfig(filepath.Join(repoPath, ConfigFile), cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +76,7 @@ func InitFSRepo(repoPath string, cfg *config.Config) (FSRepo, error) {
 	}
 	cfg.MessageService.TipsetFilePath = ""
 
-	if err := config.WriteConfig(filepath.Join(repoPath, ConfigFile), cfg); err != nil {
+	if err := utils.WriteConfig(filepath.Join(repoPath, ConfigFile), cfg); err != nil {
 		return nil, err
 	}
 
@@ -98,7 +100,7 @@ func (r *fsRepo) SqliteFile() string {
 }
 
 func (r *fsRepo) ReplaceConfig(cfg *config.Config) error {
-	if err := config.WriteConfig(filepath.Join(r.path, ConfigFile), cfg); err != nil {
+	if err := utils.WriteConfig(filepath.Join(r.path, ConfigFile), cfg); err != nil {
 		return err
 	}
 	r.cfg = cfg

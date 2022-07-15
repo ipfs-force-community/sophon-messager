@@ -358,46 +358,28 @@ func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Messa
 }
 
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
-	msgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
-	if len(msgs) > 0 {
-		ids := make([]string, 0, len(msgs))
-		for _, msg := range msgs {
-			ids = append(ids, msg.ID)
-		}
-		ms.log.Infof("list failed message by address %s %s", addr, strings.Join(ids, ","))
-	}
-
-	return msgs, err
+	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
 func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
 	var msgs []*types.Message
-	var err error
 	if addr != address.Undef {
-		msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr, d)
-	} else {
-		addrList, err := ms.addressService.ListActiveAddress(ctx)
+		return ms.repo.MessageRepo().ListBlockedMessage(addr, d)
+	}
+
+	addrList, err := ms.addressService.ListActiveAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range addrList {
+		msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
 		if err != nil {
 			return nil, err
 		}
-		for _, a := range addrList {
-			msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
-			if err != nil {
-				return nil, err
-			}
-			msgs = append(msgs, msgsT...)
-		}
+		msgs = append(msgs, msgsT...)
 	}
 
-	if len(msgs) > 0 {
-		ids := make([]string, 0, len(msgs))
-		for _, msg := range msgs {
-			ids = append(ids, msg.ID)
-		}
-		ms.log.Infof("list blocked message by address %s %s", addr, strings.Join(ids, ","))
-	}
-
-	return msgs, err
+	return msgs, nil
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {

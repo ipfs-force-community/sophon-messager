@@ -1,22 +1,22 @@
-package cli
+package internal
 
 import (
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/big"
+	cli2 "github.com/filecoin-project/venus-messager/cli"
+	"github.com/filecoin-project/venus-messager/tools/config"
+	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
 )
 
-var batchReplaceCmd = &cli.Command{
+var BatchReplaceCmd = &cli.Command{
 	Name:  "batch-replace",
 	Usage: "batch replace messages",
 	Flags: []cli.Flag{
@@ -28,7 +28,7 @@ var batchReplaceCmd = &cli.Command{
 			Name:  "gas-premium",
 			Usage: "gas premium for new message (pay to miner, attoFIL/GasUnit)",
 		},
-		gasOverPremiumFlag,
+		cli2.GasOverPremiumFlag,
 		&cli.Int64Flag{
 			Name:  "gas-limit",
 			Usage: "gas limit for new message (GasUnit)",
@@ -41,87 +41,65 @@ var batchReplaceCmd = &cli.Command{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
 		},
-		&cli.StringFlag{
-			Name:  "from",
-			Usage: "from which address is the message sent",
-		},
-		&cli.StringFlag{
-			Name:  "block-time",
-			Usage: "message retention time in messager",
-			Value: "5m",
-		},
-		&cli.StringFlag{
-			Name: "methods",
-			Usage: `Choose some methods,
-methods:
-  5:  SubmitWindowedPoSt
-  6:  PreCommitSector
-  7:  ProveCommitSector
-  11: DeclareFaultsRecovered
-`,
-			Value: "5",
-		},
-		&cli.StringFlag{
-			Name:     "actor-code",
-			Usage:    "use to check address",
-			Required: true,
-		},
 	},
 	Action: func(cctx *cli.Context) error {
 		ctx := cctx.Context
+		cfg := new(config.Config)
+		err := utils.ReadConfig(cctx.String("config"), cfg)
+		if err != nil {
+			return fmt.Errorf("read config failed: %v", err)
+		}
 
-		client, closer, err := getAPI(cctx)
+		messagerAPI, closer, err := cli2.NewMessagerAPI(ctx, cfg.Messager.URL, cfg.Messager.Token)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		nodeAPI, closer2, err := getNodeAPI(cctx)
+		nodeAPI, closer2, err := cli2.NewNodeAPI(ctx, cfg.Venus.URL, cfg.Venus.Token)
 		if err != nil {
 			return err
 		}
 		defer closer2()
 
+		methods := make(map[abi.MethodNum]struct{}, 0)
+		for _, m := range cfg.BatchReplace.Methods {
+			methods[abi.MethodNum(m)] = struct{}{}
+		}
+		blockTime, err := time.ParseDuration(cfg.BatchReplace.BlockTime)
+		if err != nil {
+			return err
+		}
+		aimActorCode, err := cid.Parse(cfg.BatchReplace.Filters.ActorCode)
+		if err != nil {
+			return fmt.Errorf("parse actor code failed %v", err)
+		}
+
 		// check
-		if cctx.IsSet("gas-premium") && cctx.IsSet(gasOverPremiumFlag.Name) {
+		if cctx.IsSet("gas-premium") && cctx.IsSet(cli2.GasOverPremiumFlag.Name) {
 			return fmt.Errorf("gas-premium and gas-over-premium flag only need one")
 		}
 
-		params, err := parseFlagToReplaceMessaeParams(cctx)
-		if err != nil {
-			return err
-		}
-
-		methods, err := parseMethods(cctx.String("methods"))
-		if err != nil {
-			return err
-		}
-
-		blockTime, err := time.ParseDuration(cctx.String("block-time"))
+		params, err := cli2.ParseFlagToReplaceMessaeParams(cctx)
 		if err != nil {
 			return err
 		}
 
 		addrs := make(map[address.Address]struct{})
-		if cctx.IsSet("from") {
-			from, err := address.NewFromString(cctx.String("from"))
+		if len(cfg.BatchReplace.Filters.From) > 0 {
+			from, err := address.NewFromString(cfg.BatchReplace.Filters.From)
 			if err != nil {
 				return err
 			}
 			addrs[from] = struct{}{}
 		} else {
-			addrList, err := client.ListAddress(ctx)
+			addrList, err := messagerAPI.ListAddress(ctx)
 			if err != nil {
 				return err
 			}
 			for _, addrInfo := range addrList {
 				addrs[addrInfo.Addr] = struct{}{}
 			}
-		}
-
-		aimActorCode, err := cid.Parse(cctx.String("actor-code"))
-		if err != nil {
-			return fmt.Errorf("parse actor code failed %v", err)
 		}
 
 		pendingMsgs := make(map[address.Address][]*messager.Message, len(addrs))
@@ -135,7 +113,7 @@ methods:
 				continue
 			}
 
-			blockedMsgs, err := client.ListBlockedMessage(ctx, addr, blockTime)
+			blockedMsgs, err := messagerAPI.ListBlockedMessage(ctx, addr, blockTime)
 			if err != nil {
 				return err
 			}
@@ -155,12 +133,16 @@ methods:
 			fmt.Printf("address %s has %d message need replace\n", addr, len(tmsgs))
 		}
 
+		if len(pendingMsgs) == 0 {
+			return nil
+		}
+
 		for addr, msgs := range pendingMsgs {
 			fmt.Printf("\nstart replace message for %s \n", addr)
 			for _, msg := range msgs {
 				params.ID = msg.ID
 				oldCid := msg.Cid()
-				newCid, err := client.ReplaceMessage(cctx.Context, params)
+				newCid, err := messagerAPI.ReplaceMessage(cctx.Context, params)
 				if err != nil {
 					fmt.Printf("replace msg %s %d failed %v\n", msg.ID, msg.Nonce, err)
 					continue
@@ -172,49 +154,4 @@ methods:
 
 		return nil
 	},
-}
-
-func parseMethods(mstr string) (map[abi.MethodNum]struct{}, error) {
-	methods := make(map[abi.MethodNum]struct{})
-	for _, m := range strings.Split(mstr, ",") {
-		i, err := strconv.Atoi(m)
-		if err != nil {
-			return nil, err
-		}
-		methods[abi.MethodNum(i)] = struct{}{}
-	}
-
-	return methods, nil
-}
-
-func parseFlagToReplaceMessaeParams(cctx *cli.Context) (*messager.ReplacMessageParams, error) {
-	params := messager.ReplacMessageParams{
-		Auto:           cctx.Bool("auto"),
-		GasLimit:       cctx.Int64("gas-limit"),
-		GasOverPremium: cctx.Float64(gasOverPremiumFlag.Name),
-	}
-
-	if cctx.IsSet("max-fee") {
-		maxFee, err := types.ParseFIL(cctx.String("max-fee"))
-		if err != nil {
-			return nil, fmt.Errorf("parse max fee failed: %v", err)
-		}
-		params.MaxFee = big.Int(maxFee)
-	}
-	if cctx.IsSet("gas-premium") {
-		gasPremium, err := types.BigFromString(cctx.String("gas-premium"))
-		if err != nil {
-			return nil, fmt.Errorf("parse gas premium failed: %v", err)
-		}
-		params.GasPremium = gasPremium
-	}
-	if cctx.IsSet("gas-feecap") {
-		gasFeecap, err := types.BigFromString(cctx.String("gas-feecap"))
-		if err != nil {
-			return nil, fmt.Errorf("parse gas feecap failed: %v", err)
-		}
-		params.GasFeecap = gasFeecap
-	}
-
-	return &params, nil
 }

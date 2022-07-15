@@ -1,0 +1,16 @@
+
+[BatchReplace]
+  BlockTime = "5m"
+  Methods = [5]
+
+  [BatchReplace.Filters]
+    ActorCode = ""
+    From = ""
+
+[Messager]
+  Token = ""
+  URL = "/ip4/127.0.0.1/tcp/39812"
+
+[Venus]
+  Token = ""
+  URL = "/ip4/127.0.0.1/tcp/3453"

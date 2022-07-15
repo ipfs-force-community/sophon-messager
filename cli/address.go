@@ -215,11 +215,6 @@ var setAddrSelMsgNumCmd = &cli.Command{
 	},
 }
 
-var gasOverPremiumFlag = &cli.Float64Flag{
-	Name:  "gas-over-premium",
-	Usage: "",
-}
-
 var setFeeParamsCmd = &cli.Command{
 	Name:      "set-fee-params",
 	Usage:     "Address setting fee associated configuration",
@@ -237,7 +232,7 @@ var setFeeParamsCmd = &cli.Command{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for message",
 		},
-		gasOverPremiumFlag,
+		GasOverPremiumFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
@@ -255,7 +250,7 @@ var setFeeParamsCmd = &cli.Command{
 			return err
 		}
 
-		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64(gasOverPremiumFlag.Name), ctx.String("max-fee"), ctx.String("max-feecap"))
+		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64(GasOverPremiumFlag.Name), ctx.String("max-fee"), ctx.String("max-feecap"))
 
 		return err
 	},
