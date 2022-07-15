@@ -17,7 +17,7 @@ type sqliteSharedParams struct {
 
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
 	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	MaxFeeCap         mtypes.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);NOT NULL"`
 	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:REAL;"`
 
 	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
@@ -28,7 +28,7 @@ func fromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
 		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
-		MaxFeeCap:         mtypes.Int{Int: sp.MaxFeeCap.Int},
+		GasFeeCap:         mtypes.Int{Int: sp.GasFeeCap.Int},
 		GasOverPremium:    sp.GasOverPremium,
 		SelMsgNum:         sp.SelMsgNum,
 	}
@@ -39,7 +39,7 @@ func (ssp sqliteSharedParams) SharedParams() *types.SharedSpec {
 		ID:                ssp.ID,
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
-		MaxFeeCap:         big.NewFromGo(ssp.MaxFeeCap.Int),
+		GasFeeCap:         big.NewFromGo(ssp.GasFeeCap.Int),
 		GasOverPremium:    ssp.GasOverPremium,
 		SelMsgNum:         ssp.SelMsgNum,
 	}
@@ -83,7 +83,7 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 	}
 
 	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.MaxFeeCap = mtypes.Int{Int: params.MaxFeeCap.Int}
+	ssp.GasFeeCap = mtypes.Int{Int: params.GasFeeCap.Int}
 	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
 	ssp.GasOverPremium = params.GasOverPremium
 

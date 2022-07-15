@@ -113,7 +113,7 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr 
 	return nil
 }
 
-func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFeeStr, maxFeeCapStr string) error {
+func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFeeStr, gasFeeCapStr string) error {
 	has, err := addressService.repo.AddressRepo().HasAddress(ctx, addr)
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	}
 
 	var needUpdate bool
-	var maxFee, maxFeeCap big.Int
+	var maxFee, gasFeeCap big.Int
 	if len(maxFeeStr) != 0 {
 		maxFee, err = venusTypes.BigFromString(maxFeeStr)
 		if err != nil {
@@ -131,8 +131,8 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 		}
 		needUpdate = true
 	}
-	if len(maxFeeCapStr) != 0 {
-		maxFeeCap, err = venusTypes.BigFromString(maxFeeCapStr)
+	if len(gasFeeCapStr) != 0 {
+		gasFeeCap, err = venusTypes.BigFromString(gasFeeCapStr)
 		if err != nil {
 			return fmt.Errorf("parsing max-feecap: %v", err)
 		}
@@ -148,7 +148,7 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 		return nil
 	}
 
-	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap)
+	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
 }
 
 func (addressService *AddressService) ActiveAddresses() map[address.Address]struct{} {

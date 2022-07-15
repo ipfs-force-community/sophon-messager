@@ -65,7 +65,7 @@ var setSharedParamsCmd = &cli.Command{
 			}
 		}
 		if ctx.IsSet("max-feecap") {
-			params.MaxFeeCap, err = big.FromString(ctx.String("max-feecap"))
+			params.GasFeeCap, err = big.FromString(ctx.String("max-feecap"))
 			if err != nil {
 				return fmt.Errorf("parse max-feecap failed %v", err)
 			}

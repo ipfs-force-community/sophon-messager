@@ -19,7 +19,7 @@ func TestSharedParams(t *testing.T) {
 			ID:                1,
 			GasOverEstimation: 1.5,
 			MaxFee:            big.NewInt(10),
-			MaxFeeCap:         big.NewInt(100),
+			GasFeeCap:         big.NewInt(100),
 			GasOverPremium:    1.6,
 			SelMsgNum:         30,
 		}

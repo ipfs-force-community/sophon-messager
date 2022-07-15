@@ -101,7 +101,7 @@ func main() {
 			msgMate := &types.SendSpec{
 				GasOverEstimation: 1.25,
 				MaxFee:            big.NewInt(10000000000000000),
-				MaxFeeCap:         big.NewInt(10000000000000000),
+				GasFeeCap:         big.NewInt(10000000000000000),
 			}
 			uid, err := client.PushMessageWithId(context.Background(),
 				venustypes.NewUUID().String(),
