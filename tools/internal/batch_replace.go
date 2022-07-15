@@ -12,7 +12,6 @@ import (
 	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
-	"github.com/ipfs/go-cid"
 	"github.com/urfave/cli/v2"
 )
 
@@ -62,22 +61,17 @@ var BatchReplaceCmd = &cli.Command{
 		}
 		defer closer2()
 
-		methods := make(map[abi.MethodNum]struct{}, 0)
-		for _, m := range cfg.BatchReplace.Methods {
-			methods[abi.MethodNum(m)] = struct{}{}
-		}
 		blockTime, err := time.ParseDuration(cfg.BatchReplace.BlockTime)
 		if err != nil {
 			return err
-		}
-		aimActorCode, err := cid.Parse(cfg.BatchReplace.Filters.ActorCode)
-		if err != nil {
-			return fmt.Errorf("parse actor code failed %v", err)
 		}
 
 		// check
 		if cctx.IsSet("gas-premium") && cctx.IsSet(cli2.GasOverPremiumFlag.Name) {
 			return fmt.Errorf("gas-premium and gas-over-premium flag only need one")
+		}
+		if len(cfg.BatchReplace.Selects) == 0 {
+			return fmt.Errorf("selects are empty, please check config")
 		}
 
 		params, err := cli2.ParseFlagToReplaceMessaeParams(cctx)
@@ -86,12 +80,8 @@ var BatchReplaceCmd = &cli.Command{
 		}
 
 		addrs := make(map[address.Address]struct{})
-		if len(cfg.BatchReplace.Filters.From) > 0 {
-			from, err := address.NewFromString(cfg.BatchReplace.Filters.From)
-			if err != nil {
-				return err
-			}
-			addrs[from] = struct{}{}
+		if !cfg.BatchReplace.From.Empty() {
+			addrs[cfg.BatchReplace.From.Address()] = struct{}{}
 		} else {
 			addrList, err := messagerAPI.ListAddress(ctx)
 			if err != nil {
@@ -108,10 +98,6 @@ var BatchReplaceCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("get actor %s failed: %v", addr, err)
 			}
-			if !aimActorCode.Equals(actor.Code) {
-				fmt.Printf("address %s(%s) not match actor code\n", addr, actor.Code)
-				continue
-			}
 
 			blockedMsgs, err := messagerAPI.ListBlockedMessage(ctx, addr, blockTime)
 			if err != nil {
@@ -122,11 +108,10 @@ var BatchReplaceCmd = &cli.Command{
 				return blockedMsgs[i].Nonce < blockedMsgs[j].Nonce
 			})
 
-			tmsgs := make([]*messager.Message, 0, len(blockedMsgs))
-			for _, msg := range blockedMsgs {
-				if _, ok := methods[msg.Method]; ok && msg.Nonce >= actor.Nonce {
-					tmsgs = append(tmsgs, msg)
-				}
+			tmsgs, err := selectMsg(cfg.BatchReplace.Selects, addr, actor, blockedMsgs)
+			if err != nil {
+				fmt.Printf("address %s selset message failed: %v", addr, err)
+				continue
 			}
 
 			pendingMsgs[addr] = tmsgs
@@ -154,4 +139,37 @@ var BatchReplaceCmd = &cli.Command{
 
 		return nil
 	},
+}
+
+func selectMsg(sels []config.Select, addr address.Address, actor *types.Actor, msgs []*messager.Message) ([]*messager.Message, error) {
+	var newSels []config.Select
+	for _, sel := range sels {
+		if sel.ActorCode.Cid() == actor.Code {
+			newSels = append(newSels, sel)
+		}
+	}
+	if len(newSels) == 0 {
+		fmt.Printf("address %s(%s) not match actor code\n", addr, actor.Code)
+		return nil, nil
+	}
+	if len(newSels) > 1 {
+		return nil, fmt.Errorf("repeat actor code %v", newSels[0].ActorCode.Cid())
+	}
+
+	res := make([]*messager.Message, 0, len(msgs))
+	methods := make(map[abi.MethodNum]struct{}, len(newSels[0].Methods))
+	for _, m := range newSels[0].Methods {
+		methods[abi.MethodNum(m)] = struct{}{}
+	}
+	for _, msg := range msgs {
+		if _, ok := methods[msg.Message.Method]; !ok {
+			continue
+		}
+		if msg.Nonce < actor.Nonce {
+			continue
+		}
+		res = append(res, msg)
+	}
+
+	return res, nil
 }

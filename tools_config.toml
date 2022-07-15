@@ -1,11 +1,11 @@
 
 [BatchReplace]
   BlockTime = "5m"
-  Methods = [5]
+  From = ""
 
-  [BatchReplace.Filters]
+  [[BatchReplace.Selects]]
     ActorCode = ""
-    From = ""
+    Methods = [5]
 
 [Messager]
   Token = ""
