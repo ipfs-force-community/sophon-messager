@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -20,7 +20,7 @@ func NewNodeService(repo repo.Repo, logger *log.Logger) *NodeService {
 
 func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	// try connect node
-	_, close, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
+	_, close, err := v1.DialFullNodeRPC(context.TODO(), node.URL, node.Token, nil)
 	if err != nil {
 		return err
 	}
