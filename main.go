@@ -199,7 +199,8 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
-	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
+
+	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {
 		return fmt.Errorf("connect to node failed %v", err)
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
@@ -685,7 +684,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	nc := make([]nodeClient, 0, len(nodeList))
 	for _, node := range nodeList {
-		cli, closer, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
+		cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 		if err != nil {
 			ms.log.Warnf("connect node(%s) %v", node.Name, err)
 			continue
