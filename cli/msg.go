@@ -520,6 +520,7 @@ var replaceCmd = &cli.Command{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for this message (applicable for auto mode)",
 		},
+		GasOverPremiumFlag,
 	},
 	ArgsUsage: "<from nonce> | <id>",
 	Action: func(ctx *cli.Context) error {
@@ -552,8 +553,13 @@ var replaceCmd = &cli.Command{
 			return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 		}
 
-		cid, err := client.ReplaceMessage(ctx.Context, id, ctx.Bool("auto"), ctx.String("max-fee"),
-			ctx.Int64("gas-limit"), ctx.String("gas-premium"), ctx.String("gas-feecap"))
+		params, err := ParseFlagToReplaceMessaeParams(ctx)
+		if err != nil {
+			return err
+		}
+		params.ID = id
+
+		cid, err := client.ReplaceMessage(ctx.Context, params)
 		if err != nil {
 			return err
 		}

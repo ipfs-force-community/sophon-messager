@@ -14,6 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/venus-messager/config"
+	utils2 "github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 )
@@ -24,13 +25,17 @@ func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) 
 		return nil, func() {}, err
 	}
 
-	apiInfo := apiinfo.NewAPIInfo(cfg.API.Address, cfg.JWT.Local.Token)
+	return NewMessagerAPI(ctx.Context, cfg.API.Address, cfg.JWT.Local.Token)
+}
+
+func NewMessagerAPI(ctx context.Context, addr, token string) (messager.IMessager, jsonrpc.ClientCloser, error) {
+	apiInfo := apiinfo.NewAPIInfo(addr, token)
 	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	client, closer, err := messager.NewIMessagerRPC(ctx.Context, addr, apiInfo.AuthHeader())
+	client, closer, err := messager.NewIMessagerRPC(ctx, addr, apiInfo.AuthHeader())
 
 	return client, closer, err
 }
@@ -43,13 +48,23 @@ func getNodeAPI(ctx *cli.Context) (v1.FullNode, jsonrpc.ClientCloser, error) {
 	return service.NewNodeClient(ctx.Context, &cfg.Node)
 }
 
+func NewNodeAPI(ctx context.Context, addr, token string) (v1.FullNode, jsonrpc.ClientCloser, error) {
+	return service.NewNodeClient(ctx, &config.NodeConfig{
+		Url:   addr,
+		Token: token,
+	})
+}
+
 func getConfig(ctx *cli.Context) (*config.Config, error) {
 	repoPath, err := homedir.Expand(ctx.String("repo"))
 	if err != nil {
 		return nil, err
 	}
+	cfg := new(config.Config)
 
-	return config.ReadConfig(filepath.Join(repoPath, filestore.ConfigFile))
+	err = utils2.ReadConfig(filepath.Join(repoPath, filestore.ConfigFile), cfg)
+
+	return cfg, err
 }
 
 func LoadBuiltinActors(ctx context.Context, nodeAPI v1.FullNode) error {

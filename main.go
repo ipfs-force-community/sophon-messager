@@ -28,6 +28,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus-messager/version"
 )
 
@@ -156,7 +157,8 @@ func runAction(ctx *cli.Context) error {
 		if hasFSRepo {
 			cfg = fsRepo.Config()
 		} else {
-			cfg, err = config.ReadConfig(path)
+			cfg = new(config.Config)
+			err = utils.ReadConfig(path, cfg)
 			if err != nil {
 				return err
 			}
@@ -170,7 +172,7 @@ func runAction(ctx *cli.Context) error {
 					return err
 				}
 			} else {
-				if err = config.WriteConfig(path, cfg); err != nil {
+				if err = utils.WriteConfig(path, cfg); err != nil {
 					return err
 				}
 			}
