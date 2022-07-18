@@ -684,7 +684,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	nc := make([]nodeClient, 0, len(nodeList))
 	for _, node := range nodeList {
-		cli, closer, err := v1.DialFullNodeRPC(context.TODO(), node.URL, node.Token, nil)
+		cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 		if err != nil {
 			ms.log.Warnf("connect node(%s) %v", node.Name, err)
 			continue

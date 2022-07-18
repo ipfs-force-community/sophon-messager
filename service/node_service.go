@@ -20,7 +20,7 @@ func NewNodeService(repo repo.Repo, logger *log.Logger) *NodeService {
 
 func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	// try connect node
-	_, close, err := v1.DialFullNodeRPC(context.TODO(), node.URL, node.Token, nil)
+	_, close, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 	if err != nil {
 		return err
 	}
