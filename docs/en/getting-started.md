@@ -149,7 +149,7 @@ options：
 
 ```bash
  # options
- # --gas-overestimation value  Estimate the  gas (default: 0)
+ # --gas-overestimation value  Estimate the coefficient of gas (default: 0)
  # --max-feecap value          Max feecap for a message (burn and pay to miner, attoFIL/GasUnit)
  # --max-fee value             Spend up to X attoFIL for message
  # --gas-over-premium value    Coefficient of gas premium (default: 0)
