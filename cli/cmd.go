@@ -6,7 +6,6 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/service"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/utils"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
@@ -45,14 +44,11 @@ func getNodeAPI(ctx *cli.Context) (v1.FullNode, jsonrpc.ClientCloser, error) {
 	if err != nil {
 		return nil, func() {}, err
 	}
-	return service.NewNodeClient(ctx.Context, &cfg.Node)
+	return v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 }
 
 func NewNodeAPI(ctx context.Context, addr, token string) (v1.FullNode, jsonrpc.ClientCloser, error) {
-	return service.NewNodeClient(ctx, &config.NodeConfig{
-		Url:   addr,
-		Token: token,
-	})
+	return v1.DialFullNodeRPC(ctx, addr, token, nil)
 }
 
 func getConfig(ctx *cli.Context) (*config.Config, error) {
