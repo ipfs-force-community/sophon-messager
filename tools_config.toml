@@ -3,7 +3,7 @@
   BlockTime = "5m"
   From = ""
 
-  [[BatchReplace.Selects]]
+  [[BatchReplace.Selectors]]
     ActorCode = ""
     Methods = [5]
 

@@ -70,7 +70,7 @@ var BatchReplaceCmd = &cli.Command{
 		if cctx.IsSet("gas-premium") && cctx.IsSet(cli2.GasOverPremiumFlag.Name) {
 			return fmt.Errorf("gas-premium and gas-over-premium flag only need one")
 		}
-		if len(cfg.BatchReplace.Selects) == 0 {
+		if len(cfg.BatchReplace.Selectors) == 0 {
 			return fmt.Errorf("selects are empty, please check config")
 		}
 
@@ -108,7 +108,7 @@ var BatchReplaceCmd = &cli.Command{
 				return blockedMsgs[i].Nonce < blockedMsgs[j].Nonce
 			})
 
-			tmsgs, err := selectMsg(cfg.BatchReplace.Selects, addr, actor, blockedMsgs)
+			tmsgs, err := selectMsg(cfg.BatchReplace.Selectors, addr, actor, blockedMsgs)
 			if err != nil {
 				fmt.Printf("address %s selset message failed: %v", addr, err)
 				continue
@@ -141,8 +141,8 @@ var BatchReplaceCmd = &cli.Command{
 	},
 }
 
-func selectMsg(sels []config.Select, addr address.Address, actor *types.Actor, msgs []*messager.Message) ([]*messager.Message, error) {
-	var newSels []config.Select
+func selectMsg(sels []config.Selector, addr address.Address, actor *types.Actor, msgs []*messager.Message) ([]*messager.Message, error) {
+	var newSels []config.Selector
 	for _, sel := range sels {
 		if sel.ActorCode.Cid() == actor.Code {
 			newSels = append(newSels, sel)

@@ -29,10 +29,10 @@ type ConnectConfig struct {
 type BatchReplaceConfig struct {
 	BlockTime string
 	From      Address
-	Selects   []Select
+	Selectors []Selector
 }
 
-type Select struct {
+type Selector struct {
 	ActorCode CID
 	Methods   []int
 }
@@ -54,7 +54,7 @@ func DefaultConfig() *Config {
 		BatchReplace: BatchReplaceConfig{
 			BlockTime: "5m",
 			From:      UndefAddress,
-			Selects: []Select{
+			Selectors: []Selector{
 				{
 					ActorCode: UndefCID,
 					Methods:   []int{5},
