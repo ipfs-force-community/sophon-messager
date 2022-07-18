@@ -7,10 +7,14 @@ endif
 
 GOFLAGS+=-ldflags="$(ldflags)"
 
-build:
+build: tools
 	rm -rf venus-messager
 	go build $(GOFLAGS) -o venus-messager .
-	./venus-messager --version
+
+tools:
+	rm -rf venus-messager-tools
+	go build -o venus-messager-tools ./tools/main.go
+.PHONY: tools
 
 gen:
 	go run ./gen/gen.go > ./api/controller/auth_map.go

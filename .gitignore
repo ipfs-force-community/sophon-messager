@@ -1,6 +1,5 @@
 .idea
 .vscode
-messager.toml.local
 ./venus-messager
 ./*.log
 *.db
@@ -12,4 +11,5 @@ test_sqlite_db
 ./cmds/cfg_example/cfg_example
 venus-messager
 *.log
-*.toml
+./venus-messager-tools
+venus-messager-tools

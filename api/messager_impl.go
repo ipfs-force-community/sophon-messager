@@ -106,8 +106,8 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
 
-func (m MessageImp) ReplaceMessage(ctx context.Context, id string, auto bool, maxFeeStr string, gasLimit int64, gasPremiumStr string, gasFeecapStr string) (cid.Cid, error) {
-	return m.MessageSrv.ReplaceMessage(ctx, id, auto, maxFeeStr, gasLimit, gasPremiumStr, gasFeecapStr)
+func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error) {
+	return m.MessageSrv.ReplaceMessage(ctx, params)
 }
 
 func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
