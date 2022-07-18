@@ -42,7 +42,7 @@ type mysqlMessage struct {
 
 	Height    int64               `gorm:"column:height;type:bigint;index:msg_height"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
-	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
+	TipsetKey string              `gorm:"column:tipset_key;type:varchar(2048);"`
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
