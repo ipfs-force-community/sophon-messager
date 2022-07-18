@@ -145,13 +145,14 @@ options：
 
 7. set parameters related to address fee
 
-> venus message address set-fee-params [options] address
+> venus-messager address set-fee-params [options] address
 
 ```bash
  # options
- # --gas-overestimation value  Estimate the coefficient of gas (default: 0)
+ # --gas-overestimation value  Estimate the  gas (default: 0)
  # --max-feecap value          Max feecap for a message (burn and pay to miner, attoFIL/GasUnit)
  # --max-fee value             Spend up to X attoFIL for message
+ # --gas-over-premium value    Coefficient of gas premium (default: 0)
 
 ./venus-messager address set-fee-params <address>
 ```
@@ -167,7 +168,7 @@ options：
 2. set shared params
 
 ```bash
-./venus-messager share-params set --gas-over-estimation=1.25 --max-feecap="0" --max-fee="7000000000000000" --sel-msg-num=20
+./venus-messager share-params set --gas-over-estimation=1.25 --max-feecap="0" --max-fee="7000000000000000" --sel-msg-num=20 --gas-over-premium 1
 ```
 
 3. manual refresh shared params from DB
