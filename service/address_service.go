@@ -4,17 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
 
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -46,9 +41,6 @@ func NewAddressService(repo repo.Repo,
 		nodeClient:   nodeClient,
 		walletClient: walletClient,
 	}
-
-	// 本身缺少 global context
-	go addressService.recordMetricsProc(context.TODO())
 
 	return addressService
 }
@@ -174,38 +166,4 @@ func (addressService *AddressService) ActiveAddresses() map[address.Address]stru
 	}
 
 	return addrs
-}
-
-func (addressService *AddressService) recordMetricsProc(ctx context.Context) {
-	tm := time.NewTicker(time.Second * 60)
-	defer tm.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			addressService.log.Info("Stop address record metrics")
-			return
-		case <-tm.C:
-			addrs, err := addressService.ListActiveAddress(ctx)
-			if err != nil {
-				addressService.log.Errorf("get address list err: %s", err)
-			}
-
-			for _, addr := range addrs {
-
-				ctx, _ = tag.New(
-					ctx,
-					tag.Upsert(metrics.WalletAddress, addr.Addr.String()),
-				)
-				stats.Record(ctx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
-
-				actor, err := addressService.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
-				if err != nil {
-					addressService.log.Errorf("get actor err: %s", err)
-				}
-				stats.Record(ctx, metrics.WalletBalance.M(actor.Balance.Int64()))
-				stats.Record(ctx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
-			}
-		}
-	}
 }

@@ -8,20 +8,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipfs/go-cid"
+	"gorm.io/gorm"
+
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/constants"
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs/go-cid"
-	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
+
+	"github.com/filecoin-project/venus/pkg/constants"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -102,6 +108,9 @@ func NewMessageService(repo repo.Repo,
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
 		ms.log.Infof("load tipset file failed: %v", err)
 	}
+
+	// 本身缺少 global context
+	go ms.recordMetricsProc(context.TODO())
 
 	return ms, ms.verifyNetworkName()
 }
@@ -1031,6 +1040,75 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 		return r.count, r.err
 	case <-ctx.Done():
 		return 0, ctx.Err()
+	}
+}
+
+func (ms *MessageService) recordMetricsProc(ctx context.Context) {
+	tm := time.NewTicker(time.Second * 60)
+	defer tm.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			ms.log.Info("Stop record metrics")
+			return
+		case <-tm.C:
+			addrs, err := ms.addressService.ListActiveAddress(ctx)
+			if err != nil {
+				ms.addressService.log.Errorf("get address list err: %s", err)
+			}
+
+			for _, addr := range addrs {
+				ctx, _ = tag.New(
+					ctx,
+					tag.Upsert(metrics.WalletAddress, addr.Addr.String()),
+				)
+				stats.Record(ctx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
+
+				actor, err := ms.addressService.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
+				if err != nil {
+					ms.addressService.log.Errorf("get actor err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.WalletBalance.M(actor.Balance.Int64()))
+					stats.Record(ctx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
+				}
+
+				msgs, err := ms.repo.MessageRepo().ListUnFilledMessage(addr.Addr)
+				if err != nil {
+					ms.addressService.log.Errorf("get unFilled msg err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
+				}
+
+				msgs, err = ms.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
+				if err != nil {
+					ms.addressService.log.Errorf("get filled msg err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
+				}
+
+				msgs, err = ms.repo.MessageRepo().ListFailedMessage()
+				if err != nil {
+					ms.addressService.log.Errorf("get failed msg err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.NumOfFailedMsg.M(int64(len(msgs))))
+				}
+
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
+				if err != nil {
+					ms.addressService.log.Errorf("get blocked msg err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
+				}
+
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
+				if err != nil {
+					ms.addressService.log.Errorf("get blocked msg err: %s", err)
+				} else {
+					stats.Record(ctx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
+				}
+			}
+		}
 	}
 }
 

@@ -16,10 +16,9 @@ var (
 	WalletDBNonce    = stats.Int64("wallet_db_nonce", "Wallet nonce in db", stats.UnitDimensionless)
 	WalletChainNonce = stats.Int64("wallet_chain_nonce", "Wallet nonce on the chain", stats.UnitDimensionless)
 
-	NumOfUnFillMsg   = stats.Int64("num_of_unfill_msg", "The number of unFill msg", stats.UnitDimensionless)
-	NumOfFillMsg     = stats.Int64("num_of_fill_msg", "The number of fill Msg", stats.UnitDimensionless)
-	NumOfFailedMsg   = stats.Int64("num_of_failed_msg", "The number of failed msg", stats.UnitDimensionless)
-	NumOfReplacedMsg = stats.Int64("num_of_replace_msg", "The number of replaced msg", stats.UnitDimensionless)
+	NumOfUnFillMsg = stats.Int64("num_of_unfill_msg", "The number of unFill msg", stats.UnitDimensionless)
+	NumOfFillMsg   = stats.Int64("num_of_fill_msg", "The number of fill Msg", stats.UnitDimensionless)
+	NumOfFailedMsg = stats.Int64("num_of_failed_msg", "The number of failed msg", stats.UnitDimensionless)
 
 	NumOfMsgBlockedThreeMinutes = stats.Int64("blocked_three_minutes_msgs", "Number of messages blocked for more than 3 minutes", stats.UnitDimensionless)
 	NumOfMsgBlockedFiveMinutes  = stats.Int64("blocked_five_minutes_msgs", "Number of messages blocked for more than 5 minutes", stats.UnitDimensionless)
@@ -55,12 +54,6 @@ var (
 	NumOfFailedMsgView = &view.View{
 		Measure:     NumOfFailedMsg,
 		Aggregation: view.LastValue(),
-		TagKeys:     []tag.Key{WalletAddress},
-	}
-	NumOfReplacedMsgView = &view.View{
-		Measure:     NumOfReplacedMsg,
-		Aggregation: view.LastValue(),
-		TagKeys:     []tag.Key{WalletAddress},
 	}
 
 	NumOfMsgBlockedThreeMinutesView = &view.View{
@@ -83,7 +76,6 @@ var MessagerNodeViews = []*view.View{
 	NumOfUnFillMsgView,
 	NumOfFillMsgView,
 	NumOfFailedMsgView,
-	NumOfReplacedMsgView,
 
 	NumOfMsgBlockedThreeMinutesView,
 	NumOfMsgBlockedFiveMinutesView,
