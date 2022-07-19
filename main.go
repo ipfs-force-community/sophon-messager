@@ -235,7 +235,8 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, &cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, &cfg.Trace),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService,
+			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(walletClient),
@@ -269,6 +270,7 @@ func runAction(ctx *cli.Context) error {
 		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(metrics.SetupJaeger),
+		fx.Invoke(metrics.SetupMetrics),
 	)
 
 	apiOption := fx.Options(

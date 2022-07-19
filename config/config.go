@@ -9,16 +9,17 @@ import (
 )
 
 type Config struct {
-	DB             DbConfig             `toml:"db"`
-	JWT            JWTConfig            `toml:"jwt"`
-	Log            LogConfig            `toml:"log"`
-	API            APIConfig            `toml:"api"`
-	Node           NodeConfig           `toml:"node"`
-	MessageService MessageServiceConfig `toml:"messageService"`
-	MessageState   MessageStateConfig   `toml:"messageState"`
-	Gateway        GatewayConfig        `toml:"gateway"`
-	RateLimit      RateLimitConfig      `toml:"rateLimit"`
-	Trace          metrics.TraceConfig  `toml:"tracing"`
+	DB             DbConfig               `toml:"db"`
+	JWT            JWTConfig              `toml:"jwt"`
+	Log            LogConfig              `toml:"log"`
+	API            APIConfig              `toml:"api"`
+	Node           NodeConfig             `toml:"node"`
+	MessageService MessageServiceConfig   `toml:"messageService"`
+	MessageState   MessageStateConfig     `toml:"messageState"`
+	Gateway        GatewayConfig          `toml:"gateway"`
+	RateLimit      RateLimitConfig        `toml:"rateLimit"`
+	Trace          *metrics.TraceConfig   `toml:"tracing"`
+	Metrics        *metrics.MetricsConfig `toml:"metrics"`
 }
 
 type NodeConfig struct {
@@ -137,11 +138,7 @@ func DefaultConfig() *Config {
 			Cfg:   gatewayTypes.Config{},
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
-		Trace: metrics.TraceConfig{
-			JaegerEndpoint:       "",
-			ProbabilitySampler:   1.0,
-			JaegerTracingEnabled: false,
-			ServerName:           "venus-messenger",
-		},
+		Trace:     metrics.DefaultTraceConfig(),
+		Metrics:   metrics.DefaultMetricsConfig(),
 	}
 }
