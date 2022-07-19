@@ -11,7 +11,6 @@ type MsgMeta struct {
 	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;"`
 	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
 	MaxFee            Int            `gorm:"column:max_fee;type:varchar(256);"`
-	MaxFeeCap         Int            `gorm:"column:max_fee_cap;type:varchar(256);"`
 	GasOverPremium    float64        `gorm:"column:gas_over_premium;type:decimal(10,2);"`
 }
 
@@ -20,7 +19,6 @@ func (meta *MsgMeta) Meta() *types.SendSpec {
 		ExpireEpoch:       meta.ExpireEpoch,
 		GasOverEstimation: meta.GasOverEstimation,
 		MaxFee:            big.NewFromGo(meta.MaxFee.Int),
-		MaxFeeCap:         big.NewFromGo(meta.MaxFeeCap.Int),
 		GasOverPremium:    meta.GasOverPremium,
 	}
 }
@@ -31,7 +29,6 @@ func FromMeta(srcMeta *types.SendSpec) *MsgMeta {
 			ExpireEpoch:       0,
 			GasOverEstimation: 0,
 			MaxFee:            Int{},
-			MaxFeeCap:         Int{},
 		}
 	}
 	meta := &MsgMeta{
@@ -42,10 +39,6 @@ func FromMeta(srcMeta *types.SendSpec) *MsgMeta {
 
 	if srcMeta.MaxFee.Int != nil {
 		meta.MaxFee = Int{Int: srcMeta.MaxFee.Int}
-	}
-
-	if srcMeta.MaxFeeCap.Int != nil {
-		meta.MaxFeeCap = Int{Int: srcMeta.MaxFeeCap.Int}
 	}
 	return meta
 }

@@ -202,10 +202,16 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var selectMsg []*types.Message
 	var errMsg []msgErrInfo
 
+	globalSpec := messageSelector.sps.GetParams()
 	estimateMesssages := make([]*venusTypes.EstimateMessage, len(messages))
 	for index, msg := range messages {
 		// global msg meta
-		newMsgMeta := messageSelector.messageMeta(msg.Meta, addr)
+		newMsgMeta := mergeMsgSpec(globalSpec, msg.Meta, addr, msg)
+
+		if msg.GasFeeCap.NilOrZero() && !newMsgMeta.GasFeeCap.NilOrZero() {
+			msg.GasFeeCap = newMsgMeta.GasFeeCap
+		}
+
 		estimateMesssages[index] = &venusTypes.EstimateMessage{
 			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
@@ -214,9 +220,10 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 				GasOverPremium:    newMsgMeta.GasOverPremium,
 			},
 		}
+
 		messageSelector.log.Infof("estimate message %s, gas fee cap %s, gas limit %v, gas premium: %s, "+
-			"meta maxfee %s, max fee cap %s, over estimation %f, gas over premium %f", msg.ID, msg.GasFeeCap, msg.GasLimit, msg.GasPremium,
-			newMsgMeta.MaxFee, newMsgMeta.MaxFeeCap, newMsgMeta.GasOverEstimation, newMsgMeta.GasOverPremium)
+			"meta maxfee %s, over estimation %f, gas over premium %f", msg.ID, msg.GasFeeCap, msg.GasLimit, msg.GasPremium,
+			newMsgMeta.MaxFee, newMsgMeta.GasOverEstimation, newMsgMeta.GasOverPremium)
 	}
 
 	timeOutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
@@ -307,43 +314,6 @@ func (messageSelector *MessageSelector) excludeExpire(ts *venusTypes.TipSet, msg
 		result = append(result, msg)
 	}
 	return result, expireMsg
-}
-
-func (messageSelector *MessageSelector) messageMeta(meta *types.SendSpec, addrInfo *types.Address) *types.SendSpec {
-	newMsgMeta := &types.SendSpec{}
-	*newMsgMeta = *meta
-	globalMeta := messageSelector.sps.GetParams().GetSendSpec()
-
-	if meta.GasOverEstimation == 0 {
-		if addrInfo.GasOverEstimation != 0 {
-			newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
-		} else if globalMeta != nil {
-			newMsgMeta.GasOverEstimation = globalMeta.GasOverEstimation
-		}
-	}
-	if meta.MaxFee.NilOrZero() {
-		if !addrInfo.MaxFee.NilOrZero() {
-			newMsgMeta.MaxFee = addrInfo.MaxFee
-		} else if globalMeta != nil {
-			newMsgMeta.MaxFee = globalMeta.MaxFee
-		}
-	}
-	if meta.MaxFeeCap.NilOrZero() {
-		if !addrInfo.MaxFeeCap.NilOrZero() {
-			newMsgMeta.MaxFeeCap = addrInfo.MaxFeeCap
-		} else if globalMeta != nil {
-			newMsgMeta.MaxFeeCap = globalMeta.MaxFeeCap
-		}
-	}
-	if meta.GasOverPremium == 0 {
-		if addrInfo.GasOverPremium != 0 {
-			newMsgMeta.GasOverPremium = addrInfo.GasOverPremium
-		} else if globalMeta.GasOverPremium != 0 {
-			newMsgMeta.GasOverPremium = globalMeta.GasOverPremium
-		}
-	}
-
-	return newMsgMeta
 }
 
 func (messageSelector *MessageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
@@ -457,4 +427,51 @@ func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 
 	msg.GasFeeCap = big.Div(maxFee, gl)
 	msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium) // cap premium at FeeCap
+}
+
+func mergeMsgSpec(globalSpec *Params, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
+	newMsgMeta := &GasSpec{}
+	newMsgMeta.GasOverEstimation = sendSpec.GasOverEstimation
+	newMsgMeta.GasOverPremium = sendSpec.GasOverPremium
+	newMsgMeta.MaxFee = sendSpec.MaxFee
+
+	if sendSpec.GasOverEstimation == 0 {
+		if addrInfo.GasOverEstimation != 0 {
+			newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
+		} else if globalSpec != nil {
+			newMsgMeta.GasOverEstimation = globalSpec.GasOverEstimation
+		}
+	}
+	if sendSpec.MaxFee.NilOrZero() {
+		if !addrInfo.MaxFee.NilOrZero() {
+			newMsgMeta.MaxFee = addrInfo.MaxFee
+		} else if globalSpec != nil {
+			newMsgMeta.MaxFee = globalSpec.MaxFee
+		}
+	}
+
+	if msg.GasFeeCap.NilOrZero() {
+		if !addrInfo.GasFeeCap.NilOrZero() {
+			newMsgMeta.GasFeeCap = addrInfo.GasFeeCap
+		} else if globalSpec != nil {
+			newMsgMeta.GasFeeCap = globalSpec.GasFeeCap
+		}
+	}
+
+	if sendSpec.GasOverPremium == 0 {
+		if addrInfo.GasOverPremium != 0 {
+			newMsgMeta.GasOverPremium = addrInfo.GasOverPremium
+		} else if globalSpec.GasOverPremium != 0 {
+			newMsgMeta.GasOverPremium = globalSpec.GasOverPremium
+		}
+	}
+
+	return newMsgMeta
+}
+
+type GasSpec struct {
+	GasOverEstimation float64
+	MaxFee            big.Int
+	GasOverPremium    float64
+	GasFeeCap         big.Int
 }

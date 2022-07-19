@@ -122,7 +122,7 @@ name | type | desc
 id | smallint(2) | primary key
 gas_over_estimation | double | gas limit的系数
 max_fee | varchar(256) |
-max_fee_cap | varchar(256) |
+gas_fee_cap | varchar(256) |
 sel_msg_num | bigint(20) | 单次选择的最大消息数
 gas_over_premium | DOUBLE | gas premium的系数
 
@@ -139,7 +139,7 @@ state | int | 地址状态
 gas_over_estimation | decimal(10,2) | gas limit的系数
 gas_over_estimation | decimal(10,2) | gas premium的系数
 max_fee | varchar(256) |
-max_fee_cap | varchar(256) |
+gas_fee_cap | varchar(256) |
 is_deleted | int | 是否删除，-1：否，1：是
 created_at | datetime | 创建时间
 updated_at | datetime | 更新时间
@@ -169,9 +169,9 @@ receipt_gas_used | bigint | 消息执行消耗的gas
 tipset_key | varchar(1024) | 消息打包高度的tipset的key
 meta_expire_epoch | bigint | 过期高度
 meta_gas_over_estimation | gas 预估超出的系数
-meta_max_fee | varchar(256) |
-meta_max_fee_cap | varchar(256) |
-gas_over_premium | decimal(10,2) | gas premium的系数
+meta_max_fee | varchar(256) | gas 费用上限
+meta_gas_fee_cap | varchar(256) | gas feecap数值
+meta_gas_over_premium | decimal(10,2) | gas premium的系数
 wallet_name | varchar(256) | 钱包名，用于指定具体签名钱包
 from_user | varchar(256) | 用户名，用于指定具体签名用户
 state | int | 消息状态

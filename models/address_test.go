@@ -37,7 +37,7 @@ func TestAddress(t *testing.T) {
 			GasOverEstimation: 1.25,
 			GasOverPremium:    1.6,
 			MaxFee:            big.NewInt(10),
-			MaxFeeCap:         big.NewInt(1),
+			GasFeeCap:         big.NewInt(1),
 			IsDeleted:         -1,
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
@@ -50,7 +50,7 @@ func TestAddress(t *testing.T) {
 			State:          types.AddressStateAlive,
 			GasOverPremium: 3.0,
 			MaxFee:         big.NewInt(110),
-			MaxFeeCap:      big.NewInt(11),
+			GasFeeCap:      big.NewInt(11),
 			Nonce:          2,
 			IsDeleted:      -1,
 			CreatedAt:      time.Time{},
@@ -85,7 +85,7 @@ func TestAddress(t *testing.T) {
 			assert.Equal(t, expect.GasOverEstimation, actual.GasOverEstimation)
 			assert.Equal(t, expect.GasOverPremium, actual.GasOverPremium)
 			assert.Equal(t, expect.MaxFee, actual.MaxFee)
-			assert.Equal(t, expect.MaxFeeCap, actual.MaxFeeCap)
+			assert.Equal(t, expect.GasFeeCap, actual.GasFeeCap)
 		}
 
 		t.Run("GetAddress", func(t *testing.T) {
@@ -135,16 +135,16 @@ func TestAddress(t *testing.T) {
 
 		t.Run("UpdateFeeParams", func(t *testing.T) {
 			gasOverEstimation := 1.5
-			maxFeeCap := big.NewInt(1000)
+			gasFeeCap := big.NewInt(1000)
 			maxFee := big.NewInt(1000)
 			gasOverPremium := 1.2
-			assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap))
+			assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap))
 
 			r, err := addressRepo.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, gasOverEstimation, r.GasOverEstimation)
 			assert.Equal(t, maxFee, r.MaxFee)
-			assert.Equal(t, maxFeeCap, r.MaxFeeCap)
+			assert.Equal(t, gasFeeCap, r.GasFeeCap)
 			assert.Equal(t, gasOverPremium, r.GasOverPremium)
 		})
 
