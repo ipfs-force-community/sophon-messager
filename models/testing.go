@@ -68,11 +68,13 @@ func NewUnsignedMessage() shared.Message {
 	from, _ := address.NewActorAddress(uid[:])
 	uid, _ = uuid.NewUUID()
 	to, _ := address.NewActorAddress(uid[:])
+	val := big.NewInt(rand.Int63n(102000400))
+	gasLimit := rand.Int63n(10000000)
 	return shared.Message{
 		From:       from,
 		To:         to,
-		Value:      big.NewInt(rand.Int63n(1024)),
-		GasLimit:   rand.Int63n(100),
+		Value:      val,
+		GasLimit:   gasLimit,
 		GasFeeCap:  abi.NewTokenAmount(2000),
 		GasPremium: abi.NewTokenAmount(1024),
 	}

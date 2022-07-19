@@ -13,8 +13,8 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type mysqlMessage struct {
@@ -279,13 +279,12 @@ func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, top
 
 //todo better batch update
 func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
+	tmsgs := make([]*mysqlMessage, 0, len(msgs))
 	for _, msg := range msgs {
-		err := m.SaveMessage(msg)
-		if err != nil {
-			return err
-		}
+		tmsgs = append(tmsgs, FromMessage(msg))
 	}
-	return nil
+
+	return m.DB.CreateInBatches(tmsgs, 1000).Error
 }
 
 func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
