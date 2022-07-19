@@ -1,8 +1,6 @@
 package metrics
 
 import (
-	"time"
-
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
