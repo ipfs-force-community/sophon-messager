@@ -40,8 +40,9 @@
 
 如果配置 `Prometheus exporter`，则在 `venus-messager` 服务启动时会附带启动 `Prometheus exporter` 的监听服务，可以通过以下方式快速查看指标：
 
+
 ```bash
- $  curl http://192.168.200.107:4568/debug/metrics
+ $  curl http://localhost:4568/debug/metrics
    # HELP messager01_chain_head_stable_dur_s Duration of chain head stabilization
    # TYPE messager01_chain_head_stable_dur_s histogram
    messager01_chain_head_stable_dur_s_bucket{le="8"} 0
@@ -62,6 +63,10 @@
    # TYPE messager01_chain_head_stable_s gauge
    messager01_chain_head_stable_s 9
    ... ...
+```
+> 如果遇到错误 `curl: (56) Recv failure: Connection reset by peer`, 请使用本机 `ip` 地址, 如下所示:
+```bash
+$  curl http://<ip>:4568/debug/metrics
 ```
 
 如果配置 `Graphite exporter`，需要先启动 `Graphite exporter` 的收集器服务， `venus-messager` 服务启动时将指标上报给收集器。服务启动参考 [Graphite exporter](https://github.com/prometheus/graphite_exporter) 中的说明。

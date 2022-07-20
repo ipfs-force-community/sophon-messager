@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 
 	"go.opencensus.io/stats/view"
 	"go.uber.org/fx"
@@ -23,7 +24,7 @@ func SetupMetrics(lc fx.Lifecycle, metricsConfig *metrics.MetricsConfig, log *lo
 	if err := view.Register(
 		MessagerNodeViews...,
 	); err != nil {
-		log.Fatalf("Cannot register the view: %v", err)
+		return fmt.Errorf("cannot register the view: %w", err)
 	}
 
 	lc.Append(fx.Hook{
@@ -45,9 +46,6 @@ func SetupMetrics(lc fx.Lifecycle, metricsConfig *metrics.MetricsConfig, log *lo
 				log.Warnf("invalid exporter type: %s", metricsConfig.Exporter.Type)
 			}
 
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
 			return nil
 		},
 	})
