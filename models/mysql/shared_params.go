@@ -16,9 +16,9 @@ type mysqlSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:SMALLINT(2) unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
 
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
-	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
-	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);NOT NULL"`
-	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:DOUBLE;NOT NULL;default:0;"`
+	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL;default:0"`
+	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);NOT NULL;default:0"`
+	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:DOUBLE;NOT NULL;default:0"`
 	SelMsgNum         uint64     `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
 }
 
