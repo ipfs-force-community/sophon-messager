@@ -3,6 +3,7 @@ module github.com/filecoin-project/venus-messager
 go 1.17
 
 require (
+	contrib.go.opencensus.io/exporter/graphite v0.0.0-20200424223504-26b90655e0ce // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/fatih/color v1.13.0
 	github.com/filecoin-project/go-address v0.0.6
@@ -15,7 +16,7 @@ require (
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/metrics v1.0.1-0.20211228055608-9462dc86e157
+	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
 	github.com/ipfs-force-community/venus-gateway v1.6.0
 	github.com/ipfs/go-cid v0.1.0
@@ -35,6 +36,8 @@ require (
 	gorm.io/gorm v1.21.12
 	modernc.org/mathutil v1.1.1
 )
+
+require go.opencensus.io v0.23.0
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1 // indirect
@@ -163,10 +166,7 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/uber/jaeger-client-go v2.25.0+incompatible // indirect
 	github.com/ugorji/go/codec v1.2.4 // indirect
-	github.com/warpfork/go-testmark v0.9.0 // indirect
 	github.com/whyrusleeping/go-logging v0.0.1 // indirect
-	github.com/xlab/c-for-go v0.0.0-20200718154222-87b0065af829 // indirect
-	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/dig v1.12.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
