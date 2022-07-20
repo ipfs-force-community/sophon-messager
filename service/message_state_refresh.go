@@ -165,13 +165,10 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 
 // delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
-	defer func() {
-		ds := time.Now().Unix() - int64(ts.MinTimestamp())
-		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
-	}()
-
 	select {
 	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
+		ds := time.Now().Unix() - int64(ts.MinTimestamp())
+		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():

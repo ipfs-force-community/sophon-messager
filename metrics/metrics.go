@@ -28,7 +28,7 @@ var (
 	ExpiredMsgNumOfLastRound  = stats.Int64("expired_msg_num", "Number of expired messages in the last round", stats.UnitDimensionless)
 	ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless)
 
-	ChainHeadStableDelay      = stats.Int64("chain_head_stable_s", "Duration of chain head stabilization", stats.UnitSeconds)
+	ChainHeadStableDelay = stats.Int64("chain_head_stable_s", "Duration of chain head stabilization", stats.UnitSeconds)
 )
 
 var (
