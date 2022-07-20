@@ -6,10 +6,13 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
+	"go.opencensus.io/stats"
 
+	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
+
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -162,6 +165,11 @@ func (ms *MessageService) updateMessageState(ctx context.Context, tsKeys map[abi
 
 // delayTrigger wait for stable ts
 func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
+	defer func() {
+		ds := time.Now().Unix() - int64(ts.MinTimestamp())
+		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
+	}()
+
 	select {
 	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
 		ms.triggerPush <- ts

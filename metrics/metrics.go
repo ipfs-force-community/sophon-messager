@@ -22,6 +22,13 @@ var (
 
 	NumOfMsgBlockedThreeMinutes = stats.Int64("blocked_three_minutes_msgs", "Number of messages blocked for more than 3 minutes", stats.UnitDimensionless)
 	NumOfMsgBlockedFiveMinutes  = stats.Int64("blocked_five_minutes_msgs", "Number of messages blocked for more than 5 minutes", stats.UnitDimensionless)
+
+	SelectedMsgNumOfLastRound = stats.Int64("selected_msg_num", "Number of selected messages in the last round", stats.UnitDimensionless)
+	ToPushMsgNumOfLastRound   = stats.Int64("topush_msg_num", "Number of to-push messages in the last round", stats.UnitDimensionless)
+	ExpiredMsgNumOfLastRound  = stats.Int64("expired_msg_num", "Number of expired messages in the last round", stats.UnitDimensionless)
+	ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless)
+
+	ChainHeadStableDelay      = stats.Int64("chain_head_stable_s", "Duration of chain head stabilization", stats.UnitSeconds)
 )
 
 var (
@@ -66,6 +73,28 @@ var (
 		Aggregation: view.LastValue(),
 		TagKeys:     []tag.Key{WalletAddress},
 	}
+
+	SelectedMsgNumOfLastRoundView = &view.View{
+		Measure:     SelectedMsgNumOfLastRound,
+		Aggregation: view.LastValue(),
+	}
+	ToPushMsgNumOfLastRoundView = &view.View{
+		Measure:     ToPushMsgNumOfLastRound,
+		Aggregation: view.LastValue(),
+	}
+	ExpiredMsgNumOfLastRoundView = &view.View{
+		Measure:     ExpiredMsgNumOfLastRound,
+		Aggregation: view.LastValue(),
+	}
+	ErrMsgNumOfLastRoundView = &view.View{
+		Measure:     ErrMsgNumOfLastRound,
+		Aggregation: view.LastValue(),
+	}
+
+	ChainHeadStableDelayView = &view.View{
+		Measure:     ChainHeadStableDelay,
+		Aggregation: view.LastValue(),
+	}
 )
 
 var MessagerNodeViews = []*view.View{
@@ -79,4 +108,11 @@ var MessagerNodeViews = []*view.View{
 
 	NumOfMsgBlockedThreeMinutesView,
 	NumOfMsgBlockedFiveMinutesView,
+
+	SelectedMsgNumOfLastRoundView,
+	ToPushMsgNumOfLastRoundView,
+	ExpiredMsgNumOfLastRoundView,
+	ErrMsgNumOfLastRoundView,
+
+	ChainHeadStableDelayView,
 }

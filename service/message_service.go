@@ -554,6 +554,11 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		return err
 	}
 	ms.log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
+	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
+	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
+	stats.Record(ctx, metrics.ExpiredMsgNumOfLastRound.M(int64(len(selectResult.ExpireMsg))))
+	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
+
 	tSaveDb := time.Now()
 	ms.log.Infof("start to save to database")
 	//save to db
@@ -1087,26 +1092,26 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
-				msgs, err = ms.repo.MessageRepo().ListFailedMessage()
-				if err != nil {
-					ms.addressService.log.Errorf("get failed msg err: %s", err)
-				} else {
-					stats.Record(ctx, metrics.NumOfFailedMsg.M(int64(len(msgs))))
-				}
-
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
 				if err != nil {
-					ms.addressService.log.Errorf("get blocked msg err: %s", err)
+					ms.addressService.log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
 				if err != nil {
-					ms.addressService.log.Errorf("get blocked msg err: %s", err)
+					ms.addressService.log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
 				}
+			}
+
+			msgs, err := ms.repo.MessageRepo().ListFailedMessage()
+			if err != nil {
+				ms.addressService.log.Errorf("get failed msg err: %s", err)
+			} else {
+				stats.Record(ctx, metrics.NumOfFailedMsg.M(int64(len(msgs))))
 			}
 		}
 	}
