@@ -169,6 +169,7 @@ func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSe
 	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
 		ds := time.Now().Unix() - int64(ts.MinTimestamp())
 		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
+		stats.Record(ctx, metrics.ChainHeadStableDuration.M(ds))
 		ms.triggerPush <- ts
 		return
 	case <-ctx.Done():

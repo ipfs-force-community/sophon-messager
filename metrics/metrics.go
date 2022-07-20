@@ -11,6 +11,9 @@ var (
 	WalletAddress, _ = tag.NewKey("wallet")
 )
 
+// Distribution
+var defaultSecondsDistribution = view.Distribution(8, 9, 10, 12, 14, 16, 18, 20, 25, 30, 60)
+
 var (
 	WalletBalance    = stats.Int64("wallet_balance", "Wallet balance", stats.UnitDimensionless)
 	WalletDBNonce    = stats.Int64("wallet_db_nonce", "Wallet nonce in db", stats.UnitDimensionless)
@@ -28,7 +31,8 @@ var (
 	ExpiredMsgNumOfLastRound  = stats.Int64("expired_msg_num", "Number of expired messages in the last round", stats.UnitDimensionless)
 	ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless)
 
-	ChainHeadStableDelay = stats.Int64("chain_head_stable_s", "Duration of chain head stabilization", stats.UnitSeconds)
+	ChainHeadStableDelay    = stats.Int64("chain_head_stable_s", "Delay of chain head stabilization", stats.UnitSeconds)
+	ChainHeadStableDuration = stats.Int64("chain_head_stable_dur_s", "Duration of chain head stabilization", stats.UnitSeconds)
 )
 
 var (
@@ -95,6 +99,10 @@ var (
 		Measure:     ChainHeadStableDelay,
 		Aggregation: view.LastValue(),
 	}
+	ChainHeadStableDurationView = &view.View{
+		Measure:     ChainHeadStableDuration,
+		Aggregation: defaultSecondsDistribution,
+	}
 )
 
 var MessagerNodeViews = []*view.View{
@@ -115,4 +123,5 @@ var MessagerNodeViews = []*view.View{
 	ErrMsgNumOfLastRoundView,
 
 	ChainHeadStableDelayView,
+	ChainHeadStableDurationView,
 }
