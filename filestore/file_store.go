@@ -30,7 +30,7 @@ type fsRepo struct {
 
 func NewFSRepo(repoPath string) (FSRepo, error) {
 	r := &fsRepo{path: repoPath}
-	cfg := new(config.Config)
+	cfg := config.DefaultConfig()
 	err := utils.ReadConfig(filepath.Join(repoPath, ConfigFile), cfg)
 	if err != nil {
 		return nil, err

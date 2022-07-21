@@ -13,9 +13,9 @@ import (
 )
 
 func SetupMetrics(lc fx.Lifecycle, metricsConfig *metrics.MetricsConfig, log *log.Logger) error {
-	log.Infof("metrics config: enabled: %v, exporter type: %s, prometheus: %v, graphite: %v\n",
-		metricsConfig.Enabled, metricsConfig.Exporter.Type, *metricsConfig.Exporter.Prometheus,
-		*metricsConfig.Exporter.Graphite)
+	log.Infof("metrics config: enabled: %v, exporter type: %s, prometheus: %v, graphite: %v",
+		metricsConfig.Enabled, metricsConfig.Exporter.Type, metricsConfig.Exporter.Prometheus,
+		metricsConfig.Exporter.Graphite)
 
 	if !metricsConfig.Enabled {
 		return nil
