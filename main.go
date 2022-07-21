@@ -157,7 +157,7 @@ func runAction(ctx *cli.Context) error {
 		if hasFSRepo {
 			cfg = fsRepo.Config()
 		} else {
-			cfg = new(config.Config)
+			cfg = config.DefaultConfig()
 			err = utils.ReadConfig(path, cfg)
 			if err != nil {
 				return err
