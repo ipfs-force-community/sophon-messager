@@ -21,8 +21,8 @@
       RegistryType = "define"
       # prometheus 服务路径
       Path = "/debug/metrics"
-      # 上报周期，单位为 秒（s）
-      ReportingPeriod = 10
+      # 上报周期
+      ReportingPeriod = "10s"
       
     [Metrics.Exporter.Graphite]
       # 命名规范: "a_b_c", 不能带"-"
@@ -31,8 +31,8 @@
       Host = "127.0.0.1"
       # graphite exporter 收集器服务监听端口
       Port = 4568
-      # 上报周期，单位为 秒（s）
-      ReportingPeriod = 10
+      # 上报周期
+      ReportingPeriod = "10s"
 ```
 ## 导出器
 
