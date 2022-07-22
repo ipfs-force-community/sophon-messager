@@ -18,7 +18,7 @@ func (meta *MsgMeta) Meta() *types.SendSpec {
 	return &types.SendSpec{
 		ExpireEpoch:       meta.ExpireEpoch,
 		GasOverEstimation: meta.GasOverEstimation,
-		MaxFee:            big.NewFromGo(meta.MaxFee.Int),
+		MaxFee:            big.Int(SafeFromGo(meta.MaxFee.Int)),
 		GasOverPremium:    meta.GasOverPremium,
 	}
 }

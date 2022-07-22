@@ -18,6 +18,13 @@ func NewFromGo(i *big.Int) Int {
 	return Int{big.NewInt(0).Set(i)}
 }
 
+func SafeFromGo(i *big.Int) Int {
+	if i == nil {
+		return NewInt(0)
+	}
+	return NewFromGo(i)
+}
+
 // Value implement sql.Scanner
 func (bi Int) Value() (driver.Value, error) {
 	if bi.Int != nil {
