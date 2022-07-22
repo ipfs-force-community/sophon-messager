@@ -20,7 +20,7 @@ type IWalletClient interface {
 	WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error)
 }
 
-// *api.MessageImp and *gateway.WalletClient both implement IWalletClient, so injection will fail
+// IWalletCli *api.MessageImp and *gateway.WalletClient both implement IWalletClient, so injection will fail
 type IWalletCli struct {
 	IWalletClient
 }

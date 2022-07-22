@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFSRepo(t *testing.T) {
 	path := t.TempDir()
 	defCfg := config.DefaultConfig()
-	assert.Nil(t, config.WriteConfig(filepath.Join(path, ConfigFile), defCfg))
+	assert.Nil(t, utils.WriteConfig(filepath.Join(path, ConfigFile), defCfg))
 
 	fsRepo, err := NewFSRepo(path)
 	assert.Nil(t, err)

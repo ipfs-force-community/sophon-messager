@@ -18,7 +18,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
@@ -358,46 +357,28 @@ func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Messa
 }
 
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
-	msgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
-	if len(msgs) > 0 {
-		ids := make([]string, 0, len(msgs))
-		for _, msg := range msgs {
-			ids = append(ids, msg.ID)
-		}
-		ms.log.Warnf("list failed message by address %s %s", addr, strings.Join(ids, ","))
-	}
-
-	return msgs, err
+	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
 func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
 	var msgs []*types.Message
-	var err error
 	if addr != address.Undef {
-		msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr, d)
-	} else {
-		addrList, err := ms.addressService.ListActiveAddress(ctx)
+		return ms.repo.MessageRepo().ListBlockedMessage(addr, d)
+	}
+
+	addrList, err := ms.addressService.ListActiveAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range addrList {
+		msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
 		if err != nil {
 			return nil, err
 		}
-		for _, a := range addrList {
-			msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
-			if err != nil {
-				return nil, err
-			}
-			msgs = append(msgs, msgsT...)
-		}
+		msgs = append(msgs, msgsT...)
 	}
 
-	if len(msgs) > 0 {
-		ids := make([]string, 0, len(msgs))
-		for _, msg := range msgs {
-			ids = append(ids, msg.ID)
-		}
-		ms.log.Warnf("list blocked message by address %s %s", addr, strings.Join(ids, ","))
-	}
-
-	return msgs, err
+	return msgs, nil
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
@@ -442,21 +423,20 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 			done:   done,
 		}
 		return <-done
-	} else {
-		apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
-		if err != nil {
-			ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
-			return nil
-		}
-
-		done := make(chan error)
-		ms.headChans <- &headChan{
-			apply:  apply,
-			revert: revertTipset,
-			done:   done,
-		}
-		return <-done
 	}
+	apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
+	if err != nil {
+		ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
+		return nil
+	}
+
+	done := make(chan error)
+	ms.headChans <- &headChan{
+		apply:  apply,
+		revert: revertTipset,
+		done:   done,
+	}
+	return <-done
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
@@ -704,7 +684,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	nc := make([]nodeClient, 0, len(nodeList))
 	for _, node := range nodeList {
-		cli, closer, err := NewNodeClient(context.TODO(), &config.NodeConfig{Token: node.Token, Url: node.URL})
+		cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 		if err != nil {
 			ms.log.Warnf("connect node(%s) %v", node.Name, err)
 			continue
@@ -816,7 +796,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Message) error {
 	cid := msg.SignedCid
 	if cid != nil {
-		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, abi.ChainEpoch(constants.LookbackNoLimit), true)
+		msgLookup, err := ms.nodeClient.StateSearchMsg(ctx, venusTypes.EmptyTSK, *cid, constants.LookbackNoLimit, true)
 		if err != nil || msgLookup == nil {
 			return fmt.Errorf("search message %s from node %v", cid.String(), err)
 		}
@@ -838,8 +818,11 @@ func (ms *MessageService) UpdateFilledMessageByID(ctx context.Context, id string
 	return id, ms.updateFilledMessage(ctx, msg)
 }
 
-func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
-	msg, err := ms.GetMessageByUid(ctx, id)
+func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error) {
+	if params == nil {
+		return cid.Undef, fmt.Errorf("params is nil")
+	}
+	msg, err := ms.GetMessageByUid(ctx, params.ID)
 	if err != nil {
 		return cid.Undef, fmt.Errorf("found message %v", err)
 	}
@@ -847,18 +830,12 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		return cid.Undef, fmt.Errorf("message already on chain")
 	}
 
-	if auto {
+	if params.Auto {
 		minRBF := computeMinRBF(msg.GasPremium)
 
-		var mss *venusTypes.MessageSendSpec
-		if len(maxFee) > 0 {
-			maxFee, err := venusTypes.BigFromString(maxFee)
-			if err != nil {
-				return cid.Undef, fmt.Errorf("parsing max-spend: %w", err)
-			}
-			mss = &venusTypes.MessageSendSpec{
-				MaxFee: maxFee,
-			}
+		mss := &venusTypes.MessageSendSpec{
+			MaxFee:         params.MaxFee,
+			GasOverPremium: params.GasOverPremium,
 		}
 
 		// msg.GasLimit = 0 // TODO: need to fix the way we estimate gas limits to account for the messages already being in the mempool
@@ -872,7 +849,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 		msg.GasPremium = big.Max(retm.GasPremium, minRBF)
 		msg.GasFeeCap = big.Max(retm.GasFeeCap, msg.GasPremium)
 
-		if mss == nil {
+		if mss.MaxFee.NilOrZero() {
 			addrInfo, err := ms.addressService.GetAddress(ctx, msg.From)
 			if err != nil {
 				return cid.Undef, err
@@ -881,25 +858,26 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, id string, auto bo
 			if maxFee.NilOrZero() {
 				maxFee = ms.sps.GetParams().MaxFee
 			}
-			mss = &venusTypes.MessageSendSpec{
-				MaxFee: maxFee,
-			}
+			mss.MaxFee = maxFee
 		}
 
 		CapGasFee(&msg.Message, mss.MaxFee)
 	} else {
-		if gasLimit > 0 {
-			msg.GasLimit = gasLimit
+		if params.GasLimit > 0 {
+			msg.GasLimit = params.GasLimit
 		}
-		msg.GasPremium, err = venusTypes.BigFromString(gasPremium)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parsing gas-premium: %w", err)
+		if big.Cmp(params.GasPremium, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas premium(%s) must bigger than zero", params.GasPremium)
 		}
+		if big.Cmp(params.GasFeecap, big.Zero()) <= 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger than zero", params.GasFeecap)
+		}
+		if big.Cmp(msg.GasFeeCap, msg.GasPremium) < 0 {
+			return cid.Undef, fmt.Errorf("gas feecap(%s) must bigger or equal than gas premium (%s)", msg.GasFeeCap, msg.GasPremium)
+		}
+		msg.GasPremium = params.GasPremium
 		// TODO: estimate fee cap here
-		msg.GasFeeCap, err = venusTypes.BigFromString(gasFeecap)
-		if err != nil {
-			return cid.Undef, fmt.Errorf("parsing gas-feecap: %w", err)
-		}
+		msg.GasFeeCap = params.GasFeecap
 	}
 
 	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)

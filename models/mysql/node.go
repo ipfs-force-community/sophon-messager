@@ -25,7 +25,7 @@ type mysqlNode struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`            // 更新时间
 }
 
-func FromNode(node *types.Node) *mysqlNode {
+func fromNode(node *types.Node) *mysqlNode {
 	return automapper.MustMapper(node, TMysqlNode).(*mysqlNode)
 }
 
@@ -48,14 +48,14 @@ func newMysqlNodeRepo(db *gorm.DB) mysqlNodeRepo {
 }
 
 func (s mysqlNodeRepo) CreateNode(node *types.Node) error {
-	sNode := FromNode(node)
+	sNode := fromNode(node)
 	sNode.CreatedAt = time.Now()
 	sNode.UpdatedAt = time.Now()
 	return s.DB.Create(sNode).Error
 }
 
 func (s mysqlNodeRepo) SaveNode(node *types.Node) error {
-	sNode := FromNode(node)
+	sNode := fromNode(node)
 	sNode.UpdatedAt = time.Now()
 	return s.DB.Save(sNode).Error
 }

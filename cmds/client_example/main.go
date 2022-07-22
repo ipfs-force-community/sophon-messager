@@ -14,6 +14,7 @@ import (
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -53,7 +54,8 @@ func main() {
 		count = 1
 	}
 
-	cfg, err := config.ReadConfig("./messager.toml")
+	cfg := new(config.Config)
+	err = utils.ReadConfig("./messager.toml", cfg)
 	if err != nil {
 		log.Fatal(err)
 		return

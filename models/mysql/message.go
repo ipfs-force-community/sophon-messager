@@ -13,8 +13,8 @@ import (
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/filecoin-project/venus-messager/utils"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type mysqlMessage struct {
@@ -42,7 +42,7 @@ type mysqlMessage struct {
 
 	Height    int64               `gorm:"column:height;type:bigint;index:msg_height"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
-	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
+	TipsetKey string              `gorm:"column:tipset_key;type:varchar(2048);"`
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
@@ -100,7 +100,7 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 	return destMsg
 }
 
-func FromMessage(srcMsg *types.Message) *mysqlMessage {
+func fromMessage(srcMsg *types.Message) *mysqlMessage {
 	destMsg := &mysqlMessage{
 		ID:         srcMsg.ID,
 		Version:    srcMsg.Version,
@@ -289,14 +289,14 @@ func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 }
 
 func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.CreatedAt = time.Now()
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Create(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
-	sqlMsg := FromMessage(msg)
+	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Omit("created_at").Save(sqlMsg).Error
 }

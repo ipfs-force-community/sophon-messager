@@ -10,6 +10,7 @@ import (
 
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
+	"github.com/pelletier/go-toml"
 )
 
 func StringToTipsetKey(str string) (venusTypes.TipSetKey, error) {
@@ -82,13 +83,13 @@ func ReadFile(filePath string) ([]byte, error) {
 	return b, err
 }
 
-// original data will be cleared
+// WriteFile original data will be cleared
 func WriteFile(filePath string, obj interface{}) error {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() // nolint
 
 	b, err := json.MarshalIndent(obj, " ", "\t")
 	if err != nil {
@@ -97,4 +98,21 @@ func WriteFile(filePath string, obj interface{}) error {
 	_, err = file.Write(b)
 
 	return err
+}
+
+func ReadConfig(path string, cfg interface{}) error {
+	configBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return toml.Unmarshal(configBytes, cfg)
+}
+
+func WriteConfig(path string, cfg interface{}) error {
+	cfgBytes, err := toml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, cfgBytes, 0666)
 }

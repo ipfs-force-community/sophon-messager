@@ -113,7 +113,7 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr 
 	return nil
 }
 
-func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFeeStr, maxFeeCapStr string) error {
+func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFeeStr, maxFeeCapStr string) error {
 	has, err := addressService.repo.AddressRepo().HasAddress(ctx, addr)
 	if err != nil {
 		return err
@@ -138,11 +138,17 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 		}
 		needUpdate = true
 	}
-	if !needUpdate && gasOverEstimation == 0 {
+	if gasOverEstimation > 0 {
+		needUpdate = true
+	}
+	if gasOverPremium > 0 {
+		needUpdate = true
+	}
+	if !needUpdate {
 		return nil
 	}
 
-	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
+	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap)
 }
 
 func (addressService *AddressService) ActiveAddresses() map[address.Address]struct{} {

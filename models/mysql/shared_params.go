@@ -18,15 +18,17 @@ type mysqlSharedParams struct {
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
 	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL"`
 	MaxFeeCap         mtypes.Int `gorm:"column:max_fee_cap;type:varchar(256);NOT NULL"`
+	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:DOUBLE;NOT NULL;default:0;"`
 	SelMsgNum         uint64     `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
 }
 
-func FromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
+func fromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
 	return &mysqlSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
 		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
 		MaxFeeCap:         mtypes.Int{Int: sp.MaxFeeCap.Int},
+		GasOverPremium:    sp.GasOverPremium,
 		SelMsgNum:         sp.SelMsgNum,
 	}
 }
@@ -37,6 +39,7 @@ func (ssp mysqlSharedParams) SharedParams() *types.SharedSpec {
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
 		MaxFeeCap:         big.NewFromGo(ssp.MaxFeeCap.Int),
+		GasOverPremium:    ssp.GasOverPremium,
 		SelMsgNum:         ssp.SelMsgNum,
 	}
 }
@@ -70,7 +73,7 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 			if params.ID == 0 {
 				params.ID = 1
 			}
-			if err := s.DB.Save(FromSharedParams(*params)).Error; err != nil {
+			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}
 			return params.ID, nil
@@ -81,6 +84,7 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 	ssp.GasOverEstimation = params.GasOverEstimation
 	ssp.MaxFeeCap = mtypes.Int{Int: params.MaxFeeCap.Int}
 	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
+	ssp.GasOverPremium = params.GasOverPremium
 
 	ssp.SelMsgNum = params.SelMsgNum
 

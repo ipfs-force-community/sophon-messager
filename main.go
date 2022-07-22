@@ -28,6 +28,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus-messager/version"
 )
 
@@ -121,7 +122,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	exist, err := config.ConfigExist(path)
+	exist, err := config.Exist(path)
 	if err != nil {
 		return err
 	}
@@ -156,7 +157,8 @@ func runAction(ctx *cli.Context) error {
 		if hasFSRepo {
 			cfg = fsRepo.Config()
 		} else {
-			cfg, err = config.ReadConfig(path)
+			cfg = new(config.Config)
+			err = utils.ReadConfig(path, cfg)
 			if err != nil {
 				return err
 			}
@@ -170,7 +172,7 @@ func runAction(ctx *cli.Context) error {
 					return err
 				}
 			} else {
-				if err = config.WriteConfig(path, cfg); err != nil {
+				if err = utils.WriteConfig(path, cfg); err != nil {
 					return err
 				}
 			}
@@ -197,7 +199,8 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
-	client, closer, err := service.NewNodeClient(ctx.Context, &cfg.Node)
+
+	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {
 		return fmt.Errorf("connect to node failed %v", err)
 	}

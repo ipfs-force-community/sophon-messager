@@ -106,8 +106,8 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
 
-func (m MessageImp) ReplaceMessage(ctx context.Context, id string, auto bool, maxFee string, gasLimit int64, gasPremium string, gasFeecap string) (cid.Cid, error) {
-	return m.MessageSrv.ReplaceMessage(ctx, id, auto, maxFee, gasLimit, gasPremium, gasFeecap)
+func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error) {
+	return m.MessageSrv.ReplaceMessage(ctx, params)
 }
 
 func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
@@ -159,8 +159,8 @@ func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, n
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
-func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation float64, maxFee, maxFeeCap string) error {
-	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, maxFee, maxFeeCap)
+func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, maxFeeCap string) error {
+	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, maxFeeCap)
 }
 
 func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
