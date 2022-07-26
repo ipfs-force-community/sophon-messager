@@ -37,8 +37,8 @@ func (ssp mysqlSharedParams) SharedParams() *types.SharedSpec {
 	return &types.SharedSpec{
 		ID:                ssp.ID,
 		GasOverEstimation: ssp.GasOverEstimation,
-		MaxFee:            big.NewFromGo(ssp.MaxFee.Int),
-		GasFeeCap:         big.NewFromGo(ssp.GasFeeCap.Int),
+		MaxFee:            big.Int(mtypes.SafeFromGo(ssp.MaxFee.Int)),
+		GasFeeCap:         big.Int(mtypes.SafeFromGo(ssp.GasFeeCap.Int)),
 		GasOverPremium:    ssp.GasOverPremium,
 		SelMsgNum:         ssp.SelMsgNum,
 	}
