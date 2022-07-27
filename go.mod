@@ -3,13 +3,15 @@ module github.com/filecoin-project/venus-messager
 go 1.17
 
 require (
-	contrib.go.opencensus.io/exporter/graphite v0.0.0-20200424223504-26b90655e0ce // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/fatih/color v1.13.0
 	github.com/filecoin-project/go-address v0.0.6
+	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.1
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.1.10
+	github.com/filecoin-project/specs-actors v0.9.15
+	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
 	github.com/filecoin-project/venus v1.6.1-0.20220718091042-a51da69e1731
 	github.com/filecoin-project/venus-auth v1.6.0
@@ -25,21 +27,19 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.9.4
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/viper v1.9.0 // indirect
 	github.com/stretchr/testify v1.7.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20220323183124-98fa8256a799
+	go.opencensus.io v0.23.0
 	go.uber.org/fx v1.15.0
-	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.12
 	modernc.org/mathutil v1.1.1
 )
 
-require go.opencensus.io v0.23.0
-
 require (
+	contrib.go.opencensus.io/exporter/graphite v0.0.0-20200424223504-26b90655e0ce // indirect
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
 	github.com/BurntSushi/toml v0.4.1 // indirect
@@ -62,15 +62,12 @@ require (
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
 	github.com/filecoin-project/go-amt-ipld/v3 v3.1.0 // indirect
 	github.com/filecoin-project/go-amt-ipld/v4 v4.0.0 // indirect
-	github.com/filecoin-project/go-bitfield v0.2.4 // indirect
 	github.com/filecoin-project/go-hamt-ipld v0.1.5 // indirect
 	github.com/filecoin-project/go-hamt-ipld/v2 v2.0.0 // indirect
 	github.com/filecoin-project/go-hamt-ipld/v3 v3.1.0 // indirect
-	github.com/filecoin-project/specs-actors v0.9.15 // indirect
 	github.com/filecoin-project/specs-actors/v2 v2.3.6 // indirect
 	github.com/filecoin-project/specs-actors/v3 v3.1.2 // indirect
 	github.com/filecoin-project/specs-actors/v4 v4.0.2 // indirect
-	github.com/filecoin-project/specs-actors/v5 v5.0.6 // indirect
 	github.com/filecoin-project/specs-actors/v7 v7.0.1 // indirect
 	github.com/filecoin-project/specs-actors/v8 v8.0.1 // indirect
 	github.com/filecoin-project/specs-storage v0.4.1 // indirect
@@ -163,6 +160,7 @@ require (
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/viper v1.7.1 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/uber/jaeger-client-go v2.25.0+incompatible // indirect
 	github.com/ugorji/go/codec v1.2.4 // indirect
@@ -177,6 +175,7 @@ require (
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/api v0.56.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect

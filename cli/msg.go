@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/utils/actor_parser"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
@@ -19,6 +17,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/venus-messager/cli/tablewriter"
+	"github.com/filecoin-project/venus-messager/utils"
+	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -128,6 +128,13 @@ var searchCmd = &cli.Command{
 		}
 
 		if params != nil {
+			res, err := utils.TryConvertParams(params)
+			if err != nil {
+				fmt.Printf("try convert params failed %v\n", err)
+			} else {
+				params = res
+			}
+
 			bytes, _ := json.MarshalIndent(params, "", "\t")
 			if len(bytes) != 0 {
 				fmt.Printf("- params information:\n%s\n", string(bytes))
@@ -135,6 +142,12 @@ var searchCmd = &cli.Command{
 		}
 
 		if rets != nil {
+			res, err := utils.TryConvertParams(rets)
+			if err != nil {
+				fmt.Printf("try convert ret failed %v\n", err)
+			} else {
+				rets = res
+			}
 			bytes, _ := json.MarshalIndent(rets, "", "\t")
 			if len(bytes) != 0 {
 				fmt.Printf("- returns information:\n%s\n", string(bytes))
