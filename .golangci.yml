@@ -16,18 +16,15 @@ linters:
     - stylecheck
     - gosimple
     - goimports
-
 issues:
   exclude:
     - "should have( a package)? comment"
     - "var-naming"
     - "(ST1003)"
-
-  exclude-rules:
   exclude-use-default: false
-
 linters-settings:
   goconst:
     min-occurrences: 6
 run:
-skip-dirs-use-default: false
+  skip-dirs-use-default: false
+

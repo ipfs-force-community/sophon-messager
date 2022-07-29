@@ -11,15 +11,14 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
-	"github.com/filecoin-project/venus/pkg/constants"
-	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs/go-cid"
-	"github.com/urfave/cli/v2"
-
 	"github.com/filecoin-project/venus-messager/cli/tablewriter"
 	"github.com/filecoin-project/venus-messager/utils"
-	"github.com/filecoin-project/venus-messager/utils/actor_parser"
+	"github.com/filecoin-project/venus/pkg/constants"
+	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	msgparser "github.com/filecoin-project/venus/venus-shared/utils/msg_parser"
+	"github.com/ipfs/go-cid"
+	"github.com/urfave/cli/v2"
 )
 
 var ReallyDoItFlag = &cli.BoolFlag{
@@ -118,7 +117,7 @@ var searchCmd = &cli.Command{
 		}
 		fmt.Printf("- message information:\n%s\n", string(bytes))
 
-		paser, err := actor_parser.NewMessageParser(nodeAPI)
+		paser, err := msgparser.NewMessageParser(nodeAPI)
 		if err != nil {
 			return nil
 		}
