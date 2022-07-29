@@ -12,10 +12,9 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	cbg "github.com/whyrusleeping/cbor-gen"
-
-	"github.com/filecoin-project/venus-messager/utils/actor_parser"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	msgparser "github.com/filecoin-project/venus/venus-shared/utils/msg_parser"
+	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 func (ms *MessageService) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
@@ -87,10 +86,11 @@ func (ms *MessageService) decodeTypedParamsFromJSON(ctx context.Context, to addr
 		return nil, err
 	}
 
-	parser, err := actor_parser.NewMessageParser(ms.nodeClient)
+	parser, err := msgparser.NewMessageParser(ms.nodeClient)
 	if err != nil {
 		return nil, err
 	}
+
 	methodMeta, found := parser.GetMethodMeta(act.Code, method)
 	if !found {
 		return nil, fmt.Errorf("method %d not found on actor %s", method, act.Code)
