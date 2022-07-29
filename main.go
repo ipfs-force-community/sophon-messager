@@ -231,7 +231,6 @@ func runAction(ctx *cli.Context) error {
 	}
 	lst := manet.NetListener(apiListener)
 
-	shutdownChan := make(chan struct{})
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		// prover
@@ -246,7 +245,6 @@ func runAction(ctx *cli.Context) error {
 		fx.Provide(func() filestore.FSRepo {
 			return fsRepo
 		}),
-		fx.Supply((ShutdownChan)(shutdownChan)),
 
 		fx.Provide(service.NewMessageState),
 		// db
@@ -281,21 +279,32 @@ func runAction(ctx *cli.Context) error {
 	app := fx.New(provider, invoker, apiOption)
 	if err := app.Start(ctx.Context); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
-		return fmt.Errorf("starting node: %w", err)
+		return fmt.Errorf("starting app: %w", err)
 	}
 
+	shutdownChan := make(chan struct{})
+	// wait for exit to complete
+	finishCh := make(chan struct{})
 	go func() {
 		<-shutdownChan
+
 		log.Warn("received shutdown")
 
 		log.Warn("Shutting down...")
 		if err := app.Stop(ctx.Context); err != nil {
 			log.Errorf("graceful shutting down failed: %s", err)
 		}
-		log.Warn("Graceful shutdown successful")
+		log.Info("Graceful shutdown successful")
+
+		close(finishCh)
 	}()
 
 	<-app.Done()
+
+	shutdownChan <- struct{}{}
+
+	<-finishCh
+
 	return nil
 }
 

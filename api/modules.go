@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 
@@ -55,15 +56,15 @@ func RunAPI(lc fx.Lifecycle, jwtCli *jwt.Client, lst net.Listener, log *log.Logg
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
-				log.Info("Start rpcserver ", lst.Addr())
-				if err := apiserv.Serve(lst); err != nil {
-					log.Errorf("Start rpcserver failed: %v", err)
+				log.Info("start rpcserver ", lst.Addr())
+				if err := apiserv.Serve(lst); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Errorf("start rpcserver failed: %v", err)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			return lst.Close()
+			return apiserv.Shutdown(ctx)
 		},
 	})
 	return nil
