@@ -43,8 +43,7 @@ type DbConfig struct {
 }
 
 type SqliteConfig struct {
-	File  string `toml:"file"`
-	Debug bool   `toml:"debug"`
+	Debug bool `toml:"debug"`
 }
 
 type MySqlConfig struct {
@@ -72,9 +71,8 @@ const (
 type MessageServiceConfig struct {
 	WaitingChainHeadStableDuration time.Duration `toml:"WaitingChainHeadStableDuration"`
 
-	TipsetFilePath  string `toml:"tipsetFilePath"`
-	SkipProcessHead bool   `toml:"skipProcessHead"`
-	SkipPushMessage bool   `toml:"skipPushMessage"`
+	SkipProcessHead bool `toml:"skipProcessHead"`
+	SkipPushMessage bool `toml:"skipPushMessage"`
 }
 
 type MessageStateConfig struct {
@@ -104,7 +102,6 @@ func DefaultConfig() *Config {
 				ConnMaxLifeTime:  time.Second * 60,
 				Debug:            false,
 			},
-			Sqlite: SqliteConfig{File: "message.db"},
 		},
 		JWT: JWTConfig{
 			AuthURL: "http://127.0.0.1:8989",
@@ -128,7 +125,6 @@ func DefaultConfig() *Config {
 		MessageService: MessageServiceConfig{
 			WaitingChainHeadStableDuration: DefWaitingChainHeadStableDuration,
 
-			TipsetFilePath:  "tipset.json",
 			SkipProcessHead: false,
 			SkipPushMessage: false,
 		},
