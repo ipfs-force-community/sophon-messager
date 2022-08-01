@@ -1,7 +1,6 @@
 package filestore
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -45,37 +44,6 @@ func InitFSRepo(repoPath string, cfg *config.Config) (FSRepo, error) {
 		return nil, err
 	}
 
-	if cfg.DB.Type == "sqlite" {
-		filePath, err := filepath.Abs(cfg.DB.Sqlite.File)
-		if err != nil {
-			return nil, err
-		}
-		fileName := filepath.Base(cfg.DB.Sqlite.File)
-		fileRootPath := filepath.Dir(filePath)
-		_, err = os.Stat(filePath)
-		if err == nil {
-			if err := copyFile(filePath, filepath.Join(repoPath, fileName)); err != nil {
-				return nil, err
-			}
-			if err := copyFile(filepath.Join(fileRootPath, fileName+"-shm"), filepath.Join(repoPath, fileName+"-shm")); err != nil {
-				return nil, err
-			}
-			if err := copyFile(filepath.Join(fileRootPath, fileName+"-wal"), filepath.Join(repoPath, fileName+"-wal")); err != nil {
-				return nil, err
-			}
-		}
-	}
-	cfg.DB.Sqlite.File = ""
-
-	tsFile := filepath.Base(cfg.MessageService.TipsetFilePath)
-	_, err := os.Stat(cfg.MessageService.TipsetFilePath)
-	if err == nil {
-		if err := copyFile(cfg.MessageService.TipsetFilePath, filepath.Join(repoPath, tsFile)); err != nil {
-			return nil, err
-		}
-	}
-	cfg.MessageService.TipsetFilePath = ""
-
 	if err := utils.WriteConfig(filepath.Join(repoPath, ConfigFile), cfg); err != nil {
 		return nil, err
 	}
@@ -106,18 +74,4 @@ func (r *fsRepo) ReplaceConfig(cfg *config.Config) error {
 	r.cfg = cfg
 
 	return nil
-}
-
-func copyFile(src, dst string) error {
-	f, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(dst, data, 0644)
 }

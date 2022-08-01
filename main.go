@@ -7,7 +7,6 @@ import (
 	"net"
 	_ "net/http/pprof"
 	"os"
-	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/metrics"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -28,7 +27,6 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus-messager/version"
 )
 
@@ -37,13 +35,6 @@ func main() {
 		Name:  "venus message",
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Value:   "./messager.toml",
-				Usage:   "specify config file",
-				Hidden:  true,
-			},
 			&cli.StringFlag{
 				Name:  "repo",
 				Value: "~/.venus-messager",
@@ -116,18 +107,9 @@ var runCmd = &cli.Command{
 }
 
 func runAction(ctx *cli.Context) error {
-	path := ctx.String("config")
-	path, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
-	exist, err := config.Exist(path)
-	if err != nil {
-		return err
-	}
-
 	var fsRepo filestore.FSRepo
+	cfg := config.DefaultConfig()
+
 	repoPath, err := homedir.Expand(ctx.String("repo"))
 	if err != nil {
 		return err
@@ -141,53 +123,30 @@ func runAction(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		cfg = fsRepo.Config()
 	}
 
-	var cfg *config.Config
-	if !exist && !hasFSRepo {
-		cfg = config.DefaultConfig()
-		err = updateFlag(cfg, ctx)
-		if err != nil {
-			return err
-		}
+	// generate jwt token for command
+	if len(cfg.JWT.Local.Secret) == 0 {
 		if err := genSecret(&cfg.JWT); err != nil {
 			return fmt.Errorf("failed to generate secret %v", err)
 		}
-	} else {
 		if hasFSRepo {
-			cfg = fsRepo.Config()
-		} else {
-			cfg = config.DefaultConfig()
-			err = utils.ReadConfig(path, cfg)
-			if err != nil {
+			if err := fsRepo.ReplaceConfig(cfg); err != nil {
 				return err
 			}
 		}
-		if len(cfg.JWT.Local.Secret) == 0 {
-			if err := genSecret(&cfg.JWT); err != nil {
-				return fmt.Errorf("failed to generate secret %v", err)
-			}
-			if hasFSRepo {
-				if err := fsRepo.ReplaceConfig(cfg); err != nil {
-					return err
-				}
-			} else {
-				if err = utils.WriteConfig(path, cfg); err != nil {
-					return err
-				}
-			}
-		}
 	}
+
+	if err = updateFlag(cfg, ctx); err != nil {
+		return err
+	}
+
 	if !hasFSRepo {
 		fsRepo, err = filestore.InitFSRepo(repoPath, cfg)
 		if err != nil {
 			return err
 		}
-	}
-	cfg = fsRepo.Config()
-
-	if err = updateFlag(cfg, ctx); err != nil {
-		return err
 	}
 
 	log, err := log.SetLogger(&cfg.Log)
@@ -374,12 +333,15 @@ func genSecret(cfg *config.JWTConfig) error {
 }
 
 func hasFSRepo(repoPath string) (bool, error) {
-	_, err := os.Stat(repoPath)
+	fi, err := os.Stat(repoPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return false, nil
 		}
 		return false, err
+	}
+	if !fi.IsDir() {
+		return false, fmt.Errorf("%s is not a folder", repoPath)
 	}
 
 	return true, nil
