@@ -50,7 +50,7 @@ func main() {
 		},
 	}
 
-	app.Version = version.Version + "--" + version.GitCommit
+	app.Version = version.Version
 	app.Setup()
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)

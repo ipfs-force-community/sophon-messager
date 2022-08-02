@@ -1,7 +1,9 @@
 package version
 
 var (
-	GitCommit string
+	CurrentCommit string
 
-	Version = "v1.6.0"
+	BuildVersion = "v1.6.0"
+
+	Version = BuildVersion + CurrentCommit
 )
