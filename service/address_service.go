@@ -8,11 +8,11 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 
-	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -25,13 +25,13 @@ type AddressService struct {
 
 	sps          *SharedParamsService
 	nodeClient   v1.FullNode
-	walletClient *gateway.IWalletCli
+	walletClient gateway.IWalletClient
 }
 
 func NewAddressService(repo repo.Repo,
 	logger *log.Logger,
 	sps *SharedParamsService,
-	walletClient *gateway.IWalletCli,
+	walletClient gateway.IWalletClient,
 	nodeClient v1.FullNode) *AddressService {
 	addressService := &AddressService{
 		repo: repo,

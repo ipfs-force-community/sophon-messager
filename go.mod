@@ -18,7 +18,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
-	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
 	github.com/ipfs-force-community/venus-gateway v1.6.0
 	github.com/ipfs/go-cid v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0

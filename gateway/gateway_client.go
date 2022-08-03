@@ -8,36 +8,20 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
+	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 )
 
-type IWalletClient interface {
-	WalletHas(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
-	WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error)
-}
-
-// IWalletCli *api.MessageImp and *gateway.WalletClient both implement IWalletClient, so injection will fail
-type IWalletCli struct {
-	IWalletClient
-}
-
-type WalletClient struct {
-	Internal struct {
-		WalletHas  func(ctx context.Context, supportAccount string, addr address.Address) (bool, error)
-		WalletSign func(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error)
-	}
-}
-
 type WalletProxy struct {
-	clients map[string]*WalletClient
+	clients map[string]gateway.IWalletClient
 	logger  *log.Logger
 
 	mutx                sync.RWMutex
-	avaliabeClientCache map[cacheKey]*WalletClient
+	avaliabeClientCache map[cacheKey]gateway.IWalletClient
 }
 
 type cacheKey string
@@ -46,7 +30,7 @@ func newCacheKey(account string, addr address.Address) cacheKey {
 	return cacheKey("walletClientCache:" + account + addr.String())
 }
 
-func (w *WalletProxy) putCache(account string, addr address.Address, client *WalletClient) {
+func (w *WalletProxy) putCache(account string, addr address.Address, client gateway.IWalletClient) {
 	w.mutx.Lock()
 	defer w.mutx.Unlock()
 	w.avaliabeClientCache[newCacheKey(account, addr)] = client
@@ -63,7 +47,7 @@ func (w *WalletProxy) delCache(account string, addr address.Address) bool {
 	return exist
 }
 
-func (w *WalletProxy) getCachedClient(account string, addr address.Address) *WalletClient {
+func (w *WalletProxy) getCachedClient(account string, addr address.Address) gateway.IWalletClient {
 	key := newCacheKey(account, addr)
 	w.mutx.RLock()
 	defer w.mutx.RUnlock()
@@ -72,12 +56,12 @@ func (w *WalletProxy) getCachedClient(account string, addr address.Address) *Wal
 
 // todo: think about 'fastSelectAvaClient' was called parallelly,
 //  input the same params('account', 'address')
-func (w *WalletProxy) fastSelectAvaClient(ctx context.Context, account string, addr address.Address) (*WalletClient, error) {
+func (w *WalletProxy) fastSelectAvaClient(ctx context.Context, account string, addr address.Address) (gateway.IWalletClient, error) {
 	var g = &sync.WaitGroup{}
-	var ch = make(chan *WalletClient, 1)
+	var ch = make(chan gateway.IWalletClient, 1)
 	for url, c := range w.clients {
 		g.Add(1)
-		go func(url string, c *WalletClient) {
+		go func(url string, c gateway.IWalletClient) {
 			has, err := c.WalletHas(ctx, account, addr)
 			if err != nil {
 				w.logger.Errorf("fastSelectAvaClient, call %s:'WalletHas' failed:%s", url, err)
@@ -147,25 +131,25 @@ func (w *WalletProxy) WalletSign(ctx context.Context, account string,
 	return s, err
 }
 
-func (w *WalletClient) WalletHas(ctx context.Context, supportAccount string, addr address.Address) (bool, error) {
-	return w.Internal.WalletHas(ctx, supportAccount, addr)
+func (w *WalletProxy) ListWalletInfo(ctx context.Context) ([]*gtypes.WalletDetail, error) {
+	panic("implement me")
 }
 
-func (w *WalletClient) WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error) {
-	return w.Internal.WalletSign(ctx, account, addr, toSign, meta)
+func (w *WalletProxy) ListWalletInfoByWallet(ctx context.Context, account string) (*gtypes.WalletDetail, error) {
+	panic("implement me")
 }
 
-func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProxy, jsonrpc.ClientCloser, error) {
+func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (gateway.IWalletClient, jsonrpc.ClientCloser, error) {
 	var proxy = &WalletProxy{
-		clients:             make(map[string]*WalletClient),
-		avaliabeClientCache: make(map[cacheKey]*WalletClient),
+		clients:             make(map[string]gateway.IWalletClient),
+		avaliabeClientCache: make(map[cacheKey]gateway.IWalletClient),
 		logger:              logger}
 	var ctx = context.Background()
 
 	var closers []jsonrpc.ClientCloser
 
 	for _, url := range cfg.Url {
-		c, cls, err := newWalletClient(ctx, cfg.Token, url)
+		c, cls, err := gateway.DialIGatewayRPC(ctx, url, cfg.Token, nil)
 
 		if err != nil {
 			return nil, nil, fmt.Errorf("create geteway client with url:%s failed:%w", url, err)
@@ -188,15 +172,4 @@ func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProx
 	return proxy, totalCloser, nil
 }
 
-func newWalletClient(ctx context.Context, token, url string) (*WalletClient, jsonrpc.ClientCloser, error) {
-	apiInfo := apiinfo.NewAPIInfo(url, token)
-	addr, err := apiInfo.DialArgs("v0")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	walletClient := WalletClient{}
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Gateway", []interface{}{&walletClient.Internal}, apiInfo.AuthHeader())
-
-	return &walletClient, closer, err
-}
+var _ gateway.IWalletClient = &WalletProxy{}
