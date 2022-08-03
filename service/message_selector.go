@@ -12,11 +12,11 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"modernc.org/mathutil"
 
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -57,7 +57,7 @@ func NewMessageSelector(repo repo.Repo,
 	nodeClient v1.FullNode,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	walletClient *gateway.IWalletCli) *MessageSelector {
+	walletClient gateway.IWalletClient) *MessageSelector {
 	return &MessageSelector{repo: repo,
 		log:            logger,
 		cfg:            cfg,

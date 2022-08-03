@@ -10,6 +10,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/metrics"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayapi "github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	"github.com/mitchellh/go-homedir"
 
 	ma "github.com/multiformats/go-multiaddr"
@@ -174,9 +175,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	var walletClient *gateway.IWalletCli
 	walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway, log)
-	walletClient = &gateway.IWalletCli{IWalletClient: walletCli}
 	if err != nil {
 		return err
 	}
@@ -197,7 +196,9 @@ func runAction(ctx *cli.Context) error {
 			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
 		fx.Supply(client),
-		fx.Supply(walletClient),
+		fx.Provide(func() gatewayapi.IWalletClient {
+			return walletCli
+		}),
 		fx.Provide(func() v1.FullNode {
 			return client
 		}),

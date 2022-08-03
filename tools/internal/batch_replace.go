@@ -10,6 +10,7 @@ import (
 	cli2 "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/tools/config"
 	"github.com/filecoin-project/venus-messager/utils"
+	mapi "github.com/filecoin-project/venus/venus-shared/api/messager"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/urfave/cli/v2"
@@ -49,7 +50,7 @@ var BatchReplaceCmd = &cli.Command{
 			return fmt.Errorf("read config failed: %v", err)
 		}
 
-		messagerAPI, closer, err := cli2.NewMessagerAPI(ctx, cfg.Messager.URL, cfg.Messager.Token)
+		messagerAPI, closer, err := mapi.DialIMessagerRPC(ctx, cfg.Messager.URL, cfg.Messager.Token, nil)
 		if err != nil {
 			return err
 		}
