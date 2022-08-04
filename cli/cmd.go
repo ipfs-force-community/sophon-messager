@@ -8,7 +8,6 @@ import (
 	"github.com/filecoin-project/venus-messager/filestore"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/utils"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 
@@ -24,19 +23,7 @@ func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) 
 		return nil, func() {}, err
 	}
 
-	return NewMessagerAPI(ctx.Context, cfg.API.Address, cfg.JWT.Local.Token)
-}
-
-func NewMessagerAPI(ctx context.Context, addr, token string) (messager.IMessager, jsonrpc.ClientCloser, error) {
-	apiInfo := apiinfo.NewAPIInfo(addr, token)
-	addr, err := apiInfo.DialArgs("v0")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	client, closer, err := messager.NewIMessagerRPC(ctx, addr, apiInfo.AuthHeader())
-
-	return client, closer, err
+	return messager.DialIMessagerRPC(ctx.Context, cfg.API.Address, cfg.JWT.Local.Token, nil)
 }
 
 func getNodeAPI(ctx *cli.Context) (v1.FullNode, jsonrpc.ClientCloser, error) {

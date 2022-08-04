@@ -20,13 +20,13 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 
 	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -84,7 +84,7 @@ func NewMessageService(repo repo.Repo,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
-	walletClient *gateway.IWalletCli) (*MessageService, error) {
+	walletClient gateway.IWalletClient) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,

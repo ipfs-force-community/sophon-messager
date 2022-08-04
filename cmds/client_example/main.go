@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -81,12 +80,7 @@ func main() {
 	fmt.Println("count      : ", count)
 	fmt.Println("value      : ", value)
 
-	apiInfo := apiinfo.NewAPIInfo(apiAddress, token)
-	addr, err := apiInfo.DialArgs("v0")
-	if err != nil {
-		log.Fatal(err)
-	}
-	client, closer, err := messager.NewIMessagerRPC(context.Background(), addr, apiInfo.AuthHeader())
+	client, closer, err := messager.DialIMessagerRPC(context.Background(), apiAddress, token, nil)
 	if err != nil {
 		log.Fatal(err)
 		return

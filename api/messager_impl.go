@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/version"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -224,4 +225,10 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		ParamsSrv:  implParams.SharedParamsService,
 		log:        implParams.Logger,
 	}
+}
+
+func (m MessageImp) Version(_ context.Context) (venusTypes.Version, error) {
+	return venusTypes.Version{
+		Version: version.Version,
+	}, nil
 }
