@@ -3,12 +3,14 @@ package testhelper
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,6 +36,14 @@ func ResolveAddr(t *testing.T, addr address.Address) address.Address {
 		t.Errorf("resolve ID address failed %s %v", addr, err)
 	}
 	return newAddr
+}
+
+func ResolveAddrs(t *testing.T, addrs []address.Address) []address.Address {
+	newAddrs := make([]address.Address, 0, len(addrs))
+	for _, addr := range addrs {
+		newAddrs = append(newAddrs, ResolveAddr(t, addr))
+	}
+	return newAddrs
 }
 
 func AddressProtocolToSignType(protocol address.Protocol) crypto.SigType {
@@ -131,4 +141,22 @@ func SliceToMap(in interface{}) map[string]interface{} {
 		}
 	}
 	return m
+}
+
+func MsgGroupByAddress(msgs []*messager.Message) map[address.Address][]*messager.Message {
+	addrMsgs := make(map[address.Address][]*messager.Message)
+	for _, msg := range msgs {
+		addrMsgs[msg.From] = append(addrMsgs[msg.From], msg)
+	}
+
+	return addrMsgs
+}
+
+func IsSortedByNonce(t *testing.T, msgs []*messager.Message) {
+	addrMsgs := MsgGroupByAddress(msgs)
+	for _, m := range addrMsgs {
+		assert.True(t, sort.SliceIsSorted(m, func(i, j int) bool {
+			return m[i].Nonce < m[j].Nonce
+		}))
+	}
 }

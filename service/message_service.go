@@ -129,7 +129,7 @@ func (ms *MessageService) verifyNetworkName() error {
 	}
 	if len(ms.tsCache.NetworkName) != 0 {
 		if ms.tsCache.NetworkName != string(networkName) {
-			return fmt.Errorf("network name not match, need %s, had %s, please remove `%s`",
+			return fmt.Errorf("network name not match, expect %s, actual %s, please remove `%s`",
 				networkName, ms.tsCache.NetworkName, ms.fsRepo.TipsetFile())
 		}
 		return nil
@@ -257,7 +257,10 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 				continue
 			//OnChain
 			case types.ReplacedMsg:
-				fallthrough
+				if msg.Confidence > int64(confidence) {
+					return msg, nil
+				}
+				continue
 			case types.OnChainMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
@@ -287,10 +290,14 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 	if err != nil {
 		return nil, err
 	}
-	if msg.State == types.OnChainMsg {
+	if isChainMsg(msg.State) {
 		msg.Confidence = int64(ts.Height()) - msg.Height
 	}
 	return msg, nil
+}
+
+func isChainMsg(msgState types.MessageState) bool {
+	return msgState == types.OnChainMsg || msgState == types.ReplacedMsg
 }
 
 func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -306,7 +313,7 @@ func (ms *MessageService) GetMessageByCid(ctx context.Context, id cid.Cid) (*typ
 	if err != nil {
 		return nil, err
 	}
-	if msg.State == types.OnChainMsg {
+	if isChainMsg(msg.State) {
 		msg.Confidence = int64(ts.Height()) - msg.Height
 	}
 	return msg, nil
@@ -325,7 +332,7 @@ func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid c
 	if err != nil {
 		return nil, err
 	}
-	if msg.State == types.OnChainMsg {
+	if isChainMsg(msg.State) {
 		msg.Confidence = int64(ts.Height()) - msg.Height
 	}
 	return msg, nil
@@ -340,7 +347,7 @@ func (ms *MessageService) GetMessageByUnsignedCid(ctx context.Context, unsignedC
 	if err != nil {
 		return nil, err
 	}
-	if msg.State == types.OnChainMsg {
+	if isChainMsg(msg.State) {
 		msg.Confidence = int64(ts.Height()) - msg.Height
 	}
 	return msg, nil
@@ -355,7 +362,7 @@ func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from add
 	if err != nil {
 		return nil, err
 	}
-	if msg.State == types.OnChainMsg {
+	if isChainMsg(msg.State) {
 		msg.Confidence = int64(ts.Height()) - msg.Height
 	}
 	return msg, nil
@@ -372,7 +379,7 @@ func (ms *MessageService) ListMessageByFromState(ctx context.Context, from addre
 	}
 
 	for _, msg := range msgs {
-		if msg.State == types.OnChainMsg {
+		if isChainMsg(msg.State) {
 			msg.Confidence = int64(ts.Height()) - msg.Height
 		}
 	}
@@ -390,7 +397,7 @@ func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, er
 	}
 
 	for _, msg := range msgs {
-		if msg.State == types.OnChainMsg {
+		if isChainMsg(msg.State) {
 			msg.Confidence = int64(ts.Height()) - msg.Height
 		}
 	}
@@ -408,7 +415,7 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	}
 
 	for _, msg := range msgs {
-		if msg.State == types.OnChainMsg {
+		if isChainMsg(msg.State) {
 			msg.Confidence = int64(ts.Height()) - msg.Height
 		}
 	}
@@ -477,7 +484,7 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 
 	defer ms.log.Infof("%d head wait to process", len(ms.headChans))
 
-	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
+	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Parents()) {
 		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
 		ms.headChans <- &headChan{
@@ -602,23 +609,51 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venu
 
 func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.TipSet) error {
 	// select message
-	tSelect := time.Now()
+	startSelectMsg := time.Now()
 	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
 	if err != nil {
 		return err
 	}
+	selectMsgSpent := time.Since(startSelectMsg)
 	ms.log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
 	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
 	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
 	stats.Record(ctx, metrics.ExpiredMsgNumOfLastRound.M(int64(len(selectResult.ExpireMsg))))
 	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
 
-	tSaveDb := time.Now()
+	startSaveDB := time.Now()
 	ms.log.Infof("start to save to database")
-	//save to db
-	if err = ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+	if err := ms.saveSelectedMessagesToDB(ctx, selectResult); err != nil {
+		return err
+	}
+	saveDBSpent := time.Since(startSaveDB)
+	ms.log.Infof("success to save to database")
+
+	startUpdateCache := time.Now()
+	if err := ms.updateCacheForSelectedMessages(selectResult); err != nil {
+		return err
+	}
+	updateCacheSpent := time.Since(startUpdateCache)
+	ms.log.Infof("success to update memory cache")
+
+	// broad cast push to node in config, push to multi node in db config, publish to pubsub
+	go func() {
+		startPush := time.Now()
+		ms.multiPushMessages(ctx, selectResult)
+		ms.log.Infof("Push message select spent:%d , save db spent:%d ,update cache spent:%d, push to node spent: %d",
+			selectMsgSpent.Milliseconds(),
+			saveDBSpent.Milliseconds(),
+			updateCacheSpent.Milliseconds(),
+			time.Since(startPush).Milliseconds(),
+		)
+	}()
+	return err
+}
+
+func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectResult *MsgSelectResult) error {
+	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		//保存消息
-		err = txRepo.MessageRepo().ExpireMessage(selectResult.ExpireMsg)
+		err := txRepo.MessageRepo().ExpireMessage(selectResult.ExpireMsg)
 		if err != nil {
 			return err
 		}
@@ -648,11 +683,10 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		ms.log.Errorf("save signed message failed %v", err)
 		return err
 	}
+	return nil
+}
 
-	ms.log.Infof("success to save to database")
-
-	tCacheUpdate := time.Now()
-	//update cache
+func (ms *MessageService) updateCacheForSelectedMessages(selectResult *MsgSelectResult) error {
 	for _, msg := range selectResult.SelectMsg {
 		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
 			Message:   msg.Message,
@@ -689,58 +723,50 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			return err
 		}
 	}
-	ms.log.Infof("success to update memory cache")
 
-	//broad cast  push to node in config ,push to multi node in db config, publish to pubsub
-	go func() {
-		tPush := time.Now()
-		pushMsgByAddr := make(map[address.Address][]*venusTypes.SignedMessage)
-		for _, msg := range selectResult.ToPushMsg {
-			if val, ok := pushMsgByAddr[msg.Message.From]; ok {
-				pushMsgByAddr[msg.Message.From] = append(val, msg)
-			} else {
-				pushMsgByAddr[msg.Message.From] = []*venusTypes.SignedMessage{msg}
+	return nil
+}
+
+func (ms *MessageService) multiPushMessages(ctx context.Context, selectResult *MsgSelectResult) {
+	pushMsgByAddr := make(map[address.Address][]*venusTypes.SignedMessage)
+	for _, msg := range selectResult.ToPushMsg {
+		if val, ok := pushMsgByAddr[msg.Message.From]; ok {
+			pushMsgByAddr[msg.Message.From] = append(val, msg)
+		} else {
+			pushMsgByAddr[msg.Message.From] = []*venusTypes.SignedMessage{msg}
+		}
+	}
+
+	for addr, msgs := range pushMsgByAddr {
+		sort.Slice(msgs, func(i, j int) bool {
+			return msgs[i].Message.Nonce < msgs[j].Message.Nonce
+		})
+		pushMsgByAddr[addr] = msgs
+	}
+
+	ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
+	for addr, msgs := range pushMsgByAddr {
+		//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
+		//issue https://github.com/filecoin-project/venus/issues/4860
+		if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
+			if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
+				ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
 			}
 		}
-
-		for addr, msgs := range pushMsgByAddr {
-			sort.Slice(msgs, func(i, j int) bool {
-				return msgs[i].Message.Nonce < msgs[j].Message.Nonce
-			})
-			pushMsgByAddr[addr] = msgs
-		}
-
-		ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
-		for addr, msgs := range pushMsgByAddr {
-			//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
-			//issue https://github.com/filecoin-project/venus/issues/4860
-			if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
-				if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
-					ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
+		// publish by pubsub
+		for _, msg := range msgs {
+			if err := ms.Pubsub.Publish(ctx, msg); err != nil {
+				if errors.Is(err, pubsub.ErrPubsubDisabled) {
+					ms.log.Debugf("pubsub not enable %v", err)
+					break
+				} else {
+					ms.log.Errorf("publish message %s to pubsub failed %v", msg.Cid(), err)
 				}
 			}
-			// publish by pubsub
-			for _, msg := range msgs {
-				if err := ms.Pubsub.Publish(ctx, msg); err != nil {
-					if errors.Is(err, pubsub.ErrPubsubDisabled) {
-						ms.log.Debugf("pubsub not enable %v", err)
-					} else {
-						ms.log.Errorf("publish message to pubsub failed %v", err)
-					}
-				}
-			}
 		}
+	}
 
-		ms.multiNodeToPush(ctx, pushMsgByAddr)
-
-		ms.log.Infof("Push message select spent:%d , save db spent:%d ,update cache spent:%d, push to node spent: %d",
-			time.Since(tSelect).Milliseconds(),
-			time.Since(tSaveDb).Milliseconds(),
-			time.Since(tCacheUpdate).Milliseconds(),
-			time.Since(tPush).Milliseconds(),
-		)
-	}()
-	return err
+	ms.multiNodeToPush(ctx, pushMsgByAddr)
 }
 
 type nodeClient struct {
@@ -1025,9 +1051,6 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 	if err != nil {
 		return nil
 	}
-	if msg.State == types.OnChainMsg {
-		return fmt.Errorf("message already on chain")
-	}
 	if msg.State != types.FillMsg {
 		return fmt.Errorf("need FillMsg got %s", msg.State)
 	}
@@ -1134,7 +1157,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 				)
 				stats.Record(ctx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
 
-				actor, err := ms.addressService.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
+				actor, err := ms.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
 				if err != nil {
 					ms.addressService.log.Errorf("get actor err: %s", err)
 				} else {

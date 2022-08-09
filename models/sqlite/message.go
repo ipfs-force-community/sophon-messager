@@ -216,9 +216,9 @@ func (m *sqliteMessageRepo) ListFilledMessageBelowNonce(addr address.Address, no
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListChainMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "height=? AND state=?", height, types.FillMsg).Error
+	err := m.DB.Find(&sqlMsgs, "height=? AND state=?", height, types.OnChainMsg).Error
 	if err != nil {
 		return nil, err
 	}

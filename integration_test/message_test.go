@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -17,8 +15,10 @@ import (
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 )
@@ -27,7 +27,7 @@ func TestMessageAPI(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.DefaultConfig()
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
-	cfg.MessageService.WaitingChainHeadStableDuration = 2 * time.Second
+	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg)
 	assert.NoError(t, err)
@@ -335,7 +335,6 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.
 	checkCreatedAt := func(msgs []*types.Message, isAsc bool) {
 		msgLen := len(msgs)
 		for i := 0; i < msgLen-1; i++ {
-			t.Log(i, msgs[i].CreatedAt, msgs[i+1].CreatedAt)
 			if isAsc {
 				assert.True(t, msgs[i].CreatedAt.Before(msgs[i+1].CreatedAt))
 			} else {
@@ -486,9 +485,9 @@ func testListBlockedMessage(ctx context.Context, t *testing.T, api messager.IMes
 			params := &types.ReplacMessageParams{
 				ID:             msg.ID,
 				Auto:           false,
-				GasLimit:       msg.GasLimit,
+				GasLimit:       testhelper.DefGasUsed,
 				GasPremium:     testhelper.DefGasPremium,
-				GasFeecap:      msg.GasFeeCap,
+				GasFeecap:      testhelper.DefGasFeeCap,
 				GasOverPremium: 0,
 			}
 			c, err := api.ReplaceMessage(ctx, params)
@@ -651,6 +650,11 @@ func testReplaceMessage(ctx context.Context, t *testing.T, api messager.IMessage
 		gasLimit := testhelper.DefGasUsed
 		gasFeeCap := testhelper.DefGasFeeCap
 		gasPremium := testhelper.DefGasPremium
+		gasOverEstimation := service.DefSharedParams.GasOverEstimation
+		if msg.Meta != nil && msg.Meta.GasOverEstimation != 0 {
+			gasOverEstimation = msg.Meta.GasOverEstimation
+		}
+		gasLimit = int64(float64(gasLimit) * gasOverEstimation)
 		switch idx {
 		case 0:
 			gasFeeCap = big.Add(testhelper.DefGasFeeCap, testhelper.DefGasPremium)

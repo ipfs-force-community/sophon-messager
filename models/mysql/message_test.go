@@ -46,7 +46,7 @@ func TestMessage(t *testing.T) {
 	t.Run("mysql test list blocked message", wrapper(testListBlockedMessage, r, mock))
 	t.Run("mysql test list unchain message by address", wrapper(testListUnChainMessageByAddress, r, mock))
 	t.Run("mysql test list failed message by address", wrapper(testListFilledMessageByAddress, r, mock))
-	t.Run("mysql test list filled message by height", wrapper(testListFilledMessageByHeight, r, mock))
+	t.Run("mysql test list chain message by height", wrapper(testListChainMessageByHeight, r, mock))
 	t.Run("mysql test list unfilled message", wrapper(testListUnFilledMessage, r, mock))
 	t.Run("mysql test list signed message", wrapper(testListSignedMsgs, r, mock))
 	t.Run("mysql test list filled message below nonce", wrapper(testListFilledMessageBelowNonce, r, mock))
@@ -404,15 +404,15 @@ func testListFilledMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlm
 	checkMsgWithIDs(t, res, ids)
 }
 
-func testListFilledMessageByHeight(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+func testListChainMessageByHeight(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	ids := []string{"msg1", "msg2"}
 	height := abi.ChainEpoch(100)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE height=? AND state=?")).
-		WithArgs(height, types.FillMsg).
+		WithArgs(height, types.OnChainMsg).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
-	res, err := r.MessageRepo().ListFilledMessageByHeight(height)
+	res, err := r.MessageRepo().ListChainMessageByHeight(height)
 	assert.NoError(t, err)
 	checkMsgWithIDs(t, res, ids)
 }

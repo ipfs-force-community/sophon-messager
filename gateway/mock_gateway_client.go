@@ -50,12 +50,34 @@ func (m *MockWalletProxy) AddAddress(account string, addrs []address.Address) er
 	return nil
 }
 
+func (m *MockWalletProxy) RemoveAddress(account string, addrs []address.Address) error {
+	m.l.Lock()
+	defer m.l.Unlock()
+
+	currAddrs, ok := m.accountAddrs[account]
+	if ok {
+		for _, addr := range addrs {
+			if addr.Protocol() == address.ID {
+				newAddr, err := testhelper.ResolveIDAddr(addr)
+				if err != nil {
+					return err
+				}
+				delete(currAddrs, newAddr)
+				continue
+			}
+			delete(currAddrs, addr)
+		}
+	}
+
+	return nil
+}
+
 func (m *MockWalletProxy) WalletHas(ctx context.Context, account string, addr address.Address) (bool, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 	currAddrs, ok := m.accountAddrs[account]
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("not found account %v", account)
 	}
 	_, ok = currAddrs[addr]
 
