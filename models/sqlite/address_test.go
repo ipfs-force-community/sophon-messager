@@ -9,13 +9,13 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/testhelper"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestAddress(t *testing.T) {
@@ -111,6 +111,10 @@ func TestAddress(t *testing.T) {
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, nonce, r.Nonce)
+
+		// set nonce for a not exist address
+		err = addressRepo.UpdateNonce(ctx, testhelper.RandAddresses(t, 1)[0], nonce)
+		assert.NoError(t, err)
 	})
 
 	t.Run("UpdateState", func(t *testing.T) {
@@ -119,6 +123,10 @@ func TestAddress(t *testing.T) {
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, state, r.State)
+
+		// set state for a not exist address
+		err = addressRepo.UpdateState(ctx, testhelper.RandAddresses(t, 1)[0], state)
+		assert.NoError(t, err)
 	})
 
 	t.Run("UpdateSelectMsgNum", func(t *testing.T) {
@@ -127,6 +135,10 @@ func TestAddress(t *testing.T) {
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, num, r.SelMsgNum)
+
+		// set select message count for a not exist address
+		err = addressRepo.UpdateSelectMsgNum(ctx, testhelper.RandAddresses(t, 1)[0], num)
+		assert.NoError(t, err)
 	})
 
 	t.Run("UpdateFeeParams", func(t *testing.T) {
@@ -142,6 +154,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, maxFee, r.MaxFee)
 		assert.Equal(t, gasFeeCap, r.GasFeeCap)
 		assert.Equal(t, gasOverPremium, r.GasOverPremium)
+
+		// set fee params for a not exist address
+		err = addressRepo.UpdateFeeParams(ctx, testhelper.RandAddresses(t, 1)[0], gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
+		assert.NoError(t, err)
 	})
 
 	t.Run("DelAddress", func(t *testing.T) {
@@ -155,6 +171,10 @@ func TestAddress(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, types.AddressStateRemoved, r.State)
 		assert.Equal(t, repo.Deleted, r.IsDeleted)
+
+		// delete a not exist address
+		err = addressRepo.DelAddress(ctx, testhelper.RandAddresses(t, 1)[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("HasAddress", func(t *testing.T) {

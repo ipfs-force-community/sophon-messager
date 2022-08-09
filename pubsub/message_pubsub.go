@@ -191,7 +191,7 @@ func (m *MessagePubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
 func (m *MessagePubSub) connectBootstrap(ctx context.Context) error {
 	for _, bsp := range m.bootstrappers {
 		if err := m.host.Connect(ctx, bsp); err != nil {
-			m.log.Warnf("failed to connect to bootstrap peer: %s", err)
+			m.log.Warnf("failed to connect to bootstrap peer: %s %s", bsp.String(), err)
 		}
 	}
 	return nil
@@ -218,7 +218,7 @@ func (m *MessagePubSub) doExpand(ctx context.Context) {
 	pcount := len(m.host.Network().Peers())
 	if pcount == 0 {
 		if len(m.bootstrappers) == 0 {
-			m.log.Warn("no peers connected, and no bootstrappers configured")
+			m.log.Info("no peers connected, and no bootstrappers configured")
 			return
 		}
 

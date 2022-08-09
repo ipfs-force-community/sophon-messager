@@ -274,7 +274,7 @@ func newAddressInfo(t *testing.T) (*types.Address, error) {
 		Nonce:             uint64(randNum),
 		Weight:            randNum,
 		SelMsgNum:         uint64(randNum),
-		State:             types.AddressState(rand.Intn(5)),
+		State:             types.AddressState(rand.Intn(4) + 1),
 		GasOverEstimation: float64(randNum),
 		GasOverPremium:    float64(randNum),
 		MaxFee:            big.NewInt(randNum),

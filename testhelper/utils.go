@@ -1,88 +1,70 @@
 package testhelper
 
 import (
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
-	"github.com/google/uuid"
+	"github.com/filecoin-project/venus/venus-shared/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func NewSignedMessages(count int) []*types.Message {
-	msgs := make([]*types.Message, 0, count)
-	for i := 0; i < count; i++ {
-		msg := NewMessage()
-		msg.Nonce = uint64(i)
-		msg.Signature = &crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())}
-		unsignedCid := msg.Message.Cid()
-		msg.UnsignedCid = &unsignedCid
-		signedCid := (&shared.SignedMessage{
-			Message:   msg.Message,
-			Signature: *msg.Signature,
-		}).Cid()
-		msg.SignedCid = &signedCid
-		msgs = append(msgs, msg)
+// ResolveIDAddr convert a ID address to a BLS address
+func ResolveIDAddr(addr address.Address) (address.Address, error) {
+	if addr.Protocol() != address.ID {
+		return address.Undef, fmt.Errorf("not ID address %d", addr.Protocol())
+	}
+	data := []byte(addr.String()[2:])
+	for i := len(data); i < address.BlsPublicKeyBytes; i++ {
+		data = append(data, byte(i))
 	}
 
-	return msgs
+	return address.NewFromBytes(append([]byte{address.BLS}, data...))
 }
 
-func NewMessages(count int) []*types.Message {
-	msgs := make([]*types.Message, count)
-	for i := 0; i < count; i++ {
-		msgs[i] = NewMessage()
+func ResolveAddr(t *testing.T, addr address.Address) address.Address {
+	if addr.Protocol() != address.ID {
+		return addr
 	}
-
-	return msgs
-}
-
-func NewMessage() *types.Message {
-	return &types.Message{
-		ID:      shared.NewUUID().String(),
-		Message: NewUnsignedMessage(),
-		Meta: &types.SendSpec{
-			ExpireEpoch:       100,
-			MaxFee:            big.NewInt(10),
-			GasOverEstimation: 0.5,
-		},
-		Receipt:   &shared.MessageReceipt{ExitCode: -1},
-		State:     types.UnFillMsg,
-		CreatedAt: time.Now(),
-	}
-}
-
-func NewUnsignedMessage() shared.Message {
-	rand.Seed(time.Now().Unix())
-	uid, _ := uuid.NewUUID()
-	from, _ := address.NewActorAddress(uid[:])
-	uid, _ = uuid.NewUUID()
-	to, _ := address.NewActorAddress(uid[:])
-	return shared.Message{
-		From:       from,
-		To:         to,
-		Value:      big.NewInt(rand.Int63n(1024)),
-		GasLimit:   rand.Int63n(100),
-		GasFeeCap:  abi.NewTokenAmount(2000),
-		GasPremium: abi.NewTokenAmount(1024),
-	}
-}
-
-func ObjectToString(obj interface{}) string {
-	res, err := json.Marshal(obj)
+	newAddr, err := ResolveIDAddr(addr)
 	if err != nil {
-		panic(fmt.Errorf("marshal failed %v", err))
+		t.Errorf("resolve ID address failed %s %v", addr, err)
 	}
-	return string(res)
+	return newAddr
+}
+
+func AddressProtocolToSignType(protocol address.Protocol) crypto.SigType {
+	switch protocol {
+	case address.SECP256K1:
+		return crypto.SigTypeSecp256k1
+	case address.BLS:
+		return crypto.SigTypeBLS
+	default:
+		return crypto.SigTypeUnknown
+	}
+}
+
+func RandAddresses(t *testing.T, count int) []address.Address {
+	var addrs []address.Address
+	if count < 4 {
+		count = 4
+	}
+	for i := 0; i < count; i++ {
+		if i%2 == 0 {
+			addrs = append(addrs, testutil.IDAddressProvider()(t))
+			continue
+		}
+		if i%3 == 0 {
+			addrs = append(addrs, testutil.BlsAddressProvider()(t))
+			continue
+		}
+		addrs = append(addrs, testutil.SecpAddressProvider(32)(t))
+	}
+
+	return addrs
 }
 
 const timeFormat = "2006-01-02 15:04:05.999"
