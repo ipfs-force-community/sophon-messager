@@ -118,6 +118,8 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
+		CreatedAt:  srcMsg.CreatedAt,
+		UpdatedAt:  srcMsg.UpdatedAt,
 	}
 
 	if srcMsg.UnsignedCid != nil {
@@ -212,7 +214,7 @@ func (m *sqliteMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]
 
 func (m *sqliteMessageRepo) ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? AND nonce <", addr.String(), types.FillMsg, nonce).Error
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? AND nonce < ?", addr.String(), types.FillMsg, nonce).Error
 	if err != nil {
 		return nil, err
 	}
@@ -262,8 +264,6 @@ func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 
 func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
-	sqlMsg.CreatedAt = time.Now()
-	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Create(sqlMsg).Error
 }
 
@@ -272,7 +272,7 @@ func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 
-	return m.DB.Omit("created_at").Save(sqlMsg).Error
+	return m.DB.Save(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

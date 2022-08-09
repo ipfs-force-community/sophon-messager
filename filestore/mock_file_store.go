@@ -11,12 +11,12 @@ type mockFileStore struct {
 	cfg  *config.Config
 }
 
-func NewMockFileStore(cfg *config.Config) FSRepo {
-	mfs := &mockFileStore{path: "./", cfg: config.DefaultConfig()}
-	if cfg != nil {
-		mfs.cfg = cfg
+func NewMockFileStore(path string) FSRepo {
+	fsRepo := &mockFileStore{path: "./", cfg: config.DefaultConfig()}
+	if len(path) != 0 {
+		fsRepo.path = path
 	}
-	return mfs
+	return fsRepo
 }
 
 func (mfs *mockFileStore) Path() string {

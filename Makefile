@@ -29,7 +29,6 @@ lint:
 	golangci-lint run
 
 test:
-	rm -rf models/test_sqlite_db*
 	go test -race ./...
 
 

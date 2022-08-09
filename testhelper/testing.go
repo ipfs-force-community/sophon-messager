@@ -1,9 +1,9 @@
-package models
+package testhelper
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
-	"testing"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -11,13 +11,8 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	shared "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/models/sqlite"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/google/uuid"
 )
 
 func NewSignedMessages(count int) []*types.Message {
@@ -78,25 +73,10 @@ func NewUnsignedMessage() shared.Message {
 	}
 }
 
-func ObjectToString(i interface{}) string {
-	res, _ := json.MarshalIndent(i, "", " ")
+func ObjectToString(obj interface{}) string {
+	res, err := json.Marshal(obj)
+	if err != nil {
+		panic(fmt.Errorf("marshal failed %v", err))
+	}
 	return string(res)
-}
-
-func setupRepo(t *testing.T) (repo.Repo, repo.Repo) {
-	fs := filestore.NewMockFileStore(nil)
-	sqliteRepo, err := sqlite.OpenSqlite(fs)
-	assert.NoError(t, err)
-
-	//mysqlRepo, err := mysql.OpenMysql(&config.MySqlConfig{
-	//	ConnectionString: "root:Root1234@(localhost:3306)/messager?parseTime=true&loc=Local",
-	//	MaxOpenConn:      1,
-	//	MaxIdleConn:      1,
-	//	ConnMaxLifeTime:  time.Second * 1,
-	//	Debug:            true,
-	//})
-	assert.NoError(t, err)
-	assert.NoError(t, sqliteRepo.AutoMigrate())
-	//assert.NoError(t, mysqlRepo.AutoMigrate())
-	return sqliteRepo, nil
 }
