@@ -15,6 +15,11 @@ type MsgMeta struct {
 }
 
 func (meta *MsgMeta) Meta() *types.SendSpec {
+	if meta == nil {
+		return &types.SendSpec{
+			MaxFee: big.NewInt(0),
+		}
+	}
 	return &types.SendSpec{
 		ExpireEpoch:       meta.ExpireEpoch,
 		GasOverEstimation: meta.GasOverEstimation,

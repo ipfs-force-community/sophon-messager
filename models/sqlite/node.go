@@ -100,6 +100,7 @@ func (s sqliteNodeRepo) DelNode(name string) error {
 		return err
 	}
 	node.IsDeleted = repo.Deleted
+	node.UpdatedAt = time.Now()
 
 	return s.DB.Save(&node).Error
 }

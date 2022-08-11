@@ -28,4 +28,20 @@ func TestSharedParams(t *testing.T) {
 	res, err := r.GetSharedParams(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, params, res)
+
+	params2 := &messager.SharedSpec{
+		ID:                3,
+		GasOverEstimation: 3.5,
+		MaxFee:            big.NewInt(310),
+		GasFeeCap:         big.NewInt(3100),
+		GasOverPremium:    3.6,
+		SelMsgNum:         10,
+	}
+	_, err = r.SetSharedParams(ctx, params2)
+	assert.Nil(t, err)
+
+	res, err = r.GetSharedParams(ctx)
+	assert.Nil(t, err)
+	params2.ID = 1
+	assert.Equal(t, params2, res)
 }
