@@ -47,6 +47,7 @@ func main() {
 			ccli.NodeCmds,
 			ccli.LogCmds,
 			ccli.SendCmd,
+			ccli.SwarmCmds,
 			runCmd,
 		},
 	}
@@ -166,6 +167,11 @@ func runAction(ctx *cli.Context) error {
 	}
 	defer closer()
 
+	networkName, err := client.StateNetworkName(ctx.Context)
+	if err != nil {
+		return fmt.Errorf("get network name failed %v", err)
+	}
+
 	if err := ccli.LoadBuiltinActors(ctx.Context, client); err != nil {
 		return err
 	}
@@ -192,10 +198,11 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService,
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Bootstrap,
 			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
 		fx.Supply(client),
+		fx.Supply(networkName),
 		fx.Provide(func() gatewayapi.IWalletClient {
 			return walletCli
 		}),

@@ -19,6 +19,7 @@ func MessagerService() fx.Option {
 		fx.Provide(NewAddressService),
 		fx.Provide(NewSharedParamsService),
 		fx.Provide(NewNodeService),
+		fx.Provide(NewMessagePubSub),
 	)
 }
 

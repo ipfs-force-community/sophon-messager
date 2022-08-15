@@ -49,6 +49,8 @@ type MessageService struct {
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
 
+	Pubsub MessagePubSub
+
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
 
@@ -84,7 +86,8 @@ func NewMessageService(repo repo.Repo,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
-	walletClient gateway.IWalletClient) (*MessageService, error) {
+	walletClient gateway.IWalletClient,
+	pubsub *MessagePubSub) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
@@ -97,6 +100,7 @@ func NewMessageService(repo repo.Repo,
 		messageState:       messageState,
 		addressService:     addressService,
 		walletClient:       walletClient,
+		Pubsub:             *pubsub,
 		tsCache:            newTipsetCache(),
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
 		sps:                sps,
@@ -637,7 +641,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	}
 	ms.log.Infof("success to update memory cache")
 
-	//broad cast  push to node in config ,push to multi node in db config
+	//broad cast  push to node in config ,push to multi node in db config, publish to pubsub
 	go func() {
 		tPush := time.Now()
 		pushMsgByAddr := make(map[address.Address][]*venusTypes.SignedMessage)
@@ -665,6 +669,13 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 					ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
 				}
 			}
+			// publish by pubsub
+			for _, msg := range msgs {
+				if err := ms.Pubsub.Publish(ctx, msg); err != nil {
+					ms.log.Errorf("publish message %s with pubsub failed %v", msg.Cid(), err)
+				}
+			}
+
 		}
 
 		ms.multiNodeToPush(ctx, pushMsgByAddr)

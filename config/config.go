@@ -20,6 +20,11 @@ type Config struct {
 	RateLimit      RateLimitConfig        `toml:"rateLimit"`
 	Trace          *metrics.TraceConfig   `toml:"tracing"`
 	Metrics        *metrics.MetricsConfig `toml:"metrics"`
+	Bootstrap      *BootstrapConfig       `toml:"bootstrap"`
+}
+
+type BootstrapConfig struct {
+	Addresses []string `toml:"addresses"`
 }
 
 type NodeConfig struct {
@@ -136,5 +141,8 @@ func DefaultConfig() *Config {
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace:     metrics.DefaultTraceConfig(),
 		Metrics:   metrics.DefaultMetricsConfig(),
+		Bootstrap: &BootstrapConfig{
+			Addresses: []string{},
+		},
 	}
 }
