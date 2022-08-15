@@ -16,3 +16,4 @@ venus-messager-tools
 *.toml
 *.toml.*
 
+__debug_bin
