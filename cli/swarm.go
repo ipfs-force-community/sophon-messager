@@ -12,6 +12,7 @@ var SwarmCmds = &cli.Command{
 	Name:  "swarm",
 	Usage: "swarm commands",
 	Subcommands: []*cli.Command{
+		addressListenCmd,
 		connectCmd,
 		peersCmd,
 	},
@@ -91,6 +92,27 @@ var peersCmd = &cli.Command{
 			fmt.Printf("%s, %s\n", p.ID, p.Addrs)
 		}
 
+		return nil
+	},
+}
+
+var addressListenCmd = &cli.Command{
+	Name:  "listen",
+	Usage: "output the listen addresses",
+	Action: func(ctx *cli.Context) error {
+
+		api, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		peerInfo, err := api.NetAddrsListen(ctx.Context)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s, %s\n", peerInfo.ID, peerInfo.Addrs)
 		return nil
 	},
 }

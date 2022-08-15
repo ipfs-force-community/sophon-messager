@@ -62,10 +62,21 @@ func TestMessagePubSub(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, true, bytes.Equal(resp.Data, buf.Bytes()))
 
+	pi2, err := ps2.AddrsListen(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, pi2, peer.AddrInfo{
+		ID:    ps2.host.ID(),
+		Addrs: ps2.host.Addrs(),
+	})
+
 	pi1, err := ps2.FindPeer(ctx, ps1.host.ID())
 	assert.Nil(t, err)
 	assert.Equal(t, ps1.host.ID(), pi1.ID)
 
 	err = ps2.Connect(ctx, pi1)
 	assert.Nil(t, err)
+
+	pis, err := ps1.Peers(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, pi2.ID, pis[0].ID)
 }

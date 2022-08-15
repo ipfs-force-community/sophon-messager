@@ -136,7 +136,7 @@ func (m *MessagePubSub) Connect(ctx context.Context, p peer.AddrInfo) error {
 
 func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
 	if m.host == nil {
-		return nil, errors.New("node must be online")
+		return nil, errors.New("messager must be online")
 	}
 
 	conns := m.host.Network().Conns()
@@ -154,6 +154,17 @@ func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
 // NetFindPeer searches the libp2p router for a given peer id
 func (m *MessagePubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
 	return m.dht.FindPeer(ctx, peerID)
+}
+
+func (m *MessagePubSub) AddrsListen(ctx context.Context) (peer.AddrInfo, error) {
+	if m.host == nil {
+		return peer.AddrInfo{}, errors.New("messager must be online")
+	}
+
+	return peer.AddrInfo{
+		ID:    m.host.ID(),
+		Addrs: m.host.Addrs(),
+	}, nil
 }
 
 func (m *MessagePubSub) connectBootstrap(ctx context.Context) error {
