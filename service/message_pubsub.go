@@ -121,7 +121,10 @@ func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) e
 }
 
 func (m *MessagePubSub) Run(ctx context.Context) {
-	m.connectBootstrap(ctx)
+	err := m.connectBootstrap(ctx)
+	if err != nil {
+		m.log.Errorf("connect bootstrap failed %s", err)
+	}
 	for range time.Tick(m.period) {
 		m.expandPeers()
 	}
@@ -151,7 +154,7 @@ func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
 	return peers, nil
 }
 
-// NetFindPeer searches the libp2p router for a given peer id
+// FindPeer searches the libp2p router for a given peer id
 func (m *MessagePubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
 	return m.dht.FindPeer(ctx, peerID)
 }
@@ -202,7 +205,10 @@ func (m *MessagePubSub) doExpand(ctx context.Context) {
 		}
 
 		m.log.Info("connecting to bootstrap peers")
-		m.connectBootstrap(ctx)
+		err := m.connectBootstrap(ctx)
+		if err != nil {
+			m.log.Info("failed to connect to bootstrap peers")
+		}
 		return
 	}
 

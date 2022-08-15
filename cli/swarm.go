@@ -58,12 +58,12 @@ var connectCmd = &cli.Command{
 				if err != nil {
 					return fmt.Errorf("invalid peer id: %s", p)
 				}
-				if pi, err := client.NetFindPeer(ctx.Context, peerid); err != nil {
+				pi, err := client.NetFindPeer(ctx.Context, peerid)
+				if err != nil {
 					return err
-				} else {
-					if err := client.NetConnect(ctx.Context, pi); err != nil {
-						return err
-					}
+				}
+				if err := client.NetConnect(ctx.Context, pi); err != nil {
+					return err
 				}
 			}
 		}

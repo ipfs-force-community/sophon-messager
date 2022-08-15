@@ -37,7 +37,7 @@ func TestMessagePubSub(t *testing.T) {
 	sub, err := ps2.topic.Subscribe()
 	assert.Nil(t, err)
 
-	// check conection between ps1 and ps2
+	// check connection between ps1 and ps2
 	time.Sleep(time.Second * 1)
 
 	assert.Equal(t, 1, len(ps1.host.Network().Peers()))
