@@ -12,11 +12,11 @@ type mockFileStore struct {
 }
 
 func NewMockFileStore(path string) FSRepo {
-	fsRepo := &mockFileStore{path: "./", cfg: config.DefaultConfig()}
+	mfs := &mockFileStore{path: "./", cfg: config.DefaultConfig()}
 	if len(path) != 0 {
-		fsRepo.path = path
+		mfs.path = path
 	}
-	return fsRepo
+	return mfs
 }
 
 func (mfs *mockFileStore) Path() string {
@@ -33,7 +33,8 @@ func (mfs *mockFileStore) ReplaceConfig(cfg *config.Config) error {
 }
 
 func (mfs *mockFileStore) TipsetFile() string {
-	return filepath.Join(mfs.path, TipsetFile)
+	// SQLite In-Memory Model
+	return ":memory:"
 }
 
 func (mfs *mockFileStore) SqliteFile() string {
