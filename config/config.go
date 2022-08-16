@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/ipfs-force-community/metrics"
-
-	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 )
 
 type Config struct {
@@ -78,6 +76,8 @@ type MessageServiceConfig struct {
 
 	SkipProcessHead bool `toml:"skipProcessHead"`
 	SkipPushMessage bool `toml:"skipPushMessage"`
+
+	PublishMessageByPubsub bool `toml:"publishMessageByPubsub"`
 }
 
 type MessageStateConfig struct {
@@ -87,9 +87,8 @@ type MessageStateConfig struct {
 }
 
 type GatewayConfig struct {
-	Token string              `toml:"token"`
-	Url   []string            `toml:"url"`
-	Cfg   gatewayTypes.Config `toml:"cfg"`
+	Token string   `toml:"token"`
+	Url   []string `toml:"url"`
 }
 
 type RateLimitConfig struct {
@@ -132,11 +131,12 @@ func DefaultConfig() *Config {
 
 			SkipProcessHead: false,
 			SkipPushMessage: false,
+
+			PublishMessageByPubsub: true,
 		},
 		Gateway: GatewayConfig{
 			Token: "",
 			Url:   []string{"/ip4/127.0.0.1/tcp/45132"},
-			Cfg:   gatewayTypes.Config{},
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace:     metrics.DefaultTraceConfig(),

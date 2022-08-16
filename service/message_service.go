@@ -49,7 +49,7 @@ type MessageService struct {
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
 
-	Pubsub MessagePubSub
+	Pubsub *MessagePubSub
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -100,7 +100,7 @@ func NewMessageService(repo repo.Repo,
 		messageState:       messageState,
 		addressService:     addressService,
 		walletClient:       walletClient,
-		Pubsub:             *pubsub,
+		Pubsub:             pubsub,
 		tsCache:            newTipsetCache(),
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
 		sps:                sps,
@@ -675,7 +675,6 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 					ms.log.Errorf("publish message %s with pubsub failed %v", msg.Cid(), err)
 				}
 			}
-
 		}
 
 		ms.multiNodeToPush(ctx, pushMsgByAddr)

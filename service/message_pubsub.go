@@ -23,6 +23,7 @@ import (
 )
 
 type MessagePubSub struct {
+	available     bool
 	topic         *pubsub.Topic
 	host          types.RawHost
 	pubsub        *pubsub.PubSub
@@ -33,15 +34,13 @@ type MessagePubSub struct {
 	expanding     chan struct{}
 }
 
-func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstrap *config.BootstrapConfig) (*MessagePubSub, error) {
+func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstrap *config.BootstrapConfig, srvCfg config.MessageServiceConfig) (*MessagePubSub, error) {
 	ctx := context.Background()
 
 	// if BootstrapConfig.Addresses is empty , get default bootstrap from net params
-	if len(bootstrap.Addresses) == 0 {
-		netconfig, _ := networks.GetNetworkConfig(string(networkName))
-		if netconfig != nil {
-			bootstrap.Addresses = netconfig.Bootstrap.Addresses
-		}
+	netconfig, _ := networks.GetNetworkConfig(string(networkName))
+	if netconfig != nil {
+		bootstrap.Addresses = append(bootstrap.Addresses, netconfig.Bootstrap.Addresses...)
 	}
 	rawHost, err := buildHost(ctx, "/ip4/0.0.0.0/tcp/0")
 	if err != nil {
@@ -52,12 +51,9 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 	for i, addr := range bootstrap.Addresses {
 		peerInfo, err := peer.AddrInfoFromString(addr)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse bootstrap addresses: %w", err)
 		}
 		bootstrapPeersres[i] = *peerInfo
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse bootstrap addresses: %w", err)
 	}
 	router, err := makeDHT(ctx, rawHost, string(networkName), bootstrapPeersres)
 	if err != nil {
@@ -91,6 +87,7 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 	}
 
 	pubsub := MessagePubSub{
+		available:     srvCfg.PublishMessageByPubsub,
 		topic:         topic,
 		host:          peerHost,
 		pubsub:        gsub,
@@ -106,6 +103,9 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 }
 
 func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) error {
+	if !m.available {
+		return nil
+	}
 	buf := new(bytes.Buffer)
 	err := msg.MarshalCBOR(buf)
 	if err != nil {
@@ -121,6 +121,9 @@ func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) e
 }
 
 func (m *MessagePubSub) Run(ctx context.Context) {
+	if !m.available {
+		return
+	}
 	err := m.connectBootstrap(ctx)
 	if err != nil {
 		m.log.Errorf("connect bootstrap failed %s", err)

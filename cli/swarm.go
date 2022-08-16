@@ -13,22 +13,16 @@ var SwarmCmds = &cli.Command{
 	Usage: "swarm commands",
 	Subcommands: []*cli.Command{
 		addressListenCmd,
-		connectCmd,
+		connectByIdCmd,
+		connectByMutiAddrCmd,
 		peersCmd,
 	},
 }
 
-var connectCmd = &cli.Command{
-	Name:      "connect",
-	Usage:     "connect to a libp2p node",
+var connectByIdCmd = &cli.Command{
+	Name:      "connect-id",
+	Usage:     "connect to a libp2p node by peer id",
 	ArgsUsage: "[peerIds]",
-	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:    "address",
-			Aliases: []string{"a"},
-			Usage:   "connect with libp2p address rather than peerId",
-		},
-	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() < 1 {
 			return fmt.Errorf("must specify peerId or address")
@@ -42,29 +36,47 @@ var connectCmd = &cli.Command{
 
 		peers := ctx.Args().Slice()
 
-		if ctx.IsSet("address") {
-			pis, err := net.ParseAddresses(ctx.Context, peers)
+		for _, p := range peers {
+			peerid, err := peer.Decode(p)
+			if err != nil {
+				return fmt.Errorf("invalid peer id: %s", p)
+			}
+			pi, err := client.NetFindPeer(ctx.Context, peerid)
 			if err != nil {
 				return err
 			}
-			for _, pi := range pis {
-				if err := client.NetConnect(ctx.Context, pi); err != nil {
-					return err
-				}
+			if err := client.NetConnect(ctx.Context, pi); err != nil {
+				return err
 			}
-		} else {
-			for _, p := range peers {
-				peerid, err := peer.Decode(p)
-				if err != nil {
-					return fmt.Errorf("invalid peer id: %s", p)
-				}
-				pi, err := client.NetFindPeer(ctx.Context, peerid)
-				if err != nil {
-					return err
-				}
-				if err := client.NetConnect(ctx.Context, pi); err != nil {
-					return err
-				}
+		}
+		return nil
+	},
+}
+
+var connectByMutiAddrCmd = &cli.Command{
+	Name:      "connect-addr",
+	Usage:     "connect to a libp2p node by muti address",
+	ArgsUsage: "[peerMutiAddress]",
+	Action: func(ctx *cli.Context) error {
+		if ctx.Args().Len() < 1 {
+			return fmt.Errorf("must specify peerId or address")
+		}
+
+		client, closer, err := getAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		peers := ctx.Args().Slice()
+
+		pis, err := net.ParseAddresses(ctx.Context, peers)
+		if err != nil {
+			return err
+		}
+		for _, pi := range pis {
+			if err := client.NetConnect(ctx.Context, pi); err != nil {
+				return err
 			}
 		}
 
@@ -76,7 +88,6 @@ var peersCmd = &cli.Command{
 	Name:  "peers",
 	Usage: "list swarm peers",
 	Action: func(ctx *cli.Context) error {
-
 		api, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
@@ -100,7 +111,6 @@ var addressListenCmd = &cli.Command{
 	Name:  "listen",
 	Usage: "output the listen addresses",
 	Action: func(ctx *cli.Context) error {
-
 		api, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
