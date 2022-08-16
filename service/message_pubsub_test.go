@@ -37,7 +37,14 @@ func TestMessagePubSub(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check connection between ps1 and ps2
-	time.Sleep(time.Second * 1)
+	waitTime := 100 // 10s
+	for {
+		if len(ps1.host.Network().Conns()) > 0 || waitTime <= 0 {
+			break
+		}
+		time.Sleep(time.Millisecond * 100)
+		waitTime--
+	}
 
 	assert.Equal(t, 1, len(ps1.host.Network().Peers()))
 	assert.Equal(t, 1, len(ps2.host.Network().Peers()))
@@ -74,8 +81,4 @@ func TestMessagePubSub(t *testing.T) {
 
 	err = ps2.Connect(ctx, pi1)
 	assert.Nil(t, err)
-
-	pis, err := ps1.Peers(ctx)
-	assert.Nil(t, err)
-	assert.Equal(t, pi2.ID, pis[0].ID)
 }
