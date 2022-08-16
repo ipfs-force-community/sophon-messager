@@ -6,15 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/utils"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -26,13 +25,14 @@ func TestSaveAndGetMessage(t *testing.T) {
 	for _, msg := range msgs {
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
+	msgsMap := testhelper.SliceToMap(msgs)
 
 	msg := msgs[0]
 
 	// tes get message by uid
 	result, err := messageRepo.GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
-	compareMsg(t, msg, result)
+	testhelper.Equal(t, msg, result)
 
 	_, err = messageRepo.GetMessageByUid(uuid.NewString())
 	assert.Error(t, err)
@@ -49,13 +49,14 @@ func TestSaveAndGetMessage(t *testing.T) {
 	allMsg, err := messageRepo.ListMessage()
 	assert.NoError(t, err)
 	assert.Equal(t, msgCount, len(allMsg))
+	checkMsgList(t, allMsg, msgsMap)
 
 	// test save message
 	oneMsg := testhelper.NewMessage()
 	assert.NoError(t, messageRepo.SaveMessage(oneMsg))
 	res, err := messageRepo.GetMessageByUid(oneMsg.ID)
 	assert.NoError(t, err)
-	compareMsg(t, oneMsg, res)
+	testhelper.Equal(t, oneMsg, res)
 	// save again, we expect CreateAt not change and UpdateAt changed
 	assert.NoError(t, messageRepo.SaveMessage(oneMsg))
 	res2, err := messageRepo.GetMessageByUid(oneMsg.ID)
@@ -81,7 +82,7 @@ func TestSaveAndGetMessage(t *testing.T) {
 	assert.NoError(t, messageRepo.SaveMessage(msg))
 	res, err = messageRepo.GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
-	compareMsg(t, msg, res)
+	testhelper.Equal(t, msg, res)
 
 	// test batch save message
 	msgs2 := testhelper.NewMessages(msgCount)
@@ -89,7 +90,7 @@ func TestSaveAndGetMessage(t *testing.T) {
 	for _, msg := range msgs2 {
 		res, err := messageRepo.GetMessageByUid(msg.ID)
 		assert.NoError(t, err)
-		compareMsg(t, msg, res)
+		testhelper.Equal(t, msg, res)
 	}
 }
 
@@ -102,11 +103,11 @@ func TestGetMessageByFromAndNonce(t *testing.T) {
 
 		res, err := messageRepo.GetMessageByFromAndNonce(msg.From, msg.Nonce)
 		assert.NoError(t, err)
-		compareMsg(t, msg, res)
+		testhelper.Equal(t, msg, res)
 
 		res, err = messageRepo.GetMessageByFromNonceAndState(msg.From, msg.Nonce, msg.State)
 		assert.NoError(t, err)
-		compareMsg(t, msg, res)
+		testhelper.Equal(t, msg, res)
 	}
 }
 
@@ -257,6 +258,7 @@ func TestListMessageByFromState(t *testing.T) {
 		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
 	})
 	assert.True(t, sorted)
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 
 	msgList, err = messageRepo.ListMessageByFromState(addr, types.OnChainMsg, isAsc, 1, onChainMsgCount/2)
 	assert.NoError(t, err)
@@ -287,6 +289,7 @@ func TestListMessageByAddress(t *testing.T) {
 	msgList, err = messageRepo.ListMessageByAddress(addr)
 	assert.NoError(t, err)
 	assert.Equal(t, count, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestListFailedMessage(t *testing.T) {
@@ -311,6 +314,7 @@ func TestListFailedMessage(t *testing.T) {
 	msgList, err = messageRepo.ListFailedMessage()
 	assert.NoError(t, err)
 	assert.Equal(t, failedMsgCount, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 
 	sorted := sort.SliceIsSorted(msgList, func(i, j int) bool {
 		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
@@ -335,6 +339,7 @@ func TestListBlockedMessage(t *testing.T) {
 	msgList, err = messageRepo.ListBlockedMessage(msgs[1].From, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestListUnChainMessageByAddress(t *testing.T) {
@@ -362,6 +367,7 @@ func TestListUnChainMessageByAddress(t *testing.T) {
 	msgList, err = messageRepo.ListUnChainMessageByAddress(addr, unChainMsgCount/2)
 	assert.NoError(t, err)
 	assert.Equal(t, unChainMsgCount/2, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 
 	sorted := sort.SliceIsSorted(msgList, func(i, j int) bool {
 		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
@@ -377,13 +383,13 @@ func TestListFilledMessageByAddress(t *testing.T) {
 	addr, err := address.NewActorAddress(uid[:])
 	assert.NoError(t, err)
 
-	msgs, err := messageRepo.ListFilledMessageByAddress(addr)
+	msgList, err := messageRepo.ListFilledMessageByAddress(addr)
 	assert.NoError(t, err)
-	assert.Len(t, msgs, 0)
+	assert.Len(t, msgList, 0)
 
 	count := 10
-	signedMsgs := testhelper.NewSignedMessages(count)
-	for i, msg := range signedMsgs {
+	msgs := testhelper.NewSignedMessages(count)
+	for i, msg := range msgs {
 		if i%2 == 0 {
 			msg.State = types.FillMsg
 		}
@@ -392,25 +398,28 @@ func TestListFilledMessageByAddress(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	msgs, err = messageRepo.ListFilledMessageByAddress(signedMsgs[0].From)
+	msgList, err = messageRepo.ListFilledMessageByAddress(msgs[0].From)
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, count/2, len(msgs))
+	assert.GreaterOrEqual(t, count/2, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestListFilledMessageByHeight(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
 	randHeight := rand.Uint64() / 2
-	for _, msg := range testhelper.NewSignedMessages(10) {
+	msgs := testhelper.NewSignedMessages(10)
+	for _, msg := range msgs {
 		msg.Height = int64(randHeight)
 		msg.State = types.FillMsg
 		err := messageRepo.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 
-	result, err := messageRepo.ListFilledMessageByHeight(abi.ChainEpoch(randHeight))
+	msgList, err := messageRepo.ListFilledMessageByHeight(abi.ChainEpoch(randHeight))
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, 10, len(result))
+	assert.Equal(t, 10, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestListUnFilledMessage(t *testing.T) {
@@ -438,6 +447,7 @@ func TestListUnFilledMessage(t *testing.T) {
 	msgList, err = messageRepo.ListUnFilledMessage(addr)
 	assert.NoError(t, err)
 	assert.Equal(t, unFillMsgCount, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestListFilledMessageBelowNonce(t *testing.T) {
@@ -446,16 +456,16 @@ func TestListFilledMessageBelowNonce(t *testing.T) {
 	addr, err := address.NewActorAddress(uuid.New().NodeID())
 	assert.NoError(t, err)
 
-	msgs, err := messageRepo.ListFilledMessageBelowNonce(addr, 10)
+	msgList, err := messageRepo.ListFilledMessageBelowNonce(addr, 10)
 	assert.NoError(t, err)
-	assert.Len(t, msgs, 0)
+	assert.Len(t, msgList, 0)
 
 	count := 100
 	maxNonce := 1000
 	aimNonce := uint64(500)
 	belowNonceCount := 0
-	signedMsgs := testhelper.NewSignedMessages(count)
-	for _, msg := range signedMsgs {
+	msgs := testhelper.NewSignedMessages(count)
+	for _, msg := range msgs {
 		msg.Nonce = uint64(rand.Intn(maxNonce))
 		if msg.Nonce%2 == 0 {
 			msg.State = types.FillMsg
@@ -468,9 +478,10 @@ func TestListFilledMessageBelowNonce(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	msgs, err = messageRepo.ListFilledMessageBelowNonce(addr, aimNonce)
+	msgList, err = messageRepo.ListFilledMessageBelowNonce(addr, aimNonce)
 	assert.NoError(t, err)
-	assert.Equal(t, belowNonceCount, len(msgs))
+	assert.Equal(t, belowNonceCount, len(msgList))
+	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
 func TestUpdateMessageInfoByCid(t *testing.T) {
@@ -575,10 +586,8 @@ func TestUpdateReturnValue(t *testing.T) {
 	assert.GreaterOrEqual(t, len(failedMsgs), 1)
 }
 
-func compareMsg(t *testing.T, expect, actual *types.Message) {
-	expect.UpdatedAt = actual.UpdatedAt
-	expect.CreatedAt = actual.CreatedAt
-	expectStr := testhelper.ObjectToString(expect)
-	actualStr := testhelper.ObjectToString(actual)
-	assert.Equal(t, expectStr, actualStr)
+func checkMsgList(t *testing.T, msgs []*types.Message, msgsMap map[string]interface{}) {
+	for _, msg := range msgs {
+		testhelper.Equal(t, msgsMap[msg.ID], msg)
+	}
 }

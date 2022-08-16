@@ -13,11 +13,13 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/testhelper"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestAddress(t *testing.T) {
+	ctx := context.Background()
 	addressRepo := setupRepo(t).AddressRepo()
 
 	rand.Seed(time.Now().Unix())
@@ -68,7 +70,7 @@ func TestAddress(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	ctx := context.Background()
+	addrInfoMap := testhelper.SliceToMap([]*types.Address{addrInfo, addrInfo2})
 
 	t.Run("SaveAddress", func(t *testing.T) {
 		assert.NoError(t, addressRepo.SaveAddress(ctx, addrInfo))
@@ -76,10 +78,21 @@ func TestAddress(t *testing.T) {
 		assert.Error(t, addressRepo.SaveAddress(ctx, addrInfo3))
 	})
 
+	t.Run("ListAddress", func(t *testing.T) {
+		addrInfos, err := addressRepo.ListAddress(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(addrInfos))
+
+		for _, info := range addrInfos {
+			val := addrInfoMap[info.ID.String()]
+			testhelper.Equal(t, val, info)
+		}
+	})
+
 	t.Run("GetAddress", func(t *testing.T) {
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
-		checkField(t, addrInfo, r)
+		testhelper.Equal(t, addrInfo, r)
 
 		r2, err2 := addressRepo.GetAddress(ctx, address.Undef)
 		assert.True(t, errors.Is(err2, gorm.ErrRecordNotFound))
@@ -90,7 +103,7 @@ func TestAddress(t *testing.T) {
 	t.Run("GetAddressByID", func(t *testing.T) {
 		r, err := addressRepo.GetAddressByID(ctx, addrInfo2.ID)
 		assert.NoError(t, err)
-		checkField(t, addrInfo2, r)
+		testhelper.Equal(t, addrInfo2, r)
 	})
 
 	t.Run("UpdateNonce", func(t *testing.T) {
@@ -149,7 +162,7 @@ func TestAddress(t *testing.T) {
 		*newAddrInfo = *addrInfo2
 		newAddrInfo.State = types.AddressStateRemoved
 		newAddrInfo.IsDeleted = repo.Deleted
-		checkField(t, newAddrInfo, r)
+		testhelper.Equal(t, newAddrInfo, r)
 	})
 
 	t.Run("HasAddress", func(t *testing.T) {
@@ -162,29 +175,9 @@ func TestAddress(t *testing.T) {
 		assert.False(t, has)
 	})
 
-	t.Run("ListAddress", func(t *testing.T) {
-		rs, err := addressRepo.ListAddress(ctx)
-		assert.NoError(t, err)
-		assert.LessOrEqual(t, 1, len(rs))
-	})
-
 	t.Run("ListActiveAddress", func(t *testing.T) {
 		rs, err := addressRepo.ListActiveAddress(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(rs))
 	})
-}
-
-func checkField(t *testing.T, expect, actual *types.Address) {
-	assert.Equal(t, expect.ID, actual.ID)
-	assert.Equal(t, expect.Addr, actual.Addr)
-	assert.Equal(t, expect.Nonce, actual.Nonce)
-	assert.Equal(t, expect.Weight, actual.Weight)
-	assert.Equal(t, expect.SelMsgNum, actual.SelMsgNum)
-	assert.Equal(t, expect.State, actual.State)
-	assert.Equal(t, expect.GasOverEstimation, actual.GasOverEstimation)
-	assert.Equal(t, expect.GasOverPremium, actual.GasOverPremium)
-	assert.Equal(t, expect.MaxFee, actual.MaxFee)
-	assert.Equal(t, expect.GasFeeCap, actual.GasFeeCap)
-	assert.Equal(t, expect.IsDeleted, actual.IsDeleted)
 }
