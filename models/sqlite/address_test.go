@@ -112,10 +112,6 @@ func TestAddress(t *testing.T) {
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, nonce, r.Nonce)
-
-		r2, err2 := addressRepo.GetAddress(ctx, addrInfo3.Addr)
-		assert.NoError(t, err2)
-		assert.Equal(t, nonce, r2.Nonce)
 	})
 
 	t.Run("UpdateState", func(t *testing.T) {
@@ -158,11 +154,8 @@ func TestAddress(t *testing.T) {
 
 		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr)
 		assert.NoError(t, err)
-		newAddrInfo := &types.Address{}
-		*newAddrInfo = *addrInfo2
-		newAddrInfo.State = types.AddressStateRemoved
-		newAddrInfo.IsDeleted = repo.Deleted
-		testhelper.Equal(t, newAddrInfo, r)
+		assert.Equal(t, types.AddressStateRemoved, r.State)
+		assert.Equal(t, repo.Deleted, r.IsDeleted)
 	})
 
 	t.Run("HasAddress", func(t *testing.T) {
@@ -179,5 +172,10 @@ func TestAddress(t *testing.T) {
 		rs, err := addressRepo.ListActiveAddress(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(rs))
+
+		assert.NoError(t, addressRepo.UpdateState(ctx, addrInfo.Addr, types.AddressStateAlive))
+		rs, err = addressRepo.ListActiveAddress(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(rs))
 	})
 }

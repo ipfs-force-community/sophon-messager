@@ -4,11 +4,11 @@ import (
 	"math/rand"
 	"testing"
 
+	"gorm.io/gorm"
+
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/filecoin-project/venus-messager/testhelper"
 )
 
 func randNode() *types.Node {
@@ -28,7 +28,6 @@ func TestNode(t *testing.T) {
 	node2 := randNode()
 	node3 := randNode()
 	randName := venustypes.NewUUID().String()
-	nodeMap := testhelper.SliceToMap([]*types.Node{node, node2, node3})
 
 	t.Run("create node", func(t *testing.T) {
 		assert.NoError(t, nodeRepo.CreateNode(node))
@@ -42,7 +41,7 @@ func TestNode(t *testing.T) {
 		assert.Equal(t, node2, res)
 
 		_, err = nodeRepo.GetNode(randName)
-		assert.Error(t, err)
+		assert.Equal(t, gorm.ErrRecordNotFound, err)
 	})
 
 	t.Run("save node", func(t *testing.T) {
@@ -60,10 +59,7 @@ func TestNode(t *testing.T) {
 		list, err := nodeRepo.ListNode()
 		assert.NoError(t, err)
 		assert.Equal(t, len(list), 3)
-		for _, node := range list {
-			expect := nodeMap[node.ID.String()]
-			assert.Equal(t, expect, node)
-		}
+		assert.Equal(t, []*types.Node{node, node2, node3}, list)
 	})
 
 	t.Run("has node", func(t *testing.T) {
