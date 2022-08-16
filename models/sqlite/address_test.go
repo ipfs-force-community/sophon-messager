@@ -96,7 +96,6 @@ func TestAddress(t *testing.T) {
 
 		r2, err2 := addressRepo.GetAddress(ctx, address.Undef)
 		assert.True(t, errors.Is(err2, gorm.ErrRecordNotFound))
-		assert.Contains(t, err2.Error(), gorm.ErrRecordNotFound.Error())
 		assert.Nil(t, r2)
 	})
 
