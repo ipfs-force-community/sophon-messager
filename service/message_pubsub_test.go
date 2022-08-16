@@ -7,7 +7,6 @@ import (
 	"time"
 
 	addr "github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -16,7 +15,7 @@ import (
 
 func TestMessagePubSub(t *testing.T) {
 	ctx := context.Background()
-	ps1, err := NewMessagePubSub(log.New(), "test_net_name", &config.BootstrapConfig{})
+	ps1, err := NewMessagePubSub(log.New(), "test_net_name", []string{}, true)
 	assert.Nil(t, err)
 	addressInfo1 := peer.AddrInfo{
 		ID:    ps1.host.ID(),
@@ -31,7 +30,7 @@ func TestMessagePubSub(t *testing.T) {
 		multiaddr[i] = addr.String()
 	}
 
-	ps2, err := NewMessagePubSub(log.New(), "test_net_name", &config.BootstrapConfig{Addresses: multiaddr})
+	ps2, err := NewMessagePubSub(log.New(), "test_net_name", multiaddr, true)
 	assert.Nil(t, err)
 
 	sub, err := ps2.topic.Subscribe()

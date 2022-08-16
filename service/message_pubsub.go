@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	"github.com/filecoin-project/venus/pkg/net"
@@ -34,21 +33,21 @@ type MessagePubSub struct {
 	expanding     chan struct{}
 }
 
-func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstrap *config.BootstrapConfig, srvCfg config.MessageServiceConfig) (*MessagePubSub, error) {
+func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstrap []string, available bool) (*MessagePubSub, error) {
 	ctx := context.Background()
 
 	// if BootstrapConfig.Addresses is empty , get default bootstrap from net params
 	netconfig, _ := networks.GetNetworkConfig(string(networkName))
 	if netconfig != nil {
-		bootstrap.Addresses = append(bootstrap.Addresses, netconfig.Bootstrap.Addresses...)
+		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
 	}
 	rawHost, err := buildHost(ctx, "/ip4/0.0.0.0/tcp/0")
 	if err != nil {
 		return nil, err
 	}
 
-	bootstrapPeersres := make([]peer.AddrInfo, len(bootstrap.Addresses))
-	for i, addr := range bootstrap.Addresses {
+	bootstrapPeersres := make([]peer.AddrInfo, len(bootstrap))
+	for i, addr := range bootstrap {
 		peerInfo, err := peer.AddrInfoFromString(addr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse bootstrap addresses: %w", err)
@@ -87,7 +86,7 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 	}
 
 	pubsub := MessagePubSub{
-		available:     srvCfg.PublishMessageByPubsub,
+		available:     available,
 		topic:         topic,
 		host:          peerHost,
 		pubsub:        gsub,
@@ -128,7 +127,9 @@ func (m *MessagePubSub) Run(ctx context.Context) {
 	if err != nil {
 		m.log.Errorf("connect bootstrap failed %s", err)
 	}
-	for range time.Tick(m.period) {
+
+	ticker := time.NewTicker(m.period)
+	for range ticker.C {
 		m.expandPeers()
 	}
 }
