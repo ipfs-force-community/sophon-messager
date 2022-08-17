@@ -3,7 +3,7 @@ package jwt
 import (
 	"fmt"
 
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	"github.com/filecoin-project/venus-messager/config"
 )

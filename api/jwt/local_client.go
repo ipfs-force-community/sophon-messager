@@ -8,7 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	auth2 "github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-auth/auth"

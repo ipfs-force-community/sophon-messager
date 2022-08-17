@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/api"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"

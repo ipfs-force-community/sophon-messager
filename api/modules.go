@@ -10,7 +10,7 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/api/permission"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"

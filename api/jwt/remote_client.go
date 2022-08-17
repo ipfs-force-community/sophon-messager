@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/filecoin-project/go-jsonrpc/auth"
-	"github.com/filecoin-project/venus-auth/cmd/jwtclient"
 	"github.com/filecoin-project/venus-auth/core"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	"github.com/filecoin-project/venus-messager/config"
 )
