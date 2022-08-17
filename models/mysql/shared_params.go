@@ -70,9 +70,7 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 	var ssp mysqlSharedParams
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			if params.ID == 0 {
-				params.ID = 1
-			}
+			params.ID = 1
 			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}

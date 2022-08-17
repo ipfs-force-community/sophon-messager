@@ -66,10 +66,10 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 		Message: venustypes.Message{
 			Version:    sqlMsg.Version,
 			Nonce:      sqlMsg.Nonce,
-			Value:      big.NewFromGo(sqlMsg.Value.Int),
+			Value:      big.Int(mtypes.SafeFromGo(sqlMsg.Value.Int)),
 			GasLimit:   sqlMsg.GasLimit,
-			GasFeeCap:  big.NewFromGo(sqlMsg.GasFeeCap.Int),
-			GasPremium: big.NewFromGo(sqlMsg.GasPremium.Int),
+			GasFeeCap:  big.Int(mtypes.SafeFromGo(sqlMsg.GasFeeCap.Int)),
+			GasPremium: big.Int(mtypes.SafeFromGo(sqlMsg.GasPremium.Int)),
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
@@ -107,7 +107,10 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 		To:         srcMsg.To.String(),
 		From:       srcMsg.From.String(),
 		Nonce:      srcMsg.Nonce,
+		Value:      mtypes.SafeFromGo(srcMsg.Value.Int),
 		GasLimit:   srcMsg.GasLimit,
+		GasFeeCap:  mtypes.SafeFromGo(srcMsg.GasFeeCap.Int),
+		GasPremium: mtypes.SafeFromGo(srcMsg.GasPremium.Int),
 		Method:     int(srcMsg.Method),
 		Params:     srcMsg.Params,
 		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
@@ -126,18 +129,6 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 
 	if srcMsg.SignedCid != nil {
 		destMsg.SignedCid = srcMsg.SignedCid.String()
-	}
-
-	if srcMsg.Value.Int != nil {
-		destMsg.Value = mtypes.Int{Int: srcMsg.Value.Int}
-	}
-
-	if srcMsg.GasFeeCap.Int != nil {
-		destMsg.GasFeeCap = mtypes.Int{Int: srcMsg.GasFeeCap.Int}
-	}
-
-	if srcMsg.GasPremium.Int != nil {
-		destMsg.GasPremium = mtypes.Int{Int: srcMsg.GasPremium.Int}
 	}
 
 	if !srcMsg.TipSetKey.IsEmpty() {
@@ -161,7 +152,7 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 	query := m.DB.Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
 
 	if from != address.Undef {
-		query = query.Where("from_addr=?", from.String())
+		query = query.Where("from_addr = ?", from.String())
 	}
 
 	if isAsc {
@@ -170,7 +161,7 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 		query = query.Order("created_at DESC")
 	}
 
-	query = query.Where("state=?", state)
+	query = query.Where("state = ?", state)
 
 	var sqlMsgs []*mysqlMessage
 	err := query.Find(&sqlMsgs).Error
@@ -187,7 +178,7 @@ func (m *mysqlMessageRepo) ListMessageByFromState(from address.Address, state ty
 
 func (m *mysqlMessageRepo) HasMessageByUid(id string) (bool, error) {
 	var count int64
-	err := m.DB.Table("messages").Where("id=?", id).Count(&count).Error
+	err := m.DB.Table("messages").Where("id = ?", id).Count(&count).Error
 	if err != nil {
 		return false, err
 	}
@@ -240,7 +231,7 @@ func (m *mysqlMessageRepo) ListFilledMessageByAddress(addr address.Address) ([]*
 
 func (m *mysqlMessageRepo) ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? AND nonce <", addr.String(), types.FillMsg, nonce).Error
+	err := m.DB.Find(&sqlMsgs, "from_addr=? AND state=? AND nonce<?", addr.String(), types.FillMsg, nonce).Error
 	if err != nil {
 		return nil, err
 	}
@@ -264,6 +255,7 @@ func (m *mysqlMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]*
 	return result, nil
 }
 
+// ListUnChainMessageByAddress if topN is less than or equal to 0, `Limit` has no effect
 func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
@@ -298,7 +290,7 @@ func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
 func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
-	return m.DB.Omit("created_at").Save(sqlMsg).Error
+	return m.DB.Save(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

@@ -3,6 +3,7 @@ module github.com/filecoin-project/venus-messager
 go 1.17
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/fatih/color v1.13.0
 	github.com/filecoin-project/go-address v0.0.6

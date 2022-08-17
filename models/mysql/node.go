@@ -26,7 +26,14 @@ type mysqlNode struct {
 }
 
 func fromNode(node *types.Node) *mysqlNode {
-	return automapper.MustMapper(node, TMysqlNode).(*mysqlNode)
+	return &mysqlNode{
+		ID:        node.ID,
+		Name:      node.Name,
+		URL:       node.URL,
+		Token:     node.Token,
+		Type:      node.Type,
+		IsDeleted: repo.NotDeleted,
+	}
 }
 
 func (mysqlNode mysqlNode) Node() *types.Node {
@@ -49,8 +56,6 @@ func newMysqlNodeRepo(db *gorm.DB) mysqlNodeRepo {
 
 func (s mysqlNodeRepo) CreateNode(node *types.Node) error {
 	sNode := fromNode(node)
-	sNode.CreatedAt = time.Now()
-	sNode.UpdatedAt = time.Now()
 	return s.DB.Create(sNode).Error
 }
 
@@ -62,7 +67,7 @@ func (s mysqlNodeRepo) SaveNode(node *types.Node) error {
 
 func (s mysqlNodeRepo) GetNode(name string) (*types.Node, error) {
 	var node mysqlNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
+	if err := s.DB.Take(&node, "name = ? and is_deleted = ?", name, repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 	return node.Node(), nil
@@ -70,7 +75,7 @@ func (s mysqlNodeRepo) GetNode(name string) (*types.Node, error) {
 
 func (s mysqlNodeRepo) HasNode(name string) (bool, error) {
 	var count int64
-	if err := s.DB.Model(&mysqlNode{}).Where("name = ? and is_deleted = -1", name).Count(&count).Error; err != nil {
+	if err := s.DB.Model(&mysqlNode{}).Where("name = ? and is_deleted = ?", name, repo.NotDeleted).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
@@ -78,7 +83,7 @@ func (s mysqlNodeRepo) HasNode(name string) (bool, error) {
 
 func (s mysqlNodeRepo) ListNode() ([]*types.Node, error) {
 	var internalNode []*mysqlNode
-	if err := s.DB.Find(&internalNode, "is_deleted = ?", -1).Error; err != nil {
+	if err := s.DB.Find(&internalNode, "is_deleted = ?", repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 
@@ -91,10 +96,11 @@ func (s mysqlNodeRepo) ListNode() ([]*types.Node, error) {
 
 func (s mysqlNodeRepo) DelNode(name string) error {
 	var node mysqlNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
+	if err := s.DB.Take(&node, "name = ? and is_deleted = ?", name, repo.NotDeleted).Error; err != nil {
 		return err
 	}
 	node.IsDeleted = repo.Deleted
+	node.UpdatedAt = time.Now()
 
 	return s.DB.Save(&node).Error
 }

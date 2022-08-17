@@ -66,10 +66,10 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 		Message: venustypes.Message{
 			Version:    sqlMsg.Version,
 			Nonce:      sqlMsg.Nonce,
-			Value:      big.NewFromGo(sqlMsg.Value.Int),
+			Value:      big.Int(mtypes.SafeFromGo(sqlMsg.Value.Int)),
 			GasLimit:   sqlMsg.GasLimit,
-			GasFeeCap:  big.NewFromGo(sqlMsg.GasFeeCap.Int),
-			GasPremium: big.NewFromGo(sqlMsg.GasPremium.Int),
+			GasFeeCap:  big.Int(mtypes.NewFromGo(sqlMsg.GasFeeCap.Int)),
+			GasPremium: big.Int(mtypes.SafeFromGo(sqlMsg.GasPremium.Int)),
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
@@ -107,7 +107,10 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 		To:         srcMsg.To.String(),
 		From:       srcMsg.From.String(),
 		Nonce:      srcMsg.Nonce,
+		Value:      mtypes.SafeFromGo(srcMsg.Value.Int),
 		GasLimit:   srcMsg.GasLimit,
+		GasFeeCap:  mtypes.SafeFromGo(srcMsg.GasFeeCap.Int),
+		GasPremium: mtypes.SafeFromGo(srcMsg.GasPremium.Int),
 		Method:     int(srcMsg.Method),
 		Params:     srcMsg.Params,
 		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
@@ -128,18 +131,6 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 
 	if srcMsg.SignedCid != nil {
 		destMsg.SignedCid = srcMsg.SignedCid.String()
-	}
-
-	if srcMsg.Value.Int != nil {
-		destMsg.Value = mtypes.Int{Int: srcMsg.Value.Int}
-	}
-
-	if srcMsg.GasFeeCap.Int != nil {
-		destMsg.GasFeeCap = mtypes.Int{Int: srcMsg.GasFeeCap.Int}
-	}
-
-	if srcMsg.GasPremium.Int != nil {
-		destMsg.GasPremium = mtypes.Int{Int: srcMsg.GasPremium.Int}
 	}
 
 	if !srcMsg.TipSetKey.IsEmpty() {
@@ -238,6 +229,7 @@ func (m *sqliteMessageRepo) ListFilledMessageByHeight(height abi.ChainEpoch) ([]
 	return result, nil
 }
 
+// ListUnChainMessageByAddress if topN is less than or equal to 0, `Limit` has no effect
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error

@@ -179,7 +179,7 @@ func TestGetSignedMessageByTime(t *testing.T) {
 	startTime := time.Now().Add(-time.Second * 3600)
 	msgs, err := messageRepo.GetSignedMessageByTime(startTime)
 	assert.NoError(t, err)
-	assert.LessOrEqual(t, 10, len(msgs))
+	assert.Equal(t, 10, len(msgs))
 }
 
 func TestGetSignedMessageByHeight(t *testing.T) {
@@ -198,7 +198,7 @@ func TestGetSignedMessageByHeight(t *testing.T) {
 	height := abi.ChainEpoch(5)
 	msgs, err := messageRepo.GetSignedMessageByHeight(height)
 	assert.NoError(t, err)
-	assert.LessOrEqual(t, 5, len(msgs))
+	assert.Equal(t, 5, len(msgs))
 }
 
 func TestGetSignedMessageFromFailedMsg(t *testing.T) {
@@ -373,6 +373,10 @@ func TestListUnChainMessageByAddress(t *testing.T) {
 		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
 	})
 	assert.True(t, sorted)
+
+	msgList, err = messageRepo.ListUnChainMessageByAddress(addr, -1)
+	assert.NoError(t, err)
+	assert.Equal(t, unChainMsgCount, len(msgList))
 }
 
 func TestListFilledMessageByAddress(t *testing.T) {
@@ -400,7 +404,7 @@ func TestListFilledMessageByAddress(t *testing.T) {
 
 	msgList, err = messageRepo.ListFilledMessageByAddress(msgs[0].From)
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, count/2, len(msgList))
+	assert.Equal(t, count/2, len(msgList))
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
