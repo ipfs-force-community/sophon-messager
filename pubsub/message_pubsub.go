@@ -53,8 +53,11 @@ type MessagePubSub struct {
 func NewMessagePubSub(logger *log.Logger, listenAddress string, networkName types.NetworkName, bootstrap []string) (*MessagePubSub, error) {
 	ctx := context.Background()
 
-	// if BootstrapConfig.Addresses is empty , get default bootstrap from net params
-	netconfig, _ := networks.GetNetworkConfig(string(networkName))
+	// get default bootstrap from net params
+	netconfig, err := networks.GetNetworkConfig(string(networkName))
+	if err != nil {
+		logger.Infof("failed to get default network config: %s", err)
+	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
 	}

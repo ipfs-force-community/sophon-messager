@@ -93,7 +93,7 @@ func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (inte
 }
 
 func newMessagePubSubIndirect(logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
-	if net.EnablePubsub {
+	if net.Enable {
 		return pubsub.NewMessagePubSub(logger, net.ListenAddress, networkName, net.BootstrapAddresses)
 	}
 	return &pubsub.MessagerPubSubStub{}, nil

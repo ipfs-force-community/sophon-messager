@@ -78,7 +78,7 @@ type Libp2pNetConfig struct {
 	ListenAddress      string   `toml:"listenAddresses"`
 	BootstrapAddresses []string `toml:"bootstrapAddresses"`
 	// TODO: EnableRelay
-	EnablePubsub bool `toml:"enablePubsub"`
+	Enable bool `toml:"enablePubsub"`
 }
 
 type MessageStateConfig struct {
@@ -143,7 +143,7 @@ func DefaultConfig() *Config {
 		Libp2pNetConfig: &Libp2pNetConfig{
 			ListenAddress:      "/ip4/0.0.0.0/tcp/0",
 			BootstrapAddresses: []string{},
-			EnablePubsub:       true,
+			Enable:             true,
 		},
 	}
 }
