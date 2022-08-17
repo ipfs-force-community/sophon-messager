@@ -8,8 +8,11 @@ import (
 
 	"go.uber.org/fx"
 
+	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 func MessagerService() fx.Option {
@@ -19,6 +22,7 @@ func MessagerService() fx.Option {
 		fx.Provide(NewAddressService),
 		fx.Provide(NewSharedParamsService),
 		fx.Provide(NewNodeService),
+		fx.Provide(newMessagePubSubIndirect),
 	)
 }
 
@@ -86,4 +90,11 @@ func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (inte
 	}
 
 	return nil, fmt.Errorf("method must has 2 return as result")
+}
+
+func newMessagePubSubIndirect(logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
+	if net.Enable {
+		return pubsub.NewMessagePubSub(logger, net.ListenAddress, networkName, net.BootstrapAddresses)
+	}
+	return &pubsub.MessagerPubSubStub{}, nil
 }

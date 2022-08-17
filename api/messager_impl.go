@@ -13,6 +13,7 @@ import (
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/fx"
 )
 
@@ -213,6 +214,22 @@ func ipAccountFromContext(ctx context.Context) (string, string) {
 	account, _ := jwtclient.CtxGetName(ctx)
 
 	return ip, account
+}
+
+func (m MessageImp) NetFindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
+	return m.MessageSrv.Pubsub.FindPeer(ctx, peerID)
+}
+
+func (m MessageImp) NetConnect(ctx context.Context, pi peer.AddrInfo) error {
+	return m.MessageSrv.Pubsub.Connect(ctx, pi)
+}
+
+func (m MessageImp) NetPeers(ctx context.Context) ([]peer.AddrInfo, error) {
+	return m.MessageSrv.Pubsub.Peers(ctx)
+}
+
+func (m MessageImp) NetAddrsListen(ctx context.Context) (peer.AddrInfo, error) {
+	return m.MessageSrv.Pubsub.AddrListen(ctx)
 }
 
 var _ messager.IMessager = (*MessageImp)(nil)

@@ -23,6 +23,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/pubsub"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -36,8 +37,7 @@ var errMinimumNonce = errors.New("minimum expected nonce")
 
 const (
 	MaxHeadChangeProcess = 5
-
-	LookBackLimit = 900
+	LookBackLimit        = 900
 )
 
 type MessageService struct {
@@ -48,6 +48,8 @@ type MessageService struct {
 	messageState   *MessageState
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
+
+	Pubsub pubsub.IMessagePubSub
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -84,7 +86,8 @@ func NewMessageService(repo repo.Repo,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
-	walletClient gateway.IWalletClient) (*MessageService, error) {
+	walletClient gateway.IWalletClient,
+	pubsub pubsub.IMessagePubSub) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
@@ -97,6 +100,7 @@ func NewMessageService(repo repo.Repo,
 		messageState:       messageState,
 		addressService:     addressService,
 		walletClient:       walletClient,
+		Pubsub:             pubsub,
 		tsCache:            newTipsetCache(),
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
 		sps:                sps,
@@ -637,7 +641,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	}
 	ms.log.Infof("success to update memory cache")
 
-	//broad cast  push to node in config ,push to multi node in db config
+	//broad cast  push to node in config ,push to multi node in db config, publish to pubsub
 	go func() {
 		tPush := time.Now()
 		pushMsgByAddr := make(map[address.Address][]*venusTypes.SignedMessage)
@@ -663,6 +667,16 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
 				if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
 					ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
+				}
+			}
+			// publish by pubsub
+			for _, msg := range msgs {
+				if err := ms.Pubsub.Publish(ctx, msg); err != nil {
+					if errors.Is(err, pubsub.ErrPubsubDisabled) {
+						ms.log.Debugf("pubsub not enable %v", err)
+					} else {
+						ms.log.Errorf("publish message to pubsub failed %v", err)
+					}
 				}
 			}
 		}

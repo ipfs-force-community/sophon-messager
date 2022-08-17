@@ -4,22 +4,21 @@ import (
 	"time"
 
 	"github.com/ipfs-force-community/metrics"
-
-	gatewayTypes "github.com/ipfs-force-community/venus-gateway/types"
 )
 
 type Config struct {
-	DB             DbConfig               `toml:"db"`
-	JWT            JWTConfig              `toml:"jwt"`
-	Log            LogConfig              `toml:"log"`
-	API            APIConfig              `toml:"api"`
-	Node           NodeConfig             `toml:"node"`
-	MessageService MessageServiceConfig   `toml:"messageService"`
-	MessageState   MessageStateConfig     `toml:"messageState"`
-	Gateway        GatewayConfig          `toml:"gateway"`
-	RateLimit      RateLimitConfig        `toml:"rateLimit"`
-	Trace          *metrics.TraceConfig   `toml:"tracing"`
-	Metrics        *metrics.MetricsConfig `toml:"metrics"`
+	DB              DbConfig               `toml:"db"`
+	JWT             JWTConfig              `toml:"jwt"`
+	Log             LogConfig              `toml:"log"`
+	API             APIConfig              `toml:"api"`
+	Node            NodeConfig             `toml:"node"`
+	MessageService  MessageServiceConfig   `toml:"messageService"`
+	MessageState    MessageStateConfig     `toml:"messageState"`
+	Gateway         GatewayConfig          `toml:"gateway"`
+	RateLimit       RateLimitConfig        `toml:"rateLimit"`
+	Trace           *metrics.TraceConfig   `toml:"tracing"`
+	Metrics         *metrics.MetricsConfig `toml:"metrics"`
+	Libp2pNetConfig *Libp2pNetConfig       `toml:"libp2p"`
 }
 
 type NodeConfig struct {
@@ -75,6 +74,13 @@ type MessageServiceConfig struct {
 	SkipPushMessage bool `toml:"skipPushMessage"`
 }
 
+type Libp2pNetConfig struct {
+	ListenAddress      string   `toml:"listenAddresses"`
+	BootstrapAddresses []string `toml:"bootstrapAddresses"`
+	// TODO: EnableRelay
+	Enable bool `toml:"enablePubsub"`
+}
+
 type MessageStateConfig struct {
 	BackTime int `toml:"backTime"` // 向前找多久的数据写到内存,单位秒
 
@@ -82,9 +88,8 @@ type MessageStateConfig struct {
 }
 
 type GatewayConfig struct {
-	Token string              `toml:"token"`
-	Url   []string            `toml:"url"`
-	Cfg   gatewayTypes.Config `toml:"cfg"`
+	Token string   `toml:"token"`
+	Url   []string `toml:"url"`
 }
 
 type RateLimitConfig struct {
@@ -131,10 +136,14 @@ func DefaultConfig() *Config {
 		Gateway: GatewayConfig{
 			Token: "",
 			Url:   []string{"/ip4/127.0.0.1/tcp/45132"},
-			Cfg:   gatewayTypes.Config{},
 		},
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace:     metrics.DefaultTraceConfig(),
 		Metrics:   metrics.DefaultMetricsConfig(),
+		Libp2pNetConfig: &Libp2pNetConfig{
+			ListenAddress:      "/ip4/0.0.0.0/tcp/0",
+			BootstrapAddresses: []string{},
+			Enable:             true,
+		},
 	}
 }
