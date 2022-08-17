@@ -23,6 +23,7 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/pubsub"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -36,8 +37,7 @@ var errMinimumNonce = errors.New("minimum expected nonce")
 
 const (
 	MaxHeadChangeProcess = 5
-
-	LookBackLimit = 900
+	LookBackLimit        = 900
 )
 
 type MessageService struct {
@@ -49,7 +49,7 @@ type MessageService struct {
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
 
-	Pubsub *MessagePubSub
+	Pubsub pubsub.IMessagePubSub
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -87,7 +87,7 @@ func NewMessageService(repo repo.Repo,
 	sps *SharedParamsService,
 	nodeService *NodeService,
 	walletClient gateway.IWalletClient,
-	pubsub *MessagePubSub) (*MessageService, error) {
+	pubsub pubsub.IMessagePubSub) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
@@ -672,7 +672,11 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 			// publish by pubsub
 			for _, msg := range msgs {
 				if err := ms.Pubsub.Publish(ctx, msg); err != nil {
-					ms.log.Errorf("publish message %s with pubsub failed %v", msg.Cid(), err)
+					if errors.Is(err, pubsub.ErrPubsubDisabled) {
+						ms.log.Debugf("pubsub not enable %v", err)
+					} else {
+						ms.log.Errorf("publish message to pubsub failed %v", err)
+					}
 				}
 			}
 		}

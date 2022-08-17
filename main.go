@@ -198,7 +198,7 @@ func runAction(ctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{log}),
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Bootstrap,
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
 			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
 		fx.Supply(client),

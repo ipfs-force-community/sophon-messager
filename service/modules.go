@@ -10,6 +10,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
@@ -91,6 +92,9 @@ func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (inte
 	return nil, fmt.Errorf("method must has 2 return as result")
 }
 
-func newMessagePubSubIndirect(logger *log.Logger, networkName types.NetworkName, bootstrap *config.BootstrapConfig, srvCfg config.MessageServiceConfig) (*MessagePubSub, error) {
-	return NewMessagePubSub(logger, networkName, bootstrap.Addresses, srvCfg.PublishMessageByPubsub)
+func newMessagePubSubIndirect(logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
+	if net.EnablePubsub {
+		return pubsub.NewMessagePubSub(logger, net.ListenAddress, networkName, net.BootstrapAddresses)
+	}
+	return &pubsub.MessagerPubSubStub{}, nil
 }

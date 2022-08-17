@@ -229,7 +229,7 @@ func (m MessageImp) NetPeers(ctx context.Context) ([]peer.AddrInfo, error) {
 }
 
 func (m MessageImp) NetAddrsListen(ctx context.Context) (peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.AddrsListen(ctx)
+	return m.MessageSrv.Pubsub.AddrListen(ctx)
 }
 
 var _ messager.IMessager = (*MessageImp)(nil)

@@ -1,4 +1,4 @@
-package service
+package pubsub
 
 import (
 	"bytes"
@@ -21,8 +21,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IMessagePubSub interface {
+	IPublisher
+	INet
+}
+
+type INet interface {
+	Connect(ctx context.Context, p peer.AddrInfo) error
+	FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error)
+	Peers(ctx context.Context) ([]peer.AddrInfo, error)
+	AddrListen(ctx context.Context) (peer.AddrInfo, error)
+}
+
+type IPublisher interface {
+	Publish(ctx context.Context, msg *types.SignedMessage) error
+}
+
+var ErrPubsubDisabled = errors.New("pubsub is disabled")
+
 type MessagePubSub struct {
-	available     bool
 	topic         *pubsub.Topic
 	host          types.RawHost
 	pubsub        *pubsub.PubSub
@@ -33,7 +50,7 @@ type MessagePubSub struct {
 	expanding     chan struct{}
 }
 
-func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstrap []string, available bool) (*MessagePubSub, error) {
+func NewMessagePubSub(logger *log.Logger, listenAddress string, networkName types.NetworkName, bootstrap []string) (*MessagePubSub, error) {
 	ctx := context.Background()
 
 	// if BootstrapConfig.Addresses is empty , get default bootstrap from net params
@@ -41,7 +58,7 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
 	}
-	rawHost, err := buildHost(ctx, "/ip4/0.0.0.0/tcp/0")
+	rawHost, err := buildHost(ctx, listenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +103,6 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 	}
 
 	pubsub := MessagePubSub{
-		available:     available,
 		topic:         topic,
 		host:          peerHost,
 		pubsub:        gsub,
@@ -97,14 +113,11 @@ func NewMessagePubSub(logger *log.Logger, networkName types.NetworkName, bootstr
 		expanding:     make(chan struct{}, 1),
 	}
 
-	go pubsub.Run(ctx)
+	go pubsub.run(ctx)
 	return &pubsub, nil
 }
 
 func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) error {
-	if !m.available {
-		return nil
-	}
 	buf := new(bytes.Buffer)
 	err := msg.MarshalCBOR(buf)
 	if err != nil {
@@ -116,13 +129,11 @@ func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) e
 		return fmt.Errorf("publish message failed %w", err)
 	}
 
+	m.log.Debugf("publish message %s", msg.Cid())
 	return nil
 }
 
-func (m *MessagePubSub) Run(ctx context.Context) {
-	if !m.available {
-		return
-	}
+func (m *MessagePubSub) run(ctx context.Context) {
 	err := m.connectBootstrap(ctx)
 	if err != nil {
 		m.log.Errorf("connect bootstrap failed %s", err)
@@ -163,7 +174,7 @@ func (m *MessagePubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.Addr
 	return m.dht.FindPeer(ctx, peerID)
 }
 
-func (m *MessagePubSub) AddrsListen(ctx context.Context) (peer.AddrInfo, error) {
+func (m *MessagePubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
 	if m.host == nil {
 		return peer.AddrInfo{}, errors.New("messager must be online")
 	}
@@ -251,3 +262,29 @@ func buildHost(ctx context.Context, address string) (types.RawHost, error) {
 	}
 	return libp2p.New(opts...)
 }
+
+type MessagerPubSubStub struct {
+}
+
+func (m *MessagerPubSubStub) Publish(ctx context.Context, msg *types.SignedMessage) error {
+	return ErrPubsubDisabled
+}
+
+func (m *MessagerPubSubStub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
+	return nil, ErrPubsubDisabled
+}
+
+func (m *MessagerPubSubStub) Connect(ctx context.Context, p peer.AddrInfo) error {
+	return ErrPubsubDisabled
+}
+
+func (m *MessagerPubSubStub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
+	return peer.AddrInfo{}, ErrPubsubDisabled
+}
+
+func (m *MessagerPubSubStub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
+	return peer.AddrInfo{}, ErrPubsubDisabled
+}
+
+var _ IMessagePubSub = &MessagePubSub{}
+var _ IMessagePubSub = &MessagerPubSubStub{}

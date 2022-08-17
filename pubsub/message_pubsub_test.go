@@ -1,4 +1,4 @@
-package service
+package pubsub
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 
 func TestMessagePubSub(t *testing.T) {
 	ctx := context.Background()
-	ps1, err := NewMessagePubSub(log.New(), "test_net_name", []string{}, true)
+	ps1, err := NewMessagePubSub(log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", []string{})
 	assert.Nil(t, err)
 	addressInfo1 := peer.AddrInfo{
 		ID:    ps1.host.ID(),
@@ -30,7 +30,7 @@ func TestMessagePubSub(t *testing.T) {
 		multiaddr[i] = addr.String()
 	}
 
-	ps2, err := NewMessagePubSub(log.New(), "test_net_name", multiaddr, true)
+	ps2, err := NewMessagePubSub(log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", multiaddr)
 	assert.Nil(t, err)
 
 	sub, err := ps2.topic.Subscribe()
@@ -68,7 +68,7 @@ func TestMessagePubSub(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, true, bytes.Equal(resp.Data, buf.Bytes()))
 
-	pi2, err := ps2.AddrsListen(ctx)
+	pi2, err := ps2.AddrListen(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, pi2, peer.AddrInfo{
 		ID:    ps2.host.ID(),

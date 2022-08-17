@@ -7,22 +7,18 @@ import (
 )
 
 type Config struct {
-	DB             DbConfig               `toml:"db"`
-	JWT            JWTConfig              `toml:"jwt"`
-	Log            LogConfig              `toml:"log"`
-	API            APIConfig              `toml:"api"`
-	Node           NodeConfig             `toml:"node"`
-	MessageService MessageServiceConfig   `toml:"messageService"`
-	MessageState   MessageStateConfig     `toml:"messageState"`
-	Gateway        GatewayConfig          `toml:"gateway"`
-	RateLimit      RateLimitConfig        `toml:"rateLimit"`
-	Trace          *metrics.TraceConfig   `toml:"tracing"`
-	Metrics        *metrics.MetricsConfig `toml:"metrics"`
-	Bootstrap      *BootstrapConfig       `toml:"bootstrap"`
-}
-
-type BootstrapConfig struct {
-	Addresses []string `toml:"addresses"`
+	DB              DbConfig               `toml:"db"`
+	JWT             JWTConfig              `toml:"jwt"`
+	Log             LogConfig              `toml:"log"`
+	API             APIConfig              `toml:"api"`
+	Node            NodeConfig             `toml:"node"`
+	MessageService  MessageServiceConfig   `toml:"messageService"`
+	MessageState    MessageStateConfig     `toml:"messageState"`
+	Gateway         GatewayConfig          `toml:"gateway"`
+	RateLimit       RateLimitConfig        `toml:"rateLimit"`
+	Trace           *metrics.TraceConfig   `toml:"tracing"`
+	Metrics         *metrics.MetricsConfig `toml:"metrics"`
+	Libp2pNetConfig *Libp2pNetConfig       `toml:"libp2p"`
 }
 
 type NodeConfig struct {
@@ -76,8 +72,13 @@ type MessageServiceConfig struct {
 
 	SkipProcessHead bool `toml:"skipProcessHead"`
 	SkipPushMessage bool `toml:"skipPushMessage"`
+}
 
-	PublishMessageByPubsub bool `toml:"publishMessageByPubsub"`
+type Libp2pNetConfig struct {
+	ListenAddress      string   `toml:"listenAddresses"`
+	BootstrapAddresses []string `toml:"bootstrapAddresses"`
+	// TODO: EnableRelay
+	EnablePubsub bool `toml:"enablePubsub"`
 }
 
 type MessageStateConfig struct {
@@ -131,8 +132,6 @@ func DefaultConfig() *Config {
 
 			SkipProcessHead: false,
 			SkipPushMessage: false,
-
-			PublishMessageByPubsub: true,
 		},
 		Gateway: GatewayConfig{
 			Token: "",
@@ -141,8 +140,10 @@ func DefaultConfig() *Config {
 		RateLimit: RateLimitConfig{Redis: ""},
 		Trace:     metrics.DefaultTraceConfig(),
 		Metrics:   metrics.DefaultMetricsConfig(),
-		Bootstrap: &BootstrapConfig{
-			Addresses: []string{},
+		Libp2pNetConfig: &Libp2pNetConfig{
+			ListenAddress:      "/ip4/0.0.0.0/tcp/0",
+			BootstrapAddresses: []string{},
+			EnablePubsub:       true,
 		},
 	}
 }
