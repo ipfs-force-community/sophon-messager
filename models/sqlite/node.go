@@ -26,7 +26,14 @@ type sqliteNode struct {
 }
 
 func fromNode(node *types.Node) *sqliteNode {
-	return automapper.MustMapper(node, TSqliteNode).(*sqliteNode)
+	return &sqliteNode{
+		ID:        node.ID,
+		Name:      node.Name,
+		URL:       node.URL,
+		Token:     node.Token,
+		Type:      node.Type,
+		IsDeleted: repo.NotDeleted,
+	}
 }
 
 func (sqliteNode sqliteNode) Node() *types.Node {
@@ -49,8 +56,6 @@ func newSqliteNodeRepo(db *gorm.DB) sqliteNodeRepo {
 
 func (s sqliteNodeRepo) CreateNode(node *types.Node) error {
 	sNode := fromNode(node)
-	sNode.CreatedAt = time.Now()
-	sNode.UpdatedAt = time.Now()
 	return s.DB.Create(sNode).Error
 }
 
@@ -62,7 +67,7 @@ func (s sqliteNodeRepo) SaveNode(node *types.Node) error {
 
 func (s sqliteNodeRepo) GetNode(name string) (*types.Node, error) {
 	var node sqliteNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
+	if err := s.DB.Take(&node, "name = ? and is_deleted = ?", name, repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 	return node.Node(), nil
@@ -70,7 +75,7 @@ func (s sqliteNodeRepo) GetNode(name string) (*types.Node, error) {
 
 func (s sqliteNodeRepo) HasNode(name string) (bool, error) {
 	var count int64
-	if err := s.DB.Model(&sqliteNode{}).Where("name = ? and is_deleted = -1", name).Count(&count).Error; err != nil {
+	if err := s.DB.Model(&sqliteNode{}).Where("name = ? and is_deleted = ?", name, repo.NotDeleted).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
@@ -78,7 +83,7 @@ func (s sqliteNodeRepo) HasNode(name string) (bool, error) {
 
 func (s sqliteNodeRepo) ListNode() ([]*types.Node, error) {
 	var internalNode []*sqliteNode
-	if err := s.DB.Find(&internalNode, "is_deleted = ?", -1).Error; err != nil {
+	if err := s.DB.Find(&internalNode, "is_deleted = ?", repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 
@@ -91,7 +96,7 @@ func (s sqliteNodeRepo) ListNode() ([]*types.Node, error) {
 
 func (s sqliteNodeRepo) DelNode(name string) error {
 	var node sqliteNode
-	if err := s.DB.Where("name = ? and is_deleted = -1", name).Find(&node).Error; err != nil {
+	if err := s.DB.Take(&node, "name = ? and is_deleted = ?", name, repo.NotDeleted).Error; err != nil {
 		return err
 	}
 	node.IsDeleted = repo.Deleted

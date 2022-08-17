@@ -1,31 +1,25 @@
 package service
 
 import (
-	"os"
 	"testing"
 
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/filecoin-project/venus-messager/testhelper"
 )
 
 func TestMessageStateCache(t *testing.T) {
-	fs := filestore.NewMockFileStore(nil)
+	fs := filestore.NewMockFileStore(t.TempDir())
 	db, err := sqlite.OpenSqlite(fs)
 	assert.NoError(t, err)
-	defer func() {
-		assert.NoError(t, os.Remove("message.db"))
-		assert.NoError(t, os.Remove("message.db-shm"))
-		assert.NoError(t, os.Remove("message.db-wal"))
-	}()
 	assert.NoError(t, db.AutoMigrate())
 
-	msgs := models.NewSignedMessages(10)
+	msgs := testhelper.NewSignedMessages(10)
 	for _, msg := range msgs {
 		err := db.MessageRepo().CreateMessage(msg)
 		assert.NoError(t, err)
