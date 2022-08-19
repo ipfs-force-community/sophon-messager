@@ -21,6 +21,15 @@ func TestNewFSRepo(t *testing.T) {
 	assert.Equal(t, path, fsRepo.Path())
 	assert.Equal(t, filepath.Join(path, TipsetFile), fsRepo.TipsetFile())
 	assert.Equal(t, filepath.Join(path, SqliteFile), fsRepo.SqliteFile())
+
+	token := []byte("test-token")
+	err = fsRepo.SaveToken(token)
+	assert.NoError(t, err)
+
+	token2, err := fsRepo.GetToken()
+	assert.NoError(t, err)
+	assert.Equal(t, token, token2)
+
 }
 
 func TestInitFSRepo(t *testing.T) {

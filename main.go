@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -20,7 +19,8 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/venus-messager/api"
-	"github.com/filecoin-project/venus-messager/api/jwt"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
@@ -128,18 +128,6 @@ func runAction(ctx *cli.Context) error {
 		cfg = fsRepo.Config()
 	}
 
-	// generate jwt token for command
-	if len(cfg.JWT.Local.Secret) == 0 {
-		if err := genSecret(&cfg.JWT); err != nil {
-			return fmt.Errorf("failed to generate secret %v", err)
-		}
-		if hasFSRepo {
-			if err := fsRepo.ReplaceConfig(cfg); err != nil {
-				return err
-			}
-		}
-	}
-
 	if err = updateFlag(cfg, ctx); err != nil {
 		return err
 	}
@@ -160,6 +148,21 @@ func runAction(ctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
+
+	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL)
+	if err != nil {
+		return err
+	}
+
+	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
+	if err != nil {
+		return fmt.Errorf("failed to generate local auth client %v", err)
+	}
+
+	err = fsRepo.SaveToken(token)
+	if err != nil {
+		return fmt.Errorf("failed to save token %v", err)
+	}
 
 	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {
@@ -203,6 +206,8 @@ func runAction(ctx *cli.Context) error {
 		fx.Supply(log),
 		fx.Supply(client),
 		fx.Supply(networkName),
+		fx.Supply(remoteAuthCli),
+		fx.Supply(localAuthCli),
 		fx.Provide(func() gatewayapi.IWalletClient {
 			return walletCli
 		}),
@@ -220,8 +225,6 @@ func runAction(ctx *cli.Context) error {
 		service.MessagerService(),
 		// api
 		fx.Provide(api.NewMessageImp),
-		// jwt
-		fx.Provide(jwt.NewJwtClient),
 
 		// middleware
 
@@ -325,19 +328,6 @@ type fxLogger struct {
 
 func (l fxLogger) Printf(str string, args ...interface{}) {
 	l.log.Infof(str, args...)
-}
-
-func genSecret(cfg *config.JWTConfig) error {
-	if len(cfg.Local.Secret) == 0 {
-		sBytes, tBytes, err := jwt.GenSecretAndToken()
-		if err != nil {
-			return err
-		}
-		cfg.Local.Secret = hex.EncodeToString(sBytes)
-		cfg.Local.Token = string(tBytes)
-	}
-
-	return nil
 }
 
 func hasFSRepo(repoPath string) (bool, error) {

@@ -14,17 +14,15 @@ require (
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
 	github.com/filecoin-project/venus v1.6.1-0.20220815081726-64c38fae8aa7
-	github.com/filecoin-project/venus-auth v1.6.0
-	github.com/gbrlsnchs/jwt/v3 v3.0.1
+	github.com/filecoin-project/venus-auth v1.6.1-0.20220818060206-3313af6a9ba1
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
-	github.com/ipfs-force-community/venus-gateway v1.6.0
 	github.com/ipfs/go-cid v0.2.0
-	github.com/libp2p/go-libp2p v0.20.3
+	github.com/libp2p/go-libp2p v0.20.0
 	github.com/libp2p/go-libp2p-core v0.16.1
 	github.com/libp2p/go-libp2p-kad-dht v0.15.0
-	github.com/libp2p/go-libp2p-pubsub v0.7.1
+	github.com/libp2p/go-libp2p-pubsub v0.6.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -88,6 +86,7 @@ require (
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/gbrlsnchs/jwt/v3 v3.0.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.7.0 // indirect
 	github.com/go-kit/log v0.2.0 // indirect

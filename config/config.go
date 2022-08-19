@@ -55,10 +55,6 @@ type MySqlConfig struct {
 
 type JWTConfig struct {
 	AuthURL string `toml:"authURL"`
-	Local   struct {
-		Secret string `toml:"secret"`
-		Token  string `toml:"token"`
-	} `toml:"local"`
 }
 
 const (
