@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-messager/filestore"
@@ -12,17 +11,11 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/venus-messager/config"
-	utils2 "github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 )
 
 func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) {
-	cfg, err := getConfig(ctx)
-	if err != nil {
-		return nil, func() {}, err
-	}
-
 	repo, err := getRepo(ctx)
 	if err != nil {
 		return nil, func() {}, err
@@ -31,6 +24,8 @@ func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) 
 	if err != nil {
 		return nil, func() {}, err
 	}
+
+	cfg := repo.Config()
 
 	return messager.DialIMessagerRPC(ctx.Context, cfg.API.Address, string(token), nil)
 }
@@ -48,15 +43,12 @@ func NewNodeAPI(ctx context.Context, addr, token string) (v1.FullNode, jsonrpc.C
 }
 
 func getConfig(ctx *cli.Context) (*config.Config, error) {
-	repoPath, err := homedir.Expand(ctx.String("repo"))
+	repo, err := getRepo(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cfg := new(config.Config)
 
-	err = utils2.ReadConfig(filepath.Join(repoPath, filestore.ConfigFile), cfg)
-
-	return cfg, err
+	return repo.Config(), nil
 }
 
 func LoadBuiltinActors(ctx context.Context, nodeAPI v1.FullNode) error {
