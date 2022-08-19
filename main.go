@@ -159,7 +159,10 @@ func runAction(ctx *cli.Context) error {
 		return fmt.Errorf("failed to generate local auth client %v", err)
 	}
 
-	fsRepo.SaveToken(token)
+	err = fsRepo.SaveToken(token)
+	if err != nil {
+		return fmt.Errorf("failed to save token %v", err)
+	}
 
 	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {
