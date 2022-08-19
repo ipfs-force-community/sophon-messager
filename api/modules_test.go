@@ -6,7 +6,6 @@ import (
 
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/api"
-	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -23,12 +22,8 @@ func TestLimitWrap(t *testing.T) {
 		fx.Supply(&config.RateLimitConfig{
 			Redis: "test url",
 		}),
-		fx.Provide(func() *jwt.Client {
-			return &jwt.Client{
-				Remote: &jwt.RemoteAuthClient{
-					Cli: &jwtclient.AuthClient{},
-				},
-			}
+		fx.Provide(func() *jwtclient.AuthClient {
+			return &jwtclient.AuthClient{}
 		}),
 		fx.Supply(log.New()),
 		fx.Supply(&api.MessageImp{}),

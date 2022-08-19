@@ -11,23 +11,22 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-auth/jwtclient"
-	"github.com/filecoin-project/venus-messager/api/jwt"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/ipfs-force-community/metrics/ratelimit"
 	"go.uber.org/fx"
 )
 
-func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.Client, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
+func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
-	if len(rateLimitCfg.Redis) != 0 && jwtCli.Remote != nil && jwtCli.Remote.Cli != nil {
+	if len(rateLimitCfg.Redis) != 0 && remoteAuthCli != nil {
 		limiter, err := ratelimit.NewRateLimitHandler(
 			rateLimitCfg.Redis,
 			nil,
 			&jwtclient.ValueFromCtx{},
-			jwtclient.WarpLimitFinder(jwtCli.Remote.Cli),
+			jwtclient.WarpLimitFinder(remoteAuthCli),
 			log,
 		)
 		if err != nil {
@@ -42,12 +41,12 @@ func BindRateLimit(msgImp *MessageImp, jwtCli *jwt.Client, log *log.Logger, rate
 
 // RunAPI bind rpc call and start rpc
 // todo
-func RunAPI(lc fx.Lifecycle, jwtCli *jwt.Client, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
+func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli *jwtclient.AuthClient, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()
 	handler.Handle("/rpc/v0", srv)
-	authMux := jwtclient.NewAuthMux(jwtCli.Local, jwtCli.Remote, handler)
+	authMux := jwtclient.NewAuthMux(localAuthCli, jwtclient.WarpIJwtAuthClient(remoteAuthCli), handler)
 	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
 
 	apiserv := &http.Server{
