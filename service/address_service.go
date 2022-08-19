@@ -136,7 +136,7 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	if len(gasFeeCapStr) != 0 {
 		gasFeeCap, err = venusTypes.BigFromString(gasFeeCapStr)
 		if err != nil {
-			return fmt.Errorf("parsing max-feecap: %v", err)
+			return fmt.Errorf("parsing gas-feecap: %v", err)
 		}
 		needUpdate = true
 	}

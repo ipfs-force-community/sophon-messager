@@ -225,8 +225,8 @@ var setFeeParamsCmd = &cli.Command{
 			Usage: "Estimate the coefficient of gas",
 		},
 		&cli.StringFlag{
-			Name:  "max-feecap",
-			Usage: "Max feecap for a message (burn and pay to miner, attoFIL/GasUnit)",
+			Name:  "gas-feecap",
+			Usage: "Gas feecap for a message (burn and pay to miner, attoFIL/GasUnit)",
 		},
 		&cli.StringFlag{
 			Name:  "max-fee",
@@ -250,7 +250,7 @@ var setFeeParamsCmd = &cli.Command{
 			return err
 		}
 
-		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64(GasOverPremiumFlag.Name), ctx.String("max-fee"), ctx.String("max-feecap"))
+		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64(GasOverPremiumFlag.Name), ctx.String("max-fee"), ctx.String("gas-feecap"))
 
 		return err
 	},

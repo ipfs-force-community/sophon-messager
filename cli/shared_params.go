@@ -31,7 +31,7 @@ var setSharedParamsCmd = &cli.Command{
 			Value: "7000000000000000",
 		},
 		&cli.StringFlag{
-			Name:  "max-feecap",
+			Name:  "gas-feecap",
 			Value: "0",
 		},
 		&cli.Uint64Flag{
@@ -64,10 +64,10 @@ var setSharedParamsCmd = &cli.Command{
 				return fmt.Errorf("parse max-fee failed %v", err)
 			}
 		}
-		if ctx.IsSet("max-feecap") {
-			params.GasFeeCap, err = big.FromString(ctx.String("max-feecap"))
+		if ctx.IsSet("gas-feecap") {
+			params.GasFeeCap, err = big.FromString(ctx.String("gas-feecap"))
 			if err != nil {
-				return fmt.Errorf("parse max-feecap failed %v", err)
+				return fmt.Errorf("parse gas-feecap failed %v", err)
 			}
 		}
 		if ctx.IsSet("sel-msg-num") {
