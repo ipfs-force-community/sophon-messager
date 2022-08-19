@@ -128,18 +128,6 @@ func runAction(ctx *cli.Context) error {
 		cfg = fsRepo.Config()
 	}
 
-	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
-	if err != nil {
-		return fmt.Errorf("failed to generate local auth client %v", err)
-	}
-
-	cfg.JWT.Local.Token = string(token)
-	if hasFSRepo {
-		if err := fsRepo.ReplaceConfig(cfg); err != nil {
-			return err
-		}
-	}
-
 	if err = updateFlag(cfg, ctx); err != nil {
 		return err
 	}
@@ -165,6 +153,13 @@ func runAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
+	if err != nil {
+		return fmt.Errorf("failed to generate local auth client %v", err)
+	}
+
+	fsRepo.SaveToken(token)
 
 	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {

@@ -23,7 +23,13 @@ func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) 
 		return nil, func() {}, err
 	}
 
-	return messager.DialIMessagerRPC(ctx.Context, cfg.API.Address, cfg.JWT.Local.Token, nil)
+	repo, err := getRepo(ctx)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	token, err := repo.GetToken()
+
+	return messager.DialIMessagerRPC(ctx.Context, cfg.API.Address, string(token), nil)
 }
 
 func getNodeAPI(ctx *cli.Context) (v1.FullNode, jsonrpc.ClientCloser, error) {
@@ -57,4 +63,13 @@ func LoadBuiltinActors(ctx context.Context, nodeAPI v1.FullNode) error {
 	utils.ReloadMethodsMap()
 
 	return nil
+}
+
+func getRepo(ctx *cli.Context) (filestore.FSRepo, error) {
+	repoPath, err := homedir.Expand(ctx.String("repo"))
+	repo, err := filestore.NewFSRepo(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return repo, nil
 }

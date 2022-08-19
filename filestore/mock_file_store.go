@@ -1,14 +1,16 @@
 package filestore
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/filecoin-project/venus-messager/config"
 )
 
 type mockFileStore struct {
-	path string
-	cfg  *config.Config
+	path  string
+	cfg   *config.Config
+	token []byte
 }
 
 func NewMockFileStore(path string) FSRepo {
@@ -39,6 +41,18 @@ func (mfs *mockFileStore) TipsetFile() string {
 
 func (mfs *mockFileStore) SqliteFile() string {
 	return filepath.Join(mfs.path, SqliteFile)
+}
+
+func (mfs *mockFileStore) GetToken() ([]byte, error) {
+	if mfs.token != nil {
+		return mfs.token, nil
+	}
+	return nil, fmt.Errorf("token not found")
+}
+
+func (mfs *mockFileStore) SaveToken(token []byte) error {
+	mfs.token = token
+	return nil
 }
 
 var _ FSRepo = (*mockFileStore)(nil)

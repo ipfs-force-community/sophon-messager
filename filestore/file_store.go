@@ -1,6 +1,8 @@
 package filestore
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -12,6 +14,7 @@ const (
 	ConfigFile = "config.toml"
 	TipsetFile = "tipset.json"
 	SqliteFile = "message.db"
+	TokenFile  = "token"
 )
 
 type FSRepo interface {
@@ -20,6 +23,8 @@ type FSRepo interface {
 	ReplaceConfig(cfg *config.Config) error
 	TipsetFile() string
 	SqliteFile() string
+	GetToken() ([]byte, error)
+	SaveToken([]byte) error
 }
 
 type fsRepo struct {
@@ -74,4 +79,16 @@ func (r *fsRepo) ReplaceConfig(cfg *config.Config) error {
 	r.cfg = cfg
 
 	return nil
+}
+
+func (r *fsRepo) SaveToken(token []byte) error {
+	err := ioutil.WriteFile(filepath.Join(r.path, TokenFile), token, 0644)
+	if err != nil {
+		return fmt.Errorf("write token to token file failed: %v", err)
+	}
+	return nil
+}
+
+func (r *fsRepo) GetToken() ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(r.path, TokenFile))
 }
