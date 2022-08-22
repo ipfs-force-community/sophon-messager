@@ -12,9 +12,6 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/utils"
-
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -27,12 +24,12 @@ func main() {
 	var count int
 	var value string
 
-	flag.StringVar(&apiAddress, "api", "", "messager api address")
+	flag.StringVar(&apiAddress, "api", "/ip4/127.0.0.1/tcp/39812", "messager api address")
 	flag.StringVar(&token, "token", "", "messager token")
 	flag.StringVar(&fromStr, "from", "", "from which address is the message sent")
 	flag.StringVar(&toStr, "to", "", "to whom is the message sent")
-	flag.IntVar(&count, "count", 50, "number of messages sent per second")
-	flag.StringVar(&value, "value", "0", "")
+	flag.IntVar(&count, "count", 1, "number of messages sent per second")
+	flag.StringVar(&value, "value", "1", "")
 
 	flag.Parse()
 
@@ -51,20 +48,6 @@ func main() {
 	}
 	if count < 0 {
 		count = 1
-	}
-
-	cfg := new(config.Config)
-	err = utils.ReadConfig("./messager.toml", cfg)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	if len(apiAddress) == 0 {
-		apiAddress = cfg.API.Address
-	}
-
-	if len(token) == 0 {
-		token = cfg.Node.Token
 	}
 
 	val, err := venustypes.ParseFIL(value)
@@ -102,7 +85,7 @@ func main() {
 					Version: 0,
 					To:      to,
 					From:    from,
-					Nonce:   1,
+					Nonce:   0,
 					Value:   abi.TokenAmount(val),
 					Method:  0,
 				},

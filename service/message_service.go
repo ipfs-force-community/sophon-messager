@@ -78,7 +78,8 @@ type cleanUnFillMsgResult struct {
 	err   error
 }
 
-func NewMessageService(repo repo.Repo,
+func NewMessageService(ctx context.Context,
+	repo repo.Repo,
 	nc v1.FullNode,
 	logger *log.Logger,
 	fsRepo filestore.FSRepo,
@@ -108,14 +109,14 @@ func NewMessageService(repo repo.Repo,
 		cleanUnFillMsgFunc: make(chan func() (int, error)),
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 	}
-	ms.refreshMessageState(context.TODO())
+	ms.refreshMessageState(ctx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
 		ms.log.Infof("load tipset file failed: %v", err)
 	}
 
 	// 本身缺少 global context
 	if fsRepo.Config().Metrics.Enabled {
-		go ms.recordMetricsProc(context.TODO())
+		go ms.recordMetricsProc(ctx)
 	}
 
 	return ms, ms.verifyNetworkName()
@@ -803,7 +804,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 	for {
 		select {
 		case <-ctx.Done():
-			ms.log.Infof("Stop push message")
+			ms.log.Warnf("stop push message: %v", ctx.Err())
 			return
 		case <-tm.C:
 			//newHead, err := ms.nodeClient.ChainHead(ctx)
@@ -848,7 +849,7 @@ func (ms *MessageService) tryClearUnFillMsg() {
 func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, error) {
 	msgs := make([]*types.Message, 0)
 
-	for addr := range ms.addressService.ActiveAddresses() {
+	for addr := range ms.addressService.ActiveAddresses(ctx) {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
 			ms.log.Errorf("list filled message %v %v", addr, err)
@@ -1118,7 +1119,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			ms.log.Info("Stop record metrics")
+			ms.log.Warnf("stop record metrics: %v", ctx.Err())
 			return
 		case <-tm.C:
 			addrs, err := ms.addressService.ListActiveAddress(ctx)

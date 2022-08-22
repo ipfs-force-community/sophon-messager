@@ -50,13 +50,17 @@ type MessagePubSub struct {
 	expanding     chan struct{}
 }
 
-func NewMessagePubSub(logger *log.Logger, listenAddress string, networkName types.NetworkName, bootstrap []string) (*MessagePubSub, error) {
-	ctx := context.Background()
+func NewMessagePubSub(ctx context.Context,
+	logger *log.Logger,
+	listenAddress string,
+	networkName types.NetworkName,
+	bootstrap []string,
+) (*MessagePubSub, error) {
 
 	// get default bootstrap from net params
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
 	if err != nil {
-		logger.Infof("failed to get default network config: %s", err)
+		logger.Errorf("failed to get default network config: %s", err)
 	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
@@ -143,8 +147,14 @@ func (m *MessagePubSub) run(ctx context.Context) {
 	}
 
 	ticker := time.NewTicker(m.period)
-	for range ticker.C {
-		m.expandPeers()
+	for {
+		select {
+		case <-ticker.C:
+			m.expandPeers()
+		case <-ctx.Done():
+			m.log.Warnf("stop expand peers: %v", ctx.Err())
+			return
+		}
 	}
 }
 
@@ -156,10 +166,6 @@ func (m *MessagePubSub) Connect(ctx context.Context, p peer.AddrInfo) error {
 }
 
 func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
-	if m.host == nil {
-		return nil, errors.New("messager must be online")
-	}
-
 	conns := m.host.Network().Conns()
 	peers := make([]peer.AddrInfo, 0, len(conns))
 	for _, conn := range conns {
@@ -178,10 +184,6 @@ func (m *MessagePubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.Addr
 }
 
 func (m *MessagePubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
-	if m.host == nil {
-		return peer.AddrInfo{}, errors.New("messager must be online")
-	}
-
 	return peer.AddrInfo{
 		ID:    m.host.ID(),
 		Addrs: m.host.Addrs(),

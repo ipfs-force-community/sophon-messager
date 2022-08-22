@@ -139,12 +139,15 @@ func (w *WalletProxy) ListWalletInfoByWallet(ctx context.Context, account string
 	panic("implement me")
 }
 
-func NewWalletClient(cfg *config.GatewayConfig, logger *log.Logger) (*WalletProxy, jsonrpc.ClientCloser, error) {
+func NewWalletClient(ctx context.Context,
+	cfg *config.GatewayConfig,
+	logger *log.Logger,
+) (*WalletProxy, jsonrpc.ClientCloser, error) {
 	var proxy = &WalletProxy{
 		clients:             make(map[string]gateway.IWalletClient),
 		avaliabeClientCache: make(map[cacheKey]gateway.IWalletClient),
-		logger:              logger}
-	var ctx = context.Background()
+		logger:              logger,
+	}
 
 	var closers []jsonrpc.ClientCloser
 

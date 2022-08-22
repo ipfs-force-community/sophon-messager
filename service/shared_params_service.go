@@ -41,7 +41,7 @@ type Params struct {
 	ScanIntervalChan chan time.Duration
 }
 
-func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
+func NewSharedParamsService(ctx context.Context, repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
 	sps := &SharedParamsService{
 		repo: repo,
 		log:  logger,
@@ -50,7 +50,6 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 			ScanIntervalChan: make(chan time.Duration, 5),
 		},
 	}
-	ctx := context.TODO()
 	params, err := sps.GetSharedParams(ctx)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -65,7 +64,7 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 	}
 
 	sps.params.SharedSpec = params
-	sps.refreshParamsLoop()
+	sps.refreshParamsLoop(ctx)
 
 	return sps, nil
 }
@@ -109,19 +108,25 @@ func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) error {
 	return nil
 }
 
-func (sps *SharedParamsService) refreshParamsLoop() {
+func (sps *SharedParamsService) refreshParamsLoop(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(referParamsInterval)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			params, err := sps.GetSharedParams(context.TODO())
-			if err != nil {
-				sps.log.Warnf("get shared params %v", err)
-				continue
-			}
-			if !reflect.DeepEqual(sps.params.SharedSpec, params) {
-				sps.SetParams(params)
+		for {
+			select {
+			case <-ticker.C:
+				params, err := sps.GetSharedParams(context.TODO())
+				if err != nil {
+					sps.log.Warnf("get shared params %v", err)
+					continue
+				}
+				if !reflect.DeepEqual(sps.params.SharedSpec, params) {
+					sps.SetParams(params)
+				}
+			case <-ctx.Done():
+				sps.log.Warnf("stop refresh shared params: %v", ctx.Err())
+				return
 			}
 		}
 	}()

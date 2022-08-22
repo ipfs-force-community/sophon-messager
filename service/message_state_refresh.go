@@ -38,7 +38,7 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 				h.done <- nil
 				ms.log.Infof("end refresh message state, spent %d 'ms'", time.Since(now).Milliseconds())
 			case <-ctx.Done():
-				ms.log.Warnf("context error: %v", ctx.Err())
+				ms.log.Warnf("stop refresh message state: %v", ctx.Err())
 				return
 			}
 		}
@@ -185,7 +185,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 			return nil, fmt.Errorf("found filled message at height %d error %v", ts.Height(), err)
 		}
 
-		addrs := ms.addressService.ActiveAddresses()
+		addrs := ms.addressService.ActiveAddresses(ctx)
 		for _, msg := range msgs {
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
@@ -205,7 +205,7 @@ type pendingMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]pendingMessage, error) {
 	var applyMsgs []pendingMessage
-	addrs := ms.addressService.ActiveAddresses()
+	addrs := ms.addressService.ActiveAddresses(ctx)
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
 		height := ts.Height()
