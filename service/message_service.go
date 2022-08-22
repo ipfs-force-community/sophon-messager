@@ -160,12 +160,12 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	has, err := ms.walletClient.WalletHas(ctx, msg.WalletName, msg.From)
+	has, err := ms.walletClient.WalletHas(ctx, msg.From)
 	if err != nil {
 		return err
 	}
 	if !has {
-		return fmt.Errorf("wallet(%s) address %s not exists", msg.WalletName, msg.From)
+		return fmt.Errorf("signer address %s not exists", msg.From)
 	}
 	var addrInfo *types.Address
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
@@ -202,18 +202,17 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return ms.repo.MessageRepo().CreateMessage(msg)
 }
 
-func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	return ms.PushMessageWithId(ctx, account, venusTypes.NewUUID().String(), msg, meta)
+<<<<<<< HEAD
+func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	return ms.PushMessageWithId(ctx, venusTypes.NewUUID().String(), msg, meta)
 }
 
-func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	if err := ms.pushMessage(ctx, &types.Message{
-		ID:         id,
-		Message:    *msg,
-		Meta:       meta,
-		State:      types.UnFillMsg,
-		WalletName: account,
-		FromUser:   account,
+		ID:      id,
+		Message: *msg,
+		Meta:    meta,
+		State:   types.UnFillMsg,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", id, err)
 		return id, err
@@ -1016,7 +1015,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	if err != nil {
 		return venusTypes.SignedMessage{}, fmt.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.WalletName, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
+	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
 		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	})

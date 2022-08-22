@@ -273,7 +273,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(timeOutCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		sigI, err := handleTimeout(timeOutCtx, messageSelector.walletClient.WalletSign, []interface{}{addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})

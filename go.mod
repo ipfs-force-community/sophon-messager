@@ -14,9 +14,9 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.15
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
-	github.com/filecoin-project/venus v1.7.1-0.20220907030918-79139f701958
-	github.com/filecoin-project/venus-auth v1.7.0
 	github.com/golang/mock v1.6.0
+	github.com/filecoin-project/venus v1.6.1-0.20220822062043-aa80a790edc9
+	github.com/filecoin-project/venus-auth v1.6.1-0.20220818090203-d2c23f97f385
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
