@@ -121,6 +121,8 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
+		CreatedAt:  srcMsg.CreatedAt,
+		UpdatedAt:  srcMsg.UpdatedAt,
 	}
 
 	if srcMsg.UnsignedCid != nil {
@@ -282,8 +284,6 @@ func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 
 func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
-	sqlMsg.CreatedAt = time.Now()
-	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Create(sqlMsg).Error
 }
 

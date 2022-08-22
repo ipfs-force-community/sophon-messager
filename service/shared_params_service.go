@@ -19,8 +19,8 @@ const referParamsInterval = time.Second * 10
 
 var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
-var defParams = &types.SharedSpec{
-	ID:                0,
+var DefSharedParams = &types.SharedSpec{
+	ID:                1,
 	GasOverEstimation: 1.25,
 	MaxFee:            big.Int{Int: DefaultMaxFee.Int},
 	GasFeeCap:         big.NewInt(0),
@@ -56,10 +56,12 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		if err = sps.SetSharedParams(ctx, defParams); err != nil {
+		// avoid data race
+		sharedParamsCopy := *DefSharedParams
+		if err = sps.SetSharedParams(ctx, &sharedParamsCopy); err != nil {
 			return nil, err
 		}
-		params = defParams
+		params = &sharedParamsCopy
 	}
 
 	sps.params.SharedSpec = params
@@ -73,14 +75,13 @@ func (sps *SharedParamsService) GetSharedParams(ctx context.Context) (*types.Sha
 }
 
 func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *types.SharedSpec) error {
-	id, err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
+	_, err := sps.repo.SharedParamsRepo().SetSharedParams(ctx, params)
 	if err != nil {
 		return err
 	}
-	params.ID = id
 	sps.SetParams(params)
 
-	return err
+	return nil
 }
 
 func (sps *SharedParamsService) GetParams() *Params {
@@ -93,15 +94,9 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedSpec) {
 		return
 	}
 	sps.log.Infof("old params %v ", sps.params.SharedSpec)
-	if sharedParams.GetSendSpec() != nil {
-		sps.params.GasOverEstimation = sharedParams.GasOverEstimation
-		sps.params.MaxFee = sharedParams.MaxFee
-		sps.params.GasFeeCap = sharedParams.GasFeeCap
-		sps.params.GasOverPremium = sharedParams.GasOverPremium
-	}
-	if sharedParams.SelMsgNum > 0 {
-		sps.params.SelMsgNum = sharedParams.SelMsgNum
-	}
+
+	sps.params.SharedSpec = sharedParams
+
 	sps.log.Infof("new params %v", sharedParams)
 }
 

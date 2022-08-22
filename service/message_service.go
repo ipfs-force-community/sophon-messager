@@ -114,7 +114,9 @@ func NewMessageService(repo repo.Repo,
 	}
 
 	// 本身缺少 global context
-	go ms.recordMetricsProc(context.TODO())
+	if fsRepo.Config().Metrics.Enabled {
+		go ms.recordMetricsProc(context.TODO())
+	}
 
 	return ms, ms.verifyNetworkName()
 }
@@ -314,19 +316,66 @@ func (ms *MessageService) GetMessageState(ctx context.Context, id string) (types
 }
 
 func (ms *MessageService) GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageBySignedCid(signedCid)
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := ms.repo.MessageRepo().GetMessageBySignedCid(signedCid)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State == types.OnChainMsg {
+		msg.Confidence = int64(ts.Height()) - msg.Height
+	}
+	return msg, nil
 }
 
 func (ms *MessageService) GetMessageByUnsignedCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := ms.repo.MessageRepo().GetMessageByCid(unsignedCid)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State == types.OnChainMsg {
+		msg.Confidence = int64(ts.Height()) - msg.Height
+	}
+	return msg, nil
 }
 
 func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error) {
-	return ms.repo.MessageRepo().GetMessageByFromAndNonce(from, nonce)
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := ms.repo.MessageRepo().GetMessageByFromAndNonce(from, nonce)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State == types.OnChainMsg {
+		msg.Confidence = int64(ts.Height()) - msg.Height
+	}
+	return msg, nil
 }
 
 func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
+	ts, err := ms.nodeClient.ChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := ms.repo.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, msg := range msgs {
+		if msg.State == types.OnChainMsg {
+			msg.Confidence = int64(ts.Height()) - msg.Height
+		}
+	}
+	return msgs, nil
 }
 
 func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
@@ -812,7 +861,7 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
-			ms.log.Errorf("update filled message: %v", err)
+			ms.log.Errorf("failed to update filled message: %v", err)
 			continue
 		}
 		updateCount++

@@ -35,12 +35,12 @@ func (mfs *mockFileStore) ReplaceConfig(cfg *config.Config) error {
 }
 
 func (mfs *mockFileStore) TipsetFile() string {
-	// SQLite In-Memory Model
-	return ":memory:"
+	return filepath.Join(mfs.Path(), TipsetFile)
 }
 
 func (mfs *mockFileStore) SqliteFile() string {
-	return filepath.Join(mfs.path, SqliteFile)
+	// SQLite In-Memory
+	return ":memory:"
 }
 
 func (mfs *mockFileStore) GetToken() ([]byte, error) {

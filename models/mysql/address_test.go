@@ -183,17 +183,25 @@ func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 func testUpdateState(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	ctx := context.Background()
 	addr := testutil.AddressProvider()(t)
-	state := types.AddressStateForbbiden
+	states := []types.AddressState{
+		types.AddressState(0),
+		types.AddressStateAlive,
+		types.AddressStateRemoving,
+		types.AddressStateRemoved,
+		types.AddressStateForbbiden,
+	}
 
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `state`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(state, anyTime{}, addr.String(), repo.NotDeleted).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
+	for _, state := range states {
+		mock.ExpectBegin()
+		mock.ExpectExec(regexp.QuoteMeta(
+			"UPDATE `addresses` SET `state`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+			WithArgs(state, anyTime{}, addr.String(), repo.NotDeleted).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
 
-	err := r.AddressRepo().UpdateState(ctx, addr, state)
-	assert.NoError(t, err)
+		err := r.AddressRepo().UpdateState(ctx, addr, state)
+		assert.NoError(t, err)
+	}
 }
 
 func testUpdateSelectMsgNum(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
@@ -269,12 +277,14 @@ func testUpdateFeeParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 func newAddressInfo(t *testing.T) (*types.Address, error) {
 	randNum := rand.Int63n(1000)
 	return &types.Address{
-		ID:                venustypes.NewUUID(),
-		Addr:              testutil.AddressProvider()(t),
-		Nonce:             uint64(randNum),
-		Weight:            randNum,
-		SelMsgNum:         uint64(randNum),
-		State:             types.AddressState(rand.Intn(5)),
+		ID:        venustypes.NewUUID(),
+		Addr:      testutil.AddressProvider()(t),
+		Nonce:     uint64(randNum),
+		Weight:    randNum,
+		SelMsgNum: uint64(randNum),
+		// Any zero value like 0, '', false won’t be saved into the database for those fields defined default value,
+		// you might want to use pointer type or Scanner/Valuer to avoid this.
+		State:             types.AddressState(rand.Intn(4) + 1),
 		GasOverEstimation: float64(randNum),
 		GasOverPremium:    float64(randNum),
 		MaxFee:            big.NewInt(randNum),
