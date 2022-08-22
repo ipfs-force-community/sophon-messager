@@ -123,7 +123,7 @@ func testDeleteNode(ctx context.Context, t *testing.T, api messager.IMessager, n
 		assert.NoError(t, err)
 
 		_, err = api.GetNode(ctx, name)
-		assert.Error(t, err)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 		has, err := api.HasNode(ctx, name)
 		assert.NoError(t, err)
 		assert.False(t, has)

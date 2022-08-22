@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -209,7 +211,7 @@ func testGetMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 	}
 
 	res, err := api.GetMessageByUid(ctx, shared.NewUUID().String())
-	assert.Error(t, err)
+	assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	assert.Nil(t, res)
 }
 
@@ -266,7 +268,7 @@ func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api messager
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
-	assert.Error(t, err)
+	assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	assert.Nil(t, res)
 }
 
@@ -281,7 +283,7 @@ func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api messager.I
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
-	assert.Error(t, err)
+	assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	assert.Nil(t, res)
 }
 
@@ -296,7 +298,7 @@ func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api message
 	}
 
 	res, err := api.GetMessageByFromAndNonce(ctx, testutil.AddressProvider()(t), 1)
-	assert.Error(t, err)
+	assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	assert.Nil(t, res)
 }
 
