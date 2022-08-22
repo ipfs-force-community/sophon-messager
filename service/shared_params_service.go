@@ -57,11 +57,11 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 			return nil, err
 		}
 		// avoid data race
-		tmp := *DefSharedParams
-		if err = sps.SetSharedParams(ctx, &tmp); err != nil {
+		sharedParamsCopy := *DefSharedParams
+		if err = sps.SetSharedParams(ctx, &sharedParamsCopy); err != nil {
 			return nil, err
 		}
-		params = &tmp
+		params = &sharedParamsCopy
 	}
 
 	sps.params.SharedSpec = params

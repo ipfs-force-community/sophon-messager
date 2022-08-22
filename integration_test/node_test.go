@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	shared "github.com/filecoin-project/venus/venus-shared/types"
@@ -34,7 +36,7 @@ func TestNodeAPI(t *testing.T) {
 	full, err := testhelper.MockFullNodeServer(t)
 	assert.NoError(t, err)
 
-	cli, closer, err := newMessagerClient(ctx, ms.port, ms.token)
+	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
 	assert.NoError(t, err)
 	defer closer()
 
@@ -54,55 +56,55 @@ func TestNodeAPI(t *testing.T) {
 
 	t.Run("test save node", func(t *testing.T) {
 		for _, node := range nodes {
-			assert.NoError(t, cli.SaveNode(ctx, node))
+			assert.NoError(t, api.SaveNode(ctx, node))
 		}
 	})
 	t.Run("test get node", func(t *testing.T) {
-		testGetNode(ctx, t, cli, nodes)
+		testGetNode(ctx, t, api, nodes)
 	})
 	t.Run("test has node", func(t *testing.T) {
-		testHasNode(ctx, t, cli, nodeNames)
+		testHasNode(ctx, t, api, nodeNames)
 	})
 	t.Run("test list node", func(t *testing.T) {
-		testListNode(ctx, t, cli, nodes)
+		testListNode(ctx, t, api, nodes)
 	})
 	t.Run("test delete node", func(t *testing.T) {
-		testDeleteNode(ctx, t, cli, nodeNames)
+		testDeleteNode(ctx, t, api, nodeNames)
 	})
 
 	assert.NoError(t, full.Stop(ctx))
 	assert.NoError(t, ms.stop(ctx))
 }
 
-func testGetNode(ctx context.Context, t *testing.T, cli messager.IMessager, nodes []*types.Node) {
+func testGetNode(ctx context.Context, t *testing.T, api messager.IMessager, nodes []*types.Node) {
 	for i, node := range nodes {
-		res, err := cli.GetNode(ctx, node.Name)
+		res, err := api.GetNode(ctx, node.Name)
 		assert.NoError(t, err)
 		assert.Equal(t, node, res)
 
 		if i%2 == 0 {
-			_, err = cli.GetNode(ctx, node.Name+"_name")
-			assert.Contains(t, err.Error(), "record not found")
+			_, err = api.GetNode(ctx, node.Name+"_name")
+			assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 		}
 	}
 }
 
-func testHasNode(ctx context.Context, t *testing.T, cli messager.IMessager, nodeNames []string) {
+func testHasNode(ctx context.Context, t *testing.T, api messager.IMessager, nodeNames []string) {
 	for i, name := range nodeNames {
-		has, err := cli.HasNode(ctx, name)
+		has, err := api.HasNode(ctx, name)
 		assert.NoError(t, err)
 		assert.True(t, has)
 
 		if i%2 == 0 {
-			has, err = cli.HasNode(ctx, name+"_name")
+			has, err = api.HasNode(ctx, name+"_name")
 			assert.NoError(t, err)
 			assert.False(t, has)
 		}
 	}
 }
 
-func testListNode(ctx context.Context, t *testing.T, cli messager.IMessager, nodes []*types.Node) {
-	list, err := cli.ListNode(ctx)
+func testListNode(ctx context.Context, t *testing.T, api messager.IMessager, nodes []*types.Node) {
+	list, err := api.ListNode(ctx)
 	assert.NoError(t, err)
 	assert.Len(t, list, len(nodes))
 
@@ -115,14 +117,14 @@ func testListNode(ctx context.Context, t *testing.T, cli messager.IMessager, nod
 	}
 }
 
-func testDeleteNode(ctx context.Context, t *testing.T, cli messager.IMessager, nodeNames []string) {
+func testDeleteNode(ctx context.Context, t *testing.T, api messager.IMessager, nodeNames []string) {
 	for _, name := range nodeNames {
-		err := cli.DeleteNode(ctx, name)
+		err := api.DeleteNode(ctx, name)
 		assert.NoError(t, err)
 
-		_, err = cli.GetNode(ctx, name)
+		_, err = api.GetNode(ctx, name)
 		assert.Error(t, err)
-		has, err := cli.HasNode(ctx, name)
+		has, err := api.HasNode(ctx, name)
 		assert.NoError(t, err)
 		assert.False(t, has)
 	}

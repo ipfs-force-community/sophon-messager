@@ -25,11 +25,11 @@ func TestSharedParamsAPI(t *testing.T) {
 	go ms.start(ctx)
 	assert.NoError(t, <-ms.appStartErr)
 
-	cli, closer, err := newMessagerClient(ctx, ms.port, ms.token)
+	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
 	assert.NoError(t, err)
 	defer closer()
 
-	res, err := cli.GetSharedParams(ctx)
+	res, err := api.GetSharedParams(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, service.DefSharedParams, res)
 
@@ -41,9 +41,9 @@ func TestSharedParamsAPI(t *testing.T) {
 		GasOverPremium:    10,
 		SelMsgNum:         100,
 	}
-	assert.NoError(t, cli.SetSharedParams(ctx, params))
+	assert.NoError(t, api.SetSharedParams(ctx, params))
 
-	res, err = cli.GetSharedParams(ctx)
+	res, err = api.GetSharedParams(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, params, res)
 

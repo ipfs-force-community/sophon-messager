@@ -71,6 +71,7 @@ func TestAddress(t *testing.T) {
 	}
 
 	addrInfoMap := testhelper.SliceToMap([]*types.Address{addrInfo, addrInfo2})
+	randAddr := testhelper.RandAddresses(t, 1)[0]
 
 	t.Run("SaveAddress", func(t *testing.T) {
 		assert.NoError(t, addressRepo.SaveAddress(ctx, addrInfo))
@@ -113,8 +114,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, nonce, r.Nonce)
 
 		// set nonce for a not exist address
-		err = addressRepo.UpdateNonce(ctx, testhelper.RandAddresses(t, 1)[0], nonce)
+		err = addressRepo.UpdateNonce(ctx, randAddr, nonce)
 		assert.NoError(t, err)
+		_, err = addressRepo.GetAddress(ctx, randAddr)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	})
 
 	t.Run("UpdateState", func(t *testing.T) {
@@ -125,8 +128,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, state, r.State)
 
 		// set state for a not exist address
-		err = addressRepo.UpdateState(ctx, testhelper.RandAddresses(t, 1)[0], state)
+		err = addressRepo.UpdateState(ctx, randAddr, state)
 		assert.NoError(t, err)
+		_, err = addressRepo.GetAddress(ctx, randAddr)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	})
 
 	t.Run("UpdateSelectMsgNum", func(t *testing.T) {
@@ -137,8 +142,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, num, r.SelMsgNum)
 
 		// set select message count for a not exist address
-		err = addressRepo.UpdateSelectMsgNum(ctx, testhelper.RandAddresses(t, 1)[0], num)
+		err = addressRepo.UpdateSelectMsgNum(ctx, randAddr, num)
 		assert.NoError(t, err)
+		_, err = addressRepo.GetAddress(ctx, randAddr)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	})
 
 	t.Run("UpdateFeeParams", func(t *testing.T) {
@@ -156,8 +163,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, gasOverPremium, r.GasOverPremium)
 
 		// set fee params for a not exist address
-		err = addressRepo.UpdateFeeParams(ctx, testhelper.RandAddresses(t, 1)[0], gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
+		err = addressRepo.UpdateFeeParams(ctx, randAddr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
 		assert.NoError(t, err)
+		_, err = addressRepo.GetAddress(ctx, randAddr)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	})
 
 	t.Run("DelAddress", func(t *testing.T) {
@@ -173,8 +182,10 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, repo.Deleted, r.IsDeleted)
 
 		// delete a not exist address
-		err = addressRepo.DelAddress(ctx, testhelper.RandAddresses(t, 1)[0])
+		err = addressRepo.DelAddress(ctx, randAddr)
 		assert.NoError(t, err)
+		_, err = addressRepo.GetAddress(ctx, randAddr)
+		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	})
 
 	t.Run("HasAddress", func(t *testing.T) {
