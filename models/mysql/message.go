@@ -3,17 +3,19 @@ package mysql
 import (
 	"time"
 
+	"github.com/ipfs/go-cid"
+	"gorm.io/gorm"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs/go-cid"
-	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/utils"
+
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
@@ -46,9 +48,6 @@ type mysqlMessage struct {
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
-	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
-	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
-
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"`                                   // 是否删除 1:是  -1:否
@@ -73,15 +72,13 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
-		Height:     sqlMsg.Height,
-		Receipt:    sqlMsg.Receipt.MsgReceipt(),
-		Signature:  (*crypto.Signature)(sqlMsg.Signature),
-		Meta:       sqlMsg.Meta.Meta(),
-		WalletName: sqlMsg.WalletName,
-		FromUser:   sqlMsg.FromUser,
-		State:      sqlMsg.State,
-		UpdatedAt:  sqlMsg.UpdatedAt,
-		CreatedAt:  sqlMsg.CreatedAt,
+		Height:    sqlMsg.Height,
+		Receipt:   sqlMsg.Receipt.MsgReceipt(),
+		Signature: (*crypto.Signature)(sqlMsg.Signature),
+		Meta:      sqlMsg.Meta.Meta(),
+		State:     sqlMsg.State,
+		UpdatedAt: sqlMsg.UpdatedAt,
+		CreatedAt: sqlMsg.CreatedAt,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -117,8 +114,6 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 		Height:     srcMsg.Height,
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       mtypes.FromMeta(srcMsg.Meta),
-		WalletName: srcMsg.WalletName,
-		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
 		CreatedAt:  srcMsg.CreatedAt,

@@ -8,17 +8,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ipfs/go-cid"
+	"github.com/urfave/cli/v2"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
+
 	"github.com/filecoin-project/venus-messager/cli/tablewriter"
 	"github.com/filecoin-project/venus-messager/utils"
+
 	"github.com/filecoin-project/venus/pkg/constants"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	msgparser "github.com/filecoin-project/venus/venus-shared/utils/msg_parser"
-	"github.com/ipfs/go-cid"
-	"github.com/urfave/cli/v2"
 )
 
 var ReallyDoItFlag = &cli.BoolFlag{
@@ -747,9 +750,6 @@ type message struct {
 
 	Meta *types.SendSpec
 
-	WalletName string
-	FromUser   string
-
 	State string
 
 	UpdatedAt time.Time
@@ -777,8 +777,6 @@ func transformMessage(msg *types.Message) *message {
 		Confidence:  msg.Confidence,
 		TipSetKey:   msg.TipSetKey,
 		Meta:        msg.Meta,
-		WalletName:  msg.WalletName,
-		FromUser:    msg.FromUser,
 		State:       msg.State.String(),
 		UpdatedAt:   msg.UpdatedAt,
 		CreatedAt:   msg.CreatedAt,

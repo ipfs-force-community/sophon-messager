@@ -10,17 +10,18 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"modernc.org/mathutil"
+
 	"github.com/filecoin-project/venus/pkg/crypto"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"modernc.org/mathutil"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/utils"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const (
@@ -35,7 +36,7 @@ type MessageSelector struct {
 	nodeClient     v1.FullNode
 	addressService *AddressService
 	sps            *SharedParamsService
-	walletClient   gateway.IWalletClient
+	walletClient   gatewayAPI.IWalletClient
 }
 
 type MsgSelectResult struct {
@@ -57,7 +58,7 @@ func NewMessageSelector(repo repo.Repo,
 	nodeClient v1.FullNode,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	walletClient gateway.IWalletClient,
+	walletClient gatewayAPI.IWalletClient,
 ) *MessageSelector {
 	return &MessageSelector{
 		repo:           repo,
@@ -274,7 +275,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		signMsgCtx, signMsgCancel := context.WithTimeout(ctx, messageSelector.cfg.SignMessageTimeout)
-		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})

@@ -6,17 +6,19 @@ import (
 	"net"
 	"strings"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
-
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus/venus-shared/api/messager"
-
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	gatewayapi "github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"go.uber.org/fx"
+
+	"github.com/filecoin-project/go-jsonrpc"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
+	"github.com/filecoin-project/venus/venus-shared/api/messager"
+
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 
 	"github.com/filecoin-project/venus-messager/api"
 	ccli "github.com/filecoin-project/venus-messager/cli"
@@ -107,7 +109,7 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		fx.Supply(networkName),
 		fx.Supply(remoteAuthCli),
 		fx.Supply(localAuthCli),
-		fx.Provide(func() gatewayapi.IWalletClient {
+		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
 		}),
 		fx.Provide(func() v1.FullNode {

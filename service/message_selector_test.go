@@ -9,9 +9,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/venus-shared/testutil"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
 
@@ -22,9 +20,11 @@ import (
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/pubsub"
 	"github.com/filecoin-project/venus-messager/testhelper"
-)
 
-const defaultLocalToken = "defaultLocalToken"
+	"github.com/filecoin-project/venus/venus-shared/testutil"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+)
 
 func TestMergeMsgSpec(t *testing.T) {
 	defSharedPramsCopy := *DefSharedParams
@@ -173,10 +173,9 @@ func TestSelectMessage(t *testing.T) {
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -195,7 +194,7 @@ func TestSelectMessage(t *testing.T) {
 	assert.Error(t, err)
 
 	totalMsg := len(addrs) * 10
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	ts, err = msh.fullNode.ChainHead(ctx)
@@ -226,10 +225,9 @@ func TestSelectNum(t *testing.T) {
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -239,7 +237,7 @@ func TestSelectNum(t *testing.T) {
 
 	defSelectedNum := int(DefSharedParams.SelMsgNum)
 	totalMsg := len(addrs) * 50
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	checkSelectNum := func(msgs []*types.Message, addrNum map[address.Address]int, defNum int) {
@@ -306,10 +304,9 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -317,7 +314,7 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// will estimate gas failed
 		msg.GasLimit = -1
@@ -364,7 +361,7 @@ func TestEstimateMessageGas(t *testing.T) {
 		assert.NoError(t, ms.addressService.SetFeeParams(ctx, params))
 	}
 
-	msgs = genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs = genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// use the fee params in the address table
 		msg.Meta = nil
@@ -397,10 +394,9 @@ func TestBaseFee(t *testing.T) {
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -409,7 +405,7 @@ func TestBaseFee(t *testing.T) {
 	defer lc.RequireStop()
 
 	totalMsg := len(addrs) * int(DefSharedParams.SelMsgNum)
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	// global basefee too low
@@ -507,10 +503,9 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -518,12 +513,12 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	removedAddrs := addrs[:len(addrs)/2]
 	aliveAddrs := addrs[len(addrs)/2:]
-	assert.NoError(t, msh.walletProxy.RemoveAddress(defaultLocalToken, removedAddrs))
+	assert.NoError(t, msh.walletProxy.RemoveAddress(ctx, removedAddrs))
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
@@ -749,12 +744,10 @@ func checkGasFee(t *testing.T, srcMsgs, currMsgs *types.Message, sharedParams *t
 	assert.Equal(t, gasPremium, currMsgs.GasPremium)
 }
 
-func genMessages(addrs []address.Address, account string, count int) []*types.Message {
+func genMessages(addrs []address.Address, count int) []*types.Message {
 	msgs := testhelper.NewMessages(count)
 	sendSpecs := testhelper.MockSendSpecs()
 	for i, msg := range msgs {
-		msg.FromUser = account
-		msg.WalletName = account
 		msg.From = addrs[i%len(addrs)]
 		msg.Meta = sendSpecs[i%len(sendSpecs)]
 	}

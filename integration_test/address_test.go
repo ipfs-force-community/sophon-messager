@@ -17,8 +17,6 @@ import (
 	"github.com/filecoin-project/venus-messager/testhelper"
 )
 
-const defaultLocalToken = "defaultLocalToken"
-
 func TestAddressAPI(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.DefaultConfig()
@@ -31,10 +29,9 @@ func TestAddressAPI(t *testing.T) {
 	go ms.start(ctx)
 	assert.NoError(t, <-ms.appStartErr)
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.RandAddresses(t, addrCount)
-	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
+	assert.NoError(t, ms.walletCli.AddAddress(addrs))
 
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
 	assert.NoError(t, err)
@@ -50,7 +47,6 @@ func TestAddressAPI(t *testing.T) {
 	addrMsgs := make(map[address.Address][]*types.Message, len(addrs))
 	for _, msg := range msgs {
 		msg.From = addrs[rand.Intn(addrCount)]
-		msg.FromUser = account
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, msg.Meta)
 		assert.NoError(t, err)
 		assert.Equal(t, msg.ID, id)
