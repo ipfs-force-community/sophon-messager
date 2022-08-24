@@ -14,8 +14,6 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-const referParamsInterval = time.Second * 10
-
 var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
 var DefSharedParams = &types.SharedSpec{
