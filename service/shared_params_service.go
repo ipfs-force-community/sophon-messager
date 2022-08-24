@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
@@ -64,7 +63,6 @@ func NewSharedParamsService(ctx context.Context, repo repo.Repo, logger *log.Log
 	}
 
 	sps.params.SharedSpec = params
-	sps.refreshParamsLoop(ctx)
 
 	return sps, nil
 }
@@ -106,28 +104,4 @@ func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) error {
 	}
 	sps.SetParams(params)
 	return nil
-}
-
-func (sps *SharedParamsService) refreshParamsLoop(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(referParamsInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				params, err := sps.GetSharedParams(context.TODO())
-				if err != nil {
-					sps.log.Warnf("get shared params %v", err)
-					continue
-				}
-				if !reflect.DeepEqual(sps.params.SharedSpec, params) {
-					sps.SetParams(params)
-				}
-			case <-ctx.Done():
-				sps.log.Warnf("stop refresh shared params: %v", ctx.Err())
-				return
-			}
-		}
-	}()
 }
