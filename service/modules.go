@@ -18,7 +18,6 @@ import (
 func MessagerService() fx.Option {
 	return fx.Options(
 		fx.Provide(NewMessageService),
-		//fx.Provide(NewWalletService),
 		fx.Provide(NewAddressService),
 		fx.Provide(NewSharedParamsService),
 		fx.Provide(NewNodeService),
@@ -46,7 +45,7 @@ func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageSer
 					select {
 					case <-time.After(time.Second):
 					case <-ctx.Done():
-						log.Warnf("not restarting listenHeadChanges: context error: %s", ctx.Err())
+						log.Warnf("stop listen head changes: %s", ctx.Err())
 						return
 					}
 
@@ -92,9 +91,9 @@ func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (inte
 	return nil, fmt.Errorf("method must has 2 return as result")
 }
 
-func newMessagePubSubIndirect(logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
+func newMessagePubSubIndirect(ctx context.Context, logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
 	if net.Enable {
-		return pubsub.NewMessagePubSub(logger, net.ListenAddress, networkName, net.BootstrapAddresses)
+		return pubsub.NewMessagePubSub(ctx, logger, net.ListenAddress, networkName, net.BootstrapAddresses)
 	}
 	return &pubsub.MessagerPubSubStub{}, nil
 }

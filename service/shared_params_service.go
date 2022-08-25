@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"reflect"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
@@ -14,8 +13,6 @@ import (
 	"github.com/filecoin-project/venus-messager/models/repo"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
-
-const referParamsInterval = time.Second * 10
 
 var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
 
@@ -41,7 +38,7 @@ type Params struct {
 	ScanIntervalChan chan time.Duration
 }
 
-func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
+func NewSharedParamsService(ctx context.Context, repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
 	sps := &SharedParamsService{
 		repo: repo,
 		log:  logger,
@@ -50,7 +47,6 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 			ScanIntervalChan: make(chan time.Duration, 5),
 		},
 	}
-	ctx := context.TODO()
 	params, err := sps.GetSharedParams(ctx)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -65,7 +61,6 @@ func NewSharedParamsService(repo repo.Repo, logger *log.Logger) (*SharedParamsSe
 	}
 
 	sps.params.SharedSpec = params
-	sps.refreshParamsLoop()
 
 	return sps, nil
 }
@@ -107,22 +102,4 @@ func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) error {
 	}
 	sps.SetParams(params)
 	return nil
-}
-
-func (sps *SharedParamsService) refreshParamsLoop() {
-	go func() {
-		ticker := time.NewTicker(referParamsInterval)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			params, err := sps.GetSharedParams(context.TODO())
-			if err != nil {
-				sps.log.Warnf("get shared params %v", err)
-				continue
-			}
-			if !reflect.DeepEqual(sps.params.SharedSpec, params) {
-				sps.SetParams(params)
-			}
-		}
-	}()
 }

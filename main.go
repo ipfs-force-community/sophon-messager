@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -108,11 +109,14 @@ var runCmd = &cli.Command{
 	Action: runAction,
 }
 
-func runAction(ctx *cli.Context) error {
+func runAction(cctx *cli.Context) error {
 	var fsRepo filestore.FSRepo
 	cfg := config.DefaultConfig()
 
-	repoPath, err := homedir.Expand(ctx.String("repo"))
+	ctx, cancel := context.WithCancel(cctx.Context)
+	defer cancel()
+
+	repoPath, err := homedir.Expand(cctx.String("repo"))
 	if err != nil {
 		return err
 	}
@@ -128,7 +132,7 @@ func runAction(ctx *cli.Context) error {
 		cfg = fsRepo.Config()
 	}
 
-	if err = updateFlag(cfg, ctx); err != nil {
+	if err = updateFlag(cfg, cctx); err != nil {
 		return err
 	}
 
@@ -146,7 +150,7 @@ func runAction(ctx *cli.Context) error {
 
 	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
-	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
+	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Gateway.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 
 	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL)
@@ -164,18 +168,18 @@ func runAction(ctx *cli.Context) error {
 		return fmt.Errorf("failed to save token %v", err)
 	}
 
-	client, closer, err := v1.DialFullNodeRPC(ctx.Context, cfg.Node.Url, cfg.Node.Token, nil)
+	client, closer, err := v1.DialFullNodeRPC(ctx, cfg.Node.Url, cfg.Node.Token, nil)
 	if err != nil {
 		return fmt.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
 
-	networkName, err := client.StateNetworkName(ctx.Context)
+	networkName, err := client.StateNetworkName(ctx)
 	if err != nil {
 		return fmt.Errorf("get network name failed %v", err)
 	}
 
-	if err := ccli.LoadBuiltinActors(ctx.Context, client); err != nil {
+	if err := ccli.LoadBuiltinActors(ctx, client); err != nil {
 		return err
 	}
 
@@ -184,7 +188,7 @@ func runAction(ctx *cli.Context) error {
 		return err
 	}
 
-	walletCli, walletCliCloser, err := gateway.NewWalletClient(&cfg.Gateway, log)
+	walletCli, walletCliCloser, err := gateway.NewWalletClient(ctx, &cfg.Gateway, log)
 	if err != nil {
 		return err
 	}
@@ -204,7 +208,6 @@ func runAction(ctx *cli.Context) error {
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
 			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
-		fx.Supply(client),
 		fx.Supply(networkName),
 		fx.Supply(remoteAuthCli),
 		fx.Supply(localAuthCli),
@@ -231,6 +234,10 @@ func runAction(ctx *cli.Context) error {
 		fx.Provide(func() net.Listener {
 			return lst
 		}),
+
+		fx.Provide(func() context.Context {
+			return ctx
+		}),
 	)
 
 	invoker := fx.Options(
@@ -247,7 +254,7 @@ func runAction(ctx *cli.Context) error {
 	)
 
 	app := fx.New(provider, invoker, apiOption)
-	if err := app.Start(ctx.Context); err != nil {
+	if err := app.Start(ctx); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
 		return fmt.Errorf("starting app: %w", err)
 	}
@@ -261,7 +268,7 @@ func runAction(ctx *cli.Context) error {
 		log.Warn("received shutdown")
 
 		log.Warn("Shutting down...")
-		if err := app.Stop(ctx.Context); err != nil {
+		if err := app.Stop(ctx); err != nil {
 			log.Errorf("graceful shutting down failed: %s", err)
 		}
 		log.Info("Graceful shutdown successful")

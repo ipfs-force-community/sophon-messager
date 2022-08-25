@@ -15,7 +15,7 @@ import (
 
 func TestMessagePubSub(t *testing.T) {
 	ctx := context.Background()
-	ps1, err := NewMessagePubSub(log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", []string{})
+	ps1, err := NewMessagePubSub(ctx, log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", []string{})
 	assert.Nil(t, err)
 	addressInfo1 := peer.AddrInfo{
 		ID:    ps1.host.ID(),
@@ -30,7 +30,7 @@ func TestMessagePubSub(t *testing.T) {
 		multiaddr[i] = addr.String()
 	}
 
-	ps2, err := NewMessagePubSub(log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", multiaddr)
+	ps2, err := NewMessagePubSub(ctx, log.New(), "/ip4/127.0.0.1/tcp/0", "test_net_name", multiaddr)
 	assert.Nil(t, err)
 
 	sub, err := ps2.topic.Subscribe()

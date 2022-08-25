@@ -125,6 +125,10 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		// api
 		fx.Provide(api.NewMessageImp),
 
+		fx.Provide(func() context.Context {
+			return ctx
+		}),
+
 		// middleware
 
 		fx.Provide(func() net.Listener {

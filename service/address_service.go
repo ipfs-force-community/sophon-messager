@@ -153,9 +153,9 @@ func (addressService *AddressService) SetFeeParams(ctx context.Context, addr add
 	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
 }
 
-func (addressService *AddressService) ActiveAddresses() map[address.Address]struct{} {
+func (addressService *AddressService) ActiveAddresses(ctx context.Context) map[address.Address]struct{} {
 	addrs := make(map[address.Address]struct{})
-	addrList, err := addressService.ListActiveAddress(context.Background())
+	addrList, err := addressService.ListActiveAddress(ctx)
 	if err != nil {
 		addressService.log.Errorf("list address %v", err)
 		return addrs
