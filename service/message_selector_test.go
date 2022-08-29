@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -500,6 +501,9 @@ func saveMsgsAndUpdateCache(ctx context.Context, ms *MessageService, selectResul
 }
 
 func checkMsgs(ctx context.Context, t *testing.T, ms *MessageService, srcMsgs []*types.Message, selectedMsgs []*types.Message) {
+	ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
+	defer calcel()
+
 	sharedParams, err := ms.sps.GetSharedParams(ctx)
 	assert.NoError(t, err)
 	addrInfos := make(map[address.Address]*types.Address)
@@ -518,8 +522,33 @@ func checkMsgs(ctx context.Context, t *testing.T, ms *MessageService, srcMsgs []
 	}
 }
 
+type waitMsgRes struct {
+	msg *types.Message
+	err error
+}
+
+func waitMsgWithTimeout(ctx context.Context, ms *MessageService, msgID string) (*types.Message, error) {
+	resChan := make(chan *waitMsgRes)
+
+	go func() {
+		res, err := ms.WaitMessage(ctx, msgID, constants.MessageConfidence)
+		resChan <- &waitMsgRes{
+			msg: res,
+			err: err,
+		}
+		close(resChan)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context done: %v", ctx.Err())
+	case res := <-resChan:
+		return res.msg, res.err
+	}
+}
+
 func waitMsgAndCheck(ctx context.Context, t *testing.T, msg *types.Message, ms *MessageService) *types.Message {
-	res, err := ms.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+	res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, msg.ID, res.ID)
 	assert.Equal(t, types.OnChainMsg, res.State)

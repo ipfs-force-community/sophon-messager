@@ -8,7 +8,6 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/constants"
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
@@ -119,8 +118,11 @@ func TestReplaceMessage(t *testing.T) {
 		assert.NoError(t, err)
 		replacedMsgs = append(replacedMsgs, res)
 	}
+
+	ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
+	defer calcel()
 	for _, msg := range replacedMsgs {
-		res, err := ms.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+		res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, msg.GasLimit, res.GasLimit)
 		assert.Equal(t, msg.GasFeeCap, res.GasFeeCap)
@@ -221,7 +223,6 @@ func TestReconnectCheck(t *testing.T) {
 				} else if expectTS.Height() == revertHeight {
 					msh.fullNode.SendRevertSignal(revertSignal)
 				}
-				t.Log(expectTS.Height(), time.Now().String())
 			case <-ctx.Done():
 				t.Errorf("not found tipset")
 			}
@@ -277,23 +278,15 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		go func() {
 			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
 		}()
-		t.Log(ms.tsCache.Cache[int64(ts.Height())].Height(), ts.Height())
 		headChange := <-ms.headChans
-		assert.Equal(t, apply, headChange.apply)
-		assert.Nil(t, headChange.revert)
+		assert.Len(t, headChange.apply, 0)
+		assert.Len(t, headChange.revert, 0)
 		headChange.done <- nil
 	})
 
-	t.Run("normal", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
-		ts, err := msh.fullNode.ChainHead(ctx)
-		assert.NoError(t, err)
-		ms.tsCache.Add(ts)
-
-		expectTS := ts
-		expectHeight := abi.ChainEpoch(5) + ts.Height()
-		tsMap := make(map[abi.ChainEpoch]shared.TipSet, 5)
-
+	getExpectTS := func(currTS *shared.TipSet, expectHeight abi.ChainEpoch) (*shared.TipSet, map[abi.ChainEpoch]shared.TipSet, error) {
+		expectTS := currTS
+		tsMap := make(map[abi.ChainEpoch]shared.TipSet, expectHeight)
 		ticker := time.NewTicker(blockDelay)
 		defer ticker.Stop()
 
@@ -307,9 +300,41 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 				assert.NoError(t, err)
 				tsMap[expectTS.Height()] = *expectTS
 			case <-ctx.Done():
-				t.Errorf("not found tipset")
+				return nil, nil, fmt.Errorf("context done: %v", err)
 			}
 		}
+		return expectTS, tsMap, nil
+	}
+
+	t.Run("head no gap", func(t *testing.T) {
+		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ts, err := msh.fullNode.ChainHead(ctx)
+		assert.NoError(t, err)
+		ms.tsCache.Add(ts)
+
+		expectHeight := ts.Height() + 1
+		expectTS, _, err := getExpectTS(ts, expectHeight)
+		assert.NoError(t, err)
+
+		apply := []*shared.TipSet{expectTS}
+		go func() {
+			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
+		}()
+		headChange := <-ms.headChans
+		assert.Equal(t, apply, headChange.apply)
+		assert.Nil(t, headChange.revert)
+		headChange.done <- nil
+	})
+
+	t.Run("normal", func(t *testing.T) {
+		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ts, err := msh.fullNode.ChainHead(ctx)
+		assert.NoError(t, err)
+		ms.tsCache.Add(ts)
+
+		expectHeight := ts.Height() + 5
+		expectTS, tsMap, err := getExpectTS(ts, expectHeight)
+		assert.NoError(t, err)
 		apply := []*shared.TipSet{expectTS}
 		go func() {
 			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))

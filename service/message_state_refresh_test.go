@@ -43,7 +43,8 @@ func TestDoRefershMessageState(t *testing.T) {
 	defer lc.RequireStop()
 
 	t.Run("normal", func(t *testing.T) {
-		t.SkipNow()
+		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
+		defer calcel()
 		wg := sync.WaitGroup{}
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
@@ -67,7 +68,6 @@ func TestDoRefershMessageState(t *testing.T) {
 	})
 
 	t.Run("revert", func(t *testing.T) {
-		t.SkipNow()
 		ticker := time.NewTicker(blockDelay)
 		defer ticker.Stop()
 
@@ -108,7 +108,6 @@ func TestDoRefershMessageState(t *testing.T) {
 				assert.Equal(t, types.OnChainMsg, res.State)
 				msgLookup, err := msh.fullNode.StateSearchMsg(ctx, shared.EmptyTSK, signedCID, constants.LookbackNoLimit, true)
 				assert.NoError(t, err)
-				t.Log(signedCID, tsk, res.TipSetKey, msgLookup.TipSet)
 				assert.Equal(t, msgLookup.Height, abi.ChainEpoch(res.Height))
 				assert.Equal(t, msgLookup.TipSet, res.TipSetKey)
 				assert.Equal(t, msgLookup.Receipt, *res.Receipt)
@@ -194,12 +193,14 @@ func TestDoRefershMessageState(t *testing.T) {
 			})
 		}
 
+		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
+		defer calcel()
+
 		go func() {
 			ms.multiPushMessages(ctx, selectResult)
 		}()
-
 		for i, msg := range cm.srcMsgs {
-			res, err := msh.ms.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+			res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
 			assert.NoError(t, err)
 			assert.Equal(t, types.ReplacedMsg, res.State)
 			assert.Equal(t, msg.Method, res.Method)
@@ -243,8 +244,12 @@ func TestUpdateMessageState(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
+
+	ctx, cancel2 := context.WithTimeout(ctx, time.Minute*3)
+	defer cancel2()
+
 	for _, msg := range msgs {
-		res, err := msh.ms.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+		res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
 		assert.NoError(t, err)
 
 		assert.Equal(t, types.OnChainMsg, res.State)

@@ -13,6 +13,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"go.uber.org/atomic"
 
 	mockV1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
 	"github.com/filecoin-project/venus/venus-shared/types"
@@ -603,17 +604,17 @@ func (f *MockFullNode) ChainNotify(ctx context.Context) (<-chan []*types.HeadCha
 			Val:  head,
 		},
 	}
-	var done bool
+	done := atomic.NewBool(false)
 	f.sub(headChangeTopic, func(hc []*types.HeadChange) {
 		// to test UpdateAllFilledMessage and testUpdateFilledMessageByID
 		time.Sleep(f.blockDelay / 4)
-		if !done {
+		if !done.Load() {
 			out <- hc
 		}
 	})
 	go func() {
 		<-ctx.Done()
-		done = true
+		done.Store(true)
 		close(out)
 	}()
 

@@ -484,7 +484,7 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 
 	defer ms.log.Infof("%d head wait to process", len(ms.headChans))
 
-	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Parents()) {
+	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
 		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
 		ms.headChans <- &headChan{
