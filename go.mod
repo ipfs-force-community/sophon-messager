@@ -14,7 +14,7 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.15
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
-	github.com/filecoin-project/venus v1.6.1-0.20220825071707-e8701c330582
+	github.com/filecoin-project/venus v1.6.1-0.20220829090632-e3c427ef83cd
 	github.com/filecoin-project/venus-auth v1.6.1-0.20220818060206-3313af6a9ba1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -222,7 +222,7 @@ require (
 	github.com/whyrusleeping/timecache v0.0.0-20160911033111-cfcb2f1abfee // indirect
 	github.com/xlab/c-for-go v0.0.0-20201112171043-ea6dce5809cb // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.12.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
