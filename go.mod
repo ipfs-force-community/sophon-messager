@@ -14,13 +14,12 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.15
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
-	github.com/filecoin-project/venus v1.6.1-0.20220819080927-9be52f189e4b
+	github.com/filecoin-project/venus v1.6.1-0.20220825071707-e8701c330582
 	github.com/filecoin-project/venus-auth v1.6.1-0.20220818060206-3313af6a9ba1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
-	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.2.0
 	github.com/libp2p/go-libp2p v0.20.0
 	github.com/libp2p/go-libp2p-core v0.16.1
@@ -246,6 +245,7 @@ require (
 
 require (
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
+	github.com/ipfs/go-block-format v0.0.3 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
