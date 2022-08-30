@@ -47,9 +47,9 @@ func NewMessage() *types.Message {
 		ID:      shared.NewUUID().String(),
 		Message: NewUnsignedMessage(),
 		Meta: &types.SendSpec{
-			ExpireEpoch:       100,
-			MaxFee:            big.NewInt(10),
-			GasOverEstimation: 0.5,
+			GasOverEstimation: DefGasOverEstimation,
+			GasOverPremium:    DefGasOverPremium,
+			MaxFee:            big.NewInt(0),
 		},
 		Receipt:   &shared.MessageReceipt{ExitCode: -1},
 		State:     types.UnFillMsg,
@@ -66,9 +66,9 @@ func NewUnsignedMessage() shared.Message {
 		From:       from,
 		To:         to,
 		Value:      big.NewInt(0),
-		GasLimit:   DefGasUsed,
-		GasFeeCap:  DefGasFeeCap,
-		GasPremium: DefGasPremium,
+		GasLimit:   0,
+		GasFeeCap:  big.NewInt(0),
+		GasPremium: big.NewInt(0),
 	}
 }
 

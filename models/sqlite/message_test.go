@@ -408,19 +408,19 @@ func TestListFilledMessageByAddress(t *testing.T) {
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 }
 
-func TestListFilledMessageByHeight(t *testing.T) {
+func TestListChainMessageByHeight(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
 	randHeight := rand.Uint64() / 2
 	msgs := testhelper.NewSignedMessages(10)
 	for _, msg := range msgs {
 		msg.Height = int64(randHeight)
-		msg.State = types.FillMsg
+		msg.State = types.OnChainMsg
 		err := messageRepo.CreateMessage(msg)
 		assert.NoError(t, err)
 	}
 
-	msgList, err := messageRepo.ListFilledMessageByHeight(abi.ChainEpoch(randHeight))
+	msgList, err := messageRepo.ListChainMessageByHeight(abi.ChainEpoch(randHeight))
 	assert.NoError(t, err)
 	assert.Equal(t, 10, len(msgList))
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))

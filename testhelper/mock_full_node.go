@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	"go.uber.org/atomic"
 
 	mockV1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
 	"github.com/filecoin-project/venus/venus-shared/types"
@@ -19,29 +21,36 @@ import (
 )
 
 const (
-	maxMsgInBlock  = 200
-	newTipsetTopic = "new_tipset"
+	maxMsgInBlock   = 200
+	headChangeTopic = "head_change"
 )
 
 var ErrGasLimitNegative = errors.New("gas limit is negative")
 
 var (
-	DefGasUsed    = int64(10000)
-	DefGasPremium = abi.NewTokenAmount(1000)
-	DefGasFeeCap  = abi.NewTokenAmount(10000)
-	defBalance    = abi.NewTokenAmount(1000)
+	DefGasUsed           = int64(10000)
+	DefGasPremium        = abi.NewTokenAmount(1000)
+	DefGasFeeCap         = abi.NewTokenAmount(10000)
+	DefGasOverEstimation = 1.25
+	DefGasOverPremium    = 4.0
+	DefMaxFee            = big.Mul(big.NewInt(DefGasUsed*10), DefGasFeeCap)
+
+	defBalance = abi.NewTokenAmount(1000)
 
 	// MinPackedPremium If the gas premium is lower than this value, the message will not be packaged
 	MinPackedPremium = abi.NewTokenAmount(500)
 )
 
 type MockFullNode struct {
+	ctx context.Context
+
 	miner address.Address
 
 	actors map[address.Address]*types.Actor
 
-	ts     map[types.TipSetKey]*types.TipSet
-	currTS *types.TipSet
+	ts        map[types.TipSetKey]*types.TipSet
+	heightKey map[abi.ChainEpoch]types.TipSetKey
+	currTS    *types.TipSet
 
 	blockDelay  time.Duration
 	blockInfos  map[cid.Cid]*blockInfo
@@ -51,6 +60,8 @@ type MockFullNode struct {
 	pendingMsgs []*types.SignedMessage
 
 	eventBus EventBus.Bus
+
+	revertSignReceiver chan *RevertSignal
 
 	l sync.Mutex
 
@@ -62,20 +73,23 @@ type blockInfo struct {
 	msgs []cid.Cid
 }
 
-func NewMockFullNode(blockDelay time.Duration) (*MockFullNode, error) {
+func NewMockFullNode(ctx context.Context, blockDelay time.Duration) (*MockFullNode, error) {
 	miner, err := address.NewIDAddress(10001)
 	if err != nil {
 		return nil, err
 	}
 	node := &MockFullNode{
-		blockDelay:  blockDelay,
-		miner:       miner,
-		actors:      make(map[address.Address]*types.Actor),
-		ts:          make(map[types.TipSetKey]*types.TipSet),
-		blockInfos:  make(map[cid.Cid]*blockInfo),
-		chainMsgs:   make(map[cid.Cid]*types.SignedMessage),
-		msgReceipts: make(map[cid.Cid]*types.MessageReceipt),
-		eventBus:    EventBus.New(),
+		ctx:                ctx,
+		blockDelay:         blockDelay,
+		miner:              miner,
+		actors:             make(map[address.Address]*types.Actor),
+		ts:                 make(map[types.TipSetKey]*types.TipSet),
+		heightKey:          make(map[abi.ChainEpoch]types.TipSetKey),
+		blockInfos:         make(map[cid.Cid]*blockInfo),
+		chainMsgs:          make(map[cid.Cid]*types.SignedMessage),
+		msgReceipts:        make(map[cid.Cid]*types.MessageReceipt),
+		eventBus:           EventBus.New(),
+		revertSignReceiver: make(chan *RevertSignal, 5),
 	}
 	bh, err := genBlockHead(miner, 0, []cid.Cid{})
 	if err != nil {
@@ -85,14 +99,24 @@ func NewMockFullNode(blockDelay time.Duration) (*MockFullNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	node.ts[ts.Key()] = ts
 	node.setHead(ts)
 	node.blockInfos[bh.Cid()] = &blockInfo{bh: bh}
-	node.eventBus.Publish(newTipsetTopic, ts)
+	node.pub(headChangeTopic, []*types.HeadChange{
+		{
+			Type: types.HCApply,
+			Val:  ts,
+		},
+	})
 
 	go node.tipsetProvider()
 
 	return node, nil
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(fmt.Errorf("%s %s", string(debug.Stack()), err))
+	}
 }
 
 func (f *MockFullNode) AddActors(addrs []address.Address) error {
@@ -112,11 +136,25 @@ func (f *MockFullNode) AddActors(addrs []address.Address) error {
 	return nil
 }
 
+type RevertSignal struct {
+	ExpectRevertCount int
+	RevertedTS        chan []*types.TipSet
+}
+
+func (f *MockFullNode) SendRevertSignal(rs *RevertSignal) {
+	select {
+	case f.revertSignReceiver <- rs:
+	default:
+		fmt.Println("receive too many revert channel")
+		close(rs.RevertedTS)
+	}
+}
+
 func (f *MockFullNode) tipsetProvider() {
 	ticker := time.NewTicker(f.blockDelay)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	genTS := func() *types.TipSet {
 		bh, err := f.blockProvider()
 		if err != nil {
 			panic(err)
@@ -125,18 +163,138 @@ func (f *MockFullNode) tipsetProvider() {
 		if err != nil {
 			panic(err)
 		}
-		f.l.Lock()
-		f.ts[ts.Key()] = ts
-		f.l.Unlock()
-		f.setHead(ts)
-		f.eventBus.Publish(newTipsetTopic, ts)
+		return ts
 	}
+
+	for {
+		var ts *types.TipSet
+		var revertTS []*types.TipSet
+		select {
+		case <-ticker.C:
+			select {
+			case rs := <-f.revertSignReceiver:
+				revertTS = f.revertTS(rs.ExpectRevertCount)
+				rs.RevertedTS <- revertTS
+			default:
+			}
+			ts = genTS()
+		case <-f.ctx.Done():
+			return
+		}
+		f.setHead(ts)
+		var headChanges []*types.HeadChange
+		headChanges = append(headChanges, &types.HeadChange{
+			Type: types.HCApply,
+			Val:  ts,
+		})
+		for _, t := range revertTS {
+			headChanges = append(headChanges, &types.HeadChange{
+				Type: types.HCRevert,
+				Val:  t,
+			})
+			headChanges = append(headChanges, &types.HeadChange{
+				Type: types.HCApply,
+				Val:  f.ts[f.heightKey[t.Height()]],
+			})
+		}
+		f.pub(headChangeTopic, headChanges)
+	}
+}
+
+func (f *MockFullNode) revertTS(revertCount int) []*types.TipSet {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	msgs := make([]cid.Cid, 0)
+	currHeight := f.currTS.Height()
+	revertTS := make([]*types.TipSet, 0, revertCount)
+
+	for i := currHeight; i > 0 && currHeight-i < abi.ChainEpoch(revertCount); i-- {
+		key := f.heightKey[i]
+		ts := f.ts[key]
+		if ts.Height() == 0 {
+			break
+		}
+		for _, blk := range ts.Cids() {
+			blkInfo, ok := f.blockInfos[blk]
+			if !ok {
+				continue
+			}
+			for i := len(blkInfo.msgs) - 1; i >= 0; i-- {
+				msgs = append(msgs, blkInfo.msgs[i])
+			}
+		}
+		revertTS = append(revertTS, ts)
+	}
+
+	revertTSLen := len(revertTS)
+	msgsLen := len(msgs)
+	cidList := make([][]cid.Cid, revertTSLen)
+	if revertTSLen == 0 {
+		return revertTS
+	}
+	if msgsLen > 0 {
+		// Redistribute messages
+		batchSize := msgsLen / revertTSLen
+		if msgsLen%revertTSLen != 0 {
+			batchSize++
+		}
+
+		j := revertTSLen - 1
+		for i := 1; i <= revertTSLen; i++ {
+			start := (i - 1) * batchSize
+			end := i * batchSize
+			if end > msgsLen {
+				end = msgsLen
+			}
+			cidList[j] = msgs[start:end]
+			j--
+		}
+	}
+
+	j := 0
+	parentKey := revertTS[revertTSLen-1].Parents()
+	for i := int(currHeight) - revertTSLen + 1; i <= int(currHeight); i++ {
+		bh, err := genBlockHead(f.miner, abi.ChainEpoch(i), parentKey.Cids())
+		checkErr(err)
+		f.blockInfos[bh.Cid()] = &blockInfo{
+			bh:   bh,
+			msgs: cidList[j],
+		}
+		ts, err := types.NewTipSet([]*types.BlockHeader{bh})
+		checkErr(err)
+		f.ts[ts.Key()] = ts
+		f.heightKey[ts.Height()] = ts.Key()
+		parentKey = ts.Key()
+		if i == int(currHeight) {
+			f.currTS = ts
+		}
+		j++
+	}
+
+	return revertTS
 }
 
 func (f *MockFullNode) setHead(ts *types.TipSet) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	f.currTS = ts
+	f.ts[ts.Key()] = ts
+	f.heightKey[ts.Height()] = ts.Key()
+}
+
+func (f *MockFullNode) pub(topic string, arg interface{}) {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	f.eventBus.Publish(topic, arg)
+}
+
+func (f *MockFullNode) sub(topic string, fn interface{}) {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	_ = f.eventBus.Subscribe(topic, fn)
 }
 
 func (f *MockFullNode) blockProvider() (*types.BlockHeader, error) {
@@ -238,11 +396,38 @@ func (f *MockFullNode) ChainGetParentReceipts(ctx context.Context, bcid cid.Cid)
 func (f *MockFullNode) ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
+
+	if key.IsEmpty() {
+		return f.currTS, nil
+	}
 	ts, ok := f.ts[key]
 	if !ok {
 		return nil, fmt.Errorf("not found %s", key)
 	}
 	return ts, nil
+}
+
+func (f *MockFullNode) ChainList(ctx context.Context, tsKey types.TipSetKey, count int) ([]types.TipSetKey, error) {
+	ts, err := f.ChainGetTipSet(ctx, tsKey)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]types.TipSetKey, 0, count)
+	for i := 0; i < count; i++ {
+		keys = append(keys, ts.Key())
+
+		if ts.Height() == 0 {
+			return keys, nil
+		}
+
+		ts, err = f.ChainGetTipSet(ctx, ts.Parents())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return keys, nil
 }
 
 func (f *MockFullNode) ChainGetMessagesInTipset(ctx context.Context, key types.TipSetKey) ([]types.MessageCID, error) {
@@ -323,14 +508,16 @@ func (f *MockFullNode) GasEstimateMessageGas(ctx context.Context, msg *types.Mes
 		msg.GasFeeCap = big.Add(DefGasFeeCap, msg.GasPremium)
 	}
 
+	maxFee := DefMaxFee
 	if spec != nil && !spec.MaxFee.NilOrZero() {
-		gl := types.NewInt(uint64(msg.GasLimit))
-		totalFee := types.BigMul(msg.GasFeeCap, gl)
+		maxFee = spec.MaxFee
+	}
+	gl := types.NewInt(uint64(msg.GasLimit))
+	totalFee := types.BigMul(msg.GasFeeCap, gl)
 
-		if !totalFee.LessThanEqual(spec.MaxFee) {
-			msg.GasFeeCap = big.Div(spec.MaxFee, gl)
-			msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium)
-		}
+	if !totalFee.LessThanEqual(maxFee) {
+		msg.GasFeeCap = big.Div(maxFee, gl)
+		msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium)
 	}
 
 	return msg, nil
@@ -359,11 +546,15 @@ func (f *MockFullNode) MpoolBatchPush(ctx context.Context, smsgs []*types.Signed
 	defer f.l.Unlock()
 	cids := make([]cid.Cid, 0, len(smsgs))
 	for _, msg := range smsgs {
+		if _, ok := f.chainMsgs[msg.Cid()]; ok {
+			continue
+		}
 		// todo: check nonce
 		for i, m := range f.pendingMsgs {
 			if m.Message.From == msg.Message.From && m.Message.Nonce == msg.Message.Nonce {
 				f.pendingMsgs[i] = msg
-				break
+				cids = append(cids, m.Cid())
+				continue
 			}
 		}
 		f.pendingMsgs = append(f.pendingMsgs, msg)
@@ -384,20 +575,20 @@ func (f *MockFullNode) StateSearchMsg(ctx context.Context, from types.TipSetKey,
 		Receipt: *f.msgReceipts[msgCid],
 		TipSet:  types.TipSetKey{},
 	}
-	for _, blkInfo := range f.blockInfos {
-		for _, c := range blkInfo.msgs {
-			if c == msgCid {
-				msgLookup.Height = blkInfo.bh.Height
-				goto loopOver
+
+	for h, tsk := range f.heightKey {
+		for _, blkCID := range tsk.Cids() {
+			for _, c := range f.blockInfos[blkCID].msgs {
+				if c == msgCid {
+					msgLookup.Height = h
+					msgLookup.TipSet = tsk
+
+					return msgLookup, nil
+				}
 			}
 		}
 	}
-loopOver:
-	for _, ts := range f.ts {
-		if ts.Height() == msgLookup.Height {
-			msgLookup.TipSet = ts.Key()
-		}
-	}
+
 	return msgLookup, nil
 }
 
@@ -413,23 +604,18 @@ func (f *MockFullNode) ChainNotify(ctx context.Context) (<-chan []*types.HeadCha
 			Val:  head,
 		},
 	}
-	var done bool
-	_ = f.eventBus.Subscribe(newTipsetTopic, func(ts *types.TipSet) {
-		if !done {
-			// to test UpdateAllFilledMessage and testUpdateFilledMessageByID
-			time.Sleep(f.blockDelay / 4)
-			out <- []*types.HeadChange{
-				{
-					Type: types.HCApply,
-					Val:  ts,
-				},
-			}
+	done := atomic.NewBool(false)
+	f.sub(headChangeTopic, func(hc []*types.HeadChange) {
+		// to test UpdateAllFilledMessage and testUpdateFilledMessageByID
+		time.Sleep(f.blockDelay / 4)
+		if !done.Load() {
+			out <- hc
 		}
 	})
 	go func() {
 		<-ctx.Done()
+		done.Store(true)
 		close(out)
-		done = true
 	}()
 
 	return out, nil

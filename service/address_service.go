@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -20,25 +19,16 @@ import (
 var errAddressNotExists = errors.New("address not exists")
 
 type AddressService struct {
-	repo repo.Repo
-	log  *log.Logger
-
-	sps          *SharedParamsService
-	nodeClient   v1.FullNode
+	repo         repo.Repo
+	log          *log.Logger
 	walletClient gateway.IWalletClient
 }
 
-func NewAddressService(repo repo.Repo,
-	logger *log.Logger,
-	sps *SharedParamsService,
-	walletClient gateway.IWalletClient,
-	nodeClient v1.FullNode) *AddressService {
+func NewAddressService(repo repo.Repo, logger *log.Logger, walletClient gateway.IWalletClient) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
 		log:  logger,
 
-		sps:          sps,
-		nodeClient:   nodeClient,
 		walletClient: walletClient,
 	}
 

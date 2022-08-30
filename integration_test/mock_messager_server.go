@@ -70,7 +70,7 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 
-	fullNode, err := testhelper.NewMockFullNode(cfg.MessageService.WaitingChainHeadStableDuration * 2)
+	fullNode, err := testhelper.NewMockFullNode(ctx, cfg.MessageService.WaitingChainHeadStableDuration*2)
 	if err != nil {
 		return nil, err
 	}

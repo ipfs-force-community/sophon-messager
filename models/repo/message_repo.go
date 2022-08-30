@@ -36,7 +36,7 @@ type MessageRepo interface {
 	ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
-	ListFilledMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
+	ListChainMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListUnFilledMessage(addr address.Address) ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
 	ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error)

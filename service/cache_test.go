@@ -1,7 +1,7 @@
 package service
 
 import (
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -132,10 +132,7 @@ func TestReadAndWriteTipset(t *testing.T) {
 	assert.Nil(t, ts2.UnmarshalJSON([]byte(TwoTsStr)))
 	tsCache.Add(ts, ts2)
 
-	filePath := "./test_read_write_tipset.json"
-	defer func() {
-		assert.NoError(t, os.Remove(filePath))
-	}()
+	filePath := filepath.Join(t.TempDir(), "tipset.json")
 	err := tsCache.Save(filePath)
 	assert.NoError(t, err)
 
