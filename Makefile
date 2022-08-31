@@ -34,8 +34,8 @@ test:
 
 .PHONY: docker
 
-
-
+TAG:=test
 docker:
-	docker build --build-arg https_proxy=$(BUILD_DOCKER_PROXY) -t venus-messager .
-	docker tag venus-messager filvenus/venus-messager:test
+	curl -O https://raw.githubusercontent.com/filecoin-project/venus-docs/feat/tanlang/improve-docker-usage/script/dockerfile
+	docker build --build-arg https_proxy=$(BUILD_DOCKER_PROXY) --build-arg BUILD_TARGET=venus-messager -t venus-messager .
+	docker tag venus-messager filvenus/venus-messager:$(TAG)
