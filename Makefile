@@ -36,6 +36,6 @@ test:
 
 TAG:=test
 docker:
-	curl -O https://raw.githubusercontent.com/filecoin-project/venus-docs/feat/tanlang/improve-docker-usage/script/dockerfile
+	curl -O https://raw.githubusercontent.com/filecoin-project/venus-docs/master/script/dockerfile
 	docker build --build-arg https_proxy=$(BUILD_DOCKER_PROXY) --build-arg BUILD_TARGET=venus-messager -t venus-messager .
 	docker tag venus-messager filvenus/venus-messager:$(TAG)
