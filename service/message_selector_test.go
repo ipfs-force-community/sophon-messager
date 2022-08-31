@@ -21,6 +21,7 @@ import (
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/pubsub"
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 const defaultLocalToken = "defaultLocalToken"
@@ -226,7 +227,7 @@ func TestSelectNum(t *testing.T) {
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	checkSelectNum := func(msgs []*types.Message, addrNum map[address.Address]int, defNum int) {
-		addrMsgs := testhelper.MsgGroupByAddress(msgs)
+		addrMsgs := utils.MsgGroupByAddress(msgs)
 		for addr, m := range addrMsgs {
 			num, ok := addrNum[addr]
 			if ok {

@@ -24,6 +24,7 @@ import (
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/pubsub"
+	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -616,10 +617,15 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	}
 	selectMsgSpent := time.Since(startSelectMsg)
 	ms.log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
-	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
+
 	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
 	stats.Record(ctx, metrics.ExpiredMsgNumOfLastRound.M(int64(len(selectResult.ExpireMsg))))
 	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
+
+	for addr, msgs := range utils.MsgGroupByAddress(selectResult.SelectMsg) {
+		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(metrics.WalletAddress, addr.String())},
+			metrics.SelectedMsgNumOfLastRound.M(int64(len(msgs))))
+	}
 
 	startSaveDB := time.Now()
 	ms.log.Infof("start to save to database")
@@ -1159,7 +1165,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 
 				actor, err := ms.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
 				if err != nil {
-					ms.addressService.log.Errorf("get actor err: %s", err)
+					ms.addressService.log.Errorf("get actor %s err: %s", addr.Addr, err)
 				} else {
 					stats.Record(ctx, metrics.WalletBalance.M(actor.Balance.Int64()))
 					stats.Record(ctx, metrics.WalletChainNonce.M(int64(actor.Nonce)))

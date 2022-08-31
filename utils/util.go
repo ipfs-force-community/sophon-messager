@@ -8,7 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/filecoin-project/go-address"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
 	"github.com/pelletier/go-toml"
 )
@@ -115,4 +117,13 @@ func WriteConfig(path string, cfg interface{}) error {
 		return err
 	}
 	return ioutil.WriteFile(path, cfgBytes, 0666)
+}
+
+func MsgGroupByAddress(msgs []*messager.Message) map[address.Address][]*messager.Message {
+	addrMsgs := make(map[address.Address][]*messager.Message)
+	for _, msg := range msgs {
+		addrMsgs[msg.From] = append(addrMsgs[msg.From], msg)
+	}
+
+	return addrMsgs
 }

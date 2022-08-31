@@ -43,12 +43,12 @@ var (
 	}
 	WalletChainNonceView = &view.View{
 		Measure:     WalletChainNonce,
-		Aggregation: view.Count(),
+		Aggregation: view.LastValue(),
 		TagKeys:     []tag.Key{WalletAddress},
 	}
 	WalletDBNonceView = &view.View{
 		Measure:     WalletDBNonce,
-		Aggregation: view.Count(),
+		Aggregation: view.LastValue(),
 		TagKeys:     []tag.Key{WalletAddress},
 	}
 
@@ -81,6 +81,7 @@ var (
 	SelectedMsgNumOfLastRoundView = &view.View{
 		Measure:     SelectedMsgNumOfLastRound,
 		Aggregation: view.LastValue(),
+		TagKeys:     []tag.Key{WalletAddress},
 	}
 	ToPushMsgNumOfLastRoundView = &view.View{
 		Measure:     ToPushMsgNumOfLastRound,

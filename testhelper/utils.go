@@ -9,6 +9,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
@@ -143,17 +144,8 @@ func SliceToMap(in interface{}) map[string]interface{} {
 	return m
 }
 
-func MsgGroupByAddress(msgs []*messager.Message) map[address.Address][]*messager.Message {
-	addrMsgs := make(map[address.Address][]*messager.Message)
-	for _, msg := range msgs {
-		addrMsgs[msg.From] = append(addrMsgs[msg.From], msg)
-	}
-
-	return addrMsgs
-}
-
 func IsSortedByNonce(t *testing.T, msgs []*messager.Message) {
-	addrMsgs := MsgGroupByAddress(msgs)
+	addrMsgs := utils.MsgGroupByAddress(msgs)
 	for _, m := range addrMsgs {
 		assert.True(t, sort.SliceIsSorted(m, func(i, j int) bool {
 			return m[i].Nonce < m[j].Nonce

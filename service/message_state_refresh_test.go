@@ -18,6 +18,7 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 func TestDoRefershMessageState(t *testing.T) {
@@ -160,7 +161,7 @@ func TestDoRefershMessageState(t *testing.T) {
 			replacedMsgs []*types.Message
 		}
 		cm := &conflictMessage{}
-		addrMsgs := testhelper.MsgGroupByAddress(selectResult.SelectMsg)
+		addrMsgs := utils.MsgGroupByAddress(selectResult.SelectMsg)
 		idx := 0
 		count := 0
 		for count < conflictCount {
