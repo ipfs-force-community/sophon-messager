@@ -17,3 +17,4 @@ venus-messager-tools
 *.toml.*
 
 __debug_bin
+dockerfile
