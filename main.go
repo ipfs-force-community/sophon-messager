@@ -7,6 +7,7 @@ import (
 	"net"
 	_ "net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/filecoin-project/venus-messager/metrics"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -173,6 +174,26 @@ func runAction(cctx *cli.Context) error {
 		return fmt.Errorf("connect to node failed %v", err)
 	}
 	defer closer()
+
+	// TODO: delete this when relative issue is fixed in lotus https://github.com/filecoin-project/venus/issues/5247
+	log.Info("wait for height of chain bigger than zero ...")
+	ticker := time.NewTicker(10 * time.Second)
+	for {
+		head, err := client.ChainHead(ctx)
+		if err != nil {
+			return err
+		}
+		if head.Height() > 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			fmt.Println("\nExit by user")
+			return nil
+		case <-ticker.C:
+		}
+	}
+	ticker.Stop()
 
 	networkName, err := client.StateNetworkName(ctx)
 	if err != nil {
