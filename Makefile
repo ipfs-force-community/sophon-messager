@@ -16,14 +16,8 @@ tools:
 	go build -o venus-messager-tools ./tools/main.go
 .PHONY: tools
 
-gen:
-	go run ./gen/gen.go > ./api/controller/auth_map.go
-	gofmt -e -s -w ./api/controller/auth_map.go
-.PHONY: gen
 
-deps:
-	git submodule update --init
-	./extern/filecoin-ffi/install-filcrypto
+
 
 lint:
 	golangci-lint run
