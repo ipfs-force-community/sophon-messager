@@ -14,7 +14,7 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-var DefaultMaxFee = venusTypes.MustParseFIL("0.007")
+var DefaultMaxFee = venusTypes.MustParseFIL("0.07")
 
 var DefSharedParams = &types.SharedSpec{
 	ID:                1,
