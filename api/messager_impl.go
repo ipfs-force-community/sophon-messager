@@ -161,8 +161,8 @@ func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, n
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
-func (m MessageImp) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap string) error {
-	return m.AddressSrv.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
+func (m MessageImp) SetFeeParams(ctx context.Context, params *types.AddressSpec) error {
+	return m.AddressSrv.SetFeeParams(ctx, params)
 }
 
 func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
@@ -175,10 +175,6 @@ func (m MessageImp) GetSharedParams(ctx context.Context) (*types.SharedSpec, err
 
 func (m MessageImp) SetSharedParams(ctx context.Context, params *types.SharedSpec) error {
 	return m.ParamsSrv.SetSharedParams(ctx, params)
-}
-
-func (m MessageImp) RefreshSharedParams(ctx context.Context) error {
-	return m.ParamsSrv.RefreshSharedParams(ctx)
 }
 
 func (m MessageImp) SaveNode(ctx context.Context, node *types.Node) error {

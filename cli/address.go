@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/urfave/cli/v2"
 )
 
@@ -218,7 +219,7 @@ var setAddrSelMsgNumCmd = &cli.Command{
 var setFeeParamsCmd = &cli.Command{
 	Name:      "set-fee-params",
 	Usage:     "Address setting fee associated configuration",
-	ArgsUsage: "address",
+	ArgsUsage: "<address>",
 	Flags: []cli.Flag{
 		&cli.Float64Flag{
 			Name:  "gas-overestimation",
@@ -231,6 +232,10 @@ var setFeeParamsCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "max-fee",
 			Usage: "Spend up to X attoFIL for message",
+		},
+		&cli.StringFlag{
+			Name:  "base-fee",
+			Usage: "",
 		},
 		GasOverPremiumFlag,
 	},
@@ -245,13 +250,18 @@ var setFeeParamsCmd = &cli.Command{
 			return fmt.Errorf("must pass address")
 		}
 
-		addr, err := address.NewFromString(ctx.Args().First())
+		params := &messager.AddressSpec{
+			GasOverEstimation: ctx.Float64("gas-overestimation"),
+			GasOverPremium:    ctx.Float64(GasOverPremiumFlag.Name),
+			MaxFeeStr:         ctx.String("max-fee"),
+			GasFeeCapStr:      ctx.String("gas-feecap"),
+			BaseFeeStr:        ctx.String("base-fee"),
+		}
+		params.Address, err = address.NewFromString(ctx.Args().First())
 		if err != nil {
 			return err
 		}
 
-		err = client.SetFeeParams(ctx.Context, addr, ctx.Float64("gas-overestimation"), ctx.Float64(GasOverPremiumFlag.Name), ctx.String("max-fee"), ctx.String("gas-feecap"))
-
-		return err
+		return client.SetFeeParams(ctx.Context, params)
 	},
 }

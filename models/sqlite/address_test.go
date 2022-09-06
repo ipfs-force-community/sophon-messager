@@ -39,6 +39,7 @@ func TestAddress(t *testing.T) {
 		GasOverPremium:    1.6,
 		MaxFee:            big.NewInt(10),
 		GasFeeCap:         big.NewInt(1),
+		BaseFee:           big.NewInt(10001),
 		IsDeleted:         -1,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
@@ -52,6 +53,7 @@ func TestAddress(t *testing.T) {
 		GasOverPremium: 3.0,
 		MaxFee:         big.NewInt(110),
 		GasFeeCap:      big.NewInt(11),
+		BaseFee:        big.NewInt(10000),
 		Nonce:          2,
 		IsDeleted:      -1,
 		CreatedAt:      time.Time{},
@@ -150,10 +152,12 @@ func TestAddress(t *testing.T) {
 
 	t.Run("UpdateFeeParams", func(t *testing.T) {
 		gasOverEstimation := 1.5
-		gasFeeCap := big.NewInt(1000)
-		maxFee := big.NewInt(1000)
 		gasOverPremium := 1.2
-		assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap))
+		maxFee := big.NewInt(1000)
+		gasFeeCap := big.NewInt(10001)
+		baseFee := big.NewInt(100002)
+
+		assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap, baseFee))
 
 		r, err := addressRepo.GetAddress(ctx, addr)
 		assert.NoError(t, err)
@@ -161,9 +165,20 @@ func TestAddress(t *testing.T) {
 		assert.Equal(t, maxFee, r.MaxFee)
 		assert.Equal(t, gasFeeCap, r.GasFeeCap)
 		assert.Equal(t, gasOverPremium, r.GasOverPremium)
+		assert.Equal(t, baseFee, r.BaseFee)
+
+		// set zero value
+		assert.NoError(t, addressRepo.UpdateFeeParams(ctx, addr, 0, 0, big.Zero(), big.Zero(), big.Zero()))
+		r, err = addressRepo.GetAddress(ctx, addr)
+		assert.NoError(t, err)
+		assert.Equal(t, gasOverEstimation, r.GasOverEstimation)
+		assert.Equal(t, gasOverPremium, r.GasOverPremium)
+		assert.Equal(t, big.Zero(), r.GasFeeCap)
+		assert.Equal(t, big.Zero(), r.MaxFee)
+		assert.Equal(t, big.Zero(), r.BaseFee)
 
 		// set fee params for a not exist address
-		err = addressRepo.UpdateFeeParams(ctx, randAddr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
+		err = addressRepo.UpdateFeeParams(ctx, randAddr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap, baseFee)
 		assert.NoError(t, err)
 		_, err = addressRepo.GetAddress(ctx, randAddr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())

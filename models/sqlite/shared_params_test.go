@@ -19,6 +19,7 @@ func TestSharedParams(t *testing.T) {
 		GasOverEstimation: 1.5,
 		MaxFee:            big.NewInt(10),
 		GasFeeCap:         big.NewInt(100),
+		BaseFee:           big.NewInt(1000),
 		GasOverPremium:    1.6,
 		SelMsgNum:         30,
 	}
@@ -29,11 +30,13 @@ func TestSharedParams(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, params, res)
 
+	// update params but ID not 1
 	params2 := &messager.SharedSpec{
 		ID:                3,
 		GasOverEstimation: 3.5,
 		MaxFee:            big.NewInt(310),
 		GasFeeCap:         big.NewInt(3100),
+		BaseFee:           big.NewInt(0),
 		GasOverPremium:    3.6,
 		SelMsgNum:         10,
 	}

@@ -31,6 +31,7 @@ var (
 	DefGasUsed           = int64(10000)
 	DefGasPremium        = abi.NewTokenAmount(1000)
 	DefGasFeeCap         = abi.NewTokenAmount(10000)
+	DefBaseFee           = abi.NewTokenAmount(1000)
 	DefGasOverEstimation = 1.25
 	DefGasOverPremium    = 4.0
 	DefMaxFee            = big.Mul(big.NewInt(DefGasUsed*10), DefGasFeeCap)

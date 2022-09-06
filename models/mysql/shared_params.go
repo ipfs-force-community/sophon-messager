@@ -20,14 +20,16 @@ type mysqlSharedParams struct {
 	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);NOT NULL;default:0"`
 	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:DOUBLE;NOT NULL;default:0"`
 	SelMsgNum         uint64     `gorm:"column:sel_msg_num;type:BIGINT(20) UNSIGNED;NOT NULL"`
+	BaseFee           mtypes.Int `gorm:"column:base_fee;type:varchar(256);default:0"`
 }
 
 func fromSharedParams(sp types.SharedSpec) *mysqlSharedParams {
 	return &mysqlSharedParams{
 		ID:                sp.ID,
 		GasOverEstimation: sp.GasOverEstimation,
-		MaxFee:            mtypes.Int{Int: sp.MaxFee.Int},
-		GasFeeCap:         mtypes.Int{Int: sp.GasFeeCap.Int},
+		MaxFee:            mtypes.SafeFromGo(sp.MaxFee.Int),
+		GasFeeCap:         mtypes.SafeFromGo(sp.GasFeeCap.Int),
+		BaseFee:           mtypes.SafeFromGo(sp.BaseFee.Int),
 		GasOverPremium:    sp.GasOverPremium,
 		SelMsgNum:         sp.SelMsgNum,
 	}
@@ -39,6 +41,7 @@ func (ssp mysqlSharedParams) SharedParams() *types.SharedSpec {
 		GasOverEstimation: ssp.GasOverEstimation,
 		MaxFee:            big.Int(mtypes.SafeFromGo(ssp.MaxFee.Int)),
 		GasFeeCap:         big.Int(mtypes.SafeFromGo(ssp.GasFeeCap.Int)),
+		BaseFee:           big.Int(mtypes.SafeFromGo(ssp.BaseFee.Int)),
 		GasOverPremium:    ssp.GasOverPremium,
 		SelMsgNum:         ssp.SelMsgNum,
 	}
@@ -68,9 +71,10 @@ func (s mysqlSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.Shar
 
 func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *types.SharedSpec) (uint, error) {
 	var ssp mysqlSharedParams
+	// make sure ID is 1
+	params.ID = 1
 	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			params.ID = 1
 			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}
@@ -79,14 +83,7 @@ func (s mysqlSharedParamsRepo) SetSharedParams(ctx context.Context, params *type
 		return 0, err
 	}
 
-	ssp.GasOverEstimation = params.GasOverEstimation
-	ssp.GasFeeCap = mtypes.Int{Int: params.GasFeeCap.Int}
-	ssp.MaxFee = mtypes.Int{Int: params.MaxFee.Int}
-	ssp.GasOverPremium = params.GasOverPremium
-
-	ssp.SelMsgNum = params.SelMsgNum
-
-	if err := s.DB.Save(&ssp).Error; err != nil {
+	if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
 		return 0, err
 	}
 

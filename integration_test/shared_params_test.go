@@ -38,6 +38,7 @@ func TestSharedParamsAPI(t *testing.T) {
 		GasOverEstimation: 10,
 		MaxFee:            big.NewInt(11111111),
 		GasFeeCap:         big.NewInt(11111112),
+		BaseFee:           big.NewInt(10000),
 		GasOverPremium:    10,
 		SelMsgNum:         100,
 	}

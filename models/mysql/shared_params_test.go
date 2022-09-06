@@ -44,6 +44,7 @@ func testSetSharedParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		GasOverEstimation: 1.25,
 		MaxFee:            big.NewInt(100),
 		GasFeeCap:         big.NewInt(1000),
+		BaseFee:           big.NewInt(1001),
 		GasOverPremium:    4.4,
 		SelMsgNum:         10,
 	}
@@ -62,7 +63,27 @@ func testSetSharedParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
+	// update params but ID not 1
+	params2 := *params
+	params2.ID = 3
+	mysqlParams2 := fromSharedParams(params2)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `shared_params` WHERE id = ? LIMIT 1")).
+		WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"gas_over_estimation"}).AddRow(params.GasOverEstimation))
+
+	args = getStructFieldValue(mysqlParams2)
+	args[0], args[len(args)-1] = args[len(args)-1], uint(1)
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(genUpdateSQL(mysqlParams2))).
+		WithArgs().
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
 	id, err := r.SharedParamsRepo().SetSharedParams(ctx, params)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(1), id)
+
+	id, err = r.SharedParamsRepo().SetSharedParams(ctx, &params2)
 	assert.NoError(t, err)
 	assert.Equal(t, uint(1), id)
 }

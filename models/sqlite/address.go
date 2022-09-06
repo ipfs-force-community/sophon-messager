@@ -25,6 +25,7 @@ type sqliteAddress struct {
 	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);"`
 	GasFeeCap         mtypes.Int         `gorm:"column:gas_fee_cap;type:varchar(256);"`
 	GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);"`
+	BaseFee           mtypes.Int         `gorm:"column:base_fee;type:varchar(256);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -36,7 +37,7 @@ func (s sqliteAddress) TableName() string {
 }
 
 func fromAddress(addr *types.Address) *sqliteAddress {
-	sqliteAddr := &sqliteAddress{
+	return &sqliteAddress{
 		ID:                addr.ID,
 		Addr:              addr.Addr.String(),
 		Nonce:             addr.Nonce,
@@ -45,19 +46,13 @@ func fromAddress(addr *types.Address) *sqliteAddress {
 		State:             addr.State,
 		GasOverEstimation: addr.GasOverEstimation,
 		GasOverPremium:    addr.GasOverPremium,
+		MaxFee:            mtypes.SafeFromGo(addr.MaxFee.Int),
+		GasFeeCap:         mtypes.SafeFromGo(addr.GasFeeCap.Int),
+		BaseFee:           mtypes.SafeFromGo(addr.BaseFee.Int),
 		IsDeleted:         addr.IsDeleted,
 		CreatedAt:         addr.CreatedAt,
 		UpdatedAt:         addr.UpdatedAt,
 	}
-
-	if !addr.MaxFee.Nil() {
-		sqliteAddr.MaxFee = mtypes.NewFromGo(addr.MaxFee.Int)
-	}
-	if !addr.GasFeeCap.Nil() {
-		sqliteAddr.GasFeeCap = mtypes.NewFromGo(addr.GasFeeCap.Int)
-	}
-
-	return sqliteAddr
 }
 
 func (s sqliteAddress) Address() (*types.Address, error) {
@@ -75,8 +70,9 @@ func (s sqliteAddress) Address() (*types.Address, error) {
 		State:             s.State,
 		GasOverEstimation: s.GasOverEstimation,
 		GasOverPremium:    s.GasOverPremium,
-		MaxFee:            big.Int{Int: s.MaxFee.Int},
-		GasFeeCap:         big.Int{Int: s.GasFeeCap.Int},
+		MaxFee:            big.Int(mtypes.SafeFromGo(s.MaxFee.Int)),
+		GasFeeCap:         big.Int(mtypes.SafeFromGo(s.GasFeeCap.Int)),
+		BaseFee:           big.Int(mtypes.SafeFromGo(s.BaseFee.Int)),
 		IsDeleted:         s.IsDeleted,
 		CreatedAt:         s.CreatedAt,
 		UpdatedAt:         s.UpdatedAt,
@@ -182,19 +178,25 @@ func (s sqliteAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.
 		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
 }
 
-func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap big.Int) error {
-	updateColumns := make(map[string]interface{})
-	if gasOverEstimation != 0 {
-		updateColumns["gas_over_estimation"] = gasOverEstimation
-	}
+func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap, baseFee big.Int) error {
+	updateColumns := make(map[string]interface{}, 6)
 	if !maxFee.Nil() {
 		updateColumns["max_fee"] = mtypes.NewFromGo(maxFee.Int)
 	}
 	if !gasFeeCap.Nil() {
 		updateColumns["gas_fee_cap"] = mtypes.NewFromGo(gasFeeCap.Int)
 	}
+	if !baseFee.Nil() {
+		updateColumns["base_fee"] = mtypes.NewFromGo(baseFee.Int)
+	}
+	if gasOverEstimation != 0 {
+		updateColumns["gas_over_estimation"] = gasOverEstimation
+	}
 	if gasOverPremium != 0 {
 		updateColumns["gas_over_premium"] = gasOverPremium
+	}
+	if len(updateColumns) == 0 {
+		return nil
 	}
 
 	updateColumns["updated_at"] = time.Now()

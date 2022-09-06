@@ -105,42 +105,36 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr 
 	return nil
 }
 
-func (addressService *AddressService) SetFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFeeStr, gasFeeCapStr string) error {
-	has, err := addressService.repo.AddressRepo().HasAddress(ctx, addr)
+func (addressService *AddressService) SetFeeParams(ctx context.Context, params *types.AddressSpec) error {
+	has, err := addressService.repo.AddressRepo().HasAddress(ctx, params.Address)
 	if err != nil {
 		return err
 	}
 	if !has {
 		return errAddressNotExists
 	}
+	var maxFee, gasFeeCap, baseFee big.Int
 
-	var needUpdate bool
-	var maxFee, gasFeeCap big.Int
-	if len(maxFeeStr) != 0 {
-		maxFee, err = venusTypes.BigFromString(maxFeeStr)
+	if len(params.MaxFeeStr) != 0 {
+		maxFee, err = venusTypes.BigFromString(params.MaxFeeStr)
 		if err != nil {
-			return fmt.Errorf("parsing max-spend: %v", err)
+			return fmt.Errorf("parsing maxfee failed %v", err)
 		}
-		needUpdate = true
 	}
-	if len(gasFeeCapStr) != 0 {
-		gasFeeCap, err = venusTypes.BigFromString(gasFeeCapStr)
+	if len(params.GasFeeCapStr) != 0 {
+		gasFeeCap, err = venusTypes.BigFromString(params.GasFeeCapStr)
 		if err != nil {
-			return fmt.Errorf("parsing gas-feecap: %v", err)
+			return fmt.Errorf("parsing gas-feecap failed %v", err)
 		}
-		needUpdate = true
 	}
-	if gasOverEstimation > 0 {
-		needUpdate = true
-	}
-	if gasOverPremium > 0 {
-		needUpdate = true
-	}
-	if !needUpdate {
-		return nil
+	if len(params.BaseFeeStr) != 0 {
+		baseFee, err = venusTypes.BigFromString(params.BaseFeeStr)
+		if err != nil {
+			return fmt.Errorf("parsing basefee failed %v", err)
+		}
 	}
 
-	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap)
+	return addressService.repo.AddressRepo().UpdateFeeParams(ctx, params.Address, params.GasOverEstimation, params.GasOverPremium, maxFee, gasFeeCap, baseFee)
 }
 
 func (addressService *AddressService) ActiveAddresses(ctx context.Context) map[address.Address]struct{} {

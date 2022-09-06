@@ -26,11 +26,13 @@ import (
 const defaultLocalToken = "defaultLocalToken"
 
 func TestMergeMsgSpec(t *testing.T) {
+	defSharedPrams := *DefSharedParams
 	defParams := &Params{
-		SharedSpec: DefSharedParams,
+		SharedSpec: &defSharedPrams,
 	}
 	defParams.GasOverPremium = 1.0
 	defParams.GasFeeCap = big.NewInt(10000)
+	defParams.BaseFee = big.NewInt(10000)
 
 	sendSpec := &types.SendSpec{
 		GasOverEstimation: 1.4,
@@ -44,6 +46,7 @@ func TestMergeMsgSpec(t *testing.T) {
 		MaxFee:            big.NewInt(50000),
 		GasFeeCap:         big.NewInt(50000),
 		GasOverPremium:    5.0,
+		BaseFee:           big.NewInt(50001),
 	}
 	emptyAddrInfo := &types.Address{}
 
@@ -60,39 +63,46 @@ func TestMergeMsgSpec(t *testing.T) {
 		expect *GasSpec
 	}{
 		{
+			params:   &Params{SharedSpec: DefSharedParams},
+			sendSpec: emptySendSpec,
+			addrInfo: emptyAddrInfo,
+			msg:      msg,
+			expect:   &GasSpec{GasOverEstimation: DefSharedParams.GasOverEstimation, MaxFee: DefSharedParams.MaxFee, GasOverPremium: 0, GasFeeCap: DefSharedParams.GasFeeCap, BaseFee: DefSharedParams.BaseFee},
+		},
+		{
 			defParams,
 			sendSpec,
 			addrInfo,
 			msg,
-			&GasSpec{GasOverEstimation: sendSpec.GasOverEstimation, MaxFee: sendSpec.MaxFee, GasOverPremium: sendSpec.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap},
+			&GasSpec{GasOverEstimation: sendSpec.GasOverEstimation, MaxFee: sendSpec.MaxFee, GasOverPremium: sendSpec.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defParams,
 			emptySendSpec,
 			addrInfo,
 			msg,
-			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap},
+			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defParams,
 			emptySendSpec,
 			emptyAddrInfo,
 			msg,
-			&GasSpec{GasOverEstimation: defParams.GasOverEstimation, MaxFee: defParams.MaxFee, GasOverPremium: defParams.GasOverPremium, GasFeeCap: defParams.GasFeeCap},
+			&GasSpec{GasOverEstimation: defParams.GasOverEstimation, MaxFee: defParams.MaxFee, GasOverPremium: defParams.GasOverPremium, GasFeeCap: defParams.GasFeeCap, BaseFee: defParams.BaseFee},
 		},
 		{
 			defParams,
 			emptySendSpec,
 			addrInfo,
 			msg2,
-			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium},
+			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defParams,
 			emptySendSpec,
 			emptyAddrInfo,
 			msg2,
-			&GasSpec{GasOverEstimation: defParams.GasOverEstimation, MaxFee: defParams.MaxFee, GasOverPremium: defParams.GasOverPremium},
+			&GasSpec{GasOverEstimation: defParams.GasOverEstimation, MaxFee: defParams.MaxFee, GasOverPremium: defParams.GasOverPremium, BaseFee: defParams.BaseFee},
 		},
 	}
 
@@ -335,11 +345,15 @@ func TestEstimateMessageGas(t *testing.T) {
 	gasOverEstimation := 1.25
 	gasOverPremium := 1.0
 	for i, addr := range addrs {
-		gasOverEstimation = float64(i) * gasOverEstimation
-		gasOverPremium = float64(i) * gasOverPremium
-		maxFeeStr := big.Mul(testhelper.DefMaxFee, big.NewInt(int64(i))).String()
-		gasFeeCapStr := big.Mul(testhelper.DefGasFeeCap, big.NewInt(int64(i))).String()
-		assert.NoError(t, ms.addressService.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFeeStr, gasFeeCapStr))
+		params := &types.AddressSpec{
+			Address:           addr,
+			GasOverEstimation: float64(i) * gasOverEstimation,
+			GasOverPremium:    float64(i) * gasOverPremium,
+			MaxFeeStr:         big.Mul(testhelper.DefMaxFee, big.NewInt(int64(i))).String(),
+			GasFeeCapStr:      big.Mul(testhelper.DefGasFeeCap, big.NewInt(int64(i))).String(),
+			BaseFeeStr:        big.Mul(testhelper.DefBaseFee, big.NewInt(int64(i))).String(),
+		}
+		assert.NoError(t, ms.addressService.SetFeeParams(ctx, params))
 	}
 
 	msgs = genMessages(addrs, defaultLocalToken, len(addrs)*10)
@@ -360,6 +374,116 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.Len(t, selectResult.ToPushMsg, 0)
 	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
 	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+}
+
+func TestBaseFee(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg := config.DefaultConfig()
+	cfg.MessageService.SkipPushMessage = true
+	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
+	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+	fsRepo := filestore.NewMockFileStore(t.TempDir())
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	assert.NoError(t, err)
+	ms := msh.ms
+
+	account := defaultLocalToken
+	addrCount := 10
+	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.fullNode.AddActors(addrs))
+
+	lc := fxtest.NewLifecycle(t)
+	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	assert.NoError(t, lc.Start(ctx))
+	defer lc.RequireStop()
+
+	totalMsg := len(addrs) * int(DefSharedParams.SelMsgNum)
+	msgs := genMessages(addrs, account, totalMsg)
+	assert.NoError(t, pushMessage(ctx, ms, msgs))
+
+	// global basefee too low
+	sharedParams, err := ms.sps.GetSharedParams(ctx)
+	assert.NoError(t, err)
+	sharedParams.BaseFee = big.Div(testhelper.DefBaseFee, big.NewInt(2))
+	assert.NoError(t, ms.sps.SetSharedParams(ctx, sharedParams))
+
+	ts, err := msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
+	assert.NoError(t, err)
+	assert.Len(t, selectResult.SelectMsg, 0)
+	assert.Len(t, selectResult.ErrMsg, 0)
+	assert.Len(t, selectResult.ModifyAddress, 0)
+	assert.Len(t, selectResult.ExpireMsg, 0)
+	assert.Len(t, selectResult.ToPushMsg, 0)
+
+	// set basefee for address
+	heightBaseFeeAddrs := make(map[address.Address]struct{}, addrCount/2)
+	for i, addr := range addrs {
+		if i%2 == 0 {
+			addrSpec := types.AddressSpec{
+				Address:    addr,
+				BaseFeeStr: big.Mul(testhelper.DefBaseFee, big.NewInt(2)).String(),
+			}
+			heightBaseFeeAddrs[addr] = struct{}{}
+			assert.NoError(t, ms.addressService.SetFeeParams(ctx, &addrSpec))
+		}
+	}
+
+	ts, err = msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
+	assert.NoError(t, err)
+	assert.Len(t, selectResult.SelectMsg, totalMsg/2)
+	assert.Len(t, selectResult.ErrMsg, 0)
+	assert.Len(t, selectResult.ModifyAddress, addrCount/2)
+	assert.Len(t, selectResult.ExpireMsg, 0)
+	assert.Len(t, selectResult.ToPushMsg, 0)
+	for _, addr := range selectResult.ModifyAddress {
+		_, ok := heightBaseFeeAddrs[addr.Addr]
+		assert.True(t, ok)
+	}
+	for addr := range testhelper.MsgGroupByAddress(selectResult.SelectMsg) {
+		_, ok := heightBaseFeeAddrs[addr]
+		assert.True(t, ok)
+	}
+	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
+
+	// increase basefee
+	for _, addr := range addrs {
+		if _, ok := heightBaseFeeAddrs[addr]; !ok {
+			addrSpec := types.AddressSpec{
+				Address:    addr,
+				BaseFeeStr: big.Mul(testhelper.DefBaseFee, big.NewInt(2)).String(),
+			}
+			heightBaseFeeAddrs[addr] = struct{}{}
+			assert.NoError(t, ms.addressService.SetFeeParams(ctx, &addrSpec))
+		}
+	}
+	ts, err = msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
+	assert.NoError(t, err)
+	assert.Len(t, selectResult.SelectMsg, totalMsg/2)
+	assert.Len(t, selectResult.ErrMsg, 0)
+	assert.Len(t, selectResult.ModifyAddress, addrCount/2)
+	assert.Len(t, selectResult.ExpireMsg, 0)
+	assert.Len(t, selectResult.ToPushMsg, 0)
+	for _, addr := range selectResult.ModifyAddress {
+		_, ok := heightBaseFeeAddrs[addr.Addr]
+		assert.True(t, ok)
+	}
+	for addr := range testhelper.MsgGroupByAddress(selectResult.SelectMsg) {
+		_, ok := heightBaseFeeAddrs[addr]
+		assert.True(t, ok)
+	}
+	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
+	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 }
 
 func TestSignMessageFailed(t *testing.T) {

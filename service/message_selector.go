@@ -203,8 +203,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var errMsg []msgErrInfo
 
 	globalSpec := messageSelector.sps.GetParams()
-	estimateMesssages := make([]*venusTypes.EstimateMessage, len(messages))
-	for index, msg := range messages {
+	estimateMesssages := make([]*venusTypes.EstimateMessage, 0, len(messages))
+	candidateMessages := make([]*types.Message, 0, len(messages))
+	for _, msg := range messages {
 		// global msg meta
 		newMsgMeta := mergeMsgSpec(globalSpec, msg.Meta, addr, msg)
 
@@ -212,14 +213,21 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			msg.GasFeeCap = newMsgMeta.GasFeeCap
 		}
 
-		estimateMesssages[index] = &venusTypes.EstimateMessage{
+		baseFee := ts.At(0).ParentBaseFee
+		if !newMsgMeta.BaseFee.NilOrZero() && baseFee.GreaterThan(newMsgMeta.BaseFee) {
+			messageSelector.log.Infof("skip msg %v, base fee too height %v(local) < %v(chain), height %v", msg.ID, newMsgMeta.BaseFee, baseFee, ts.Height())
+			continue
+		}
+
+		candidateMessages = append(candidateMessages, msg)
+		estimateMesssages = append(estimateMesssages, &venusTypes.EstimateMessage{
 			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,
 				GasOverEstimation: newMsgMeta.GasOverEstimation,
 				GasOverPremium:    newMsgMeta.GasOverPremium,
 			},
-		}
+		})
 
 		messageSelector.log.Infof("estimate message %s, gas fee cap %s, gas limit %v, gas premium: %s, "+
 			"meta maxfee %s, over estimation %f, gas over premium %f", msg.ID, msg.GasFeeCap, msg.GasLimit, msg.GasPremium,
@@ -234,7 +242,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	}
 
 	// sign
-	for index, msg := range messages {
+	for index, msg := range candidateMessages {
 		//if error print error message
 		if len(estimateResult[index].Err) != 0 {
 			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: gasEstimate + estimateResult[index].Err})
@@ -430,10 +438,11 @@ func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 }
 
 func mergeMsgSpec(globalSpec *Params, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
-	newMsgMeta := &GasSpec{}
-	newMsgMeta.GasOverEstimation = sendSpec.GasOverEstimation
-	newMsgMeta.GasOverPremium = sendSpec.GasOverPremium
-	newMsgMeta.MaxFee = sendSpec.MaxFee
+	newMsgMeta := &GasSpec{
+		GasOverEstimation: sendSpec.GasOverEstimation,
+		GasOverPremium:    sendSpec.GasOverPremium,
+		MaxFee:            sendSpec.MaxFee,
+	}
 
 	if sendSpec.GasOverEstimation == 0 {
 		if addrInfo.GasOverEstimation != 0 {
@@ -466,6 +475,12 @@ func mergeMsgSpec(globalSpec *Params, sendSpec *types.SendSpec, addrInfo *types.
 		}
 	}
 
+	if !addrInfo.BaseFee.NilOrZero() {
+		newMsgMeta.BaseFee = addrInfo.BaseFee
+	} else if globalSpec != nil {
+		newMsgMeta.BaseFee = globalSpec.BaseFee
+	}
+
 	return newMsgMeta
 }
 
@@ -474,4 +489,5 @@ type GasSpec struct {
 	MaxFee            big.Int
 	GasOverPremium    float64
 	GasFeeCap         big.Int
+	BaseFee           big.Int
 }
