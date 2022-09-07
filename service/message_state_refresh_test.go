@@ -216,6 +216,64 @@ func TestDoRefershMessageState(t *testing.T) {
 			assert.Equal(t, msgLookup.Receipt, *res.Receipt)
 		}
 	})
+
+	t.Run("tow message nonce is zero", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		cfg := config.DefaultConfig()
+		cfg.MessageService.SkipPushMessage = true
+		cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
+		blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+		fsRepo := filestore.NewMockFileStore(t.TempDir())
+		msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+		assert.NoError(t, err)
+		ms := msh.ms
+
+		account := defaultLocalToken
+		addrCount := 1
+		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+		assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+		assert.NoError(t, msh.fullNode.AddActors(addrs))
+
+		lc := fxtest.NewLifecycle(t)
+		_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+		assert.NoError(t, lc.Start(ctx))
+		defer lc.RequireStop()
+
+		// first message will estimate gas failed
+		// second message will on chain
+		// both messages nonce is 0
+		msgs := genMessages(addrs, defaultLocalToken, 2)
+		msg := msgs[0]
+		msg.GasLimit = -1
+		assert.NoError(t, pushMessage(ctx, ms, msgs))
+
+		ts, err := msh.fullNode.ChainHead(ctx)
+		assert.NoError(t, err)
+		selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
+		assert.NoError(t, err)
+		assert.Len(t, selectResult.SelectMsg, 1)
+		assert.Equal(t, msgs[1].ID, selectResult.SelectMsg[0].ID)
+		assert.Len(t, selectResult.ErrMsg, 1)
+		assert.Equal(t, msgs[0].ID, selectResult.ErrMsg[0].id)
+
+		assert.NoError(t, saveMsgsAndUpdateCache(ctx, ms, selectResult))
+
+		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
+		defer calcel()
+		go func() {
+			ms.multiPushMessages(ctx, selectResult)
+		}()
+
+		fillMsg := selectResult.SelectMsg[0]
+		res, err := waitMsgWithTimeout(ctx, msh.ms, fillMsg.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, fillMsg.ID, res.ID)
+		assert.Equal(t, types.OnChainMsg, res.State)
+		assert.Equal(t, fillMsg.UnsignedCid, res.UnsignedCid)
+		assert.Equal(t, fillMsg.SignedCid, res.SignedCid)
+	})
 }
 
 func TestUpdateMessageState(t *testing.T) {

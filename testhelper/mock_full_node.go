@@ -361,6 +361,13 @@ func (f *MockFullNode) StateNetworkName(ctx context.Context) (types.NetworkName,
 	return types.NetworkNameMain, nil
 }
 
+func (f *MockFullNode) StateGetNetworkParams(ctx context.Context) (*types.NetworkParams, error) {
+	return &types.NetworkParams{
+		NetworkName:    types.NetworkNameMain,
+		BlockDelaySecs: uint64(f.blockDelay / time.Second),
+	}, nil
+}
+
 func (f *MockFullNode) ChainGetParentMessages(ctx context.Context, bcid cid.Cid) ([]types.MessageCID, error) {
 	f.l.Lock()
 	defer f.l.Unlock()

@@ -123,12 +123,14 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 		}
 
 		for _, msg := range applyMsgs {
-			localMsg, err := txRepo.MessageRepo().GetMessageByFromAndNonce(msg.msg.From, msg.msg.Nonce)
+			// 两个 `nonce` 都为 `0` 的消息，第一条消息预估gas失败了，第二条消息成功上链，
+			// 若只按 `from` 和 `nonce` 查询，查到的是第一条消息，这样第二条消息一直是 `FillMsg`
+			localMsg, err := txRepo.MessageRepo().GetMessageByFromNonceAndState(msg.msg.From, msg.msg.Nonce, types.FillMsg)
 			if err != nil {
-				ms.log.Warnf("msg not exit in local db maybe address %s send out of messager", msg.msg.From)
+				ms.log.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.signedCID, msg.msg.From)
 				continue
 			}
-			if localMsg.SignedCid == nil || *localMsg.SignedCid != msg.signedCID {
+			if localMsg.SignedCid != nil && !(*localMsg.SignedCid).Equals(msg.signedCID) {
 				ms.log.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.signedCID, localMsg.ID)
 				// replace msg
 				localMsg.State = types.ReplacedMsg
