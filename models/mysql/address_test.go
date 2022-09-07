@@ -227,7 +227,48 @@ func testUpdateFeeParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	gasOverPremium := 4.0
 	maxFee := big.NewInt(100)
 	gasFeeCap := big.NewInt(1000)
+	baseFee := big.NewInt(1000)
 
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(
+		"UPDATE `addresses` SET `base_fee`=?,`gas_fee_cap`=?,`gas_over_estimation`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+		WithArgs(baseFee.String(), gasFeeCap.String(), gasOverEstimation, gasOverPremium, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	// gasFeeCap is nil
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(
+		"UPDATE `addresses` SET `base_fee`=?,`gas_over_estimation`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+		WithArgs(baseFee.String(), gasOverEstimation, gasOverPremium, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
+		WillReturnResult(sqlmock.NewResult(2, 1))
+	mock.ExpectCommit()
+
+	// gasOverEstimation is 0
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(
+		"UPDATE `addresses` SET `base_fee`=?,`gas_fee_cap`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+		WithArgs(baseFee.String(), gasFeeCap.String(), gasOverPremium, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	// gasOverPremium is 0
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(
+		"UPDATE `addresses` SET `base_fee`=?,`gas_fee_cap`=?,`gas_over_estimation`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+		WithArgs(baseFee.String(), gasFeeCap.String(), gasOverEstimation, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	// maxFee is nil
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(
+		"UPDATE `addresses` SET `base_fee`=?,`gas_fee_cap`=?,`gas_over_estimation`=?,`gas_over_premium`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
+		WithArgs(baseFee.String(), gasFeeCap.String(), gasOverEstimation, gasOverPremium, anyTime{}, addr.String(), repo.NotDeleted).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	// baseFee is nil
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(
 		"UPDATE `addresses` SET `gas_fee_cap`=?,`gas_over_estimation`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
@@ -235,43 +276,12 @@ func testUpdateFeeParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	// gasFeeCap is nil
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `gas_over_estimation`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(gasOverEstimation, gasOverPremium, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
-		WillReturnResult(sqlmock.NewResult(2, 1))
-	mock.ExpectCommit()
-
-	// gasOverEstimation is 0
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `gas_fee_cap`=?,`gas_over_premium`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(gasFeeCap.String(), gasOverPremium, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
-
-	// gasOverPremium is 0
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `gas_fee_cap`=?,`gas_over_estimation`=?,`max_fee`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(gasFeeCap.String(), gasOverEstimation, maxFee.String(), anyTime{}, addr.String(), repo.NotDeleted).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
-
-	// all parameter
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `gas_fee_cap`=?,`gas_over_estimation`=?,`gas_over_premium`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(gasFeeCap.String(), gasOverEstimation, gasOverPremium, anyTime{}, addr.String(), repo.NotDeleted).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
-
-	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap))
-	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, big.Int{}))
-	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, 0, gasOverPremium, maxFee, gasFeeCap))
-	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, 0, maxFee, gasFeeCap))
-	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, big.Int{}, gasFeeCap))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap, baseFee))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, big.Int{}, baseFee))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, 0, gasOverPremium, maxFee, gasFeeCap, baseFee))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, 0, maxFee, gasFeeCap, baseFee))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, big.Int{}, gasFeeCap, baseFee))
+	assert.NoError(t, r.AddressRepo().UpdateFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee, gasFeeCap, big.Int{}))
 }
 
 func newAddressInfo(t *testing.T) (*types.Address, error) {
@@ -289,6 +299,7 @@ func newAddressInfo(t *testing.T) (*types.Address, error) {
 		GasOverPremium:    float64(randNum),
 		MaxFee:            big.NewInt(randNum),
 		GasFeeCap:         big.NewInt(randNum),
+		BaseFee:           big.NewInt(randNum),
 		IsDeleted:         repo.NotDeleted,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),

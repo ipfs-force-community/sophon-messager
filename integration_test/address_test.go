@@ -109,6 +109,14 @@ func testGetAddressAndHasAddress(ctx context.Context,
 		if ok {
 			assert.NoError(t, getAddrErr)
 			assert.Equal(t, addr, addrInfo.Addr)
+			assert.Equal(t, uint64(0), addrInfo.Nonce)
+			assert.Equal(t, types.AddressStateAlive, addrInfo.State)
+			assert.Equal(t, uint64(0), addrInfo.SelMsgNum)
+			assert.Equal(t, 0.0, addrInfo.GasOverEstimation)
+			assert.Equal(t, big.Zero(), addrInfo.MaxFee)
+			assert.Equal(t, big.Zero(), addrInfo.GasFeeCap)
+			assert.Equal(t, 0.0, addrInfo.GasOverPremium)
+			assert.Equal(t, big.Zero(), addrInfo.BaseFee)
 			assert.True(t, has)
 		} else {
 			assert.Contains(t, getAddrErr.Error(), gorm.ErrRecordNotFound.Error())
@@ -199,30 +207,60 @@ func testSetFeeParams(ctx context.Context, t *testing.T, api messager.IMessager,
 	gasOverPremium := 44.0
 	maxFee := big.NewInt(10001110)
 	gasFeeCap := big.NewInt(10001101)
+	baseFee := big.NewInt(1010110)
+	params := types.AddressSpec{
+		GasOverEstimation: gasOverEstimation,
+		GasOverPremium:    gasOverPremium,
+		MaxFeeStr:         maxFee.String(),
+		GasFeeCapStr:      gasFeeCap.String(),
+		BaseFeeStr:        baseFee.String(),
+	}
+	emptyAddrSpec := &types.AddressSpec{}
 
 	checkParams := func(addrInfo *types.Address) {
 		assert.Equal(t, gasOverEstimation, addrInfo.GasOverEstimation)
 		assert.Equal(t, gasOverPremium, addrInfo.GasOverPremium)
 		assert.Equal(t, maxFee, addrInfo.MaxFee)
 		assert.Equal(t, gasFeeCap, addrInfo.GasFeeCap)
+		assert.Equal(t, baseFee, addrInfo.BaseFee)
 	}
+	var usedAddr address.Address
 	for _, addr := range allAddrs {
 		_, ok := usedAddrs[addr]
+		params.Address = addr
+		usedAddr = addr
 		if ok {
-			assert.NoError(t, api.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee.String(), gasFeeCap.String()))
+			assert.NoError(t, api.SetFeeParams(ctx, &params))
 			addrInfo, err := api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			checkParams(addrInfo)
 
 			// use empty value
-			assert.NoError(t, api.SetFeeParams(ctx, addr, 0, 0, "", ""))
+			emptyAddrSpec.Address = addr
+			assert.NoError(t, api.SetFeeParams(ctx, emptyAddrSpec))
 			addrInfo, err = api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			checkParams(addrInfo)
 		} else {
-			assert.Error(t, api.SetFeeParams(ctx, addr, gasOverEstimation, gasOverPremium, maxFee.String(), gasFeeCap.String()))
+			assert.Error(t, api.SetFeeParams(ctx, &params))
 		}
 	}
+
+	// set zero value
+	params2 := &types.AddressSpec{
+		Address:      usedAddr,
+		MaxFeeStr:    big.Zero().String(),
+		GasFeeCapStr: big.Zero().String(),
+		BaseFeeStr:   big.Zero().String(),
+	}
+	assert.NoError(t, api.SetFeeParams(ctx, params2))
+	res, err := api.GetAddress(ctx, params2.Address)
+	assert.NoError(t, err)
+	assert.Equal(t, gasOverEstimation, gasOverEstimation)
+	assert.Equal(t, gasOverPremium, gasOverPremium)
+	assert.Equal(t, big.Zero(), res.MaxFee)
+	assert.Equal(t, big.Zero(), res.GasFeeCap)
+	assert.Equal(t, big.Zero(), res.BaseFee)
 }
 
 func testClearUnFillMessage(ctx context.Context, t *testing.T, api messager.IMessager, allAddrs []address.Address, addrMsgs map[address.Address][]*types.Message) {

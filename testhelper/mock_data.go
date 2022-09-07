@@ -160,6 +160,6 @@ func genBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Ci
 		Timestamp:             uint64(time.Now().Unix()),
 		BlockSig:              nil,
 		ForkSignaling:         0,
-		ParentBaseFee:         abi.TokenAmount{},
+		ParentBaseFee:         DefBaseFee,
 	}, nil
 }

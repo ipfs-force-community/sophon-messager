@@ -264,6 +264,7 @@ func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api messager
 		res, err := api.GetMessageByUnsignedCid(ctx, *msg.UnsignedCid)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, res.Confidence, msg.Confidence)
+		msg.Confidence = res.Confidence
 		assert.Equal(t, msg, res)
 	}
 

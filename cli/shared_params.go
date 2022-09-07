@@ -14,7 +14,6 @@ var SharedParamsCmds = &cli.Command{
 	Subcommands: []*cli.Command{
 		setSharedParamsCmd,
 		getSharedParamCmd,
-		refreshSharedParamCmd,
 	},
 }
 
@@ -37,6 +36,9 @@ var setSharedParamsCmd = &cli.Command{
 		&cli.Uint64Flag{
 			Name:  "sel-msg-num",
 			Value: 20,
+		},
+		&cli.StringFlag{
+			Name: "base-fee",
 		},
 		GasOverPremiumFlag,
 	},
@@ -68,6 +70,12 @@ var setSharedParamsCmd = &cli.Command{
 			params.GasFeeCap, err = big.FromString(ctx.String("gas-feecap"))
 			if err != nil {
 				return fmt.Errorf("parse gas-feecap failed %v", err)
+			}
+		}
+		if ctx.IsSet("base-fee") {
+			params.BaseFee, err = big.FromString(ctx.String("base-fee"))
+			if err != nil {
+				return fmt.Errorf("parse basefee failed %v", err)
 			}
 		}
 		if ctx.IsSet("sel-msg-num") {
@@ -105,25 +113,6 @@ var getSharedParamCmd = &cli.Command{
 			return err
 		}
 		fmt.Println(string(paramsByte))
-
-		return nil
-	},
-}
-
-var refreshSharedParamCmd = &cli.Command{
-	Name:  "refresh",
-	Usage: "refresh shared params from DB",
-	Action: func(ctx *cli.Context) error {
-		client, closer, err := getAPI(ctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		err = client.RefreshSharedParams(ctx.Context)
-		if err != nil {
-			return err
-		}
 
 		return nil
 	},

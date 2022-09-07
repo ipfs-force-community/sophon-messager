@@ -172,6 +172,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 				ID:        venusTypes.NewUUID(),
 				Addr:      msg.From,
 				Nonce:     0,
+				SelMsgNum: 0,
 				State:     types.AddressStateAlive,
 				IsDeleted: repo.NotDeleted,
 				CreatedAt: time.Now(),

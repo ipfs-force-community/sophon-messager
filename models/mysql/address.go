@@ -25,6 +25,7 @@ type mysqlAddress struct {
 	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);"`
 	GasFeeCap         mtypes.Int         `gorm:"column:gas_fee_cap;type:varchar(256);"`
 	GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);"`
+	BaseFee           mtypes.Int         `gorm:"column:base_fee;type:varchar(256);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -36,7 +37,7 @@ func (s mysqlAddress) TableName() string {
 }
 
 func fromAddress(addr *types.Address) *mysqlAddress {
-	mysqlAddr := &mysqlAddress{
+	return &mysqlAddress{
 		ID:                addr.ID,
 		Addr:              addr.Addr.String(),
 		Nonce:             addr.Nonce,
@@ -45,19 +46,13 @@ func fromAddress(addr *types.Address) *mysqlAddress {
 		State:             addr.State,
 		GasOverEstimation: addr.GasOverEstimation,
 		GasOverPremium:    addr.GasOverPremium,
+		MaxFee:            mtypes.SafeFromGo(addr.MaxFee.Int),
+		GasFeeCap:         mtypes.SafeFromGo(addr.GasFeeCap.Int),
+		BaseFee:           mtypes.SafeFromGo(addr.BaseFee.Int),
 		IsDeleted:         addr.IsDeleted,
 		CreatedAt:         addr.CreatedAt,
 		UpdatedAt:         addr.UpdatedAt,
 	}
-
-	if !addr.MaxFee.Nil() {
-		mysqlAddr.MaxFee = mtypes.NewFromGo(addr.MaxFee.Int)
-	}
-	if !addr.GasFeeCap.Nil() {
-		mysqlAddr.GasFeeCap = mtypes.NewFromGo(addr.GasFeeCap.Int)
-	}
-
-	return mysqlAddr
 }
 
 func (s mysqlAddress) Address() (*types.Address, error) {
@@ -74,6 +69,7 @@ func (s mysqlAddress) Address() (*types.Address, error) {
 		State:             s.State,
 		MaxFee:            big.Int(mtypes.SafeFromGo(s.MaxFee.Int)),
 		GasFeeCap:         big.Int(mtypes.SafeFromGo(s.GasFeeCap.Int)),
+		BaseFee:           big.Int(mtypes.SafeFromGo(s.BaseFee.Int)),
 		GasOverPremium:    s.GasOverPremium,
 		GasOverEstimation: s.GasOverEstimation,
 		IsDeleted:         s.IsDeleted,
@@ -188,19 +184,25 @@ func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.A
 		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
 }
 
-func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap big.Int) error {
-	updateColumns := make(map[string]interface{})
-	if gasOverEstimation != 0 {
-		updateColumns["gas_over_estimation"] = gasOverEstimation
-	}
+func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap, baseFee big.Int) error {
+	updateColumns := make(map[string]interface{}, 6)
 	if !maxFee.Nil() {
 		updateColumns["max_fee"] = mtypes.NewFromGo(maxFee.Int)
 	}
 	if !gasFeeCap.Nil() {
 		updateColumns["gas_fee_cap"] = mtypes.NewFromGo(gasFeeCap.Int)
 	}
+	if !baseFee.Nil() {
+		updateColumns["base_fee"] = mtypes.NewFromGo(baseFee.Int)
+	}
+	if gasOverEstimation != 0 {
+		updateColumns["gas_over_estimation"] = gasOverEstimation
+	}
 	if gasOverPremium != 0 {
 		updateColumns["gas_over_premium"] = gasOverPremium
+	}
+	if len(updateColumns) == 0 {
+		return nil
 	}
 
 	updateColumns["updated_at"] = time.Now()

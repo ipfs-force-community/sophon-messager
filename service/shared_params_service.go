@@ -23,6 +23,7 @@ var DefSharedParams = &types.SharedSpec{
 	GasFeeCap:         big.NewInt(0),
 	GasOverPremium:    0,
 	SelMsgNum:         20,
+	BaseFee:           big.NewInt(0),
 }
 
 type SharedParamsService struct {
@@ -93,13 +94,4 @@ func (sps *SharedParamsService) SetParams(sharedParams *types.SharedSpec) {
 	sps.params.SharedSpec = sharedParams
 
 	sps.log.Infof("new params %v", sharedParams)
-}
-
-func (sps *SharedParamsService) RefreshSharedParams(ctx context.Context) error {
-	params, err := sps.GetSharedParams(ctx)
-	if err != nil {
-		return err
-	}
-	sps.SetParams(params)
-	return nil
 }
