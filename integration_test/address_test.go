@@ -228,8 +228,8 @@ func testSetFeeParams(ctx context.Context, t *testing.T, api messager.IMessager,
 	for _, addr := range allAddrs {
 		_, ok := usedAddrs[addr]
 		params.Address = addr
-		usedAddr = addr
 		if ok {
+			usedAddr = addr
 			assert.NoError(t, api.SetFeeParams(ctx, &params))
 			addrInfo, err := api.GetAddress(ctx, addr)
 			assert.NoError(t, err)

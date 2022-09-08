@@ -65,6 +65,8 @@ type MessageService struct {
 
 	cleanUnFillMsgFunc chan func() (int, error)
 	cleanUnFillMsgRes  chan cleanUnFillMsgResult
+
+	blockDelay time.Duration
 }
 
 type headChan struct {
@@ -118,6 +120,12 @@ func NewMessageService(ctx context.Context,
 	if fsRepo.Config().Metrics.Enabled {
 		go ms.recordMetricsProc(ctx)
 	}
+
+	networkParams, err := ms.nodeClient.StateGetNetworkParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get network params failed %v", err)
+	}
+	ms.blockDelay = time.Duration(networkParams.BlockDelaySecs) * time.Second
 
 	return ms, ms.verifyNetworkName()
 }
@@ -234,7 +242,11 @@ func (ms *MessageService) PushMessageWithId(ctx context.Context, account string,
 }
 
 func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
-	tm := time.NewTicker(time.Second * 30)
+	d := time.Second * 30
+	if ms.blockDelay > 0 {
+		d = ms.blockDelay
+	}
+	tm := time.NewTicker(d)
 	defer tm.Stop()
 
 	doneCh := make(chan struct{}, 1)
