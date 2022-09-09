@@ -8,9 +8,6 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/constants"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
@@ -18,6 +15,10 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/testhelper"
+
+	"github.com/filecoin-project/venus/pkg/constants"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestDoRefreshMessageState(t *testing.T) {
@@ -31,10 +32,9 @@ func TestDoRefreshMessageState(t *testing.T) {
 	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
 	assert.NoError(t, err)
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -48,7 +48,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		wg := sync.WaitGroup{}
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
-			msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+			msgs := genMessages(addrs, len(addrs)*10)
 			assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
 			go func(msgs []*types.Message) {
 				defer wg.Done()
@@ -77,7 +77,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		for i < loop {
 			select {
 			case <-ticker.C:
-				msgs := genMessages(addrs, defaultLocalToken, len(addrs)*2*(i+1))
+				msgs := genMessages(addrs, len(addrs)*2*(i+1))
 				assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
 				if i == 6 {
 					msh.fullNode.SendRevertSignal(rs)
@@ -129,10 +129,9 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.NoError(t, err)
 		ms := msh.ms
 
-		account := defaultLocalToken
 		addrCount := 10
 		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-		assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+		assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 		lc := fxtest.NewLifecycle(t)
@@ -140,7 +139,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.NoError(t, lc.Start(ctx))
 		defer lc.RequireStop()
 
-		msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+		msgs := genMessages(addrs, len(addrs)*10)
 		assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 		ts, err := msh.fullNode.ChainHead(ctx)
@@ -230,10 +229,9 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.NoError(t, err)
 		ms := msh.ms
 
-		account := defaultLocalToken
 		addrCount := 1
 		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-		assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+		assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 		lc := fxtest.NewLifecycle(t)
@@ -244,7 +242,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		// first message will estimate gas failed
 		// second message will on chain
 		// both messages nonce is 0
-		msgs := genMessages(addrs, defaultLocalToken, 2)
+		msgs := genMessages(addrs, 2)
 		msg := msgs[0]
 		msg.GasLimit = -1
 		assert.NoError(t, pushMessage(ctx, ms, msgs))
@@ -289,7 +287,7 @@ func TestUpdateMessageState(t *testing.T) {
 
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
+	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -297,7 +295,7 @@ func TestUpdateMessageState(t *testing.T) {
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10*5)
+	msgs := genMessages(addrs, len(addrs)*10*5)
 	assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
 
 	ts, err := msh.fullNode.ChainHead(ctx)

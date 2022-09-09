@@ -202,7 +202,6 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	return ms.repo.MessageRepo().CreateMessage(msg)
 }
 
-<<<<<<< HEAD
 func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
 	return ms.PushMessageWithId(ctx, venusTypes.NewUUID().String(), msg, meta)
 }
@@ -1091,47 +1090,47 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 			}
 
 			for _, addr := range addrs {
-				tCtx, _ := tag.New(
+				ctx, _ = tag.New(
 					ctx,
 					tag.Upsert(metrics.WalletAddress, addr.Addr.String()),
 				)
-				stats.Record(tCtx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
+				stats.Record(ctx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
 
-				actor, err := ms.nodeClient.StateGetActor(tCtx, addr.Addr, venusTypes.EmptyTSK)
+				actor, err := ms.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
 				if err != nil {
 					ms.addressService.log.Errorf("get actor err: %s", err)
 				} else {
 					balance, _ := strconv.ParseFloat(venusTypes.FIL(actor.Balance).Unitless(), 64)
-					stats.Record(tCtx, metrics.WalletBalance.M(balance))
-					stats.Record(tCtx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
+					stats.Record(ctx, metrics.WalletBalance.M(balance))
+					stats.Record(ctx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
 				}
 
 				msgs, err := ms.repo.MessageRepo().ListUnFilledMessage(addr.Addr)
 				if err != nil {
 					ms.addressService.log.Errorf("get unFilled msg err: %s", err)
 				} else {
-					stats.Record(tCtx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
+					stats.Record(ctx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
 				if err != nil {
 					ms.addressService.log.Errorf("get filled msg err: %s", err)
 				} else {
-					stats.Record(tCtx, metrics.NumOfFillMsg.M(int64(len(msgs))))
+					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
 				if err != nil {
 					ms.addressService.log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
-					stats.Record(tCtx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
+					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
 				if err != nil {
 					ms.addressService.log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
-					stats.Record(tCtx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
+					stats.Record(ctx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
 				}
 			}
 

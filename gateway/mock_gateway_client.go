@@ -48,11 +48,11 @@ func (m *MockWalletProxy) AddAddress(addrs []address.Address) error {
 	return nil
 }
 
-func (m *MockWalletProxy) RemoveAddress(ctx context.Context, addr address.Address) error {
+func (m *MockWalletProxy) RemoveAddress(ctx context.Context, addrs []address.Address) error {
 	m.l.Lock()
 	defer m.l.Unlock()
 
-	if _, ok := m.signers[addr]; ok {
+	for _, addr := range addrs {
 		delete(m.signers, addr)
 	}
 
