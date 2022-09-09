@@ -9,25 +9,25 @@ import (
 	"os"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/metrics"
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	gatewayapi "github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	"github.com/mitchellh/go-homedir"
-
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 
-	"github.com/filecoin-project/venus-messager/api"
-
 	"github.com/filecoin-project/venus-auth/jwtclient"
+
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
+
+	"github.com/filecoin-project/venus-messager/api"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/version"
@@ -232,7 +232,7 @@ func runAction(cctx *cli.Context) error {
 		fx.Supply(networkName),
 		fx.Supply(remoteAuthCli),
 		fx.Supply(localAuthCli),
-		fx.Provide(func() gatewayapi.IWalletClient {
+		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
 		}),
 		fx.Provide(func() v1.FullNode {

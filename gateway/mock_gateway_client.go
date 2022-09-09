@@ -7,7 +7,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 
@@ -47,28 +48,16 @@ func (m *MockWalletProxy) AddAddress(addrs []address.Address) error {
 	return nil
 }
 
-func (m *MockWalletProxy) RemoveAddress(account string, addrs []address.Address) error {
+func (m *MockWalletProxy) RemoveAddress(ctx context.Context, addr address.Address) error {
 	m.l.Lock()
 	defer m.l.Unlock()
 
-	currAddrs, ok := m.accountAddrs[account]
-	if ok {
-		for _, addr := range addrs {
-			if addr.Protocol() == address.ID {
-				newAddr, err := testhelper.ResolveIDAddr(addr)
-				if err != nil {
-					return err
-				}
-				delete(currAddrs, newAddr)
-				continue
-			}
-			delete(currAddrs, addr)
-		}
+	if _, ok := m.signers[addr]; ok {
+		delete(m.signers, addr)
 	}
 
 	return nil
 }
-
 
 func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
 	m.l.Lock()
@@ -100,4 +89,4 @@ func (m *MockWalletProxy) ListWalletInfoByWallet(ctx context.Context, wallet str
 	panic("implement me")
 }
 
-var _ gateway.IWalletClient = (*MockWalletProxy)(nil)
+var _ gatewayAPI.IWalletClient = (*MockWalletProxy)(nil)

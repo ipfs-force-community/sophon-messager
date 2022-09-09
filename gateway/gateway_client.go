@@ -9,7 +9,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/crypto"
 
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 
@@ -18,17 +18,17 @@ import (
 )
 
 type WalletProxy struct {
-	clients map[string]gateway.IWalletClient
+	clients map[string]gatewayAPI.IWalletClient
 	logger  *log.Logger
 }
 
-func (w *WalletProxy) fastSelectAvaWalletClient(ctx context.Context, addr address.Address) (gateway.IWalletClient, error) {
+func (w *WalletProxy) fastSelectAvaWalletClient(ctx context.Context, addr address.Address) (gatewayAPI.IWalletClient, error) {
 	var g = &sync.WaitGroup{}
-	var ch = make(chan gateway.IWalletClient, 1)
+	var ch = make(chan gatewayAPI.IWalletClient, 1)
 
 	for url, c := range w.clients {
 		g.Add(1)
-		go func(url string, c gateway.IWalletClient) {
+		go func(url string, c gatewayAPI.IWalletClient) {
 			has, err := c.WalletHas(ctx, addr)
 			if err != nil {
 				w.logger.Errorf("fastSelectAvaWalletClient, call %s:'WalletHas' failed:%s", url, err)
@@ -81,15 +81,13 @@ func NewWalletClient(ctx context.Context,
 	logger *log.Logger,
 ) (*WalletProxy, jsonrpc.ClientCloser, error) {
 	var proxy = &WalletProxy{
-		clients: make(map[string]gateway.IWalletClient),
+		clients: make(map[string]gatewayAPI.IWalletClient),
 		logger:  logger,
 	}
-	var ctx = context.Background()
 
 	var closers []jsonrpc.ClientCloser
-
 	for _, url := range cfg.Url {
-		c, cls, err := gateway.DialIGatewayRPC(ctx, url, cfg.Token, nil)
+		c, cls, err := gatewayAPI.DialIGatewayRPC(ctx, url, cfg.Token, nil)
 
 		if err != nil {
 			return nil, nil, fmt.Errorf("create geteway client with url:%s failed: %w", url, err)
@@ -112,4 +110,4 @@ func NewWalletClient(ctx context.Context,
 	return proxy, totalCloser, nil
 }
 
-var _ gateway.IWalletClient = &WalletProxy{}
+var _ gatewayAPI.IWalletClient = &WalletProxy{}

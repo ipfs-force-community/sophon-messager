@@ -28,7 +28,7 @@ import (
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -47,7 +47,7 @@ type MessageService struct {
 	fsRepo         filestore.FSRepo
 	nodeClient     v1.FullNode
 	addressService *AddressService
-	walletClient   gateway.IWalletClient
+	walletClient   gatewayAPI.IWalletClient
 
 	Pubsub pubsub.IMessagePubSub
 
@@ -88,7 +88,7 @@ func NewMessageService(ctx context.Context,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
-	walletClient gateway.IWalletClient,
+	walletClient gatewayAPI.IWalletClient,
 	pubsub pubsub.IMessagePubSub) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
@@ -1007,7 +1007,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 	return nil
 }
 
-func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.Message.Cid()
 	msg.UnsignedCid = &unsignedCid
 	//签名
