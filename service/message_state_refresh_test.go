@@ -20,7 +20,7 @@ import (
 	"github.com/filecoin-project/venus-messager/testhelper"
 )
 
-func TestDoRefershMessageState(t *testing.T) {
+func TestDoRefreshMessageState(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
