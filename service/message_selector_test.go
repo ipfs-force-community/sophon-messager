@@ -598,7 +598,7 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 
 func pushMessage(ctx context.Context, ms *MessageService, msgs []*types.Message) error {
 	for _, msg := range msgs {
-		// avoid being modified
+		// avoid been modified
 		msgCopy := *msg
 		if err := ms.pushMessage(ctx, &msgCopy); err != nil {
 			return err
@@ -633,7 +633,7 @@ func checkMsgs(ctx context.Context, t *testing.T, ms *MessageService, srcMsgs []
 	addrInfos := make(map[address.Address]*types.Address)
 	idMsgMap := testhelper.SliceToMap(srcMsgs)
 	for _, msg := range selectedMsgs {
-		res := waitMsgAndCheck(ctx, t, msg, ms)
+		res := waitMsgAndCheck(ctx, t, msg.ID, ms)
 
 		addrInfo, ok := addrInfos[msg.From]
 		if !ok {
@@ -671,10 +671,10 @@ func waitMsgWithTimeout(ctx context.Context, ms *MessageService, msgID string) (
 	}
 }
 
-func waitMsgAndCheck(ctx context.Context, t *testing.T, msg *types.Message, ms *MessageService) *types.Message {
-	res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
+func waitMsgAndCheck(ctx context.Context, t *testing.T, msgID string, ms *MessageService) *types.Message {
+	res, err := waitMsgWithTimeout(ctx, ms, msgID)
 	assert.NoError(t, err)
-	assert.Equal(t, msg.ID, res.ID)
+	assert.Equal(t, msgID, res.ID)
 	assert.Equal(t, types.OnChainMsg, res.State)
 	assert.Greater(t, res.Height, int64(0))
 	assert.NotEmpty(t, res.TipSetKey.String())

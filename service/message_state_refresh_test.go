@@ -54,7 +54,7 @@ func TestDoRefershMessageState(t *testing.T) {
 				defer wg.Done()
 
 				for _, msg := range msgs {
-					res := waitMsgAndCheck(ctx, t, msg, msh.ms)
+					res := waitMsgAndCheck(ctx, t, msg.ID, msh.ms)
 
 					msgLookup, err := msh.fullNode.StateSearchMsg(ctx, shared.EmptyTSK, *res.SignedCid, constants.LookbackNoLimit, true)
 					assert.NoError(t, err)
