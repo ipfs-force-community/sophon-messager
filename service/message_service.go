@@ -209,20 +209,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 }
 
 func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	newId := venusTypes.NewUUID()
-	if err := ms.pushMessage(ctx, &types.Message{
-		ID:         newId.String(),
-		Message:    *msg,
-		Meta:       meta,
-		State:      types.UnFillMsg,
-		WalletName: account,
-		FromUser:   account,
-	}); err != nil {
-		ms.log.Errorf("push message %s failed %v", newId.String(), err)
-		return newId.String(), err
-	}
-
-	return newId.String(), nil
+	return ms.PushMessageWithId(ctx, account, venusTypes.NewUUID().String(), msg, meta)
 }
 
 func (ms *MessageService) PushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {

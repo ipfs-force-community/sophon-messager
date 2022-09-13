@@ -1,3 +1,4 @@
+//stm: #unit
 package service
 
 import (
@@ -8,8 +9,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
@@ -158,6 +159,7 @@ func TestAddrSelectMsgNum(t *testing.T) {
 }
 
 func TestSelectMessage(t *testing.T) {
+	//stm: @MESSENGER_SELECTOR_SELECT_MESSAGE_001, @MESSENGER_SELECTOR_SELECT_MESSAGE_002
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -186,6 +188,10 @@ func TestSelectMessage(t *testing.T) {
 	res, err := ms.messageSelector.SelectMessage(ctx, ts)
 	assert.NoError(t, err)
 	assert.Equal(t, &MsgSelectResult{}, res)
+
+	// If an error occurs retrieving nonce in tipset, return that error
+	_, err = ms.messageSelector.SelectMessage(ctx, &shared.TipSet{})
+	assert.Error(t, err)
 
 	totalMsg := len(addrs) * 10
 	msgs := genMessages(addrs, account, totalMsg)
@@ -286,6 +292,7 @@ func TestSelectNum(t *testing.T) {
 }
 
 func TestEstimateMessageGas(t *testing.T) {
+	//stm: @MESSENGER_SELECTOR_ESTIMATE_MESSAGE_GAS_001
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -544,6 +551,25 @@ func TestSignMessageFailed(t *testing.T) {
 	}
 }
 
+func TestCapGasFee(t *testing.T) {
+	//stm: @MESSENGER_SELECTOR_CAP_MESSAGE_GAS_001
+	msg := testhelper.NewMessage().Message
+	maxfee := func(msg *shared.Message) big.Int {
+		return big.Mul(big.NewInt(msg.GasLimit), msg.GasFeeCap)
+	}
+	oldFeeCap := big.NewInt(1000)
+	oldGasPremium := oldFeeCap
+	msg.GasLimit = 10000
+	msg.GasFeeCap = oldFeeCap
+	msg.GasPremium = oldGasPremium
+	oldMaxFee := maxfee(&msg)
+	descedMaxFee := big.Div(oldMaxFee, big.NewInt(10))
+	CapGasFee(&msg, descedMaxFee)
+	newMaxFee := maxfee(&msg)
+	assert.Less(t, big.Cmp(msg.GasPremium, oldGasPremium), 0)
+	assert.Less(t, big.Cmp(newMaxFee, oldMaxFee), 0)
+}
+
 type messageServiceHelper struct {
 	fullNode    *testhelper.MockFullNode
 	walletProxy *gateway.MockWalletProxy
@@ -598,7 +624,7 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 
 func pushMessage(ctx context.Context, ms *MessageService, msgs []*types.Message) error {
 	for _, msg := range msgs {
-		// avoid being modified
+		// avoid been modified
 		msgCopy := *msg
 		if err := ms.pushMessage(ctx, &msgCopy); err != nil {
 			return err
@@ -633,7 +659,7 @@ func checkMsgs(ctx context.Context, t *testing.T, ms *MessageService, srcMsgs []
 	addrInfos := make(map[address.Address]*types.Address)
 	idMsgMap := testhelper.SliceToMap(srcMsgs)
 	for _, msg := range selectedMsgs {
-		res := waitMsgAndCheck(ctx, t, msg, ms)
+		res := waitMsgAndCheck(ctx, t, msg.ID, ms)
 
 		addrInfo, ok := addrInfos[msg.From]
 		if !ok {
@@ -655,7 +681,7 @@ func waitMsgWithTimeout(ctx context.Context, ms *MessageService, msgID string) (
 	resChan := make(chan *waitMsgRes)
 
 	go func() {
-		res, err := ms.WaitMessage(ctx, msgID, constants.MessageConfidence)
+		res, err := ms.WaitMessage(ctx, msgID, 1)
 		resChan <- &waitMsgRes{
 			msg: res,
 			err: err,
@@ -671,10 +697,10 @@ func waitMsgWithTimeout(ctx context.Context, ms *MessageService, msgID string) (
 	}
 }
 
-func waitMsgAndCheck(ctx context.Context, t *testing.T, msg *types.Message, ms *MessageService) *types.Message {
-	res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
+func waitMsgAndCheck(ctx context.Context, t *testing.T, msgID string, ms *MessageService) *types.Message {
+	res, err := waitMsgWithTimeout(ctx, ms, msgID)
 	assert.NoError(t, err)
-	assert.Equal(t, msg.ID, res.ID)
+	assert.Equal(t, msgID, res.ID)
 	assert.Equal(t, types.OnChainMsg, res.State)
 	assert.Greater(t, res.Height, int64(0))
 	assert.NotEmpty(t, res.TipSetKey.String())

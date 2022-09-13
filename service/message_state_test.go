@@ -1,3 +1,4 @@
+//stm: #unit
 package service
 
 import (
@@ -14,6 +15,9 @@ import (
 )
 
 func TestMessageStateCache(t *testing.T) {
+	//stm: @MESSENGER_STATE_GET_MESSAGE_001, @MESSENGER_STATE_SET_MESSAGE_ID_001, @MESSENGER_STATE_GET_MESSAGE_STATE_BY_CID_001
+	//stm: @MESSENGER_STATE_UPDATE_MESSAGE_BY_CID_001, @MESSENGER_STATE_SET_MESSAGE_ID_001, @MESSENGER_STATE_DELETE_MESSAGE_001
+	//stm: @MESSENGER_STATE_MUTATE_MESSAGE_001
 	fs := filestore.NewMockFileStore(t.TempDir())
 	db, err := sqlite.OpenSqlite(fs)
 	assert.NoError(t, err)
@@ -51,4 +55,11 @@ func TestMessageStateCache(t *testing.T) {
 	state, flag = msgState.GetMessageStateByCid(msgs[1].Cid().String())
 	assert.True(t, flag)
 	assert.Equal(t, types.OnChainMsg, state)
+
+	msgState.DeleteMessage(msgs[0].ID)
+
+	// Since `msg[0]` has already been removed, `GetMessageStateByCid` should returns `(Unknown, false)`
+	state, flag = msgState.GetMessageStateByCid(msgs[0].Cid().String())
+	assert.Equal(t, state, types.UnKnown)
+	assert.False(t, flag)
 }

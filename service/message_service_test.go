@@ -1,13 +1,18 @@
+//stm: #unit
 package service
 
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus/pkg/constants"
+	"github.com/filecoin-project/venus/venus-shared/testutil"
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
@@ -48,6 +53,8 @@ func TestVerifyNetworkName(t *testing.T) {
 }
 
 func TestReplaceMessage(t *testing.T) {
+	//stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_001, @MESSENGER_SERVICE_REPLACE_MESSAGE_002
+	//stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_003, @MESSENGER_SERVICE_REPLACE_MESSAGE_004
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -128,6 +135,18 @@ func TestReplaceMessage(t *testing.T) {
 		assert.Equal(t, msg.GasFeeCap, res.GasFeeCap)
 		assert.Equal(t, msg.GasPremium, res.GasPremium)
 	}
+
+	failedMessageReplace := func(*types.ReplacMessageParams) {
+		_, err = ms.ReplaceMessage(ctx, nil)
+		assert.Error(t, err)
+	}
+
+	// param is nil, expect an error
+	failedMessageReplace(nil)
+	// message can't find, expect an error
+	failedMessageReplace(&types.ReplacMessageParams{ID: shared.NewUUID().String(), Auto: true})
+	// message is already on chain, expect an error
+	failedMessageReplace(&types.ReplacMessageParams{ID: replacedMsgs[0].ID, Auto: true})
 }
 
 func TestReconnectCheck(t *testing.T) {
@@ -244,6 +263,7 @@ func TestReconnectCheck(t *testing.T) {
 }
 
 func TestMessageService_ProcessNewHead(t *testing.T) {
+	//stm: @MESSENGER_SERVICE_LIST_MESSAGE_BY_ADDRESS_001
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -392,6 +412,102 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		assert.Equal(t, revert[len(revert)-1].Parents(), apply[len(apply)-1].Parents())
 		assert.Equal(t, revertedTS[len(revertedTS)-1], revert[len(revert)-1])
 		headChange.done <- nil
+	})
+}
+
+func TestMessageService_PushMessage(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg := config.DefaultConfig()
+	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
+	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+	fsRepo := filestore.NewMockFileStore(t.TempDir())
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	assert.NoError(t, err)
+
+	account := defaultLocalToken
+	addr := testutil.BlsAddressProvider()(t)
+	assert.NoError(t, msh.fullNode.AddActors([]address.Address{addr}))
+	assert.NoError(t, msh.walletProxy.AddAddress(account, []address.Address{addr}))
+
+	lc := fxtest.NewLifecycle(t)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, msh.ms.log)
+	assert.NoError(t, lc.Start(ctx))
+	defer lc.RequireStop()
+
+	var pushedMsg *types.Message
+
+	t.Run("push message:", func(t *testing.T) {
+		//stm: @MESSENGER_SERVICE_PUSH_MESSAGE_001, @MESSENGER_SERVICE_PUSH_MESSAGE_002,
+		//stm: @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_001, @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_002
+		//stm: @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_001, @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_002
+		//stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
+		rawMsg := testhelper.NewUnsignedMessage()
+		rawMsg.From = addr
+		uidStr, err := msh.ms.PushMessage(ctx, account, &rawMsg, nil)
+		assert.NoError(t, err)
+		_, err = shared.ParseUUID(uidStr)
+		assert.NoError(t, err)
+
+		{
+			// pushing message would be failed
+			pushFailedMsg := testhelper.NewUnsignedMessage()
+			_, err = msh.ms.PushMessage(ctx, "invalid account", &pushFailedMsg, nil)
+			assert.Error(t, err)
+			// msg with uuid not exists, expect an error
+			_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
+			assert.Error(t, err)
+		}
+
+		pushedMsg, err = msh.ms.GetMessageByUid(ctx, uidStr)
+		assert.NoError(t, err)
+		assert.Equal(t, pushedMsg.ID, uidStr)
+
+		{ // list messages
+			msgs, err := msh.ms.ListMessage(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, len(msgs), 1)
+			assert.Equal(t, msgs[0].ID, uidStr)
+
+			msgs, err = msh.ms.ListMessageByAddress(ctx, addr)
+			assert.NoError(t, err)
+			assert.Equal(t, len(msgs), 1)
+			assert.Equal(t, msgs[0].ID, uidStr)
+		}
+
+	})
+
+	t.Run("wait message:", func(t *testing.T) {
+		//stm: @MESSENGER_SERVICE_WAIT_MESSAGE_001, @MESSENGER_SERVICE_WAIT_MESSAGE_002
+		ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*3)
+		defer cancel()
+		_, err := waitMsgWithTimeout(ctx, msh.ms, shared.NewUUID().String())
+		assert.Error(t, err)
+
+		wg := sync.WaitGroup{}
+
+		waitOneMsg := func(msgID string, expectErr bool) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				res, err := waitMsgWithTimeout(ctx, msh.ms, msgID)
+				if expectErr {
+					assert.Error(t, err)
+					return
+				}
+				assert.Equal(t, res.ID, msgID)
+				msgLookup, err := msh.fullNode.StateSearchMsg(ctx, shared.EmptyTSK, *res.SignedCid, constants.LookbackNoLimit, true)
+				assert.NoError(t, err)
+				assert.Equal(t, msgLookup.Height, abi.ChainEpoch(res.Height))
+				assert.Equal(t, msgLookup.TipSet, res.TipSetKey)
+				assert.Equal(t, msgLookup.Receipt, *res.Receipt)
+			}()
+		}
+
+		waitOneMsg(pushedMsg.ID, false)
+		waitOneMsg(shared.NewUUID().String(), true)
+		wg.Wait()
 	})
 }
 
