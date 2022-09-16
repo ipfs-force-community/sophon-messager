@@ -317,7 +317,7 @@ func testListMessage(ctx context.Context, t *testing.T, api messager.IMessager, 
 	for _, msg := range msgs {
 		tmpMsg, ok := msgMap[msg.ID]
 		assert.True(t, ok)
-		assert.GreaterOrEqual(t, msg.Confidence, tmpMsg.Confidence)
+		assert.LessOrEqual(t, msg.Confidence, tmpMsg.Confidence)
 		tmpMsg.Confidence = msg.Confidence
 		assert.Equal(t, tmpMsg, msg)
 	}

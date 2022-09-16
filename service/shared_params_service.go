@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/filecoin-project/go-state-types/big"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
@@ -29,39 +28,22 @@ var DefSharedParams = &types.SharedSpec{
 type SharedParamsService struct {
 	repo repo.Repo
 	log  *log.Logger
-
-	params *Params
-}
-
-type Params struct {
-	*types.SharedSpec
-
-	ScanIntervalChan chan time.Duration
 }
 
 func NewSharedParamsService(ctx context.Context, repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
 	sps := &SharedParamsService{
 		repo: repo,
 		log:  logger,
-		params: &Params{
-			SharedSpec:       &types.SharedSpec{},
-			ScanIntervalChan: make(chan time.Duration, 5),
-		},
 	}
-	params, err := sps.GetSharedParams(ctx)
+	_, err := sps.GetSharedParams(ctx)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		// avoid data race
-		sharedParamsCopy := *DefSharedParams
-		if err = sps.SetSharedParams(ctx, &sharedParamsCopy); err != nil {
+		if err = sps.SetSharedParams(ctx, DefSharedParams); err != nil {
 			return nil, err
 		}
-		params = &sharedParamsCopy
 	}
-
-	sps.params.SharedSpec = params
 
 	return sps, nil
 }
@@ -75,23 +57,7 @@ func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *typ
 	if err != nil {
 		return err
 	}
-	sps.SetParams(params)
+	sps.log.Infof("new shared params %v", params)
 
 	return nil
-}
-
-func (sps *SharedParamsService) GetParams() *Params {
-	return sps.params
-}
-
-func (sps *SharedParamsService) SetParams(sharedParams *types.SharedSpec) {
-	if sharedParams == nil {
-		sps.log.Warnf("params is nil")
-		return
-	}
-	sps.log.Infof("old params %v ", sps.params.SharedSpec)
-
-	sps.params.SharedSpec = sharedParams
-
-	sps.log.Infof("new params %v", sharedParams)
 }

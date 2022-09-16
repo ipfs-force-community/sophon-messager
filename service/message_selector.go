@@ -69,12 +69,16 @@ func NewMessageSelector(repo repo.Repo,
 }
 
 func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) (*MsgSelectResult, error) {
+	sharedParams, err := messageSelector.sps.GetSharedParams(ctx)
+	if err != nil {
+		return nil, err
+	}
 	activeAddrs, err := messageSelector.addressService.ListActiveAddress(ctx)
 	if err != nil {
 		return nil, err
 	}
 	addrList := messageSelector.uniqAddresses(activeAddrs)
-	addrSelMsgNum := messageSelector.addrSelectMsgNum(activeAddrs)
+	addrSelMsgNum := messageSelector.addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 
 	appliedNonce, err := messageSelector.getNonceInTipset(ctx, ts)
 	if err != nil {
@@ -101,7 +105,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 				<-sem
 			}()
 
-			addrSelResult, err := messageSelector.selectAddrMessage(ctx, appliedNonce, addr, ts, selMsgNum)
+			addrSelResult, err := messageSelector.selectAddrMessage(ctx, appliedNonce, addr, ts, selMsgNum, sharedParams)
 			if err != nil {
 				messageSelector.log.Errorf("select message of %s fail %v", addr.Addr, err)
 				return
@@ -124,7 +128,7 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 	return selectResult, nil
 }
 
-func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64) (*MsgSelectResult, error) {
+func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64, sharedParams *types.SharedSpec) (*MsgSelectResult, error) {
 	var toPushMessage []*venusTypes.SignedMessage
 
 	//判断是否需要推送消息
@@ -202,12 +206,11 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var selectMsg []*types.Message
 	var errMsg []msgErrInfo
 
-	globalSpec := messageSelector.sps.GetParams()
 	estimateMesssages := make([]*venusTypes.EstimateMessage, 0, len(messages))
 	candidateMessages := make([]*types.Message, 0, len(messages))
 	for _, msg := range messages {
 		// global msg meta
-		newMsgMeta := mergeMsgSpec(globalSpec, msg.Meta, addr, msg)
+		newMsgMeta := mergeMsgSpec(sharedParams, msg.Meta, addr, msg)
 
 		if msg.GasFeeCap.NilOrZero() && !newMsgMeta.GasFeeCap.NilOrZero() {
 			msg.GasFeeCap = newMsgMeta.GasFeeCap
@@ -369,11 +372,7 @@ func (messageSelector *MessageSelector) uniqAddresses(addrList []*types.Address)
 	return addrs
 }
 
-func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Address) map[address.Address]uint64 {
-	var defSelMsgNum uint64
-	if messageSelector.sps.GetParams().SharedSpec != nil {
-		defSelMsgNum = messageSelector.sps.GetParams().SelMsgNum
-	}
+func (messageSelector *MessageSelector) addrSelectMsgNum(addrList []*types.Address, defSelMsgNum uint64) map[address.Address]uint64 {
 	selMsgNum := make(map[address.Address]uint64)
 	for _, addr := range addrList {
 		if num, ok := selMsgNum[addr.Addr]; ok && addr.SelMsgNum > 0 && num < addr.SelMsgNum {
@@ -406,7 +405,7 @@ func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 	msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium) // cap premium at FeeCap
 }
 
-func mergeMsgSpec(globalSpec *Params, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
+func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
 	newMsgMeta := &GasSpec{
 		GasOverEstimation: sendSpec.GasOverEstimation,
 		GasOverPremium:    sendSpec.GasOverPremium,

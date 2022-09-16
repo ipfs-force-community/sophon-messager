@@ -959,8 +959,12 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 				return cid.Undef, err
 			}
 			maxFee := addrInfo.MaxFee
+			sharedParams, err := ms.sps.GetSharedParams(ctx)
+			if err != nil {
+				return cid.Undef, err
+			}
 			if maxFee.NilOrZero() {
-				maxFee = ms.sps.GetParams().MaxFee
+				maxFee = sharedParams.MaxFee
 			}
 			mss.MaxFee = maxFee
 		}
