@@ -83,22 +83,3 @@ func (tsCache *TipsetCache) Save(filePath string) error {
 	tsCache.reduce()
 	return utils.WriteFile(filePath, tsCache)
 }
-
-type idCidCache struct {
-	cache map[string]string
-	l     sync.Mutex
-}
-
-func (ic *idCidCache) Set(cid string, id string) {
-	ic.l.Lock()
-	defer ic.l.Unlock()
-	ic.cache[cid] = id
-}
-
-func (ic *idCidCache) Get(cid string) (string, bool) {
-	ic.l.Lock()
-	defer ic.l.Unlock()
-	id, ok := ic.cache[cid]
-
-	return id, ok
-}

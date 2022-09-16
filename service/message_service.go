@@ -45,7 +45,6 @@ type MessageService struct {
 	log            *log.Logger
 	fsRepo         filestore.FSRepo
 	nodeClient     v1.FullNode
-	messageState   *MessageState
 	addressService *AddressService
 	walletClient   gateway.IWalletClient
 
@@ -85,7 +84,6 @@ func NewMessageService(ctx context.Context,
 	nc v1.FullNode,
 	logger *log.Logger,
 	fsRepo filestore.FSRepo,
-	messageState *MessageState,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	nodeService *NodeService,
@@ -100,7 +98,6 @@ func NewMessageService(ctx context.Context,
 		messageSelector: selector,
 		headChans:       make(chan *headChan, MaxHeadChangeProcess),
 
-		messageState:       messageState,
 		addressService:     addressService,
 		walletClient:       walletClient,
 		Pubsub:             pubsub,
@@ -200,12 +197,8 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 	}
 
 	msg.Nonce = 0
-	err = ms.repo.MessageRepo().CreateMessage(msg)
-	if err == nil {
-		ms.messageState.SetMessage(msg.ID, msg)
-	}
 
-	return err
+	return ms.repo.MessageRepo().CreateMessage(msg)
 }
 
 func (ms *MessageService) PushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
@@ -629,22 +622,21 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	saveDBSpent := time.Since(startSaveDB)
 	ms.log.Infof("success to save to database")
 
-	startUpdateCache := time.Now()
-	if err := ms.updateCacheForSelectedMessages(selectResult); err != nil {
-		return err
+	for _, msg := range selectResult.SelectMsg {
+		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
+			Message:   msg.Message,
+			Signature: *msg.Signature,
+		})
 	}
-	updateCacheSpent := time.Since(startUpdateCache)
-	ms.log.Infof("success to update memory cache")
 
 	// broad cast push to node in config, push to multi node in db config, publish to pubsub
 	go func() {
 		startPush := time.Now()
 		ms.multiPushMessages(ctx, selectResult)
-		ms.log.Infof("Push message select spent:%d , save db spent:%d ,update cache spent:%d, push to node spent: %d",
-			selectMsgSpent.Milliseconds(),
-			saveDBSpent.Milliseconds(),
-			updateCacheSpent.Milliseconds(),
-			time.Since(startPush).Milliseconds(),
+		ms.log.Infof("Push message select spent: %v, save db spent: %v, push to node spent: %v",
+			selectMsgSpent,
+			saveDBSpent,
+			time.Since(startPush),
 		)
 	}()
 	return err
@@ -683,47 +675,6 @@ func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectRe
 		ms.log.Errorf("save signed message failed %v", err)
 		return err
 	}
-	return nil
-}
-
-func (ms *MessageService) updateCacheForSelectedMessages(selectResult *MsgSelectResult) error {
-	for _, msg := range selectResult.SelectMsg {
-		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
-			Message:   msg.Message,
-			Signature: *msg.Signature,
-		})
-		//update cache
-		err := ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
-			message.SignedCid = msg.SignedCid
-			message.UnsignedCid = msg.UnsignedCid
-			message.Message = msg.Message
-			message.State = msg.State
-			message.Signature = msg.Signature
-			message.Nonce = msg.Nonce
-			if message.Receipt != nil {
-				message.Receipt.Return = nil //cover data for err before
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, m := range selectResult.ErrMsg {
-		err := ms.messageState.MutatorMessage(m.id, func(message *types.Message) error {
-			if message.Receipt != nil {
-				message.Receipt.Return = []byte(m.err)
-			} else {
-				message.Receipt = &venusTypes.MessageReceipt{Return: []byte(m.err)}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -990,21 +941,6 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	}
 
 	if err := ms.repo.MessageRepo().SaveMessage(msg); err != nil {
-		return cid.Undef, err
-	}
-	err = ms.messageState.MutatorMessage(msg.ID, func(message *types.Message) error {
-		message.SignedCid = msg.SignedCid
-		message.GasLimit = msg.GasLimit
-		message.GasPremium = msg.GasPremium
-		message.GasFeeCap = msg.GasFeeCap
-		message.UnsignedCid = msg.UnsignedCid
-		message.Message = msg.Message
-		message.State = msg.State
-		message.Signature = msg.Signature
-		message.Nonce = msg.Nonce
-		return nil
-	})
-	if err != nil {
 		return cid.Undef, err
 	}
 

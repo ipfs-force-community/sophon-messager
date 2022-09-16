@@ -185,7 +185,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 			idx++
 		}
 
-		assert.NoError(t, saveMsgsAndUpdateCache(ctx, ms, selectResult))
+		assert.NoError(t, saveMsgsToDB(ctx, ms, selectResult))
 		for _, msg := range cm.replacedMsgs {
 			selectResult.ToPushMsg = append(selectResult.ToPushMsg, &shared.SignedMessage{
 				Message:   msg.Message,
@@ -258,7 +258,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.Len(t, selectResult.ErrMsg, 1)
 		assert.Equal(t, msgs[0].ID, selectResult.ErrMsg[0].id)
 
-		assert.NoError(t, saveMsgsAndUpdateCache(ctx, ms, selectResult))
+		assert.NoError(t, saveMsgsToDB(ctx, ms, selectResult))
 
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
 		defer calcel()

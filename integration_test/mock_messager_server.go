@@ -117,7 +117,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 			return fsRepo
 		}),
 
-		fx.Provide(service.NewMessageState),
 		// db
 		fx.Provide(models.SetDataBase),
 		// service
