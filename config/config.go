@@ -13,7 +13,6 @@ type Config struct {
 	API             APIConfig              `toml:"api"`
 	Node            NodeConfig             `toml:"node"`
 	MessageService  MessageServiceConfig   `toml:"messageService"`
-	MessageState    MessageStateConfig     `toml:"messageState"`
 	Gateway         GatewayConfig          `toml:"gateway"`
 	RateLimit       RateLimitConfig        `toml:"rateLimit"`
 	Trace           *metrics.TraceConfig   `toml:"tracing"`
@@ -117,11 +116,6 @@ func DefaultConfig() *Config {
 		Node: NodeConfig{
 			Url:   "/ip4/127.0.0.1/tcp/3453",
 			Token: "",
-		},
-		MessageState: MessageStateConfig{
-			BackTime:          3600 * 24,
-			DefaultExpiration: 3600 * 24 * 3,
-			CleanupInterval:   3600 * 24,
 		},
 		MessageService: MessageServiceConfig{
 			WaitingChainHeadStableDuration: DefWaitingChainHeadStableDuration,

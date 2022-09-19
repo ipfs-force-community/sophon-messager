@@ -62,35 +62,9 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	replaceMsg, err := ms.updateMessageState(ctx, applyMsgs, revertMsgs)
+	replaceMsg, invalidMsgs, err := ms.updateMessageState(ctx, applyMsgs, revertMsgs)
 	if err != nil {
 		return err
-	}
-	// update cache
-	for id, msg := range replaceMsg {
-		ms.messageState.SetMessage(id, msg)
-	}
-
-	for _, msg := range applyMsgs {
-		if err := ms.messageState.UpdateMessageByCid(msg.msg.Cid(), func(message *types.Message) error {
-			message.Receipt = msg.receipt
-			message.Height = int64(msg.height)
-			message.State = types.OnChainMsg
-			return nil
-		}); err != nil {
-			ms.log.Debugf("update message failed cid: %s error: %v", msg.signedCID.String(), err)
-		}
-	}
-
-	for cid := range revertMsgs {
-		if err := ms.messageState.UpdateMessageByCid(cid, func(message *types.Message) error {
-			message.Receipt = &venustypes.MessageReceipt{ExitCode: -1}
-			message.Height = 0
-			message.State = types.FillMsg
-			return nil
-		}); err != nil {
-			ms.log.Debugf("update message failed cid: %s error: %v", cid.String(), err)
-		}
 	}
 
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
@@ -99,7 +73,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		ms.log.Errorf("store tipsetkey failed %v", err)
 	}
 
-	ms.log.Infof("process block %d, revert %d message, apply %d message, replaced %d message", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs), len(replaceMsg))
+	ms.log.Infof("process block %d, revert %d message, apply %d message, replaced %d message", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs)-len(invalidMsgs), len(replaceMsg))
 
 	if ms.preCancel != nil {
 		ms.preCancel()
@@ -112,9 +86,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	return nil
 }
 
-func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []applyMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, error) {
+func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []applyMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, map[cid.Cid]struct{}, error) {
 	replaceMsg := make(map[string]*types.Message)
-	return replaceMsg, ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+	invalidMsgs := make(map[cid.Cid]struct{})
+	return replaceMsg, invalidMsgs, ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		for cid := range revertMsgs {
 			if err := txRepo.MessageRepo().UpdateMessageInfoByCid(cid.String(), &venustypes.MessageReceipt{ExitCode: -1},
 				abi.ChainEpoch(0), types.FillMsg, venustypes.EmptyTSK); err != nil {
@@ -128,6 +103,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromNonceAndState(msg.msg.From, msg.msg.Nonce, types.FillMsg)
 			if err != nil {
 				ms.log.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.signedCID, msg.msg.From)
+				invalidMsgs[msg.signedCID] = struct{}{}
 				continue
 			}
 			if localMsg.SignedCid != nil && !(*localMsg.SignedCid).Equals(msg.signedCID) {

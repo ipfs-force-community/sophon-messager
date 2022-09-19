@@ -517,7 +517,6 @@ func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *Mess
 		log:            msh.ms.log,
 		fsRepo:         fsRepo,
 		nodeClient:     msh.fullNode,
-		messageState:   msh.ms.messageState,
 		addressService: msh.ms.addressService,
 		walletClient:   msh.walletProxy,
 		Pubsub:         msh.ms.Pubsub,

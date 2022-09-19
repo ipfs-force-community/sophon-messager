@@ -605,12 +605,7 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	msgState, err := NewMessageState(repo, log, &cfg.MessageState)
-	if err != nil {
-		return nil, err
-	}
-
-	ms, err := NewMessageService(ctx, repo, fullNode, log, fsRepo, msgState, addressService, sharedParamsService,
+	ms, err := NewMessageService(ctx, repo, fullNode, log, fsRepo, addressService, sharedParamsService,
 		NewNodeService(repo, log), walletProxy, &pubsub.MessagerPubSubStub{})
 	if err != nil {
 		return nil, err
@@ -635,7 +630,7 @@ func pushMessage(ctx context.Context, ms *MessageService, msgs []*types.Message)
 }
 
 func saveAndPushMsgs(ctx context.Context, ms *MessageService, selectResult *MsgSelectResult) error {
-	if err := saveMsgsAndUpdateCache(ctx, ms, selectResult); err != nil {
+	if err := saveMsgsToDB(ctx, ms, selectResult); err != nil {
 		return err
 	}
 	go func() {
@@ -644,11 +639,17 @@ func saveAndPushMsgs(ctx context.Context, ms *MessageService, selectResult *MsgS
 	return nil
 }
 
-func saveMsgsAndUpdateCache(ctx context.Context, ms *MessageService, selectResult *MsgSelectResult) error {
+func saveMsgsToDB(ctx context.Context, ms *MessageService, selectResult *MsgSelectResult) error {
 	if err := ms.saveSelectedMessagesToDB(ctx, selectResult); err != nil {
 		return err
 	}
-	return ms.updateCacheForSelectedMessages(selectResult)
+	for _, msg := range selectResult.SelectMsg {
+		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &shared.SignedMessage{
+			Message:   msg.Message,
+			Signature: *msg.Signature,
+		})
+	}
+	return nil
 }
 
 func checkMsgs(ctx context.Context, t *testing.T, ms *MessageService, srcMsgs []*types.Message, selectedMsgs []*types.Message) {

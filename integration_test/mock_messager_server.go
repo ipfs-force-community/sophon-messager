@@ -101,7 +101,7 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	provider := fx.Options(
 		// prover
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
-			&cfg.MessageState, &cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
+			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
 		fx.Supply(log),
 		fx.Supply(fullNode),
 		fx.Supply(networkName),
@@ -117,7 +117,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 			return fsRepo
 		}),
 
-		fx.Provide(service.NewMessageState),
 		// db
 		fx.Provide(models.SetDataBase),
 		// service
