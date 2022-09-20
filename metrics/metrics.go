@@ -15,7 +15,7 @@ var (
 var defaultSecondsDistribution = view.Distribution(8, 9, 10, 12, 14, 16, 18, 20, 25, 30, 60)
 
 var (
-	WalletBalance    = stats.Int64("wallet_balance", "Wallet balance", stats.UnitDimensionless)
+	WalletBalance    = stats.Float64("wallet_balance", "Wallet balance", stats.UnitDimensionless)
 	WalletDBNonce    = stats.Int64("wallet_db_nonce", "Wallet nonce in db", stats.UnitDimensionless)
 	WalletChainNonce = stats.Int64("wallet_chain_nonce", "Wallet nonce on the chain", stats.UnitDimensionless)
 
@@ -43,12 +43,12 @@ var (
 	}
 	WalletChainNonceView = &view.View{
 		Measure:     WalletChainNonce,
-		Aggregation: view.Count(),
+		Aggregation: view.LastValue(),
 		TagKeys:     []tag.Key{WalletAddress},
 	}
 	WalletDBNonceView = &view.View{
 		Measure:     WalletDBNonce,
-		Aggregation: view.Count(),
+		Aggregation: view.LastValue(),
 		TagKeys:     []tag.Key{WalletAddress},
 	}
 
