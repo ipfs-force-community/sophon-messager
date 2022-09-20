@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1091,46 +1092,47 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 			}
 
 			for _, addr := range addrs {
-				ctx, _ = tag.New(
+				tCtx, _ := tag.New(
 					ctx,
 					tag.Upsert(metrics.WalletAddress, addr.Addr.String()),
 				)
-				stats.Record(ctx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
+				stats.Record(tCtx, metrics.WalletDBNonce.M(int64(addr.Nonce)))
 
-				actor, err := ms.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
+				actor, err := ms.nodeClient.StateGetActor(tCtx, addr.Addr, venusTypes.EmptyTSK)
 				if err != nil {
 					ms.addressService.log.Errorf("get actor err: %s", err)
 				} else {
-					stats.Record(ctx, metrics.WalletBalance.M(actor.Balance.Int64()))
-					stats.Record(ctx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
+					balance, _ := strconv.ParseFloat(venusTypes.FIL(actor.Balance).Unitless(), 64)
+					stats.Record(tCtx, metrics.WalletBalance.M(balance))
+					stats.Record(tCtx, metrics.WalletChainNonce.M(int64(actor.Nonce)))
 				}
 
 				msgs, err := ms.repo.MessageRepo().ListUnFilledMessage(addr.Addr)
 				if err != nil {
 					ms.addressService.log.Errorf("get unFilled msg err: %s", err)
 				} else {
-					stats.Record(ctx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
+					stats.Record(tCtx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
 				if err != nil {
 					ms.addressService.log.Errorf("get filled msg err: %s", err)
 				} else {
-					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
+					stats.Record(tCtx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
 				if err != nil {
 					ms.addressService.log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
-					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
+					stats.Record(tCtx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
 				if err != nil {
 					ms.addressService.log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
-					stats.Record(ctx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
+					stats.Record(tCtx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
 				}
 			}
 
