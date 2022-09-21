@@ -190,8 +190,9 @@ var setAddrSelMsgNumCmd = &cli.Command{
 	ArgsUsage: "address",
 	Flags: []cli.Flag{
 		&cli.Uint64Flag{
-			Name:  "num",
-			Usage: "the number of one address selection message",
+			Name:     "num",
+			Usage:    "the number of one address selection message",
+			Required: true,
 		},
 	},
 	Action: func(ctx *cli.Context) error {
