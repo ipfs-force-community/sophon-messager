@@ -132,7 +132,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	var toPushMessage []*venusTypes.SignedMessage
 
 	//判断是否需要推送消息
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, messageSelector.cfg.DefaultTimeout)
 	defer cancel()
 	actorI, err := handleTimeout(timeoutCtx, messageSelector.nodeClient.StateGetActor, []interface{}{addr.Addr, ts.Key()})
 
@@ -237,9 +237,9 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			newMsgMeta.MaxFee, newMsgMeta.GasOverEstimation, newMsgMeta.GasOverPremium)
 	}
 
-	timeOutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
-	estimateResult, err := messageSelector.nodeClient.GasBatchEstimateMessageGas(timeOutCtx, estimateMesssages, addr.Nonce, ts.Key())
-	cancel()
+	estimateMsgCtx, estimateMsgCancel := context.WithTimeout(ctx, messageSelector.cfg.EstimateMessageTimeout)
+	defer estimateMsgCancel()
+	estimateResult, err := messageSelector.nodeClient.GasBatchEstimateMessageGas(estimateMsgCtx, estimateMesssages, addr.Nonce, ts.Key())
 	if err != nil {
 		return nil, err
 	}
@@ -272,12 +272,12 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 
-		timeOutCtx, cancel = context.WithTimeout(ctx, time.Second)
-		sigI, err := handleTimeout(timeOutCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		signMsgCtx, signMsgCancel := context.WithTimeout(ctx, messageSelector.cfg.SignMessageTimeout)
+		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})
-		cancel()
+		signMsgCancel()
 		if err != nil {
 			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: signMsg + err.Error()})
 			messageSelector.log.Errorf("wallet sign failed %s fail %v", msg.ID, err)
