@@ -39,6 +39,15 @@ func NewFSRepo(repoPath string) (FSRepo, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cfg.MessageService.DefaultTimeout <= 0 {
+		cfg.MessageService.DefaultTimeout = config.DefaultTimeout
+	}
+	if cfg.MessageService.SignMessageTimeout <= 0 {
+		cfg.MessageService.SignMessageTimeout = config.SignMessageTimeout
+	}
+	if cfg.MessageService.EstimateMessageTimeout <= 0 {
+		cfg.MessageService.EstimateMessageTimeout = config.EstimateMessageTimeout
+	}
 	r.cfg = cfg
 
 	return r, nil
