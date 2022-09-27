@@ -68,8 +68,18 @@ const (
 	DefWaitingChainHeadStableDuration = time.Second * 8
 )
 
+const (
+	DefaultTimeout         = time.Second
+	SignMessageTimeout     = time.Second * 3
+	EstimateMessageTimeout = time.Second * 5
+)
+
 type MessageServiceConfig struct {
 	WaitingChainHeadStableDuration time.Duration `toml:"WaitingChainHeadStableDuration"`
+
+	DefaultTimeout         time.Duration `toml:"DefaultTimeout"`
+	SignMessageTimeout     time.Duration `toml:"SignMessageTimeout"`
+	EstimateMessageTimeout time.Duration `toml:"EstimateMessageTimeout"`
 
 	TipsetFilePath  string `toml:"tipsetFilePath"`
 	SkipProcessHead bool   `toml:"skipProcessHead"`
@@ -126,6 +136,10 @@ func DefaultConfig() *Config {
 		},
 		MessageService: MessageServiceConfig{
 			WaitingChainHeadStableDuration: DefWaitingChainHeadStableDuration,
+
+			DefaultTimeout:         DefaultTimeout,
+			SignMessageTimeout:     SignMessageTimeout,
+			EstimateMessageTimeout: EstimateMessageTimeout,
 
 			TipsetFilePath:  "tipset.json",
 			SkipProcessHead: false,
