@@ -17,26 +17,59 @@ import (
 	"github.com/filecoin-project/venus-messager/log"
 )
 
+type cacheKey string
+
+func newCacheKey(addr address.Address) cacheKey {
+	return cacheKey("walletClientCache:" + addr.String())
+}
+
 type WalletProxy struct {
 	clients map[string]gatewayAPI.IWalletClient
 	logger  *log.Logger
+
+	mutx                sync.RWMutex
+	avaliabeClientCache map[cacheKey]gatewayAPI.IWalletClient
 }
 
-func (w *WalletProxy) fastSelectAvaWalletClient(ctx context.Context, addr address.Address) (gatewayAPI.IWalletClient, error) {
+func (w *WalletProxy) putCache(addr address.Address, client gatewayAPI.IWalletClient) {
+	w.mutx.Lock()
+	defer w.mutx.Unlock()
+	w.avaliabeClientCache[newCacheKey(addr)] = client
+}
+
+func (w *WalletProxy) delCache(addr address.Address) bool {
+	key := newCacheKey(addr)
+	w.mutx.Lock()
+	defer w.mutx.Unlock()
+	_, exist := w.avaliabeClientCache[key]
+	if exist {
+		delete(w.avaliabeClientCache, key)
+	}
+	return exist
+}
+
+func (w *WalletProxy) getCachedClient(addr address.Address) gatewayAPI.IWalletClient {
+	key := newCacheKey(addr)
+	w.mutx.RLock()
+	defer w.mutx.RUnlock()
+	return w.avaliabeClientCache[key]
+}
+
+// todo: think about 'fastSelectAvaClient' was called parallelly,
+//  input the same params('account', 'address')
+func (w *WalletProxy) fastSelectAvaGatewayClient(ctx context.Context, addr address.Address) (gatewayAPI.IWalletClient, error) {
 	var g = &sync.WaitGroup{}
 	var ch = make(chan gatewayAPI.IWalletClient, 1)
-
 	for url, c := range w.clients {
 		g.Add(1)
 		go func(url string, c gatewayAPI.IWalletClient) {
 			has, err := c.WalletHas(ctx, addr)
 			if err != nil {
-				w.logger.Errorf("fastSelectAvaWalletClient, call %s:'WalletHas' failed:%s", url, err)
+				w.logger.Errorf("fastSelectAvaClient, call %s:'WalletHas' failed:%s", url, err)
 			}
 			if has {
 				ch <- c
 			}
-
 			g.Done()
 		}(url, c)
 	}
@@ -48,24 +81,54 @@ func (w *WalletProxy) fastSelectAvaWalletClient(ctx context.Context, addr addres
 
 	c, isok := <-ch
 	if !isok || c == nil {
-		return nil, fmt.Errorf("can't find a wallet, signer address: %s", addr)
+		return nil, fmt.Errorf("can't find a wallet, address: %s", addr.String())
 	}
 
+	w.putCache(addr, c)
 	return c, nil
 }
 
 func (w *WalletProxy) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	c, err := w.fastSelectAvaWalletClient(ctx, addr)
+	c := w.getCachedClient(addr)
+	if c != nil {
+		return true, nil
+	}
+	c, err := w.fastSelectAvaGatewayClient(ctx, addr)
 	return c != nil, err
 }
 
 func (w *WalletProxy) WalletSign(ctx context.Context, addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error) {
-	c, err := w.fastSelectAvaWalletClient(ctx, addr)
-	if err != nil {
-		return nil, err
+	var err error
+	var useCachedClient bool
+
+	c := w.getCachedClient(addr)
+
+	if c == nil {
+		if c, err = w.fastSelectAvaGatewayClient(ctx, addr); err != nil {
+			return nil, err
+		}
+	} else {
+		useCachedClient = true
 	}
 
-	return c.WalletSign(ctx, addr, toSign, meta)
+	var s *crypto.Signature
+	if s, err = c.WalletSign(ctx, addr, toSign, meta); err != nil {
+		if useCachedClient {
+
+			w.logger.Warnf("sign with cached client failed:%s, will re-SelectAvaliableClient, and retry",
+				err.Error())
+
+			w.delCache(addr)
+
+			if c, err = w.fastSelectAvaGatewayClient(ctx, addr); err != nil {
+				return nil, err
+			}
+
+			s, err = c.WalletSign(ctx, addr, toSign, meta)
+		}
+	}
+
+	return s, err
 }
 
 func (w *WalletProxy) ListWalletInfo(context.Context) ([]*gtypes.WalletDetail, error) {
@@ -81,8 +144,9 @@ func NewWalletClient(ctx context.Context,
 	logger *log.Logger,
 ) (*WalletProxy, jsonrpc.ClientCloser, error) {
 	var proxy = &WalletProxy{
-		clients: make(map[string]gatewayAPI.IWalletClient),
-		logger:  logger,
+		clients:             make(map[string]gatewayAPI.IWalletClient),
+		avaliabeClientCache: make(map[cacheKey]gatewayAPI.IWalletClient),
+		logger:              logger,
 	}
 
 	var closers []jsonrpc.ClientCloser

@@ -450,15 +450,13 @@ func TestMessageService_PushMessage(t *testing.T) {
 		_, err = shared.ParseUUID(uidStr)
 		assert.NoError(t, err)
 
-		{
-			// pushing message would be failed
-			pushFailedMsg := testhelper.NewUnsignedMessage()
-			_, err = msh.ms.PushMessage(ctx, &pushFailedMsg, nil)
-			assert.Error(t, err)
-			// msg with uuid not exists, expect an error
-			_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
-			assert.Error(t, err)
-		}
+		// pushing message would be failed
+		pushFailedMsg := testhelper.NewUnsignedMessage()
+		_, err = msh.ms.PushMessage(ctx, &pushFailedMsg, nil)
+		assert.Error(t, err)
+		// msg with uuid not exists, expect an error
+		_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
+		assert.Error(t, err)
 
 		pushedMsg, err = msh.ms.GetMessageByUid(ctx, uidStr)
 		assert.NoError(t, err)
