@@ -107,7 +107,7 @@ func DefaultConfig() *Config {
 			AuthURL: "http://127.0.0.1:8989",
 		},
 		Log: LogConfig{
-			Path:  "messager.log",
+			Path:  "",
 			Level: "info",
 		},
 		API: APIConfig{

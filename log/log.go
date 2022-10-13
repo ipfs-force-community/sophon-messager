@@ -30,12 +30,17 @@ func SetLogger(logCfg *config.LogConfig) (*Logger, error) {
 		return nil, err
 	}
 
-	file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0666)
-	if err == nil {
-		logrus.SetOutput(file)
+	if len(logCfg.Path) > 0 {
+		file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0666)
+		if err == nil {
+			logrus.SetOutput(file)
+		} else {
+			return nil, fmt.Errorf("open log file fail %v", err)
+		}
 	} else {
-		return nil, fmt.Errorf("open log file fail %v", err)
+		logrus.SetOutput(os.Stdout)
 	}
+
 	return logger, nil
 }
 
