@@ -458,7 +458,7 @@ func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *ve
 	return unsignedCid, ms.repo.MessageRepo().UpdateMessageInfoByCid(unsignedCid, receipt, height, state, tsKey)
 }
 
-func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*venusTypes.TipSet) error {
+func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusTypes.TipSet) error {
 	ms.log.Infof("receive new head from chain")
 	if ms.fsRepo.Config().MessageService.SkipProcessHead {
 		ms.log.Infof("skip process new head")
@@ -488,15 +488,19 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply, revert []*v
 		}
 		return <-done
 	}
-	apply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
+
+	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
 	if err != nil {
 		ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
 		return nil
 	}
 
+	if len(apply) > 1 {
+		localApply = append(apply[:len(apply)-1], localApply...)
+	}
 	done := make(chan error)
 	ms.headChans <- &headChan{
-		apply:  apply,
+		apply:  localApply,
 		revert: revertTipset,
 		done:   done,
 	}

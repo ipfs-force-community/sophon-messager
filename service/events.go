@@ -39,18 +39,15 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 
 	for notif := range notifs {
 		var apply []*types.TipSet
-		var revert []*types.TipSet
 
 		for _, change := range notif {
 			switch change.Type {
 			case types.HCApply:
 				apply = append(apply, change.Val)
-			case types.HCRevert:
-				revert = append(revert, change.Val)
 			}
 		}
 
-		if err := nd.msgService.ProcessNewHead(ctx, apply, revert); err != nil {
+		if err := nd.msgService.ProcessNewHead(ctx, apply); err != nil {
 			return fmt.Errorf("process new head error: %v", err)
 		}
 	}

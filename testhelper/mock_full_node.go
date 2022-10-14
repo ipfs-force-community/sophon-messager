@@ -92,7 +92,7 @@ func NewMockFullNode(ctx context.Context, blockDelay time.Duration) (*MockFullNo
 		eventBus:           EventBus.New(),
 		revertSignReceiver: make(chan *RevertSignal, 5),
 	}
-	bh, err := genBlockHead(miner, 0, []cid.Cid{})
+	bh, err := GenBlockHead(miner, 0, []cid.Cid{})
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (f *MockFullNode) revertTS(revertCount int) []*types.TipSet {
 	j := 0
 	parentKey := revertTS[revertTSLen-1].Parents()
 	for i := int(currHeight) - revertTSLen + 1; i <= int(currHeight); i++ {
-		bh, err := genBlockHead(f.miner, abi.ChainEpoch(i), parentKey.Cids())
+		bh, err := GenBlockHead(f.miner, abi.ChainEpoch(i), parentKey.Cids())
 		checkErr(err)
 		f.blockInfos[bh.Cid()] = &blockInfo{
 			bh:   bh,
@@ -303,7 +303,7 @@ func (f *MockFullNode) blockProvider() (*types.BlockHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	bh, err := genBlockHead(f.miner, head.Height()+1, head.Cids())
+	bh, err := GenBlockHead(f.miner, head.Height()+1, head.Cids())
 	if err != nil {
 		return nil, err
 	}

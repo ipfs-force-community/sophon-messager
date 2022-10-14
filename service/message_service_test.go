@@ -1,12 +1,20 @@
-//stm: #unit
+// stm: #unit
 package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"testing"
 	"time"
+
+	v1Mock "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -280,7 +288,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		assert.NoError(t, err)
 		apply := []*shared.TipSet{ts}
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
+			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
 		}()
 
 		headChange := <-ms.headChans
@@ -296,7 +304,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		ms.tsCache.Add(ts)
 		apply := []*shared.TipSet{ts}
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
+			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
 		}()
 		headChange := <-ms.headChans
 		assert.Len(t, headChange.apply, 0)
@@ -338,7 +346,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 
 		apply := []*shared.TipSet{expectTS}
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
+			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
 		}()
 		headChange := <-ms.headChans
 		assert.Equal(t, apply, headChange.apply)
@@ -357,7 +365,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		assert.NoError(t, err)
 		apply := []*shared.TipSet{expectTS}
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply, nil))
+			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
 		}()
 		headChange := <-ms.headChans
 		assert.Len(t, headChange.apply, int(expectTS.Height()-ts.Height()))
@@ -368,7 +376,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		headChange.done <- nil
 	})
 
-	t.Run("test with revert", func(t *testing.T) {
+	t.Run("test with revert apply multiple tipset", func(t *testing.T) {
 		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
@@ -402,7 +410,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		}
 		revertedTS := <-revertSignal.RevertedTS
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}, nil))
+			assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}))
 		}()
 
 		headChange := <-ms.headChans
@@ -412,6 +420,68 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		assert.Equal(t, revert[len(revert)-1].Parents(), apply[len(apply)-1].Parents())
 		assert.Equal(t, revertedTS[len(revertedTS)-1], revert[len(revert)-1])
 		headChange.done <- nil
+	})
+
+	t.Run("test with revert", func(t *testing.T) {
+		var testRevert = func(revertFrom, applyFrom int) {
+			ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+			var tipSets []*shared.TipSet
+			var revert []*shared.TipSet
+			var parent []cid.Cid
+			for i := 0; i < 6; i++ {
+				ts, err := testhelper.GenTipset(abi.ChainEpoch(i), 1, parent)
+				assert.NoError(t, err)
+				parent = ts.Cids()
+				tipSets = append(tipSets, ts)
+				ms.tsCache.Add(ts)
+				if i > revertFrom {
+					revert = append(revert, ts)
+				}
+			}
+
+			var apply []*shared.TipSet
+			parent = tipSets[applyFrom-1].Cids()
+			for i := applyFrom; i < 6; i++ {
+				ts, err := testhelper.GenTipset(abi.ChainEpoch(i), 2, parent)
+				assert.NoError(t, err)
+				parent = ts.Cids()
+				apply = append(apply, ts)
+			}
+
+			sort.Slice(apply, func(i, j int) bool {
+				return apply[i].Height() > apply[j].Height()
+			})
+
+			full := v1Mock.NewMockFullNode(gomock.NewController(t))
+			ms.nodeClient = full
+			full.EXPECT().ChainGetTipSet(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(arg0 context.Context, arg1 shared.TipSetKey) (*shared.TipSet, error) {
+				for _, ts := range tipSets {
+					if ts.Key().Equals(arg1) {
+						return ts, nil
+					}
+				}
+				return nil, errors.New("not found tipset")
+			})
+
+			go func() {
+				assert.NoError(t, ms.ProcessNewHead(context.Background(), apply))
+			}()
+
+			headChange := <-ms.headChans
+			headChange.done <- nil
+			assert.EqualValues(t, headChange.apply, apply)
+			sort.Slice(revert, func(i, j int) bool {
+				return revert[i].Height() > revert[j].Height()
+			})
+			assert.EqualValues(t, headChange.revert, revert)
+		}
+		//1,2,3,4,5
+		// revert 3,4,5
+		testRevert(2, 3)
+
+		// apply 5
+		// revert 5
+		testRevert(4, 5)
 	})
 }
 
