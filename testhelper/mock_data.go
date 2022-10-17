@@ -137,7 +137,7 @@ func MockReplaceMessageParams() []*types.ReplacMessageParams {
 	}
 }
 
-func genBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Cid) (*shared.BlockHeader, error) {
+func GenBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Cid) (*shared.BlockHeader, error) {
 	data := make([]byte, 32)
 	rand.Read(data[:])
 	c, err := abi.CidBuilder.Sum(data)
@@ -145,8 +145,10 @@ func genBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Ci
 		return nil, err
 	}
 	return &shared.BlockHeader{
-		Miner:                 miner,
-		Ticket:                nil,
+		Miner: miner,
+		Ticket: &shared.Ticket{
+			VRFProof: []byte("mock"),
+		},
 		ElectionProof:         nil,
 		BeaconEntries:         nil,
 		WinPoStProof:          nil,
@@ -162,4 +164,20 @@ func genBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Ci
 		ForkSignaling:         0,
 		ParentBaseFee:         DefBaseFee,
 	}, nil
+}
+
+func GenTipset(height abi.ChainEpoch, width int, parents []cid.Cid) (*shared.TipSet, error) {
+	var headers []*shared.BlockHeader
+	for i := 0; i < width; i++ {
+		addr, err := address.NewIDAddress(uint64(rand.Uint32()))
+		if err != nil {
+			return nil, err
+		}
+		blk, err := GenBlockHead(addr, height, parents)
+		if err != nil {
+			return nil, err
+		}
+		headers = append(headers, blk)
+	}
+	return shared.NewTipSet(headers)
 }
