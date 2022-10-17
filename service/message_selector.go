@@ -173,7 +173,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 	//calc the message needed
 	nonceGap := addr.Nonce - nonceInLatestTs
 	if nonceGap >= maxAllowPendingMessage {
-		messageSelector.log.Infof("%s there are %d message not to be package ", addr.Addr, nonceGap)
+		messageSelector.log.Errorf("%s there are %d message not to be package ", addr.Addr, nonceGap)
 		return &MsgSelectResult{
 			ToPushMsg: toPushMessage,
 		}, nil
