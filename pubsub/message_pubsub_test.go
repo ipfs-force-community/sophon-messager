@@ -9,7 +9,7 @@ import (
 	addr "github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/assert"
 )
 
