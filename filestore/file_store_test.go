@@ -30,6 +30,20 @@ func TestNewFSRepo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, token, token2)
 
+	t.Run("use default value when timeout is zero", func(t *testing.T) {
+		cfgCopy := *config.DefaultConfig()
+		cfgCopy.MessageService.DefaultTimeout = 0
+		cfgCopy.MessageService.SignMessageTimeout = 0
+		cfgCopy.MessageService.EstimateMessageTimeout = 0
+
+		repoPath := t.TempDir()
+		assert.Nil(t, utils.WriteConfig(filepath.Join(repoPath, ConfigFile), &cfgCopy))
+		fsRepo, err := NewFSRepo(repoPath)
+		assert.Nil(t, err)
+		fsRepo.Config().MessageService.DefaultTimeout = config.DefaultTimeout
+		fsRepo.Config().MessageService.SignMessageTimeout = config.SignMessageTimeout
+		fsRepo.Config().MessageService.EstimateMessageTimeout = config.EstimateMessageTimeout
+	})
 }
 
 func TestInitFSRepo(t *testing.T) {

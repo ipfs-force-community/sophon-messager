@@ -153,6 +153,8 @@ func runAction(cctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Gateway.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
+	log.Infof("defalut timeout: %v, sign message timeout: %v, estimate message timeout: %v", cfg.MessageService.DefaultTimeout,
+		cfg.MessageService.SignMessageTimeout, cfg.MessageService.EstimateMessageTimeout)
 
 	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL)
 	if err != nil {
