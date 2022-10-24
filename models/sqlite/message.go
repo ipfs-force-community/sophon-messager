@@ -61,7 +61,7 @@ func (sqlMsg *sqliteMessage) TableName() string {
 }
 
 func (sqlMsg *sqliteMessage) Message() *types.Message {
-	var destMsg = &types.Message{
+	destMsg := &types.Message{
 		ID: sqlMsg.ID,
 		Message: venustypes.Message{
 			Version:    sqlMsg.Version,
@@ -243,7 +243,7 @@ func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, to
 	return result, nil
 }
 
-//todo better batch update
+// todo better batch update
 func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
 		err := m.SaveMessage(msg)
@@ -433,7 +433,7 @@ func (m *sqliteMessageRepo) ListUnFilledMessage(addr address.Address) ([]*types.
 		return nil, err
 	}
 
-	var result = make([]*types.Message, len(sqlMsgs))
+	result := make([]*types.Message, len(sqlMsgs))
 
 	for idx, msg := range sqlMsgs {
 		result[idx] = msg.Message()
@@ -449,7 +449,7 @@ func (m *sqliteMessageRepo) ListSignedMsgs() ([]*types.Message, error) {
 		return nil, err
 	}
 
-	var result = make([]*types.Message, len(sqlMsgs))
+	result := make([]*types.Message, len(sqlMsgs))
 
 	for idx, msg := range sqlMsgs {
 		result[idx] = msg.Message()
@@ -461,7 +461,8 @@ func (m *sqliteMessageRepo) UpdateMessageInfoByCid(unsignedCid string,
 	receipt *venustypes.MessageReceipt,
 	height abi.ChainEpoch,
 	state types.MessageState,
-	tsKey venustypes.TipSetKey) error {
+	tsKey venustypes.TipSetKey,
+) error {
 	rcp := repo.FromMsgReceipt(receipt)
 	updateClause := map[string]interface{}{
 		"height":               uint64(height),

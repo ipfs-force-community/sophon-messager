@@ -78,8 +78,8 @@ func (d SqlLiteRepo) DbClose() error {
 }
 
 func OpenSqlite(fsRepo filestore.FSRepo) (repo.Repo, error) {
-	//cache=shared&_journal_mode=wal&sync=normal
-	//cache=shared&sync=full
+	// cache=shared&_journal_mode=wal&sync=normal
+	// cache=shared&sync=full
 	db, err := gorm.Open(sqlite.Open(fsRepo.SqliteFile()+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})

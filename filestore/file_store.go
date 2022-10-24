@@ -2,7 +2,6 @@ package filestore
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -54,7 +53,7 @@ func NewFSRepo(repoPath string) (FSRepo, error) {
 }
 
 func InitFSRepo(repoPath string, cfg *config.Config) (FSRepo, error) {
-	if err := os.MkdirAll(repoPath, 0775); err != nil {
+	if err := os.MkdirAll(repoPath, 0o775); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +90,7 @@ func (r *fsRepo) ReplaceConfig(cfg *config.Config) error {
 }
 
 func (r *fsRepo) SaveToken(token []byte) error {
-	err := ioutil.WriteFile(filepath.Join(r.path, TokenFile), token, 0644)
+	err := os.WriteFile(filepath.Join(r.path, TokenFile), token, 0o644)
 	if err != nil {
 		return fmt.Errorf("write token to token file failed: %v", err)
 	}
@@ -99,5 +98,5 @@ func (r *fsRepo) SaveToken(token []byte) error {
 }
 
 func (r *fsRepo) GetToken() ([]byte, error) {
-	return ioutil.ReadFile(filepath.Join(r.path, TokenFile))
+	return os.ReadFile(filepath.Join(r.path, TokenFile))
 }

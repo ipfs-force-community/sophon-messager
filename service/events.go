@@ -29,7 +29,7 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 		if noti[0].Type != types.HCCurrent {
 			return fmt.Errorf("expect hccurrent event but got %s ", noti[0].Type)
 		}
-		//todo do some check or repaire for the first connect
+		// todo do some check or repaire for the first connect
 		if err := nd.msgService.ReconnectCheck(ctx, noti[0].Val); err != nil {
 			return fmt.Errorf("reconnect check error: %v", err)
 		}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/pelletier/go-toml"
 
@@ -10,5 +10,5 @@ import (
 
 func main() {
 	bytes, _ := toml.Marshal(config.DefaultConfig())
-	_ = ioutil.WriteFile("messager.toml", bytes, 0777)
+	_ = os.WriteFile("messager.toml", bytes, 0o777)
 }

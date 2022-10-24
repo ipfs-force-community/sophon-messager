@@ -56,7 +56,6 @@ func NewMessagePubSub(ctx context.Context,
 	networkName types.NetworkName,
 	bootstrap []string,
 ) (*MessagePubSub, error) {
-
 	// get default bootstrap from net params
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
 	if err != nil {
@@ -240,13 +239,15 @@ func (m *MessagePubSub) doExpand(ctx context.Context) {
 
 func makeDHT(ctx context.Context, h types.RawHost, networkName string, bootNodes []peer.AddrInfo) (*dht.IpfsDHT, error) {
 	mode := dht.ModeAuto
-	opts := []dht.Option{dht.Mode(mode),
+	opts := []dht.Option{
+		dht.Mode(mode),
 		dht.ProtocolPrefix(net.FilecoinDHT(networkName)),
 		dht.QueryFilter(dht.PublicQueryFilter),
 		dht.RoutingTableFilter(dht.PublicRoutingTableFilter),
 		dht.DisableProviders(),
 		dht.BootstrapPeers(bootNodes...),
-		dht.DisableValues()}
+		dht.DisableValues(),
+	}
 	r, err := dht.New(
 		ctx, h, opts...,
 	)
@@ -268,8 +269,7 @@ func buildHost(ctx context.Context, address string) (types.RawHost, error) {
 	return libp2p.New(opts...)
 }
 
-type MessagerPubSubStub struct {
-}
+type MessagerPubSubStub struct{}
 
 func (m *MessagerPubSubStub) Publish(ctx context.Context, msg *types.SignedMessage) error {
 	return ErrPubsubDisabled
@@ -291,5 +291,7 @@ func (m *MessagerPubSubStub) AddrListen(ctx context.Context) (peer.AddrInfo, err
 	return peer.AddrInfo{}, ErrPubsubDisabled
 }
 
-var _ IMessagePubSub = &MessagePubSub{}
-var _ IMessagePubSub = &MessagerPubSubStub{}
+var (
+	_ IMessagePubSub = &MessagePubSub{}
+	_ IMessagePubSub = &MessagerPubSubStub{}
+)

@@ -115,7 +115,6 @@ func testBatchSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	}
 
 	assert.NoError(t, r.MessageRepo().BatchSaveMessage(msgs))
-
 }
 
 func testSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
@@ -144,7 +143,6 @@ func testSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	mock.ExpectCommit()
 
 	assert.NoError(t, r.MessageRepo().SaveMessage(msg))
-
 }
 
 func testGetMessageByFromAndNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {

@@ -160,7 +160,7 @@ func TestAddrSelectMsgNum(t *testing.T) {
 }
 
 func TestSelectMessage(t *testing.T) {
-	//stm: @MESSENGER_SELECTOR_SELECT_MESSAGE_001, @MESSENGER_SELECTOR_SELECT_MESSAGE_002
+	// stm: @MESSENGER_SELECTOR_SELECT_MESSAGE_001, @MESSENGER_SELECTOR_SELECT_MESSAGE_002
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -293,7 +293,7 @@ func TestSelectNum(t *testing.T) {
 }
 
 func TestEstimateMessageGas(t *testing.T) {
-	//stm: @MESSENGER_SELECTOR_ESTIMATE_MESSAGE_GAS_001
+	// stm: @MESSENGER_SELECTOR_ESTIMATE_MESSAGE_GAS_001
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -553,7 +553,7 @@ func TestSignMessageFailed(t *testing.T) {
 }
 
 func TestCapGasFee(t *testing.T) {
-	//stm: @MESSENGER_SELECTOR_CAP_MESSAGE_GAS_001
+	// stm: @MESSENGER_SELECTOR_CAP_MESSAGE_GAS_001
 	msg := testhelper.NewMessage().Message
 	maxfee := func(msg *shared.Message) big.Int {
 		return big.Mul(big.NewInt(msg.GasLimit), msg.GasFeeCap)

@@ -34,7 +34,6 @@ func TestConvertBitFieldToString(t *testing.T) {
 }
 
 func TestTryConvertParams(t *testing.T) {
-
 	t.Run("test convert ExtendSectorExpirationParams", func(t *testing.T) {
 		params := &miner.ExtendSectorExpirationParams{
 			Extensions: []miner.ExpirationExtension{
