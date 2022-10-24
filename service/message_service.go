@@ -33,8 +33,10 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
-var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
-var errMinimumNonce = errors.New("minimum expected nonce")
+var (
+	errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
+	errMinimumNonce   = errors.New("minimum expected nonce")
+)
 
 const (
 	MaxHeadChangeProcess = 5
@@ -89,7 +91,8 @@ func NewMessageService(ctx context.Context,
 	sps *SharedParamsService,
 	nodeService *NodeService,
 	walletClient gateway.IWalletClient,
-	pubsub pubsub.IMessagePubSub) (*MessageService, error) {
+	pubsub pubsub.IMessagePubSub,
+) (*MessageService, error) {
 	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
@@ -150,7 +153,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		return errors.New("empty uid")
 	}
 
-	//replace address
+	// replace address
 	if msg.From.Protocol() == address.ID {
 		fromA, err := ms.nodeClient.StateAccountKey(ctx, msg.From, venusTypes.EmptyTSK)
 		if err != nil {
@@ -242,14 +245,14 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			}
 
 			switch msg.State {
-			//OffChain
+			// OffChain
 			case types.FillMsg:
 				fallthrough
 			case types.UnFillMsg:
 				fallthrough
 			case types.UnKnown:
 				continue
-			//OnChain
+			// OnChain
 			case types.ReplacedMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
@@ -260,7 +263,7 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 					return msg, nil
 				}
 				continue
-			//Error
+			// Error
 			case types.FailedMsg:
 				return msg, nil
 			case types.NoWalletMsg:
@@ -454,7 +457,8 @@ func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id string,
 }
 
 func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *venusTypes.MessageReceipt,
-	height abi.ChainEpoch, state types.MessageState, tsKey venusTypes.TipSetKey) (string, error) {
+	height abi.ChainEpoch, state types.MessageState, tsKey venusTypes.TipSetKey,
+) (string, error) {
 	return unsignedCid, ms.repo.MessageRepo().UpdateMessageInfoByCid(unsignedCid, receipt, height, state, tsKey)
 }
 
@@ -649,7 +653,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 
 func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectResult *MsgSelectResult) error {
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		//保存消息
+		// 保存消息
 		err := txRepo.MessageRepo().ExpireMessage(selectResult.ExpireMsg)
 		if err != nil {
 			return err
@@ -702,8 +706,8 @@ func (ms *MessageService) multiPushMessages(ctx context.Context, selectResult *M
 
 	ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 	for addr, msgs := range pushMsgByAddr {
-		//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
-		//issue https://github.com/filecoin-project/venus/issues/4860
+		// use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
+		// issue https://github.com/filecoin-project/venus/issues/4860
 		if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
 			if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
 				ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
@@ -759,10 +763,10 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	for _, node := range nc {
 		for addr, msgs := range msgsByAddr {
-			//use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
-			//issue https://github.com/filecoin-project/venus/issues/4860
+			// use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
+			// issue https://github.com/filecoin-project/venus/issues/4860
 			if _, err := node.cli.MpoolBatchPush(ctx, msgs); err != nil {
-				//skip error
+				// skip error
 				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
 					ms.log.Errorf("push message from %s to node %s %v", addr, node.name, err)
 				}
@@ -1015,7 +1019,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.Message.Cid()
 	msg.UnsignedCid = &unsignedCid
-	//签名
+	// 签名
 	data, err := msg.Message.ToStorageBlock()
 	if err != nil {
 		return venusTypes.SignedMessage{}, fmt.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
@@ -1029,7 +1033,7 @@ func ToSignedMsg(ctx context.Context, walletCli gateway.IWalletClient, msg *type
 	}
 
 	msg.Signature = sig
-	//state
+	// state
 	msg.State = types.FillMsg
 
 	signedMsg := venusTypes.SignedMessage{
@@ -1155,8 +1159,10 @@ const (
 	RbfDenom                 = 256
 )
 
-var rbfNumBig = big.NewInt(int64((ReplaceByFeeRatioDefault - 1) * RbfDenom))
-var rbfDenomBig = big.NewInt(RbfDenom)
+var (
+	rbfNumBig   = big.NewInt(int64((ReplaceByFeeRatioDefault - 1) * RbfDenom))
+	rbfDenomBig = big.NewInt(RbfDenom)
+)
 
 func computeMinRBF(curPrem abi.TokenAmount) abi.TokenAmount {
 	minPrice := big.Add(curPrem, big.Div(big.Mul(curPrem, rbfNumBig), rbfDenomBig))

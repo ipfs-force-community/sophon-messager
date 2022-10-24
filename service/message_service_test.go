@@ -61,8 +61,8 @@ func TestVerifyNetworkName(t *testing.T) {
 }
 
 func TestReplaceMessage(t *testing.T) {
-	//stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_001, @MESSENGER_SERVICE_REPLACE_MESSAGE_002
-	//stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_003, @MESSENGER_SERVICE_REPLACE_MESSAGE_004
+	// stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_001, @MESSENGER_SERVICE_REPLACE_MESSAGE_002
+	// stm: @MESSENGER_SERVICE_REPLACE_MESSAGE_003, @MESSENGER_SERVICE_REPLACE_MESSAGE_004
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -271,7 +271,7 @@ func TestReconnectCheck(t *testing.T) {
 }
 
 func TestMessageService_ProcessNewHead(t *testing.T) {
-	//stm: @MESSENGER_SERVICE_LIST_MESSAGE_BY_ADDRESS_001
+	// stm: @MESSENGER_SERVICE_LIST_MESSAGE_BY_ADDRESS_001
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -423,7 +423,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	})
 
 	t.Run("test with revert", func(t *testing.T) {
-		var testRevert = func(revertFrom, applyFrom int) {
+		testRevert := func(revertFrom, applyFrom int) {
 			ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
 			var tipSets []*shared.TipSet
 			var revert []*shared.TipSet
@@ -475,7 +475,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 			})
 			assert.EqualValues(t, headChange.revert, revert)
 		}
-		//1,2,3,4,5
+		// 1,2,3,4,5
 		// revert 3,4,5
 		testRevert(2, 3)
 
@@ -509,10 +509,10 @@ func TestMessageService_PushMessage(t *testing.T) {
 	var pushedMsg *types.Message
 
 	t.Run("push message:", func(t *testing.T) {
-		//stm: @MESSENGER_SERVICE_PUSH_MESSAGE_001, @MESSENGER_SERVICE_PUSH_MESSAGE_002,
-		//stm: @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_001, @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_002
-		//stm: @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_001, @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_002
-		//stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
+		// stm: @MESSENGER_SERVICE_PUSH_MESSAGE_001, @MESSENGER_SERVICE_PUSH_MESSAGE_002,
+		// stm: @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_001, @MESSENGER_SERVICE_PUSH_MESSAGE_WITH_ID_002
+		// stm: @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_001, @MESSENGER_SERVICE_GET_MESSAGE_BY_UID_002
+		// stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
 		rawMsg := testhelper.NewUnsignedMessage()
 		rawMsg.From = addr
 		uidStr, err := msh.ms.PushMessage(ctx, account, &rawMsg, nil)
@@ -545,11 +545,10 @@ func TestMessageService_PushMessage(t *testing.T) {
 			assert.Equal(t, len(msgs), 1)
 			assert.Equal(t, msgs[0].ID, uidStr)
 		}
-
 	})
 
 	t.Run("wait message:", func(t *testing.T) {
-		//stm: @MESSENGER_SERVICE_WAIT_MESSAGE_001, @MESSENGER_SERVICE_WAIT_MESSAGE_002
+		// stm: @MESSENGER_SERVICE_WAIT_MESSAGE_001, @MESSENGER_SERVICE_WAIT_MESSAGE_002
 		ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*3)
 		defer cancel()
 		_, err := waitMsgWithTimeout(ctx, msh.ms, shared.NewUUID().String())

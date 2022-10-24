@@ -63,7 +63,6 @@ var addNodeCmd = &cli.Command{
 		}
 		if has {
 			return fmt.Errorf("node exist")
-
 		}
 
 		err = client.SaveNode(ctx.Context, &node)

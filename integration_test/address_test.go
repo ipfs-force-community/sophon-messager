@@ -95,7 +95,8 @@ func testGetAddressAndHasAddress(ctx context.Context,
 	t *testing.T,
 	api messager.IMessager,
 	allAddrs []address.Address,
-	usedAddrs map[address.Address]struct{}) {
+	usedAddrs map[address.Address]struct{},
+) {
 	var err error
 	for _, addr := range allAddrs {
 		_, ok := usedAddrs[addr]

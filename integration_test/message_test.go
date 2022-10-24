@@ -772,7 +772,6 @@ func checkUnsignedMsg(t *testing.T, expect, actual *shared.Message) {
 	assert.Equal(t, testhelper.ResolveAddr(t, expect.From), actual.From)
 	// todo: finish estimate gas
 	if actual.Nonce > 0 {
-
 	} else {
 		assert.Equal(t, expect.GasLimit, actual.GasLimit)
 		assert.Equal(t, expect.GasFeeCap, actual.GasFeeCap)

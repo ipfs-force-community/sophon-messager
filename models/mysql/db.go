@@ -81,9 +81,8 @@ func (t *TxMysqlRepo) AddressRepo() repo.AddressRepo {
 
 func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {
 	db, err := gorm.Open(mysql.Open(cfg.ConnectionString), &gorm.Config{
-		//Logger: logger.Default.LogMode(logger.Info), // 日志配置
+		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("[db connection failed] Database name: %s %w", cfg.ConnectionString, err)
 	}
@@ -103,7 +102,7 @@ func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {
 	sqlDB.SetConnMaxLifetime(time.Minute * cfg.ConnMaxLifeTime)
 
 	// 使用插件
-	//db.Use(&TracePlugin{})
+	// db.Use(&TracePlugin{})
 	return &Repo{
 		db,
 	}, nil

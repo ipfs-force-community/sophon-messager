@@ -31,7 +31,7 @@ func SetLogger(logCfg *config.LogConfig) (*Logger, error) {
 	}
 
 	if len(logCfg.Path) > 0 {
-		file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile(logCfg.Path, os.O_CREATE|os.O_WRONLY, 0o666)
 		if err == nil {
 			logrus.SetOutput(file)
 		} else {

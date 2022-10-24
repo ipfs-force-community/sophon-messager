@@ -17,7 +17,7 @@ import (
 // weather `limiter.WraperLimiter` could warp 'msgAPI' to 'ratelimitAPI' or not,
 // if ok, all member function in 'ratelimitAPI' is not nil
 func TestLimitWrap(t *testing.T) {
-	//todo make test injection more generic
+	// todo make test injection more generic
 	provider := fx.Options(
 		fx.Supply(&config.RateLimitConfig{
 			Redis: "test url",

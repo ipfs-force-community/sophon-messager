@@ -43,7 +43,8 @@ func main() {
 				Value: "~/.venus-messager",
 			},
 		},
-		Commands: []*cli.Command{ccli.MsgCmds,
+		Commands: []*cli.Command{
+			ccli.MsgCmds,
 			ccli.AddrCmds,
 			ccli.SharedParamsCmds,
 			ccli.NodeCmds,
@@ -60,7 +61,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
 }
 
 var runCmd = &cli.Command{

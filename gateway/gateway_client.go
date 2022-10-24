@@ -55,10 +55,11 @@ func (w *WalletProxy) getCachedClient(account string, addr address.Address) gate
 }
 
 // todo: think about 'fastSelectAvaClient' was called parallelly,
-//  input the same params('account', 'address')
+//
+//	input the same params('account', 'address')
 func (w *WalletProxy) fastSelectAvaClient(ctx context.Context, account string, addr address.Address) (gateway.IWalletClient, error) {
-	var g = &sync.WaitGroup{}
-	var ch = make(chan gateway.IWalletClient, 1)
+	g := &sync.WaitGroup{}
+	ch := make(chan gateway.IWalletClient, 1)
 	for url, c := range w.clients {
 		g.Add(1)
 		go func(url string, c gateway.IWalletClient) {
@@ -97,7 +98,8 @@ func (w *WalletProxy) WalletHas(ctx context.Context, supportAccount string, addr
 }
 
 func (w *WalletProxy) WalletSign(ctx context.Context, account string,
-	addr address.Address, toSign []byte, meta venusTypes.MsgMeta) (*crypto.Signature, error) {
+	addr address.Address, toSign []byte, meta venusTypes.MsgMeta,
+) (*crypto.Signature, error) {
 	var err error
 	var useCachedClient bool
 
@@ -143,7 +145,7 @@ func NewWalletClient(ctx context.Context,
 	cfg *config.GatewayConfig,
 	logger *log.Logger,
 ) (*WalletProxy, jsonrpc.ClientCloser, error) {
-	var proxy = &WalletProxy{
+	proxy := &WalletProxy{
 		clients:             make(map[string]gateway.IWalletClient),
 		avaliabeClientCache: make(map[cacheKey]gateway.IWalletClient),
 		logger:              logger,
@@ -153,7 +155,6 @@ func NewWalletClient(ctx context.Context,
 
 	for _, url := range cfg.Url {
 		c, cls, err := gateway.DialIGatewayRPC(ctx, url, cfg.Token, nil)
-
 		if err != nil {
 			return nil, nil, fmt.Errorf("create geteway client with url:%s failed:%w", url, err)
 		}

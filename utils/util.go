@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -73,19 +72,19 @@ func Contains(s []string, e string) bool {
 }
 
 func ReadFile(filePath string) ([]byte, error) {
-	file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0o666)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 
 	return b, err
 }
 
 // WriteFile original data will be cleared
 func WriteFile(filePath string, obj interface{}) error {
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0o666)
 	if err != nil {
 		return err
 	}
@@ -101,7 +100,7 @@ func WriteFile(filePath string, obj interface{}) error {
 }
 
 func ReadConfig(path string, cfg interface{}) error {
-	configBytes, err := ioutil.ReadFile(path)
+	configBytes, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -114,5 +113,5 @@ func WriteConfig(path string, cfg interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, cfgBytes, 0666)
+	return os.WriteFile(path, cfgBytes, 0o666)
 }

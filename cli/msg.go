@@ -474,7 +474,6 @@ var updateFilledMessageCmd = &cli.Command{
 
 		var id string
 		if id = ctx.String("id"); len(id) > 0 {
-
 		} else if signedCidStr := ctx.String("signed_cid"); len(signedCidStr) > 0 {
 			signedCid, err := cid.Decode(signedCidStr)
 			if err != nil {
