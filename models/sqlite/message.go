@@ -27,11 +27,11 @@ type sqliteMessage struct {
 	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
-	Value mtypes.Int `gorm:"column:value;type:varchar(256);"`
+	Value mtypes.Int `gorm:"column:value;type:varchar(256);default:0"`
 
 	GasLimit   int64      `gorm:"column:gas_limit;type:bigint"`
-	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);"`
-	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);"`
+	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
+	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);default:0"`
 
 	Method int `gorm:"column:method;type:int"`
 

@@ -10,7 +10,7 @@ import (
 type MsgMeta struct {
 	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;"`
 	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            Int            `gorm:"column:max_fee;type:varchar(256);"`
+	MaxFee            Int            `gorm:"column:max_fee;type:varchar(256);default:0"`
 	GasOverPremium    float64        `gorm:"column:gas_over_premium;type:decimal(10,2);"`
 }
 
@@ -31,19 +31,14 @@ func (meta *MsgMeta) Meta() *types.SendSpec {
 func FromMeta(srcMeta *types.SendSpec) *MsgMeta {
 	if srcMeta == nil {
 		return &MsgMeta{
-			ExpireEpoch:       0,
-			GasOverEstimation: 0,
-			MaxFee:            Int{},
+			MaxFee: NewInt(0),
 		}
 	}
-	meta := &MsgMeta{
+
+	return &MsgMeta{
 		ExpireEpoch:       srcMeta.ExpireEpoch,
 		GasOverEstimation: srcMeta.GasOverEstimation,
 		GasOverPremium:    srcMeta.GasOverPremium,
+		MaxFee:            SafeFromGo(srcMeta.MaxFee.Int),
 	}
-
-	if srcMeta.MaxFee.Int != nil {
-		meta.MaxFee = Int{Int: srcMeta.MaxFee.Int}
-	}
-	return meta
 }
