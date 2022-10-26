@@ -58,7 +58,7 @@ func (s *SqlSignature) Value() (driver.Value, error) {
 type SqlMsgReceipt struct {
 	ExitCode exitcode.ExitCode `gorm:"column:exit_code;default:-1"`
 	Return   []byte            `gorm:"column:return_value;type:blob;"`
-	GasUsed  int64             `gorm:"column:gas_used;type:bigint;"`
+	GasUsed  int64             `gorm:"column:gas_used;type:bigint;NOT NULL"`
 }
 
 func (s *SqlMsgReceipt) MsgReceipt() *types.MessageReceipt {
