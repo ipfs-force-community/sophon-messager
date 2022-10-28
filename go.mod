@@ -14,7 +14,7 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.15
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
 	github.com/filecoin-project/specs-actors/v6 v6.0.2
-	github.com/filecoin-project/venus v1.7.1-0.20221109060333-cb5028ddafeb
+	github.com/filecoin-project/venus v1.7.1-0.20221110012205-7fd659d52fb3
 	github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221101071442-c2ed29a74e9e
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -28,7 +28,6 @@ require (
 	github.com/multiformats/go-multiaddr v0.6.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli/v2 v2.8.1
 	github.com/whyrusleeping/cbor-gen v0.0.0-20220514204315-f29c37e9c44c
@@ -123,7 +122,7 @@ require (
 	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
 	github.com/ipfs/go-ipns v0.2.0 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
-	github.com/ipfs/go-log/v2 v2.5.1 // indirect
+	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipfs/go-merkledag v0.8.0 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
 	github.com/ipfs/go-verifcid v0.0.1 // indirect
@@ -241,6 +240,7 @@ require (
 	github.com/mattn/go-pointer v0.0.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	go.opentelemetry.io/otel v1.7.0 // indirect

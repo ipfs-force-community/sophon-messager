@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	"github.com/filecoin-project/venus/pkg/net"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -20,6 +20,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 )
+
+var log = logging.Logger("msg-pubsub")
 
 type IMessagePubSub interface {
 	IPublisher
@@ -43,7 +45,6 @@ type MessagePubSub struct {
 	topic         *pubsub.Topic
 	host          types.RawHost
 	pubsub        *pubsub.PubSub
-	log           *log.Logger
 	dht           *dht.IpfsDHT
 	bootstrappers []peer.AddrInfo
 	period        time.Duration
@@ -51,7 +52,6 @@ type MessagePubSub struct {
 }
 
 func NewMessagePubSub(ctx context.Context,
-	logger *log.Logger,
 	listenAddress string,
 	networkName types.NetworkName,
 	bootstrap []string,
@@ -59,7 +59,7 @@ func NewMessagePubSub(ctx context.Context,
 	// get default bootstrap from net params
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
 	if err != nil {
-		logger.Errorf("failed to get default network config: %s", err)
+		log.Errorf("failed to get default network config: %s", err)
 	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
@@ -114,7 +114,6 @@ func NewMessagePubSub(ctx context.Context,
 		pubsub:        gsub,
 		period:        5 * time.Second,
 		bootstrappers: bootstrapPeersres,
-		log:           logger,
 		dht:           router,
 		expanding:     make(chan struct{}, 1),
 	}
@@ -135,14 +134,14 @@ func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) e
 		return fmt.Errorf("publish message failed %w", err)
 	}
 
-	m.log.Debugf("publish message %s", msg.Cid())
+	log.Debugf("publish message %s", msg.Cid())
 	return nil
 }
 
 func (m *MessagePubSub) run(ctx context.Context) {
 	err := m.connectBootstrap(ctx)
 	if err != nil {
-		m.log.Errorf("connect bootstrap failed %s", err)
+		log.Errorf("connect bootstrap failed %s", err)
 	}
 
 	ticker := time.NewTicker(m.period)
@@ -151,7 +150,7 @@ func (m *MessagePubSub) run(ctx context.Context) {
 		case <-ticker.C:
 			m.expandPeers()
 		case <-ctx.Done():
-			m.log.Warnf("stop expand peers: %v", ctx.Err())
+			log.Warnf("stop expand peers: %v", ctx.Err())
 			return
 		}
 	}
@@ -192,7 +191,7 @@ func (m *MessagePubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
 func (m *MessagePubSub) connectBootstrap(ctx context.Context) error {
 	for _, bsp := range m.bootstrappers {
 		if err := m.host.Connect(ctx, bsp); err != nil {
-			m.log.Warnf("failed to connect to bootstrap peer: %s %s", bsp, err)
+			log.Warnf("failed to connect to bootstrap peer: %s %s", bsp, err)
 		}
 	}
 	return nil
@@ -219,21 +218,21 @@ func (m *MessagePubSub) doExpand(ctx context.Context) {
 	pcount := len(m.host.Network().Peers())
 	if pcount == 0 {
 		if len(m.bootstrappers) == 0 {
-			m.log.Info("no peers connected, and no bootstrappers configured")
+			log.Info("no peers connected, and no bootstrappers configured")
 			return
 		}
 
-		m.log.Info("connecting to bootstrap peers")
+		log.Info("connecting to bootstrap peers")
 		err := m.connectBootstrap(ctx)
 		if err != nil {
-			m.log.Info("failed to connect to bootstrap peers")
+			log.Info("failed to connect to bootstrap peers")
 		}
 		return
 	}
 
 	// if we already have some peers and need more, the dht is really good at connecting to most peers. Use that for now until something better comes along.
 	if err := m.dht.Bootstrap(ctx); err != nil {
-		m.log.Warnf("dht bootstrapping failed: %s", err)
+		log.Warnf("dht bootstrapping failed: %s", err)
 	}
 }
 

@@ -6,14 +6,16 @@ import (
 	"reflect"
 	"time"
 
+	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
+
+var log = logging.Logger("service")
 
 func MessagerService() fx.Option {
 	return fx.Options(
@@ -25,10 +27,9 @@ func MessagerService() fx.Option {
 	)
 }
 
-func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageService, log *log.Logger) *NodeEvents {
+func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageService) *NodeEvents {
 	nd := &NodeEvents{
 		client:     client,
-		log:        log,
 		msgService: msgService,
 	}
 
@@ -91,9 +92,9 @@ func handleTimeout(ctx context.Context, f interface{}, args []interface{}) (inte
 	return nil, fmt.Errorf("method must has 2 return as result")
 }
 
-func newMessagePubSubIndirect(ctx context.Context, logger *log.Logger, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
+func newMessagePubSubIndirect(ctx context.Context, networkName types.NetworkName, net *config.Libp2pNetConfig) (pubsub.IMessagePubSub, error) {
 	if net.Enable {
-		return pubsub.NewMessagePubSub(ctx, logger, net.ListenAddress, networkName, net.BootstrapAddresses)
+		return pubsub.NewMessagePubSub(ctx, net.ListenAddress, networkName, net.BootstrapAddresses)
 	}
 	return &pubsub.MessagerPubSubStub{}, nil
 }

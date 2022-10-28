@@ -9,6 +9,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/filecoin-project/venus-messager/metrics"
+	"github.com/filecoin-project/venus-messager/utils"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -16,22 +22,17 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
-
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
-
 	"github.com/filecoin-project/venus-messager/api"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/version"
 )
+
+var log = logging.Logger("main")
 
 func main() {
 	app := &cli.App{
@@ -117,6 +118,9 @@ func runAction(cctx *cli.Context) error {
 	ctx, cancel := context.WithCancel(cctx.Context)
 	defer cancel()
 
+	// Set the log level. The default log level is info
+	utils.SetupLogLevels()
+
 	repoPath, err := homedir.Expand(cctx.String("repo"))
 	if err != nil {
 		return err
@@ -142,11 +146,6 @@ func runAction(cctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	log, err := log.SetLogger(&cfg.Log)
-	if err != nil {
-		return err
 	}
 
 	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
@@ -211,7 +210,7 @@ func runAction(cctx *cli.Context) error {
 		return err
 	}
 
-	walletCli, walletCliCloser, err := gateway.NewWalletClient(ctx, &cfg.Gateway, log)
+	walletCli, walletCliCloser, err := gateway.NewWalletClient(ctx, &cfg.Gateway)
 	if err != nil {
 		return err
 	}
@@ -226,7 +225,7 @@ func runAction(cctx *cli.Context) error {
 	lst := manet.NetListener(apiListener)
 
 	provider := fx.Options(
-		fx.Logger(fxLogger{log}),
+		fx.Logger(fxLogger{}),
 		// prover
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
 			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
@@ -354,12 +353,10 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 	return nil
 }
 
-type fxLogger struct {
-	log *log.Logger
-}
+type fxLogger struct{}
 
 func (l fxLogger) Printf(str string, args ...interface{}) {
-	l.log.Infof(str, args...)
+	log.Infof(str, args...)
 }
 
 func hasFSRepo(repoPath string) (bool, error) {

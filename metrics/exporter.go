@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ipfs-force-community/metrics"
+	logging "github.com/ipfs/go-log/v2"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/fx"
-
-	"github.com/ipfs-force-community/metrics"
-
-	"github.com/filecoin-project/venus-messager/log"
 )
 
-func SetupMetrics(lc fx.Lifecycle, metricsConfig *metrics.MetricsConfig, log *log.Logger) error {
+var log = logging.Logger("metric")
+
+func SetupMetrics(lc fx.Lifecycle, metricsConfig *metrics.MetricsConfig) error {
 	log.Infof("metrics config: enabled: %v, exporter type: %s, prometheus: %v, graphite: %v",
 		metricsConfig.Enabled, metricsConfig.Exporter.Type, metricsConfig.Exporter.Prometheus,
 		metricsConfig.Exporter.Graphite)

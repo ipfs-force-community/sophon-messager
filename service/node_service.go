@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -11,11 +10,10 @@ import (
 
 type NodeService struct {
 	repo repo.Repo
-	log  *log.Logger
 }
 
-func NewNodeService(repo repo.Repo, logger *log.Logger) *NodeService {
-	return &NodeService{repo: repo, log: logger}
+func NewNodeService(repo repo.Repo) *NodeService {
+	return &NodeService{repo: repo}
 }
 
 func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
@@ -28,7 +26,7 @@ func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	if err := ns.repo.NodeRepo().SaveNode(node); err != nil {
 		return err
 	}
-	ns.log.Infof("add node %s", node.Name)
+	log.Infof("add node %s", node.Name)
 
 	return nil
 }
@@ -49,7 +47,7 @@ func (ns *NodeService) DeleteNode(ctx context.Context, name string) error {
 	if err := ns.repo.NodeRepo().DelNode(name); err != nil {
 		return err
 	}
-	ns.log.Infof("delete node %s", name)
+	log.Infof("delete node %s", name)
 
 	return nil
 }

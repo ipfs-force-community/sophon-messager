@@ -7,7 +7,6 @@ import (
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/api"
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx"
@@ -25,7 +24,6 @@ func TestLimitWrap(t *testing.T) {
 		fx.Provide(func() *jwtclient.AuthClient {
 			return &jwtclient.AuthClient{}
 		}),
-		fx.Supply(log.New()),
 		fx.Supply(&api.MessageImp{}),
 		fx.Provide(api.BindRateLimit),
 	)

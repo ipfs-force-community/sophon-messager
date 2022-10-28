@@ -5,16 +5,15 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/go-address"
-
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/version"
 )
@@ -25,7 +24,6 @@ type ImplParams struct {
 	MessageService      *service.MessageService
 	NodeService         *service.NodeService
 	SharedParamsService *service.SharedParamsService
-	Logger              *log.Logger
 }
 
 type MessageImp struct {
@@ -33,7 +31,6 @@ type MessageImp struct {
 	MessageSrv *service.MessageService
 	NodeSrv    *service.NodeService
 	ParamsSrv  *service.SharedParamsService
-	log        *log.Logger
 }
 
 func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -188,10 +185,6 @@ func (m MessageImp) DeleteNode(ctx context.Context, name string) error {
 	return m.NodeSrv.DeleteNode(ctx, name)
 }
 
-func (m MessageImp) SetLogLevel(ctx context.Context, level string) error {
-	return m.log.SetLogLevel(ctx, level)
-}
-
 func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
 	return m.MessageSrv.Send(ctx, params)
 }
@@ -220,7 +213,6 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		MessageSrv: implParams.MessageService,
 		NodeSrv:    implParams.NodeService,
 		ParamsSrv:  implParams.SharedParamsService,
-		log:        implParams.Logger,
 	}
 }
 
@@ -228,4 +220,12 @@ func (m MessageImp) Version(_ context.Context) (venusTypes.Version, error) {
 	return venusTypes.Version{
 		Version: version.Version,
 	}, nil
+}
+
+func (m MessageImp) SetLogLevel(ctx context.Context, subSystem, level string) error {
+	return logging.SetLogLevel(subSystem, level)
+}
+
+func (m MessageImp) LogList(ctx context.Context) ([]string, error) {
+	return logging.GetSubsystems(), nil
 }

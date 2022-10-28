@@ -85,7 +85,7 @@ func TestReplaceMessage(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -507,7 +507,7 @@ func TestMessageService_PushMessage(t *testing.T) {
 	assert.NoError(t, msh.walletProxy.AddAddress(account, []address.Address{addr}))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, msh.ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -586,7 +586,6 @@ func TestMessageService_PushMessage(t *testing.T) {
 func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *MessageService {
 	return &MessageService{
 		repo:           msh.ms.repo,
-		log:            msh.ms.log,
 		fsRepo:         fsRepo,
 		nodeClient:     msh.fullNode,
 		addressService: msh.ms.addressService,
