@@ -16,7 +16,6 @@ var AddrCmds = &cli.Command{
 		searchAddrCmd,
 		listAddrCmd,
 		deleteAddrCmd,
-		// updateNonceCmd,
 		forbiddenAddrCmd,
 		activeAddrCmd,
 		setAddrSelMsgNumCmd,

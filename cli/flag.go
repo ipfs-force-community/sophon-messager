@@ -45,3 +45,25 @@ func ParseFlagToReplaceMessaeParams(cctx *cli.Context) (*messager.ReplacMessageP
 
 	return &params, nil
 }
+
+var reallyDoItFlag = &cli.BoolFlag{
+	Name:  "really-do-it",
+	Usage: "specify this flag to confirm mark-bad",
+}
+
+var outputTypeFlag = &cli.StringFlag{
+	Name:  "output-type",
+	Usage: "output type support json and table (default table)",
+	Value: "table",
+}
+
+var FromFlag = &cli.StringFlag{
+	Name:  "from",
+	Usage: "address to send message",
+}
+
+var verboseFlag = &cli.BoolFlag{
+	Name:  "verbose",
+	Usage: "verbose address",
+	Value: false,
+}
