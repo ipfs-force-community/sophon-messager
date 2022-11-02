@@ -10,14 +10,15 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/testhelper"
-
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
 	"github.com/filecoin-project/venus-messager/config"
+	"github.com/filecoin-project/venus-messager/testhelper"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +28,7 @@ func TestNodeAPI(t *testing.T) {
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.SkipPushMessage = true
 	cfg.MessageService.WaitingChainHeadStableDuration = 2 * time.Second
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg)
+	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, &jwtclient.AuthClient{})
 	assert.NoError(t, err)
 
 	go ms.start(ctx)

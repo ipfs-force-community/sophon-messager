@@ -48,7 +48,7 @@ func TestVerifyNetworkName(t *testing.T) {
 	}
 	assert.NoError(t, tipsetCache.Save(fsRepo.TipsetFile()))
 
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	networkName, err := msh.fullNode.StateNetworkName(ctx)
@@ -73,13 +73,15 @@ func TestReplaceMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -166,7 +168,7 @@ func TestReconnectCheck(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
@@ -280,7 +282,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
@@ -494,12 +496,15 @@ func TestMessageService_PushMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 
+	account := defaultLocalToken
 	addr := testutil.BlsAddressProvider()(t)
 	assert.NoError(t, msh.fullNode.AddActors([]address.Address{addr}))
-	assert.NoError(t, msh.walletProxy.AddAddress([]address.Address{addr}))
+	authClient.AddMockUserAndSigner(account, []address.Address{addr})
+	assert.NoError(t, msh.walletProxy.AddAddress(account, []address.Address{addr}))
 
 	lc := fxtest.NewLifecycle(t)
 	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, msh.ms.log)

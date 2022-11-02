@@ -445,12 +445,12 @@ github.com/filecoin-project/storetheindex v0.3.5/go.mod h1:0r3d0kSpK63O6AvLr1CjA
 github.com/filecoin-project/storetheindex v0.4.17/go.mod h1:y2dL8C5D3PXi183hdxgGtM8vVYOZ1lg515tpl/D3tN8=
 github.com/filecoin-project/test-vectors/schema v0.0.5/go.mod h1:iQ9QXLpYWL3m7warwvK1JC/pTri8mnfEmKygNDqqY6E=
 github.com/filecoin-project/venus v1.2.4/go.mod h1:hJULXHGAnWuq5S5KRtPkwbT8DqgM9II7NwyNU7t59D0=
-github.com/filecoin-project/venus v1.7.1-0.20221025034405-cbf086d6012d h1:Jq6/+tZH4zFydZBZk3XvUd5xn0ncGTMgUy4AV5Z8noc=
-github.com/filecoin-project/venus v1.7.1-0.20221025034405-cbf086d6012d/go.mod h1:+QxMl7tEDvNLPt2ZnsGQOKWdmNoWF4ZxrHP+Z4phv/0=
+github.com/filecoin-project/venus v1.7.1-0.20221102021930-ac0f60ee4c31 h1:FWuhJfj8/Ym6v+MALq1gmqgkigizs5sJKMVz7YjX2hE=
+github.com/filecoin-project/venus v1.7.1-0.20221102021930-ac0f60ee4c31/go.mod h1:+QxMl7tEDvNLPt2ZnsGQOKWdmNoWF4ZxrHP+Z4phv/0=
 github.com/filecoin-project/venus-auth v1.3.2/go.mod h1:m5Jog2GYxztwP7w3m/iJdv/V1/bTcAVU9rm/CbhxRQU=
 github.com/filecoin-project/venus-auth v1.8.0-rc1/go.mod h1:DR/RdqOycbMyQ4/oKGYMGlh8qwpLw8A40eL1Qbj7KpQ=
-github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221025063603-21bb633bdd48 h1:fqOno9f0FgrZ0bZ7D7IFChn0tKemy+yk2g+rGEry4Mk=
-github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221025063603-21bb633bdd48/go.mod h1:DR/RdqOycbMyQ4/oKGYMGlh8qwpLw8A40eL1Qbj7KpQ=
+github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221101071442-c2ed29a74e9e h1:KsM5XFZrnoN4JmeRBMwSlpUuexJaNQuRJMjTbZzPcQc=
+github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221101071442-c2ed29a74e9e/go.mod h1:DR/RdqOycbMyQ4/oKGYMGlh8qwpLw8A40eL1Qbj7KpQ=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6/go.mod h1:1i71OnUq3iUe1ma7Lr6yG6/rjvM3emb6yoL7xLFzcVQ=
 github.com/flynn/noise v1.0.0 h1:DlTHqmzmvcEiKj+4RYo/imoswx/4r6iBlCMfVtrMXpQ=

@@ -16,59 +16,82 @@ import (
 )
 
 type MockWalletProxy struct {
-	signers map[address.Address]struct{}
+	accountAddrs map[string]map[address.Address]struct{}
 
 	l sync.Mutex
 }
 
 func NewMockWalletProxy() *MockWalletProxy {
 	return &MockWalletProxy{
-		signers: make(map[address.Address]struct{}),
+		accountAddrs: make(map[string]map[address.Address]struct{}),
 	}
 }
 
-func (m *MockWalletProxy) AddAddress(addrs []address.Address) error {
+func (m *MockWalletProxy) AddAddress(account string, addrs []address.Address) error {
 	m.l.Lock()
 	defer m.l.Unlock()
 
+	currAddrs, ok := m.accountAddrs[account]
+	if !ok {
+		currAddrs = make(map[address.Address]struct{}, len(addrs))
+	}
 	for _, addr := range addrs {
-		signerAddr := addr
 		if addr.Protocol() == address.ID {
 			newAddr, err := testhelper.ResolveIDAddr(addr)
 			if err != nil {
 				return err
 			}
-			signerAddr = newAddr
+			currAddrs[newAddr] = struct{}{}
+			continue
 		}
-		if _, ok := m.signers[signerAddr]; !ok {
-			m.signers[signerAddr] = struct{}{}
+		currAddrs[addr] = struct{}{}
+	}
+	m.accountAddrs[account] = currAddrs
+
+	return nil
+}
+
+func (m *MockWalletProxy) RemoveAddress(account string, addrs []address.Address) error {
+	m.l.Lock()
+	defer m.l.Unlock()
+
+	currAddrs, ok := m.accountAddrs[account]
+	if ok {
+		for _, addr := range addrs {
+			if addr.Protocol() == address.ID {
+				newAddr, err := testhelper.ResolveIDAddr(addr)
+				if err != nil {
+					return err
+				}
+				delete(currAddrs, newAddr)
+				continue
+			}
+			delete(currAddrs, addr)
 		}
 	}
 
 	return nil
 }
 
-func (m *MockWalletProxy) RemoveAddress(ctx context.Context, addrs []address.Address) error {
+func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address, accounts []string) (bool, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 
-	for _, addr := range addrs {
-		delete(m.signers, addr)
+	for _, account := range accounts {
+		currAddrs, ok := m.accountAddrs[account]
+		if !ok {
+			continue
+		}
+		if _, ok := currAddrs[addr]; ok {
+			return true, nil
+		}
 	}
 
-	return nil
+	return false, nil
 }
 
-func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	m.l.Lock()
-	defer m.l.Unlock()
-
-	_, ok := m.signers[addr]
-	return ok, nil
-}
-
-func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, toSign []byte, meta types.MsgMeta) (*crypto.Signature, error) {
-	has, err := m.WalletHas(ctx, addr)
+func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, accounts []string, toSign []byte, meta types.MsgMeta) (*crypto.Signature, error) {
+	has, err := m.WalletHas(ctx, addr, accounts)
 	if err != nil {
 		return nil, err
 	}

@@ -274,8 +274,14 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 			continue
 		}
 
+		accounts, err := messageSelector.addressService.GetAccountsOfSigner(ctx, msg.From)
+		if err != nil {
+			messageSelector.log.Errorf("get account for message id %s fail %v", msg.ID, err)
+			continue
+		}
+
 		signMsgCtx, signMsgCancel := context.WithTimeout(ctx, messageSelector.cfg.SignMessageTimeout)
-		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{addr.Addr, accounts, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})

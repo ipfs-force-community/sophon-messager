@@ -163,7 +163,11 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		msg.From = fromA
 	}
 
-	has, err := ms.walletClient.WalletHas(ctx, msg.From)
+	accounts, err := ms.addressService.GetAccountsOfSigner(ctx, msg.From)
+	if err != nil {
+		return fmt.Errorf("get accounts for %s: %w", msg.From.String(), err)
+	}
+	has, err := ms.walletClient.WalletHas(ctx, msg.From, accounts)
 	if err != nil {
 		return err
 	}
@@ -946,7 +950,11 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 		msg.GasFeeCap = params.GasFeecap
 	}
 
-	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg)
+	accounts, err := ms.addressService.GetAccountsOfSigner(ctx, msg.From)
+	if err != nil {
+		return cid.Undef, err
+	}
+	signedMsg, err := ToSignedMsg(ctx, ms.walletClient, msg, accounts)
 	if err != nil {
 		return cid.Undef, err
 	}
@@ -1014,7 +1022,7 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 	return nil
 }
 
-func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *types.Message) (venusTypes.SignedMessage, error) {
+func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *types.Message, accounts []string) (venusTypes.SignedMessage, error) {
 	unsignedCid := msg.Message.Cid()
 	msg.UnsignedCid = &unsignedCid
 	// 签名
@@ -1022,7 +1030,7 @@ func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *t
 	if err != nil {
 		return venusTypes.SignedMessage{}, fmt.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
 	}
-	sig, err := walletCli.WalletSign(ctx, msg.From, unsignedCid.Bytes(), venusTypes.MsgMeta{
+	sig, err := walletCli.WalletSign(ctx, msg.From, accounts, unsignedCid.Bytes(), venusTypes.MsgMeta{
 		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	})

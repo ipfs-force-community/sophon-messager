@@ -237,6 +237,9 @@ func runAction(cctx *cli.Context) error {
 		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
 		}),
+		fx.Provide(func() jwtclient.IAuthClient {
+			return remoteAuthCli
+		}),
 		fx.Provide(func() v1.FullNode {
 			return client
 		}),

@@ -30,15 +30,18 @@ func TestMessageAPI(t *testing.T) {
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg)
+	authClient := testhelper.NewMockAuthClient()
+	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
 	assert.NoError(t, err)
 
 	go ms.start(ctx)
 	assert.NoError(t, <-ms.appStartErr)
 
 	addrCount := 10
+	account := defaultLocalToken
 	addrs := testhelper.RandAddresses(t, addrCount)
-	assert.NoError(t, ms.walletCli.AddAddress(addrs))
+	authClient.AddMockUserAndSigner(account, addrs)
+	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
 	assert.NoError(t, ms.fullNode.AddActors(addrs))
 
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
