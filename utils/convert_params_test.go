@@ -2,10 +2,14 @@ package utils
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/filecoin-project/go-bitfield"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/proof"
+	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/testutil"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,8 +39,8 @@ func TestConvertBitFieldToString(t *testing.T) {
 
 func TestTryConvertParams(t *testing.T) {
 	t.Run("test convert ExtendSectorExpirationParams", func(t *testing.T) {
-		params := &miner.ExtendSectorExpirationParams{
-			Extensions: []miner.ExpirationExtension{
+		params := &types.ExtendSectorExpirationParams{
+			Extensions: []types.ExpirationExtension{
 				{
 					Deadline:      10,
 					Partition:     101,
@@ -48,7 +52,7 @@ func TestTryConvertParams(t *testing.T) {
 
 		res, err := TryConvertParams(params)
 		assert.NoError(t, err)
-		val, ok := res.(map[string][]map[string]interface{})
+		val, ok := res.(map[string]interface{})
 		assert.True(t, ok)
 		expect := []map[string]interface{}{
 			{
@@ -62,8 +66,8 @@ func TestTryConvertParams(t *testing.T) {
 	})
 
 	t.Run("test convert DeclareFaultsRecoveredParams", func(t *testing.T) {
-		params := &miner.DeclareFaultsRecoveredParams{
-			Recoveries: []miner.RecoveryDeclaration{
+		params := &types.DeclareFaultsRecoveredParams{
+			Recoveries: []types.RecoveryDeclaration{
 				{
 					Deadline:  10,
 					Partition: 100,
@@ -74,7 +78,7 @@ func TestTryConvertParams(t *testing.T) {
 
 		res, err := TryConvertParams(params)
 		assert.NoError(t, err)
-		val, ok := res.(map[string][]map[string]interface{})
+		val, ok := res.(map[string]interface{})
 		assert.True(t, ok)
 		expect := []map[string]interface{}{
 			{
@@ -87,9 +91,9 @@ func TestTryConvertParams(t *testing.T) {
 	})
 
 	t.Run("test convert SubmitWindowedPoStParams", func(t *testing.T) {
-		params := &miner.SubmitWindowedPoStParams{
+		params := &types.SubmitWindowedPoStParams{
 			Deadline: 10,
-			Partitions: []miner.PoStPartition{
+			Partitions: []types.PoStPartition{
 				{
 					Index:   101,
 					Skipped: bitfield.NewFromSet([]uint64{2, 3, 6, 7}),
@@ -109,15 +113,15 @@ func TestTryConvertParams(t *testing.T) {
 					"Skipped": "2-3, 6-7",
 				},
 			},
-			"Proofs":           nil,
+			"Proofs":           []proof.PoStProof{},
 			"ChainCommitEpoch": 100,
-			"ChainCommitRand":  "Q2hhaW5Db21taXRSYW5k",
+			"ChainCommitRand":  []byte("ChainCommitRand"),
 		}
 		equalMarshal(t, expect, res)
 	})
 
 	t.Run("tes convert CompactPartitionsParams", func(t *testing.T) {
-		params := &miner.CompactPartitionsParams{
+		params := &types.CompactPartitionsParams{
 			Deadline:   100,
 			Partitions: bitfield.NewFromSet([]uint64{1, 2, 8, 10}),
 		}
@@ -138,4 +142,31 @@ func equalMarshal(t *testing.T, expect, actual interface{}) {
 	d2, err := json.Marshal(actual)
 	assert.NoError(t, err)
 	assert.Equal(t, string(d), string(d2))
+}
+
+func TestHasBitfield(t *testing.T) {
+	cases := []struct {
+		typ    interface{}
+		expect bool
+	}{
+		{&types.ExtendSectorExpirationParams{}, true},
+		{&miner5.ExtendSectorExpirationParams{}, true},
+		{&types.DeclareFaultsRecoveredParams{}, true},
+		{&miner5.DeclareFaultsRecoveredParams{}, true},
+		{&types.DeclareFaultsParams{}, true},
+		{&miner5.ProveCommitAggregateParams{}, true},
+		{&types.TerminateSectorsParams{}, true},
+		{&types.CompactPartitionsParams{}, true},
+		{&types.CompactSectorNumbersParams{}, true},
+		{&types.SubmitWindowedPoStParams{}, true},
+		{&types.PublishStorageDealsReturn{}, true},
+		{&types.ActiveBeneficiary{}, false},
+		{&types.ActivateDealsParams{}, false},
+	}
+	for _, c := range cases {
+		testutil.Provide(t, c.typ)
+		if actual := hasBitfield(reflect.ValueOf(c.typ)); actual != c.expect {
+			t.Errorf("call %T failed, actual %v, expect %v", c.typ, actual, c.expect)
+		}
+	}
 }
