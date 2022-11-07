@@ -132,6 +132,13 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 }
 
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64, sharedParams *types.SharedSpec) (*MsgSelectResult, error) {
+	// 没有绑定账号肯定无法签名
+	accounts, err := messageSelector.addressService.GetAccountsOfSigner(ctx, addr.Addr)
+	if err != nil {
+		messageSelector.log.Errorf("get account for %s fail %v", addr.Addr.String(), err)
+		return nil, err
+	}
+
 	var toPushMessage []*venusTypes.SignedMessage
 
 	// 判断是否需要推送消息
@@ -271,12 +278,6 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		data, err := msg.Message.ToStorageBlock()
 		if err != nil {
 			messageSelector.log.Errorf("calc message unsigned message id %s fail %v", msg.ID, err)
-			continue
-		}
-
-		accounts, err := messageSelector.addressService.GetAccountsOfSigner(ctx, msg.From)
-		if err != nil {
-			messageSelector.log.Errorf("get account for message id %s fail %v", msg.ID, err)
 			continue
 		}
 
