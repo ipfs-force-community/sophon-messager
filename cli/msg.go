@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,22 +11,12 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/crypto"
-	"github.com/filecoin-project/go-state-types/exitcode"
-
-	"github.com/filecoin-project/venus-messager/cli/tablewriter"
 	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/pkg/constants"
-	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	msgparser "github.com/filecoin-project/venus/venus-shared/utils/msg_parser"
 )
-
-var ReallyDoItFlag = &cli.BoolFlag{
-	Name:  "really-do-it",
-	Usage: "specify this flag to confirm mark-bad",
-}
 
 var MsgCmds = &cli.Command{
 	Name:  "msg",
@@ -46,23 +35,6 @@ var MsgCmds = &cli.Command{
 		clearUnFillMessageCmd,
 		recoverFailedMsgCmd,
 	},
-}
-
-var outputTypeFlag = &cli.StringFlag{
-	Name:  "output-type",
-	Usage: "output type support json and table (default table)",
-	Value: "table",
-}
-
-var FromFlag = &cli.StringFlag{
-	Name:  "from",
-	Usage: "address to send message",
-}
-
-var verboseFlag = &cli.BoolFlag{
-	Name:  "verbose",
-	Usage: "verbose address",
-	Value: false,
 }
 
 var searchCmd = &cli.Command{
@@ -114,7 +86,7 @@ var searchCmd = &cli.Command{
 			return fmt.Errorf("value of query must be entered")
 		}
 
-		bytes, err := json.MarshalIndent(transformMessage(msg), "", "\t")
+		bytes, err := json.MarshalIndent(transformMessage(msg, nodeAPI), "", "\t")
 		if err != nil {
 			return err
 		}
@@ -227,6 +199,17 @@ state:
 			return err
 		}
 		defer closer()
+
+		nodeAPI, nodeAPICloser, err := getNodeAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer nodeAPICloser()
+
+		if err := LoadBuiltinActors(ctx.Context, nodeAPI); err != nil {
+			return err
+		}
+
 		var from address.Address
 		if addrStr := ctx.String("from"); len(addrStr) > 0 {
 			from, err = address.NewFromString(addrStr)
@@ -246,11 +229,11 @@ state:
 		}
 
 		if ctx.String("output-type") == "table" {
-			return outputWithTable(msgs, ctx.Bool("verbose"))
+			return outputWithTable(msgs, ctx.Bool("verbose"), nodeAPI)
 		}
 		msgT := make([]*message, 0, len(msgs))
 		for _, msg := range msgs {
-			msgT = append(msgT, transformMessage(msg))
+			msgT = append(msgT, transformMessage(msg, nodeAPI))
 		}
 		bytes, err := json.MarshalIndent(msgT, " ", "\t")
 		if err != nil {
@@ -277,6 +260,16 @@ var listFailedCmd = &cli.Command{
 		}
 		defer closer()
 
+		nodeAPI, nodeAPICloser, err := getNodeAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer nodeAPICloser()
+
+		if err := LoadBuiltinActors(ctx.Context, nodeAPI); err != nil {
+			return err
+		}
+
 		var msgs []*types.Message
 
 		msgs, err = client.ListFailedMessage(ctx.Context)
@@ -295,11 +288,11 @@ var listFailedCmd = &cli.Command{
 		}
 
 		if ctx.String("output-type") == "table" {
-			return outputWithTable(msgs, ctx.Bool("verbose"))
+			return outputWithTable(msgs, ctx.Bool("verbose"), nodeAPI)
 		}
 		msgT := make([]*message, 0, len(msgs))
 		for _, msg := range msgs {
-			msgT = append(msgT, transformMessage(msg))
+			msgT = append(msgT, transformMessage(msg, nodeAPI))
 		}
 		bytes, err := json.MarshalIndent(msgT, " ", "\t")
 		if err != nil {
@@ -332,6 +325,16 @@ var ListBlockedMessageCmd = &cli.Command{
 		}
 		defer closer()
 
+		nodeAPI, nodeAPICloser, err := getNodeAPI(ctx)
+		if err != nil {
+			return err
+		}
+		defer nodeAPICloser()
+
+		if err := LoadBuiltinActors(ctx.Context, nodeAPI); err != nil {
+			return err
+		}
+
 		var msgs []*types.Message
 		var addr address.Address
 
@@ -352,11 +355,11 @@ var ListBlockedMessageCmd = &cli.Command{
 		}
 
 		if ctx.String("output-type") == "table" {
-			return outputWithTable(msgs, ctx.Bool("verbose"))
+			return outputWithTable(msgs, ctx.Bool("verbose"), nodeAPI)
 		}
 		msgT := make([]*message, 0, len(msgs))
 		for _, msg := range msgs {
-			msgT = append(msgT, transformMessage(msg))
+			msgT = append(msgT, transformMessage(msg, nodeAPI))
 		}
 		bytes, err := json.MarshalIndent(msgT, " ", "\t")
 		if err != nil {
@@ -366,67 +369,6 @@ var ListBlockedMessageCmd = &cli.Command{
 
 		return nil
 	},
-}
-
-var tw = tablewriter.New(
-	tablewriter.Col("ID"),
-	tablewriter.Col("To"),
-	tablewriter.Col("From"),
-	tablewriter.Col("Nonce"),
-	tablewriter.Col("Value"),
-	tablewriter.Col("GasLimit"),
-	tablewriter.Col("GasFeeCap"),
-	tablewriter.Col("GasPremium"),
-	tablewriter.Col("Method"),
-	tablewriter.Col("State"),
-	tablewriter.Col("ExitCode"),
-	tablewriter.Col("CreateAt"),
-)
-
-func outputWithTable(msgs []*types.Message, verbose bool) error {
-	for _, msgT := range msgs {
-		msg := transformMessage(msgT)
-		val := venusTypes.MustParseFIL(msg.Msg.Value.String() + "attofil").String()
-		row := map[string]interface{}{
-			"ID":         msg.ID,
-			"To":         msg.Msg.To,
-			"From":       msg.Msg.From,
-			"Nonce":      msg.Msg.Nonce,
-			"Value":      val,
-			"GasLimit":   msg.Msg.GasLimit,
-			"GasFeeCap":  msg.Msg.GasFeeCap,
-			"GasPremium": msg.Msg.GasPremium,
-			"Method":     msg.Msg.Method,
-			"State":      msg.State,
-			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
-		}
-		if !verbose {
-			if from := msg.Msg.From.String(); len(from) > 9 {
-				row["From"] = from[:9] + "..."
-			}
-			if to := msg.Msg.To.String(); len(to) > 9 {
-				row["To"] = to[:9] + "..."
-			}
-			if len(msg.ID) > 36 {
-				row["ID"] = msg.ID[:36] + "..."
-			}
-			if len(val) > 6 {
-				row["Value"] = val[:6] + "..."
-			}
-		}
-		if msg.Receipt != nil {
-			row["ExitCode"] = msg.Receipt.ExitCode
-			row["Return"] = msg.Receipt.Return
-		}
-		tw.Write(row)
-	}
-
-	buf := new(bytes.Buffer)
-	if err := tw.Flush(buf); err != nil {
-		return err
-	}
-	fmt.Println(buf)
-	return nil
 }
 
 var updateAllFilledMessageCmd = &cli.Command{
@@ -611,7 +553,7 @@ var markBadCmd = &cli.Command{
 	Name:  "mark-bad",
 	Usage: "mark bad message",
 	Flags: []cli.Flag{
-		ReallyDoItFlag,
+		reallyDoItFlag,
 		&cli.StringFlag{
 			Name:  "from",
 			Usage: "mark unfill message as bad message if specify this flag",
@@ -672,7 +614,7 @@ var recoverFailedMsgCmd = &cli.Command{
 	Name:  "recover-failed-msg",
 	Usage: "recover failed messages",
 	Flags: []cli.Flag{
-		ReallyDoItFlag,
+		reallyDoItFlag,
 		&cli.StringFlag{
 			Name:  "from",
 			Usage: "mark unfill message as bad message if specify this flag",
@@ -735,69 +677,12 @@ var recoverFailedMsgCmd = &cli.Command{
 	},
 }
 
-type message struct {
-	ID string
-
-	UnsignedCid *cid.Cid
-	SignedCid   *cid.Cid
-	Msg         venusTypes.Message
-	Signature   *crypto.Signature
-
-	Height     int64
-	Confidence int64
-	Receipt    *receipt
-	TipSetKey  venusTypes.TipSetKey
-
-	Meta *types.SendSpec
-
-	State string
-
-	UpdatedAt time.Time
-	CreatedAt time.Time
-}
-
-type receipt struct {
-	ExitCode exitcode.ExitCode
-	Return   string
-	GasUsed  int64
-}
-
-func transformMessage(msg *types.Message) *message {
-	if msg == nil {
-		return nil
-	}
-
-	m := &message{
-		ID:          msg.ID,
-		UnsignedCid: msg.UnsignedCid,
-		SignedCid:   msg.SignedCid,
-		Msg:         msg.Message,
-		Signature:   msg.Signature,
-		Height:      msg.Height,
-		Confidence:  msg.Confidence,
-		TipSetKey:   msg.TipSetKey,
-		Meta:        msg.Meta,
-		State:       msg.State.String(),
-		UpdatedAt:   msg.UpdatedAt,
-		CreatedAt:   msg.CreatedAt,
-	}
-	if msg.Receipt != nil {
-		m.Receipt = &receipt{
-			ExitCode: msg.Receipt.ExitCode,
-			Return:   string(msg.Receipt.Return),
-			GasUsed:  msg.Receipt.GasUsed,
-		}
-	}
-
-	return m
-}
-
 var clearUnFillMessageCmd = &cli.Command{
 	Name:      "clear-unfill-msg",
 	Usage:     "clear unfill messages by address",
 	ArgsUsage: "address",
 	Flags: []cli.Flag{
-		ReallyDoItFlag,
+		reallyDoItFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		client, closer, err := getAPI(ctx)
