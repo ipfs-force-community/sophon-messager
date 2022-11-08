@@ -13,7 +13,7 @@ import (
 )
 
 type mysqlSharedParams struct {
-	ID uint `gorm:"primary_key;column:id;type:SMALLINT(2) unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
+	ID uint `gorm:"primary_key;column:id;type:SMALLINT(2) unsigned AUTO_INCREMENT;NOT NULL"`
 
 	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:DOUBLE;NOT NULL"`
 	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL;default:0"`

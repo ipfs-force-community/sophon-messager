@@ -21,19 +21,19 @@ import (
 
 type sqliteMessage struct {
 	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
-	Version uint64 `gorm:"column:version;type:unsigned bigint"`
+	Version uint64 `gorm:"column:version;type:unsigned bigint;NOT NULL"`
 
 	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
-	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
+	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce;NOT NULL"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
-	Value mtypes.Int `gorm:"column:value;type:varchar(256);"`
+	Value mtypes.Int `gorm:"column:value;type:varchar(256);default:0"`
 
-	GasLimit   int64      `gorm:"column:gas_limit;type:bigint"`
-	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);"`
-	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);"`
+	GasLimit   int64      `gorm:"column:gas_limit;type:bigint;NOT NULL"`
+	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
+	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);default:0"`
 
-	Method int `gorm:"column:method;type:int"`
+	Method int `gorm:"column:method;type:int;NOT NULL"`
 
 	Params []byte `gorm:"column:params;type:blob;"`
 
@@ -42,13 +42,13 @@ type sqliteMessage struct {
 	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:msg_unsigned_cid;"`
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:msg_signed_cid"`
 
-	Height    int64               `gorm:"column:height;type:bigint;index:msg_height"`
+	Height    int64               `gorm:"column:height;type:bigint;index:msg_height;NOT NULL"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
-	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
+	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
