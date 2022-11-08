@@ -6,12 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
+
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
-	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/testhelper"
@@ -25,7 +28,8 @@ func TestAddressAPI(t *testing.T) {
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.SkipPushMessage = true
 	cfg.MessageService.WaitingChainHeadStableDuration = 2 * time.Second
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg)
+	authClient := testhelper.NewMockAuthClient()
+	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
 	assert.NoError(t, err)
 
 	go ms.start(ctx)
@@ -34,6 +38,7 @@ func TestAddressAPI(t *testing.T) {
 	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.RandAddresses(t, addrCount)
+	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
 
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
@@ -50,7 +55,6 @@ func TestAddressAPI(t *testing.T) {
 	addrMsgs := make(map[address.Address][]*types.Message, len(addrs))
 	for _, msg := range msgs {
 		msg.From = addrs[rand.Intn(addrCount)]
-		msg.FromUser = account
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, msg.Meta)
 		assert.NoError(t, err)
 		assert.Equal(t, msg.ID, id)

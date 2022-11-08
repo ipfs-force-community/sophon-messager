@@ -6,17 +6,19 @@ import (
 	"net"
 	"strings"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"go.uber.org/fx"
 
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus/venus-shared/api/messager"
-
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	gatewayapi "github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	"go.uber.org/fx"
+
+	"github.com/filecoin-project/go-jsonrpc"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
+	"github.com/filecoin-project/venus/venus-shared/api/messager"
 
 	"github.com/filecoin-project/venus-messager/api"
 	ccli "github.com/filecoin-project/venus-messager/cli"
@@ -42,13 +44,13 @@ type messagerServer struct {
 	appStartErr chan error
 }
 
-func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config) (*messagerServer, error) {
+func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config, authClient jwtclient.IAuthClient) (*messagerServer, error) {
 	repoPath, err := homedir.Expand(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	remoteAuthCli := &jwtclient.AuthClient{}
+	remoteAuthClient := &jwtclient.AuthClient{}
 
 	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
 	if err != nil {
@@ -105,10 +107,13 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		fx.Supply(log),
 		fx.Supply(fullNode),
 		fx.Supply(networkName),
-		fx.Supply(remoteAuthCli),
+		fx.Supply(remoteAuthClient),
 		fx.Supply(localAuthCli),
-		fx.Provide(func() gatewayapi.IWalletClient {
+		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
+		}),
+		fx.Provide(func() jwtclient.IAuthClient {
+			return authClient
 		}),
 		fx.Provide(func() v1.FullNode {
 			return fullNode

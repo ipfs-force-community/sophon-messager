@@ -8,10 +8,12 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -21,15 +23,17 @@ var errAddressNotExists = errors.New("address not exists")
 type AddressService struct {
 	repo         repo.Repo
 	log          *log.Logger
-	walletClient gateway.IWalletClient
+	walletClient gatewayAPI.IWalletClient
+	authClient   jwtclient.IAuthClient
 }
 
-func NewAddressService(repo repo.Repo, logger *log.Logger, walletClient gateway.IWalletClient) *AddressService {
+func NewAddressService(repo repo.Repo, logger *log.Logger, walletClient gatewayAPI.IWalletClient, remoteAuthCli jwtclient.IAuthClient) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
 		log:  logger,
 
 		walletClient: walletClient,
+		authClient:   remoteAuthCli,
 	}
 
 	return addressService
@@ -58,8 +62,28 @@ func (addressService *AddressService) GetAddress(ctx context.Context, addr addre
 	return addressService.repo.AddressRepo().GetAddress(ctx, addr)
 }
 
-func (addressService *AddressService) WalletHas(ctx context.Context, account string, addr address.Address) (bool, error) {
-	return addressService.walletClient.WalletHas(ctx, account, addr)
+// WalletHas 1. 检查请求token绑定的 account是否在addr绑定的用户列表中,不在返回false; eg. from01的绑定关系: from01-acc01,from01-acc02, 判断: acc[token] IN (acc01,acc02)
+// 2. 调用venus-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
+// venus-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
+func (addressService *AddressService) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
+	accounts, err := addressService.GetAccountsOfSigner(ctx, addr)
+	if err != nil {
+		return false, err
+	}
+
+	bExist := false
+	name, _ := jwtclient.CtxGetName(ctx)
+	for _, account := range accounts {
+		if name == account {
+			bExist = true
+			break
+		}
+	}
+	if !bExist {
+		return false, nil
+	}
+
+	return addressService.walletClient.WalletHas(ctx, addr, accounts)
 }
 
 func (addressService *AddressService) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
@@ -150,4 +174,18 @@ func (addressService *AddressService) ActiveAddresses(ctx context.Context) map[a
 	}
 
 	return addrs
+}
+
+func (addressService *AddressService) GetAccountsOfSigner(ctx context.Context, addr address.Address) ([]string, error) {
+	users, err := addressService.authClient.GetUserBySigner(addr.String())
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]string, 0, len(users))
+	for _, user := range users {
+		accounts = append(accounts, user.Name)
+	}
+
+	return accounts, nil
 }

@@ -10,17 +10,18 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"modernc.org/mathutil"
+
 	"github.com/filecoin-project/venus/pkg/crypto"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
-	"modernc.org/mathutil"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/utils"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const (
@@ -35,7 +36,7 @@ type MessageSelector struct {
 	nodeClient     v1.FullNode
 	addressService *AddressService
 	sps            *SharedParamsService
-	walletClient   gateway.IWalletClient
+	walletClient   gatewayAPI.IWalletClient
 }
 
 type MsgSelectResult struct {
@@ -57,7 +58,7 @@ func NewMessageSelector(repo repo.Repo,
 	nodeClient v1.FullNode,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	walletClient gateway.IWalletClient,
+	walletClient gatewayAPI.IWalletClient,
 ) *MessageSelector {
 	return &MessageSelector{
 		repo:           repo,
@@ -131,6 +132,13 @@ func (messageSelector *MessageSelector) SelectMessage(ctx context.Context, ts *v
 }
 
 func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, appliedNonce *utils.NonceMap, addr *types.Address, ts *venusTypes.TipSet, maxAllowPendingMessage uint64, sharedParams *types.SharedSpec) (*MsgSelectResult, error) {
+	// 没有绑定账号肯定无法签名
+	accounts, err := messageSelector.addressService.GetAccountsOfSigner(ctx, addr.Addr)
+	if err != nil {
+		messageSelector.log.Errorf("get account for %s fail %v", addr.Addr.String(), err)
+		return nil, err
+	}
+
 	var toPushMessage []*venusTypes.SignedMessage
 
 	// 判断是否需要推送消息
@@ -274,7 +282,7 @@ func (messageSelector *MessageSelector) selectAddrMessage(ctx context.Context, a
 		}
 
 		signMsgCtx, signMsgCancel := context.WithTimeout(ctx, messageSelector.cfg.SignMessageTimeout)
-		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{msg.WalletName, addr.Addr, unsignedCid.Bytes(), venusTypes.MsgMeta{
+		sigI, err := handleTimeout(signMsgCtx, messageSelector.walletClient.WalletSign, []interface{}{addr.Addr, accounts, unsignedCid.Bytes(), venusTypes.MsgMeta{
 			Type:  venusTypes.MTChainMsg,
 			Extra: data.RawData(),
 		}})

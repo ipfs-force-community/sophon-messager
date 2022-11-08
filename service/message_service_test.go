@@ -19,16 +19,18 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/pkg/constants"
-	"github.com/filecoin-project/venus/venus-shared/testutil"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/testhelper"
+
+	"github.com/filecoin-project/venus/pkg/constants"
+	"github.com/filecoin-project/venus/venus-shared/testutil"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 func TestVerifyNetworkName(t *testing.T) {
@@ -46,7 +48,7 @@ func TestVerifyNetworkName(t *testing.T) {
 	}
 	assert.NoError(t, tipsetCache.Save(fsRepo.TipsetFile()))
 
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	networkName, err := msh.fullNode.StateNetworkName(ctx)
@@ -71,14 +73,15 @@ func TestReplaceMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -87,7 +90,7 @@ func TestReplaceMessage(t *testing.T) {
 	defer lc.RequireStop()
 
 	blockedMsgs := make(map[string]*types.Message, 0)
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	for i, msg := range msgs {
 		if i%2 == 0 {
 			msg.GasPremium = big.Sub(testhelper.MinPackedPremium, big.NewInt(100))
@@ -165,7 +168,7 @@ func TestReconnectCheck(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
@@ -279,7 +282,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
 	assert.NoError(t, err)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
@@ -493,12 +496,14 @@ func TestMessageService_PushMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 
 	account := defaultLocalToken
 	addr := testutil.BlsAddressProvider()(t)
 	assert.NoError(t, msh.fullNode.AddActors([]address.Address{addr}))
+	authClient.AddMockUserAndSigner(account, []address.Address{addr})
 	assert.NoError(t, msh.walletProxy.AddAddress(account, []address.Address{addr}))
 
 	lc := fxtest.NewLifecycle(t)
@@ -515,20 +520,18 @@ func TestMessageService_PushMessage(t *testing.T) {
 		// stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
 		rawMsg := testhelper.NewUnsignedMessage()
 		rawMsg.From = addr
-		uidStr, err := msh.ms.PushMessage(ctx, account, &rawMsg, nil)
+		uidStr, err := msh.ms.PushMessage(ctx, &rawMsg, nil)
 		assert.NoError(t, err)
 		_, err = shared.ParseUUID(uidStr)
 		assert.NoError(t, err)
 
-		{
-			// pushing message would be failed
-			pushFailedMsg := testhelper.NewUnsignedMessage()
-			_, err = msh.ms.PushMessage(ctx, "invalid account", &pushFailedMsg, nil)
-			assert.Error(t, err)
-			// msg with uuid not exists, expect an error
-			_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
-			assert.Error(t, err)
-		}
+		// pushing message would be failed
+		pushFailedMsg := testhelper.NewUnsignedMessage()
+		_, err = msh.ms.PushMessage(ctx, &pushFailedMsg, nil)
+		assert.Error(t, err)
+		// msg with uuid not exists, expect an error
+		_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
+		assert.Error(t, err)
 
 		pushedMsg, err = msh.ms.GetMessageByUid(ctx, uidStr)
 		assert.NoError(t, err)

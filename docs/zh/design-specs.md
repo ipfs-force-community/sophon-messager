@@ -172,8 +172,6 @@ meta_gas_over_estimation | gas 预估超出的系数
 meta_max_fee | varchar(256) | gas 费用上限
 meta_gas_fee_cap | varchar(256) | gas feecap数值
 meta_gas_over_premium | decimal(10,2) | gas premium的系数
-wallet_name | varchar(256) | 钱包名，用于指定具体签名钱包
-from_user | varchar(256) | 用户名，用于指定具体签名用户
 state | int | 消息状态
 is_deleted | int | 是否删除，-1：否，1：是
 created_at | datetime | 创建时间

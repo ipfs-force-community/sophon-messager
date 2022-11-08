@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/venus-shared/testutil"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
+
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
@@ -22,6 +22,10 @@ import (
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/pubsub"
 	"github.com/filecoin-project/venus-messager/testhelper"
+
+	"github.com/filecoin-project/venus/venus-shared/testutil"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const defaultLocalToken = "defaultLocalToken"
@@ -169,13 +173,15 @@ func TestSelectMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
 	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
@@ -195,7 +201,7 @@ func TestSelectMessage(t *testing.T) {
 	assert.Error(t, err)
 
 	totalMsg := len(addrs) * 10
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	ts, err = msh.fullNode.ChainHead(ctx)
@@ -222,14 +228,15 @@ func TestSelectNum(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -239,7 +246,7 @@ func TestSelectNum(t *testing.T) {
 
 	defSelectedNum := int(DefSharedParams.SelMsgNum)
 	totalMsg := len(addrs) * 50
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	checkSelectNum := func(msgs []*types.Message, addrNum map[address.Address]int, defNum int) {
@@ -302,14 +309,15 @@ func TestEstimateMessageGas(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -317,7 +325,7 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// will estimate gas failed
 		msg.GasLimit = -1
@@ -364,7 +372,7 @@ func TestEstimateMessageGas(t *testing.T) {
 		assert.NoError(t, ms.addressService.SetFeeParams(ctx, params))
 	}
 
-	msgs = genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs = genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// use the fee params in the address table
 		msg.Meta = nil
@@ -393,14 +401,15 @@ func TestBaseFee(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
@@ -409,7 +418,7 @@ func TestBaseFee(t *testing.T) {
 	defer lc.RequireStop()
 
 	totalMsg := len(addrs) * int(DefSharedParams.SelMsgNum)
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	// global basefee too low
@@ -503,13 +512,15 @@ func TestSignMessageFailed(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
+	account := defaultLocalToken
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
@@ -518,12 +529,12 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	removedAddrs := addrs[:len(addrs)/2]
 	aliveAddrs := addrs[len(addrs)/2:]
-	assert.NoError(t, msh.walletProxy.RemoveAddress(defaultLocalToken, removedAddrs))
+	assert.NoError(t, msh.walletProxy.RemoveAddress(account, removedAddrs))
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
@@ -578,7 +589,7 @@ type messageServiceHelper struct {
 	ms *MessageService
 }
 
-func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay time.Duration, fsRepo filestore.FSRepo) (*messageServiceHelper, error) {
+func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay time.Duration, fsRepo filestore.FSRepo, authClient jwtclient.IAuthClient) (*messageServiceHelper, error) {
 	fullNode, err := testhelper.NewMockFullNode(ctx, blockDelay)
 	if err != nil {
 		return nil, err
@@ -599,7 +610,7 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	addressService := NewAddressService(repo, log, walletProxy)
+	addressService := NewAddressService(repo, log, walletProxy, authClient)
 	sharedParamsService, err := NewSharedParamsService(ctx, repo, log)
 	if err != nil {
 		return nil, err
@@ -749,12 +760,10 @@ func checkGasFee(t *testing.T, srcMsgs, currMsgs *types.Message, sharedParams *t
 	assert.Equal(t, gasPremium, currMsgs.GasPremium)
 }
 
-func genMessages(addrs []address.Address, account string, count int) []*types.Message {
+func genMessages(addrs []address.Address, count int) []*types.Message {
 	msgs := testhelper.NewMessages(count)
 	sendSpecs := testhelper.MockSendSpecs()
 	for i, msg := range msgs {
-		msg.FromUser = account
-		msg.WalletName = account
 		msg.From = addrs[i%len(addrs)]
 		msg.Meta = sendSpecs[i%len(sendSpecs)]
 	}
