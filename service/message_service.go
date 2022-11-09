@@ -20,6 +20,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
@@ -214,11 +216,13 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Messa
 }
 
 func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	account, _ := jwtclient.CtxGetName(ctx)
 	if err := ms.pushMessage(ctx, &types.Message{
-		ID:      id,
-		Message: *msg,
-		Meta:    meta,
-		State:   types.UnFillMsg,
+		ID:         id,
+		Message:    *msg,
+		Meta:       meta,
+		WalletName: account,
+		State:      types.UnFillMsg,
 	}); err != nil {
 		ms.log.Errorf("push message %s failed %v", id, err)
 		return id, err

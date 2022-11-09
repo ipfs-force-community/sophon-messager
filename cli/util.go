@@ -114,7 +114,6 @@ type message struct {
 	Meta *types.SendSpec
 
 	WalletName string
-	FromUser   string
 
 	State string
 
@@ -136,6 +135,7 @@ func transformMessage(msg *types.Message, nodeAPI v1.FullNode) *message {
 		Confidence:  msg.Confidence,
 		TipSetKey:   msg.TipSetKey,
 		Meta:        msg.Meta,
+		WalletName:  msg.WalletName,
 		State:       msg.State.String(),
 		UpdatedAt:   msg.UpdatedAt,
 		CreatedAt:   msg.CreatedAt,

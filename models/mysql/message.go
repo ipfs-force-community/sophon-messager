@@ -48,6 +48,8 @@ type mysqlMessage struct {
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
+	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
+
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"`                                   // 是否删除 1:是  -1:否
@@ -72,13 +74,14 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 			Method:     abi.MethodNum(sqlMsg.Method),
 			Params:     sqlMsg.Params,
 		},
-		Height:    sqlMsg.Height,
-		Receipt:   sqlMsg.Receipt.MsgReceipt(),
-		Signature: (*crypto.Signature)(sqlMsg.Signature),
-		Meta:      sqlMsg.Meta.Meta(),
-		State:     sqlMsg.State,
-		UpdatedAt: sqlMsg.UpdatedAt,
-		CreatedAt: sqlMsg.CreatedAt,
+		Height:     sqlMsg.Height,
+		Receipt:    sqlMsg.Receipt.MsgReceipt(),
+		Signature:  (*crypto.Signature)(sqlMsg.Signature),
+		Meta:       sqlMsg.Meta.Meta(),
+		WalletName: sqlMsg.WalletName,
+		State:      sqlMsg.State,
+		UpdatedAt:  sqlMsg.UpdatedAt,
+		CreatedAt:  sqlMsg.CreatedAt,
 	}
 	destMsg.From, _ = address.NewFromString(sqlMsg.From)
 	destMsg.To, _ = address.NewFromString(sqlMsg.To)
@@ -114,6 +117,7 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 		Height:     srcMsg.Height,
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       mtypes.FromMeta(srcMsg.Meta),
+		WalletName: srcMsg.WalletName,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
 		CreatedAt:  srcMsg.CreatedAt,
