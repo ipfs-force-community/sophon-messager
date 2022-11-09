@@ -51,6 +51,7 @@ func main() {
 			ccli.LogCmds,
 			ccli.SendCmd,
 			ccli.SwarmCmds,
+			ccli.MirtateCmd,
 			runCmd,
 		},
 	}
