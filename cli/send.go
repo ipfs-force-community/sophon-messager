@@ -50,6 +50,11 @@ var SendCmd = &cli.Command{
 			Name:  "params-hex",
 			Usage: "specify invocation parameters in hex",
 		},
+		&cli.StringFlag{
+			Name:     "account",
+			Usage:    "optionally specify the account to send",
+			Required: false,
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		if ctx.Args().Len() != 2 {
@@ -80,6 +85,10 @@ var SendCmd = &cli.Command{
 			return fmt.Errorf("failed to parse from address: %w", err)
 		}
 		params.From = addr
+
+		if ctx.IsSet("account") {
+			params.Account = ctx.String("account")
+		}
 
 		if ctx.IsSet("gas-premium") {
 			gp, err := venusTypes.BigFromString(ctx.String("gas-premium"))
