@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/proof"
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
@@ -90,6 +91,99 @@ func TestTryConvertParams(t *testing.T) {
 		equalMarshal(t, expect, val["Recoveries"])
 	})
 
+	t.Run("test convert DeclareFaultsParams", func(t *testing.T) {
+		params := &types.DeclareFaultsParams{
+			Faults: []types.FaultDeclaration{
+				{
+					Deadline:  10,
+					Partition: 100,
+					Sectors:   bitfield.NewFromSet([]uint64{1, 4, 7}),
+				},
+			},
+		}
+
+		res, err := TryConvertParams(params)
+		assert.NoError(t, err)
+		val, ok := res.(map[string]interface{})
+		assert.True(t, ok)
+		expect := []map[string]interface{}{
+			{
+				"Deadline":  10,
+				"Partition": 100,
+				"Sectors":   "1, 4, 7",
+			},
+		}
+		equalMarshal(t, expect, val["Faults"])
+	})
+
+	t.Run("test convert ProveCommitAggregateParams", func(t *testing.T) {
+		params := &types.ProveCommitAggregateParams{
+			SectorNumbers:  bitfield.NewFromSet([]uint64{1, 7}),
+			AggregateProof: []byte("AggregateProof"),
+		}
+
+		res, err := TryConvertParams(params)
+		assert.NoError(t, err)
+		expect := map[string]interface{}{
+			"SectorNumbers":  "1, 7",
+			"AggregateProof": []byte("AggregateProof"),
+		}
+		equalMarshal(t, expect, res)
+	})
+
+	t.Run("test convert TerminateSectorsParams", func(t *testing.T) {
+		params := &types.TerminateSectorsParams{
+			Terminations: []types.TerminationDeclaration{
+				{
+					Deadline:  10,
+					Partition: 100,
+					Sectors:   bitfield.NewFromSet([]uint64{1, 4}),
+				},
+			},
+		}
+
+		res, err := TryConvertParams(params)
+		assert.NoError(t, err)
+		val, ok := res.(map[string]interface{})
+		assert.True(t, ok)
+		expect := []map[string]interface{}{
+			{
+				"Deadline":  10,
+				"Partition": 100,
+				"Sectors":   "1, 4",
+			},
+		}
+		equalMarshal(t, expect, val["Terminations"])
+	})
+
+	t.Run("test convert CompactPartitionsParams", func(t *testing.T) {
+		params := &types.CompactPartitionsParams{
+			Deadline:   100,
+			Partitions: bitfield.NewFromSet([]uint64{1, 2, 8, 10}),
+		}
+
+		res, err := TryConvertParams(params)
+		assert.NoError(t, err)
+		expect := map[string]interface{}{
+			"Deadline":   100,
+			"Partitions": "1-2, 8, 10",
+		}
+		equalMarshal(t, expect, res)
+	})
+
+	t.Run("test convert CompactSectorNumbersParams", func(t *testing.T) {
+		params := &types.CompactSectorNumbersParams{
+			MaskSectorNumbers: bitfield.NewFromSet([]uint64{1, 2, 8, 10}),
+		}
+
+		res, err := TryConvertParams(params)
+		assert.NoError(t, err)
+		expect := map[string]interface{}{
+			"MaskSectorNumbers": "1-2, 8, 10",
+		}
+		equalMarshal(t, expect, res)
+	})
+
 	t.Run("test convert SubmitWindowedPoStParams", func(t *testing.T) {
 		params := &types.SubmitWindowedPoStParams{
 			Deadline: 10,
@@ -120,17 +214,17 @@ func TestTryConvertParams(t *testing.T) {
 		equalMarshal(t, expect, res)
 	})
 
-	t.Run("tes convert CompactPartitionsParams", func(t *testing.T) {
-		params := &types.CompactPartitionsParams{
-			Deadline:   100,
-			Partitions: bitfield.NewFromSet([]uint64{1, 2, 8, 10}),
+	t.Run("test convert PublishStorageDealsReturn", func(t *testing.T) {
+		params := &types.PublishStorageDealsReturn{
+			IDs:        []abi.DealID{1, 5},
+			ValidDeals: bitfield.NewFromSet([]uint64{1, 2, 8, 10}),
 		}
 
 		res, err := TryConvertParams(params)
 		assert.NoError(t, err)
 		expect := map[string]interface{}{
-			"Deadline":   100,
-			"Partitions": "1-2, 8, 10",
+			"IDs":        []abi.DealID{1, 5},
+			"ValidDeals": "1-2, 8, 10",
 		}
 		equalMarshal(t, expect, res)
 	})
