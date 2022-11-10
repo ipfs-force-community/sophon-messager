@@ -18,7 +18,6 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/pubsub"
 	"github.com/filecoin-project/venus-messager/testhelper"
@@ -116,14 +115,13 @@ func TestMergeMsgSpec(t *testing.T) {
 }
 
 func TestAddrSelectMsgNum(t *testing.T) {
-	log := log.New()
 	ctx := context.Background()
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
 	repo, err := models.SetDataBase(fsRepo)
 	assert.NoError(t, err)
 	assert.NoError(t, repo.AutoMigrate())
 
-	sps, err := NewSharedParamsService(ctx, repo, log)
+	sps, err := NewSharedParamsService(ctx, repo)
 	assert.NoError(t, err)
 	msgSelector := &MessageSelector{
 		sps: sps,
@@ -186,7 +184,7 @@ func TestSelectMessage(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -240,7 +238,7 @@ func TestSelectNum(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -321,7 +319,7 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -413,7 +411,7 @@ func TestBaseFee(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -525,7 +523,7 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -600,7 +598,6 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	log := log.New()
 	repo, err := models.SetDataBase(fsRepo)
 	if err != nil {
 		return nil, err
@@ -610,14 +607,14 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	addressService := NewAddressService(repo, log, walletProxy, authClient)
-	sharedParamsService, err := NewSharedParamsService(ctx, repo, log)
+	addressService := NewAddressService(repo, walletProxy, authClient)
+	sharedParamsService, err := NewSharedParamsService(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	ms, err := NewMessageService(ctx, repo, fullNode, log, fsRepo, addressService, sharedParamsService,
-		NewNodeService(repo, log), walletProxy, &pubsub.MessagerPubSubStub{})
+	ms, err := NewMessageService(ctx, repo, fullNode, fsRepo, addressService, sharedParamsService,
+		NewNodeService(repo), walletProxy, &pubsub.MessagerPubSubStub{})
 	if err != nil {
 		return nil, err
 	}

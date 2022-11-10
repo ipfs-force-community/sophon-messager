@@ -8,7 +8,6 @@ import (
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
@@ -27,13 +26,11 @@ var DefSharedParams = &types.SharedSpec{
 
 type SharedParamsService struct {
 	repo repo.Repo
-	log  *log.Logger
 }
 
-func NewSharedParamsService(ctx context.Context, repo repo.Repo, logger *log.Logger) (*SharedParamsService, error) {
+func NewSharedParamsService(ctx context.Context, repo repo.Repo) (*SharedParamsService, error) {
 	sps := &SharedParamsService{
 		repo: repo,
-		log:  logger,
 	}
 	_, err := sps.GetSharedParams(ctx)
 	if err != nil {
@@ -57,7 +54,7 @@ func (sps *SharedParamsService) SetSharedParams(ctx context.Context, params *typ
 	if err != nil {
 		return err
 	}
-	sps.log.Infof("new shared params %v", params)
+	log.Infof("new shared params %v", params)
 
 	return nil
 }

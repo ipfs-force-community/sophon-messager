@@ -10,27 +10,24 @@ import (
 
 	"github.com/filecoin-project/venus-auth/jwtclient"
 
-	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/models/repo"
-
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+
+	"github.com/filecoin-project/venus-messager/models/repo"
 )
 
 var errAddressNotExists = errors.New("address not exists")
 
 type AddressService struct {
 	repo         repo.Repo
-	log          *log.Logger
 	walletClient gatewayAPI.IWalletClient
 	authClient   jwtclient.IAuthClient
 }
 
-func NewAddressService(repo repo.Repo, logger *log.Logger, walletClient gatewayAPI.IWalletClient, remoteAuthCli jwtclient.IAuthClient) *AddressService {
+func NewAddressService(repo repo.Repo, walletClient gatewayAPI.IWalletClient, remoteAuthCli jwtclient.IAuthClient) *AddressService {
 	addressService := &AddressService{
 		repo: repo,
-		log:  logger,
 
 		walletClient: walletClient,
 		authClient:   remoteAuthCli,
@@ -106,7 +103,7 @@ func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.AddressStateForbbiden); err != nil {
 		return err
 	}
-	addressService.log.Infof("forbidden address %v success", addr.String())
+	log.Infof("forbidden address %v success", addr.String())
 
 	return nil
 }
@@ -115,7 +112,7 @@ func (addressService *AddressService) ActiveAddress(ctx context.Context, addr ad
 	if err := addressService.repo.AddressRepo().UpdateState(ctx, addr, types.AddressStateAlive); err != nil {
 		return err
 	}
-	addressService.log.Infof("active address %v success", addr.String())
+	log.Infof("active address %v success", addr.String())
 
 	return nil
 }
@@ -124,7 +121,7 @@ func (addressService *AddressService) SetSelectMsgNum(ctx context.Context, addr 
 	if err := addressService.repo.AddressRepo().UpdateSelectMsgNum(ctx, addr, num); err != nil {
 		return err
 	}
-	addressService.log.Infof("set select msg num: %s %d", addr.String(), num)
+	log.Infof("set select msg num: %s %d", addr.String(), num)
 
 	return nil
 }
@@ -165,7 +162,7 @@ func (addressService *AddressService) ActiveAddresses(ctx context.Context) map[a
 	addrs := make(map[address.Address]struct{})
 	addrList, err := addressService.ListActiveAddress(ctx)
 	if err != nil {
-		addressService.log.Errorf("list address %v", err)
+		log.Errorf("list address %v", err)
 		return addrs
 	}
 

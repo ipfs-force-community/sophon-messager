@@ -12,10 +12,12 @@ import (
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
+	logging "github.com/ipfs/go-log/v2"
 
 	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/log"
 )
+
+var log = logging.Logger("wallet-proxy")
 
 type cacheKey string
 
@@ -25,7 +27,6 @@ func newCacheKey(addr address.Address) cacheKey {
 
 type WalletProxy struct {
 	clients map[string]gatewayAPI.IWalletClient
-	logger  *log.Logger
 
 	mutx                sync.RWMutex
 	avaliabeClientCache map[cacheKey]gatewayAPI.IWalletClient
@@ -65,7 +66,7 @@ func (w *WalletProxy) fastSelectAvaGatewayClient(ctx context.Context, addr addre
 		go func(url string, c gatewayAPI.IWalletClient) {
 			has, err := c.WalletHas(ctx, addr, accounts)
 			if err != nil {
-				w.logger.Errorf("fastSelectAvaClient, call %s:'WalletHas' failed:%s", url, err)
+				log.Errorf("fastSelectAvaClient, call %s:'WalletHas' failed:%s", url, err)
 			}
 			if has {
 				ch <- c
@@ -114,7 +115,7 @@ func (w *WalletProxy) WalletSign(ctx context.Context, addr address.Address, acco
 	var s *crypto.Signature
 	if s, err = c.WalletSign(ctx, addr, accounts, toSign, meta); err != nil {
 		if useCachedClient {
-			w.logger.Warnf("sign with cached client failed:%s, will re-SelectAvaliableClient, and retry",
+			log.Warnf("sign with cached client failed:%s, will re-SelectAvaliableClient, and retry",
 				err.Error())
 
 			w.delCache(addr)
@@ -139,12 +140,10 @@ func (w *WalletProxy) ListWalletInfoByWallet(context.Context, string) (*gtypes.W
 
 func NewWalletClient(ctx context.Context,
 	cfg *config.GatewayConfig,
-	logger *log.Logger,
 ) (*WalletProxy, jsonrpc.ClientCloser, error) {
 	var proxy = &WalletProxy{
 		clients:             make(map[string]gatewayAPI.IWalletClient),
 		avaliabeClientCache: make(map[cacheKey]gatewayAPI.IWalletClient),
-		logger:              logger,
 	}
 
 	var closers []jsonrpc.ClientCloser

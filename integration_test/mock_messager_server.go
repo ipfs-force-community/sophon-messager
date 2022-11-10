@@ -25,15 +25,14 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type messagerServer struct {
-	log       *log.Logger
 	walletCli *gateway.MockWalletProxy
 	fullNode  *testhelper.MockFullNode
 
@@ -61,16 +60,12 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	if err != nil {
 		return nil, err
 	}
+	utils.SetupLogLevels()
 
-	log, err := log.SetLogger(&cfg.Log)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
-	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
-	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
-	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
+	fmt.Printf("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
+	fmt.Printf("auth info url: %s\n", cfg.JWT.AuthURL)
+	fmt.Printf("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
+	fmt.Printf("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 
 	fullNode, err := testhelper.NewMockFullNode(ctx, cfg.MessageService.WaitingChainHeadStableDuration*2)
 	if err != nil {
@@ -104,7 +99,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		// prover
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
 			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
-		fx.Supply(log),
 		fx.Supply(fullNode),
 		fx.Supply(networkName),
 		fx.Supply(remoteAuthClient),
@@ -156,7 +150,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	app := fx.New(provider, invoker, apiOption)
 
 	return &messagerServer{
-		log:         log,
 		walletCli:   walletCli,
 		fullNode:    fullNode,
 		token:       string(token),

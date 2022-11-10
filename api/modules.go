@@ -6,18 +6,20 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/filecoin-project/venus/venus-shared/api/messager"
-	"github.com/filecoin-project/venus/venus-shared/api/permission"
-
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-auth/jwtclient"
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus/venus-shared/api/messager"
+	"github.com/filecoin-project/venus/venus-shared/api/permission"
 	"github.com/ipfs-force-community/metrics/ratelimit"
+	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
+
+	"github.com/filecoin-project/venus-messager/config"
 )
 
-func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, log *log.Logger, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
+var log = logging.Logger("api")
+
+func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
@@ -27,7 +29,7 @@ func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, log 
 			nil,
 			&jwtclient.ValueFromCtx{},
 			jwtclient.WarpLimitFinder(remoteAuthCli),
-			log,
+			logging.Logger("rate-limit"),
 		)
 		if err != nil {
 			return nil, err
@@ -41,7 +43,7 @@ func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, log 
 
 // RunAPI bind rpc call and start rpc
 // todo
-func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli *jwtclient.AuthClient, lst net.Listener, log *log.Logger, msgImp messager.IMessager) error {
+func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli *jwtclient.AuthClient, lst net.Listener, msgImp messager.IMessager) error {
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()

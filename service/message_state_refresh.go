@@ -7,14 +7,17 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log/v2"
 	"go.opencensus.io/stats"
-
-	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus-messager/models/repo"
 
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+
+	"github.com/filecoin-project/venus-messager/metrics"
+	"github.com/filecoin-project/venus-messager/models/repo"
 )
+
+var msgStateLog = logging.Logger("msg-state")
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
 	go func() {
@@ -24,21 +27,21 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 				// 跳过这个检查可以更精准的推送，但是会增加系统负担
 				/*	if len(h.apply) == 1 && len(h.revert) == 1 {
 					ms.tsCache.AddTs(&tipsetFormat{Key: h.apply[0].Key().String(), Height: int64(h.apply[0].Height())})
-					ms.log.Warnf("revert at same height %d just update cache and skip process %s", h.apply[0].Height(), h.apply[0].String())
+					stateRefreshlog.Warnf("revert at same height %d just update cache and skip process %s", h.apply[0].Height(), h.apply[0].String())
 					ms.triggerPush <- h.apply[0]
 					continue
 				}*/
-				ms.log.Infof("start refresh message state, apply %d, revert %d", len(h.apply), len(h.revert))
+				msgStateLog.Infof("start refresh message state, apply %d, revert %d", len(h.apply), len(h.revert))
 				now := time.Now()
 				if err := ms.doRefreshMessageState(ctx, h); err != nil {
 					h.done <- err
-					ms.log.Errorf("refresh message occurs unexpected error %v", err)
+					msgStateLog.Errorf("refresh message occurs unexpected error %v", err)
 					continue
 				}
 				h.done <- nil
-				ms.log.Infof("end refresh message state, spent %d 'ms'", time.Since(now).Milliseconds())
+				msgStateLog.Infof("end refresh message state, spent %d 'ms'", time.Since(now).Milliseconds())
 			case <-ctx.Done():
-				ms.log.Warnf("stop refresh message state: %v", ctx.Err())
+				msgStateLog.Warnf("stop refresh message state: %v", ctx.Err())
 				return
 			}
 		}
@@ -47,7 +50,7 @@ func (ms *MessageService) refreshMessageState(ctx context.Context) {
 
 func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan) error {
 	if len(h.apply) == 0 {
-		ms.log.Infof("apply is empty")
+		msgStateLog.Infof("apply is empty")
 		return nil
 	}
 
@@ -70,10 +73,10 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
 	ms.tsCache.Add(h.apply...)
 	if err := ms.tsCache.Save(ms.fsRepo.TipsetFile()); err != nil {
-		ms.log.Errorf("store tipsetkey failed %v", err)
+		msgStateLog.Errorf("store tipsetkey failed %v", err)
 	}
 
-	ms.log.Infof("process block %d, revert %d message, apply %d message, replaced %d message", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs)-len(invalidMsgs), len(replaceMsg))
+	msgStateLog.Infof("process block %d, revert %d message, apply %d message, replaced %d message", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs)-len(invalidMsgs), len(replaceMsg))
 
 	if ms.preCancel != nil {
 		ms.preCancel()
@@ -102,12 +105,12 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 			// 若只按 `from` 和 `nonce` 查询，查到的是第一条消息，这样第二条消息一直是 `FillMsg`
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromNonceAndState(msg.msg.From, msg.msg.Nonce, types.FillMsg)
 			if err != nil {
-				ms.log.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.signedCID, msg.msg.From)
+				msgStateLog.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.signedCID, msg.msg.From)
 				invalidMsgs[msg.signedCID] = struct{}{}
 				continue
 			}
 			if localMsg.SignedCid != nil && !(*localMsg.SignedCid).Equals(msg.signedCID) {
-				ms.log.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.signedCID, localMsg.ID)
+				msgStateLog.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.signedCID, localMsg.ID)
 				// replace msg
 				localMsg.State = types.ReplacedMsg
 				localMsg.Receipt = msg.receipt

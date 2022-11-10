@@ -40,7 +40,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, msh.ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
@@ -139,7 +139,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 		lc := fxtest.NewLifecycle(t)
-		_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+		_ = StartNodeEvents(lc, msh.fullNode, ms)
 		assert.NoError(t, lc.Start(ctx))
 		defer lc.RequireStop()
 
@@ -241,7 +241,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 		lc := fxtest.NewLifecycle(t)
-		_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+		_ = StartNodeEvents(lc, msh.fullNode, ms)
 		assert.NoError(t, lc.Start(ctx))
 		defer lc.RequireStop()
 
@@ -299,7 +299,7 @@ func TestUpdateMessageState(t *testing.T) {
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, msh.ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 

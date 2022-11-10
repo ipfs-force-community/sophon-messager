@@ -19,20 +19,18 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-
 	"github.com/filecoin-project/venus-auth/jwtclient"
-
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/pubsub"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+
+	"github.com/filecoin-project/venus-messager/filestore"
+	"github.com/filecoin-project/venus-messager/metrics"
+	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/pubsub"
 )
 
 var (
@@ -47,7 +45,6 @@ const (
 
 type MessageService struct {
 	repo           repo.Repo
-	log            *log.Logger
 	fsRepo         filestore.FSRepo
 	nodeClient     v1.FullNode
 	addressService *AddressService
@@ -87,7 +84,6 @@ type cleanUnFillMsgResult struct {
 func NewMessageService(ctx context.Context,
 	repo repo.Repo,
 	nc v1.FullNode,
-	logger *log.Logger,
 	fsRepo filestore.FSRepo,
 	addressService *AddressService,
 	sps *SharedParamsService,
@@ -95,10 +91,9 @@ func NewMessageService(ctx context.Context,
 	walletClient gatewayAPI.IWalletClient,
 	pubsub pubsub.IMessagePubSub,
 ) (*MessageService, error) {
-	selector := NewMessageSelector(repo, logger, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
+	selector := NewMessageSelector(repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
 		repo:            repo,
-		log:             logger,
 		nodeClient:      nc,
 		fsRepo:          fsRepo,
 		messageSelector: selector,
@@ -116,7 +111,7 @@ func NewMessageService(ctx context.Context,
 	}
 	ms.refreshMessageState(ctx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
-		ms.log.Infof("load tipset file failed: %v", err)
+		log.Infof("load tipset file failed: %v", err)
 	}
 
 	// 本身缺少 global context
@@ -161,7 +156,7 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 		if err != nil {
 			return fmt.Errorf("getting key address: %w", err)
 		}
-		ms.log.Warnf("Push from ID address (%s), adjusting to %s", msg.From, fromA)
+		log.Warnf("Push from ID address (%s), adjusting to %s", msg.From, fromA)
 		msg.From = fromA
 	}
 
@@ -195,14 +190,14 @@ func (ms *MessageService) pushMessage(ctx context.Context, msg *types.Message) e
 			}); err != nil {
 				return fmt.Errorf("save address %s failed %v", msg.From.String(), err)
 			}
-			ms.log.Infof("add new address %s", msg.From.String())
+			log.Infof("add new address %s", msg.From.String())
 		}
 		return err
 	}); err != nil {
 		return err
 	}
 	if addrInfo != nil && addrInfo.State == types.AddressStateForbbiden {
-		ms.log.Errorf("address(%s) is forbidden", msg.From.String())
+		log.Errorf("address(%s) is forbidden", msg.From.String())
 		return fmt.Errorf("address(%s) is forbidden", msg.From.String())
 	}
 
@@ -224,7 +219,7 @@ func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg 
 		WalletName: account,
 		State:      types.UnFillMsg,
 	}); err != nil {
-		ms.log.Errorf("push message %s failed %v", id, err)
+		log.Errorf("push message %s failed %v", id, err)
 		return id, err
 	}
 
@@ -469,14 +464,14 @@ func (ms *MessageService) UpdateMessageInfoByCid(unsignedCid string, receipt *ve
 }
 
 func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusTypes.TipSet) error {
-	ms.log.Infof("receive new head from chain")
+	log.Infof("receive new head from chain")
 	if ms.fsRepo.Config().MessageService.SkipProcessHead {
-		ms.log.Infof("skip process new head")
+		log.Infof("skip process new head")
 		return nil
 	}
 
 	if len(apply) == 0 {
-		ms.log.Errorf("expect apply blocks, but got none")
+		log.Errorf("expect apply blocks, but got none")
 		return nil
 	}
 
@@ -486,10 +481,10 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 	})
 	smallestTs := apply[len(apply)-1]
 
-	defer ms.log.Infof("%d head wait to process", len(ms.headChans))
+	defer log.Infof("%d head wait to process", len(ms.headChans))
 
 	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
-		ms.log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
+		log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
 		ms.headChans <- &headChan{
 			apply:  apply,
@@ -501,7 +496,7 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 
 	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
 	if err != nil {
-		ms.log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
+		log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
 		return nil
 	}
 
@@ -518,14 +513,14 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
-	ms.log.Infof("reconnect to node")
+	log.Infof("reconnect to node")
 
 	if len(ms.tsCache.Cache) == 0 {
 		count, err := ms.UpdateAllFilledMessage(ctx)
 		if err != nil {
 			return err
 		}
-		ms.log.Infof("update filled message count %v", count)
+		log.Infof("update filled message count %v", count)
 		return nil
 	}
 
@@ -540,12 +535,12 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		if err != nil {
 			return err
 		}
-		ms.log.Infof("gap height %v, update filled message count %v", head.Height()-tsList[0].Height(), count)
+		log.Infof("gap height %v, update filled message count %v", head.Height()-tsList[0].Height(), count)
 		return nil
 	}
 
 	if tsList[0].Height() == head.Height() && tsList[0].Equals(head) {
-		ms.log.Infof("The head does not change and returns directly.")
+		log.Infof("The head does not change and returns directly.")
 		return nil
 	}
 
@@ -623,19 +618,19 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 		return err
 	}
 	selectMsgSpent := time.Since(startSelectMsg)
-	ms.log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
+	log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
 	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
 	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
 	stats.Record(ctx, metrics.ExpiredMsgNumOfLastRound.M(int64(len(selectResult.ExpireMsg))))
 	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
 
 	startSaveDB := time.Now()
-	ms.log.Infof("start to save to database")
+	log.Infof("start to save to database")
 	if err := ms.saveSelectedMessagesToDB(ctx, selectResult); err != nil {
 		return err
 	}
 	saveDBSpent := time.Since(startSaveDB)
-	ms.log.Infof("success to save to database")
+	log.Infof("success to save to database")
 
 	for _, msg := range selectResult.SelectMsg {
 		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
@@ -648,7 +643,7 @@ func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.
 	go func() {
 		startPush := time.Now()
 		ms.multiPushMessages(ctx, selectResult)
-		ms.log.Infof("Push message select spent: %v, save db spent: %v, push to node spent: %v",
+		log.Infof("Push message select spent: %v, save db spent: %v, push to node spent: %v",
 			selectMsgSpent,
 			saveDBSpent,
 			time.Since(startPush),
@@ -678,7 +673,7 @@ func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectRe
 		}
 
 		for _, m := range selectResult.ErrMsg {
-			ms.log.Infof("update message %s return value with error %s", m.id, m.err)
+			log.Infof("update message %s return value with error %s", m.id, m.err)
 			err := txRepo.MessageRepo().UpdateReturnValue(m.id, m.err)
 			if err != nil {
 				return err
@@ -687,7 +682,7 @@ func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectRe
 
 		return nil
 	}); err != nil {
-		ms.log.Errorf("save signed message failed %v", err)
+		log.Errorf("save signed message failed %v", err)
 		return err
 	}
 	return nil
@@ -710,23 +705,23 @@ func (ms *MessageService) multiPushMessages(ctx context.Context, selectResult *M
 		pushMsgByAddr[addr] = msgs
 	}
 
-	ms.log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
+	log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
 	for addr, msgs := range pushMsgByAddr {
 		// use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
 		// issue https://github.com/filecoin-project/venus/issues/4860
 		if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
 			if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
-				ms.log.Errorf("push message in address %s to node failed %v", addr, pushErr)
+				log.Errorf("push message in address %s to node failed %v", addr, pushErr)
 			}
 		}
 		// publish by pubsub
 		for _, msg := range msgs {
 			if err := ms.Pubsub.Publish(ctx, msg); err != nil {
 				if errors.Is(err, pubsub.ErrPubsubDisabled) {
-					ms.log.Debugf("pubsub not enable %v", err)
+					log.Debugf("pubsub not enable %v", err)
 					break
 				} else {
-					ms.log.Errorf("publish message %s to pubsub failed %v", msg.Cid(), err)
+					log.Errorf("publish message %s to pubsub failed %v", msg.Cid(), err)
 				}
 			}
 		}
@@ -748,7 +743,7 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 
 	nodeList, err := ms.nodeService.ListNode(context.TODO())
 	if err != nil {
-		ms.log.Errorf("list node %v", err)
+		log.Errorf("list node %v", err)
 		return
 	}
 
@@ -756,14 +751,14 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 	for _, node := range nodeList {
 		cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 		if err != nil {
-			ms.log.Warnf("connect node(%s) %v", node.Name, err)
+			log.Warnf("connect node(%s) %v", node.Name, err)
 			continue
 		}
 		nc = append(nc, nodeClient{name: node.Name, cli: cli, close: closer})
 	}
 
 	if len(nc) == 0 {
-		ms.log.Infof("no available broadcast node config")
+		log.Infof("no available broadcast node config")
 		return
 	}
 
@@ -774,14 +769,14 @@ func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[ad
 			if _, err := node.cli.MpoolBatchPush(ctx, msgs); err != nil {
 				// skip error
 				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-					ms.log.Errorf("push message from %s to node %s %v", addr, node.name, err)
+					log.Errorf("push message from %s to node %s %v", addr, node.name, err)
 				}
 			}
 		}
-		ms.log.Infof("start to broadcast message of address")
+		log.Infof("start to broadcast message of address")
 		for fromAddr := range msgsByAddr {
 			if err := node.cli.MpoolPublishByAddr(ctx, fromAddr); err != nil {
-				ms.log.Errorf("publish message of address %s to node %s failed %v", fromAddr, node.name, err)
+				log.Errorf("publish message of address %s to node %s failed %v", fromAddr, node.name, err)
 			}
 		}
 
@@ -796,32 +791,32 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 	for {
 		select {
 		case <-ctx.Done():
-			ms.log.Warnf("stop push message: %v", ctx.Err())
+			log.Warnf("stop push message: %v", ctx.Err())
 			return
 		case <-tm.C:
 			//newHead, err := ms.nodeClient.ChainHead(ctx)
 			//if err != nil {
-			//	ms.log.Errorf("fail to get chain head %v", err)
+			//	log.Errorf("fail to get chain head %v", err)
 			//}
 			//err = ms.pushMessageToPool(ctx, newHead)
 			//if err != nil {
-			//	ms.log.Errorf("push message error %v", err)
+			//	log.Errorf("push message error %v", err)
 			//}
 		case newHead := <-ms.triggerPush:
 			// Clear all unfill messages by address
 			ms.tryClearUnFillMsg()
 
 			if skipPushMsg {
-				ms.log.Info("skip push message")
+				log.Info("skip push message")
 				continue
 			}
 			start := time.Now()
-			ms.log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
+			log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
 			err := ms.pushMessageToPool(ctx, newHead)
 			if err != nil {
-				ms.log.Errorf("push message error %v", err)
+				log.Errorf("push message error %v", err)
 			}
-			ms.log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
+			log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
 		}
 	}
 }
@@ -844,17 +839,17 @@ func (ms *MessageService) UpdateAllFilledMessage(ctx context.Context) (int, erro
 	for addr := range ms.addressService.ActiveAddresses(ctx) {
 		filledMsgs, err := ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 		if err != nil {
-			ms.log.Errorf("list filled message %v %v", addr, err)
+			log.Errorf("list filled message %v %v", addr, err)
 			continue
 		}
 		msgs = append(msgs, filledMsgs...)
 	}
 
-	ms.log.Infof("%d messages need to sync", len(msgs))
+	log.Infof("%d messages need to sync", len(msgs))
 	updateCount := 0
 	for _, msg := range msgs {
 		if err := ms.updateFilledMessage(ctx, msg); err != nil {
-			ms.log.Errorf("failed to update filled message: %v", err)
+			log.Errorf("failed to update filled message: %v", err)
 			continue
 		}
 		updateCount++
@@ -873,7 +868,7 @@ func (ms *MessageService) updateFilledMessage(ctx context.Context, msg *types.Me
 		if _, err := ms.UpdateMessageInfoByCid(msg.UnsignedCid.String(), &msgLookup.Receipt, msgLookup.Height, types.OnChainMsg, msgLookup.TipSet); err != nil {
 			return err
 		}
-		ms.log.Infof("update message %v by node success, height: %d", msg.ID, msgLookup.Height)
+		log.Infof("update message %v by node success, height: %d", msg.ID, msgLookup.Height)
 	}
 
 	return nil
@@ -1087,7 +1082,7 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 		if !ok {
 			return 0, fmt.Errorf("unexpect error")
 		}
-		ms.log.Infof("clear unfill messages success, address: %v, count: %d", addr.String(), r.count)
+		log.Infof("clear unfill messages success, address: %v, count: %d", addr.String(), r.count)
 		return r.count, r.err
 	case <-ctx.Done():
 		return 0, ctx.Err()
@@ -1101,12 +1096,12 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			ms.log.Warnf("stop record metrics: %v", ctx.Err())
+			log.Warnf("stop record metrics: %v", ctx.Err())
 			return
 		case <-tm.C:
 			addrs, err := ms.addressService.ListActiveAddress(ctx)
 			if err != nil {
-				ms.addressService.log.Errorf("get address list err: %s", err)
+				log.Errorf("get address list err: %s", err)
 			}
 
 			for _, addr := range addrs {
@@ -1118,7 +1113,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 
 				actor, err := ms.nodeClient.StateGetActor(ctx, addr.Addr, venusTypes.EmptyTSK)
 				if err != nil {
-					ms.addressService.log.Errorf("get actor err: %s", err)
+					log.Errorf("get actor err: %s", err)
 				} else {
 					balance, _ := strconv.ParseFloat(venusTypes.FIL(actor.Balance).Unitless(), 64)
 					stats.Record(ctx, metrics.WalletBalance.M(balance))
@@ -1127,28 +1122,28 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 
 				msgs, err := ms.repo.MessageRepo().ListUnFilledMessage(addr.Addr)
 				if err != nil {
-					ms.addressService.log.Errorf("get unFilled msg err: %s", err)
+					log.Errorf("get unFilled msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfUnFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListFilledMessageByAddress(addr.Addr)
 				if err != nil {
-					ms.addressService.log.Errorf("get filled msg err: %s", err)
+					log.Errorf("get filled msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
 				if err != nil {
-					ms.addressService.log.Errorf("get blocked three minutes msg err: %s", err)
+					log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
 				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
 				if err != nil {
-					ms.addressService.log.Errorf("get blocked five minutes msg err: %s", err)
+					log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedFiveMinutes.M(int64(len(msgs))))
 				}
@@ -1156,7 +1151,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 
 			msgs, err := ms.repo.MessageRepo().ListFailedMessage()
 			if err != nil {
-				ms.addressService.log.Errorf("get failed msg err: %s", err)
+				log.Errorf("get failed msg err: %s", err)
 			} else {
 				stats.Record(ctx, metrics.NumOfFailedMsg.M(int64(len(msgs))))
 			}
