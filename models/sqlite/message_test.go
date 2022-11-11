@@ -583,7 +583,7 @@ func TestUpdateErrInfo(t *testing.T) {
 	assert.NoError(t, err)
 	msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 	assert.NoError(t, err)
-	assert.Equal(t, failedInfo, string(msg.ErrorMsg))
+	assert.Equal(t, failedInfo, msg.ErrorMsg)
 
 	failedMsgs, err := messageRepo.ListFailedMessage()
 	assert.NoError(t, err)
