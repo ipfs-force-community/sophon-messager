@@ -48,6 +48,7 @@ func outputWithTable(msgs []*types.Message, verbose bool, nodeAPI v1.FullNode) e
 			"GasPremium": msg.Msg.GasPremium,
 			"Method":     msg.Msg.Method,
 			"State":      msg.State,
+			"ErrorMsg":   msgT.ErrorMsg,
 			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		if !verbose {
@@ -66,7 +67,6 @@ func outputWithTable(msgs []*types.Message, verbose bool, nodeAPI v1.FullNode) e
 		}
 		if msg.Receipt != nil {
 			row["ExitCode"] = msg.Receipt.ExitCode
-			row["Return"] = msg.Receipt.Return
 		}
 		tw.Write(row)
 	}
@@ -137,8 +137,9 @@ func transformMessage(msg *types.Message, nodeAPI v1.FullNode) *message {
 		Meta:        msg.Meta,
 		WalletName:  msg.WalletName,
 		State:       msg.State.String(),
-		UpdatedAt:   msg.UpdatedAt,
-		CreatedAt:   msg.CreatedAt,
+
+		UpdatedAt: msg.UpdatedAt,
+		CreatedAt: msg.CreatedAt,
 	}
 	if msg.Receipt != nil {
 		m.Receipt = &receipt{
