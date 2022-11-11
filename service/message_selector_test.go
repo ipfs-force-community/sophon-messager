@@ -19,7 +19,7 @@ import (
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models"
-	"github.com/filecoin-project/venus-messager/pubsub"
+	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/venus-shared/testutil"
@@ -613,8 +613,9 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
+	publisher := publisher.NewRpcPublisher(ctx, fullNode, repo.NodeRepo())
 	ms, err := NewMessageService(ctx, repo, fullNode, fsRepo, addressService, sharedParamsService,
-		NewNodeService(repo), walletProxy, &pubsub.MessagerPubSubStub{})
+		walletProxy, publisher)
 	if err != nil {
 		return nil, err
 	}

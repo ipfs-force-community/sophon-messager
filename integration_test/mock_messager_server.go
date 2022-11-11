@@ -27,6 +27,8 @@ import (
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/publisher"
+	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -79,6 +81,10 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	if err != nil {
 		return nil, fmt.Errorf("get network name failed %v", err)
 	}
+	networkParams, err := fullNode.StateGetNetworkParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get network params failed %v", err)
+	}
 
 	mAddr, err := ma.NewMultiaddr(cfg.API.Address)
 	if err != nil {
@@ -97,12 +103,13 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 
 	provider := fx.Options(
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
-			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNet,
+			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics, cfg.Publisher),
 		fx.Supply(fullNode),
 		fx.Supply(networkName),
 		fx.Supply(remoteAuthClient),
 		fx.Supply(localAuthCli),
+		fx.Supply(networkParams),
 		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
 		}),
@@ -116,8 +123,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 			return fsRepo
 		}),
 
-		// db
-		fx.Provide(models.SetDataBase),
 		// service
 		service.MessagerService(),
 		// api
@@ -136,7 +141,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 
 	invoker := fx.Options(
 		// invoke
-		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(metrics.SetupJaeger),
 		fx.Invoke(metrics.SetupMetrics),
@@ -147,7 +151,13 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		fx.Invoke(api.RunAPI),
 	)
 
-	app := fx.New(provider, invoker, apiOption)
+	app := fx.New(provider,
+		models.Options(),
+		publisher.Options(),
+		pubsub.Options(),
+		invoker,
+		apiOption,
+	)
 
 	return &messagerServer{
 		walletCli:   walletCli,

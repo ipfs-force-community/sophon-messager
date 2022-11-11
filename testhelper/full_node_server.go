@@ -17,7 +17,8 @@ import (
 )
 
 type FullNodeServer struct {
-	Stop func(ctx context.Context) error
+	FullNode *mock.MockFullNode
+	Stop     func(ctx context.Context) error
 
 	Port  string
 	Token string
@@ -61,6 +62,7 @@ func MockFullNodeServer(t *testing.T) (*FullNodeServer, error) {
 	}()
 
 	return &FullNodeServer{
+		FullNode: full,
 		Stop: func(ctx context.Context) error {
 			return apiserv.Shutdown(ctx)
 		},

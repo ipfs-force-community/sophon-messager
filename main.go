@@ -9,6 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/filecoin-project/venus-messager/publisher"
+	"github.com/filecoin-project/venus-messager/publisher/pubsub"
+
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/utils"
@@ -200,6 +203,10 @@ func runAction(cctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("get network name failed %v", err)
 	}
+	networkParams, err := client.StateGetNetworkParams(ctx)
+	if err != nil {
+		return fmt.Errorf("get network params failed %v", err)
+	}
 
 	if err := ccli.LoadBuiltinActors(ctx, client); err != nil {
 		return err
@@ -227,10 +234,11 @@ func runAction(cctx *cli.Context) error {
 	provider := fx.Options(
 		fx.Logger(fxLogger{}),
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
-			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNet,
+			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics, cfg.Publisher),
 		fx.Supply(log),
 		fx.Supply(networkName),
+		fx.Supply(networkParams),
 		fx.Supply(remoteAuthCli),
 		fx.Supply(localAuthCli),
 		fx.Provide(func() gatewayAPI.IWalletClient {
@@ -246,8 +254,6 @@ func runAction(cctx *cli.Context) error {
 			return fsRepo
 		}),
 
-		// db
-		fx.Provide(models.SetDataBase),
 		// service
 		service.MessagerService(),
 		// api
@@ -266,7 +272,6 @@ func runAction(cctx *cli.Context) error {
 
 	invoker := fx.Options(
 		// invoke
-		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(metrics.SetupJaeger),
 		fx.Invoke(metrics.SetupMetrics),
@@ -277,7 +282,14 @@ func runAction(cctx *cli.Context) error {
 		fx.Invoke(api.RunAPI),
 	)
 
-	app := fx.New(provider, invoker, apiOption)
+	app := fx.New(
+		models.Options(),
+		publisher.Options(),
+		pubsub.Options(),
+		provider,
+		invoker,
+		apiOption,
+	)
 	if err := app.Start(ctx); err != nil {
 		// comment fx.NopLogger few lines above for easier debugging
 		return fmt.Errorf("starting app: %w", err)

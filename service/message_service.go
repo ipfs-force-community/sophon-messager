@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -16,7 +15,6 @@ import (
 	"go.opencensus.io/tag"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-auth/jwtclient"
@@ -30,12 +28,7 @@ import (
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/pubsub"
-)
-
-var (
-	errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
-	errMinimumNonce   = errors.New("minimum expected nonce")
+	"github.com/filecoin-project/venus-messager/publisher"
 )
 
 const (
@@ -50,7 +43,7 @@ type MessageService struct {
 	addressService *AddressService
 	walletClient   gatewayAPI.IWalletClient
 
-	Pubsub pubsub.IMessagePubSub
+	publisher publisher.IMsgPublisher
 
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
@@ -59,8 +52,7 @@ type MessageService struct {
 
 	messageSelector *MessageSelector
 
-	sps         *SharedParamsService
-	nodeService *NodeService
+	sps *SharedParamsService
 
 	preCancel context.CancelFunc
 
@@ -87,25 +79,20 @@ func NewMessageService(ctx context.Context,
 	fsRepo filestore.FSRepo,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	nodeService *NodeService,
-	walletClient gatewayAPI.IWalletClient,
-	pubsub pubsub.IMessagePubSub,
-) (*MessageService, error) {
+	walletClient gatewayAPI.IWalletClient, msgPublisher publisher.IMsgPublisher) (*MessageService, error) {
 	selector := NewMessageSelector(repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
 	ms := &MessageService{
-		repo:            repo,
-		nodeClient:      nc,
-		fsRepo:          fsRepo,
-		messageSelector: selector,
-		headChans:       make(chan *headChan, MaxHeadChangeProcess),
-
+		repo:               repo,
+		nodeClient:         nc,
+		fsRepo:             fsRepo,
+		messageSelector:    selector,
+		headChans:          make(chan *headChan, MaxHeadChangeProcess),
+		publisher:          msgPublisher,
 		addressService:     addressService,
 		walletClient:       walletClient,
-		Pubsub:             pubsub,
 		tsCache:            newTipsetCache(),
 		triggerPush:        make(chan *venusTypes.TipSet, 20),
 		sps:                sps,
-		nodeService:        nodeService,
 		cleanUnFillMsgFunc: make(chan func() (int, error)),
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 	}
@@ -706,81 +693,12 @@ func (ms *MessageService) multiPushMessages(ctx context.Context, selectResult *M
 	}
 
 	log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
+
 	for addr, msgs := range pushMsgByAddr {
-		// use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
-		// issue https://github.com/filecoin-project/venus/issues/4860
-		if _, pushErr := ms.nodeClient.MpoolBatchPush(ctx, msgs); pushErr != nil {
-			if !strings.Contains(pushErr.Error(), errMinimumNonce.Error()) && !strings.Contains(pushErr.Error(), errAlreadyInMpool.Error()) {
-				log.Errorf("push message in address %s to node failed %v", addr, pushErr)
-			}
-		}
-		// publish by pubsub
-		for _, msg := range msgs {
-			if err := ms.Pubsub.Publish(ctx, msg); err != nil {
-				if errors.Is(err, pubsub.ErrPubsubDisabled) {
-					log.Debugf("pubsub not enable %v", err)
-					break
-				} else {
-					log.Errorf("publish message %s to pubsub failed %v", msg.Cid(), err)
-				}
-			}
-		}
-	}
-
-	ms.multiNodeToPush(ctx, pushMsgByAddr)
-}
-
-type nodeClient struct {
-	name  string
-	cli   v1.FullNode
-	close jsonrpc.ClientCloser
-}
-
-func (ms *MessageService) multiNodeToPush(ctx context.Context, msgsByAddr map[address.Address][]*venusTypes.SignedMessage) {
-	if len(msgsByAddr) == 0 {
-		return
-	}
-
-	nodeList, err := ms.nodeService.ListNode(context.TODO())
-	if err != nil {
-		log.Errorf("list node %v", err)
-		return
-	}
-
-	nc := make([]nodeClient, 0, len(nodeList))
-	for _, node := range nodeList {
-		cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
+		err := ms.publisher.PublishMessages(ctx, msgs)
 		if err != nil {
-			log.Warnf("connect node(%s) %v", node.Name, err)
-			continue
+			log.Errorf("publish message from address %s failed %v", addr, err)
 		}
-		nc = append(nc, nodeClient{name: node.Name, cli: cli, close: closer})
-	}
-
-	if len(nc) == 0 {
-		log.Infof("no available broadcast node config")
-		return
-	}
-
-	for _, node := range nc {
-		for addr, msgs := range msgsByAddr {
-			// use batchpush instead of push one by one, push single may cause messsage send to different nodes when through chain-co
-			// issue https://github.com/filecoin-project/venus/issues/4860
-			if _, err := node.cli.MpoolBatchPush(ctx, msgs); err != nil {
-				// skip error
-				if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-					log.Errorf("push message from %s to node %s %v", addr, node.name, err)
-				}
-			}
-		}
-		log.Infof("start to broadcast message of address")
-		for fromAddr := range msgsByAddr {
-			if err := node.cli.MpoolPublishByAddr(ctx, fromAddr); err != nil {
-				log.Errorf("publish message of address %s to node %s failed %v", fromAddr, node.name, err)
-			}
-		}
-
-		node.close()
 	}
 }
 
@@ -1012,13 +930,10 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		Message:   msg.Message,
 		Signature: *msg.Signature,
 	}
-	if _, err := ms.nodeClient.MpoolPush(ctx, signedMsg); err != nil {
-		return err
-	}
-	toPush := make(map[address.Address][]*venusTypes.SignedMessage)
-	toPush[signedMsg.Message.From] = []*venusTypes.SignedMessage{signedMsg}
-	ms.multiNodeToPush(ctx, toPush)
-	return nil
+
+	msgs := []*venusTypes.SignedMessage{signedMsg}
+	err = ms.publisher.PublishMessages(ctx, msgs)
+	return err
 }
 
 func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *types.Message, accounts []string) (venusTypes.SignedMessage, error) {
