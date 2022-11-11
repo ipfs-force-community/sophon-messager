@@ -10,6 +10,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -22,15 +23,27 @@ type ImplParams struct {
 	fx.In
 	AddressService      *service.AddressService
 	MessageService      *service.MessageService
-	NodeService         *service.NodeService
+	NodeService         service.INodeService
 	SharedParamsService *service.SharedParamsService
+	Net                 pubsub.INet
+}
+
+func NewMessageImp(implParams ImplParams) *MessageImp {
+	return &MessageImp{
+		AddressSrv: implParams.AddressService,
+		MessageSrv: implParams.MessageService,
+		NodeSrv:    implParams.NodeService,
+		ParamsSrv:  implParams.SharedParamsService,
+		Net:        implParams.Net,
+	}
 }
 
 type MessageImp struct {
 	AddressSrv *service.AddressService
 	MessageSrv *service.MessageService
-	NodeSrv    *service.NodeService
+	NodeSrv    service.INodeService
 	ParamsSrv  *service.SharedParamsService
+	Net        pubsub.INet
 }
 
 func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -190,31 +203,22 @@ func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (str
 }
 
 func (m MessageImp) NetFindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.FindPeer(ctx, peerID)
+	return m.Net.FindPeer(ctx, peerID)
 }
 
 func (m MessageImp) NetConnect(ctx context.Context, pi peer.AddrInfo) error {
-	return m.MessageSrv.Pubsub.Connect(ctx, pi)
+	return m.Net.Connect(ctx, pi)
 }
 
 func (m MessageImp) NetPeers(ctx context.Context) ([]peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.Peers(ctx)
+	return m.Net.Peers(ctx)
 }
 
 func (m MessageImp) NetAddrsListen(ctx context.Context) (peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.AddrListen(ctx)
+	return m.Net.AddrListen(ctx)
 }
 
 var _ messager.IMessager = (*MessageImp)(nil)
-
-func NewMessageImp(implParams ImplParams) *MessageImp {
-	return &MessageImp{
-		AddressSrv: implParams.AddressService,
-		MessageSrv: implParams.MessageService,
-		NodeSrv:    implParams.NodeService,
-		ParamsSrv:  implParams.SharedParamsService,
-	}
-}
 
 func (m MessageImp) Version(_ context.Context) (venusTypes.Version, error) {
 	return venusTypes.Version{

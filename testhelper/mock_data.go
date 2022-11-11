@@ -33,6 +33,26 @@ func NewSignedMessages(count int) []*types.Message {
 	return msgs
 }
 
+func NewShareSignedMessage() *shared.SignedMessage {
+	return &shared.SignedMessage{
+		Message:   NewUnsignedMessage(),
+		Signature: crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())},
+	}
+}
+
+func NewShareSignedMessages(count int) []*shared.SignedMessage {
+	msgs := make([]*shared.SignedMessage, 0, count)
+	for i := 0; i < count; i++ {
+		msg := NewUnsignedMessage()
+		msg.Nonce = uint64(i)
+		msgs = append(msgs, &shared.SignedMessage{
+			Message:   msg,
+			Signature: crypto.Signature{Type: crypto.SigTypeSecp256k1, Data: []byte(uuid.New().String())},
+		})
+	}
+	return msgs
+}
+
 func NewMessages(count int) []*types.Message {
 	msgs := make([]*types.Message, count)
 	for i := 0; i < count; i++ {

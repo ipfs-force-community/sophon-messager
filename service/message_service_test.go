@@ -25,6 +25,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
+	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -584,14 +585,15 @@ func TestMessageService_PushMessage(t *testing.T) {
 }
 
 func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *MessageService {
+	publisher := publisher.NewRpcPublisher(context.TODO(), msh.fullNode, msh.ms.repo.NodeRepo())
 	return &MessageService{
 		repo:           msh.ms.repo,
 		fsRepo:         fsRepo,
 		nodeClient:     msh.fullNode,
 		addressService: msh.ms.addressService,
 		walletClient:   msh.walletProxy,
-		Pubsub:         msh.ms.Pubsub,
 		triggerPush:    msh.ms.triggerPush,
+		publisher:      publisher,
 		headChans:      make(chan *headChan, 10),
 		tsCache:        newTipsetCache(),
 	}
