@@ -52,7 +52,8 @@ type mysqlMessage struct {
 
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
 
-	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"`                                   // 是否删除 1:是  -1:否
+	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
+	ErrorMsg  string    `gorm:"column:error_info;type:varchar(2048);"`
 	CreatedAt time.Time `gorm:"column:created_at;index;index:idx_messages_create_at_state_from_addr;NOT NULL"` // 创建时间
 	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`                                              // 更新时间
 }
@@ -80,6 +81,7 @@ func (sqlMsg *mysqlMessage) Message() *types.Message {
 		Meta:       sqlMsg.Meta.Meta(),
 		WalletName: sqlMsg.WalletName,
 		State:      sqlMsg.State,
+		ErrorMsg:   sqlMsg.ErrorMsg,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
 	}
@@ -119,6 +121,7 @@ func fromMessage(srcMsg *types.Message) *mysqlMessage {
 		Meta:       mtypes.FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
 		State:      srcMsg.State,
+		ErrorMsg:   srcMsg.ErrorMsg,
 		IsDeleted:  repo.NotDeleted,
 		CreatedAt:  srcMsg.CreatedAt,
 		UpdatedAt:  srcMsg.UpdatedAt,
@@ -399,7 +402,7 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 
 func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_info is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -502,10 +505,10 @@ func (m *mysqlMessageRepo) MarkBadMessage(id string) error {
 	return m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *mysqlMessageRepo) UpdateReturnValue(id string, returnVal string) error {
+func (m *mysqlMessageRepo) UpdateErrInfo(id string, returnVal string) error {
 	updateColumns := map[string]interface{}{
-		"receipt_return_value": returnVal,
-		"updated_at":           time.Now(),
+		"error_info": returnVal,
+		"updated_at": time.Now(),
 	}
 	return m.DB.Model((*mysqlMessage)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

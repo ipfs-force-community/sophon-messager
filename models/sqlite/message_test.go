@@ -305,7 +305,7 @@ func TestListFailedMessage(t *testing.T) {
 	for _, msg := range msgs {
 		msg.State = types.MessageState(rand.Intn(7))
 		if msg.State == types.UnFillMsg {
-			msg.Receipt.Return = []byte("gas over limit")
+			msg.ErrorMsg = "gas over limit"
 			failedMsgCount++
 		}
 		assert.NoError(t, messageRepo.CreateMessage(msg))
@@ -570,7 +570,7 @@ func TestMarkBadMessage(t *testing.T) {
 	assert.Equal(t, types.FailedMsg, msg.State)
 }
 
-func TestUpdateReturnValue(t *testing.T) {
+func TestUpdateErrInfo(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
 	msgs := testhelper.NewMessages(2)
@@ -579,11 +579,11 @@ func TestUpdateReturnValue(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	failedInfo := "gas estimate failed"
-	err := messageRepo.UpdateReturnValue(msgs[0].ID, failedInfo)
+	err := messageRepo.UpdateErrInfo(msgs[0].ID, failedInfo)
 	assert.NoError(t, err)
 	msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 	assert.NoError(t, err)
-	assert.Equal(t, failedInfo, string(msg.Receipt.Return))
+	assert.Equal(t, failedInfo, string(msg.ErrorMsg))
 
 	failedMsgs, err := messageRepo.ListFailedMessage()
 	assert.NoError(t, err)
