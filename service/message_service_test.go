@@ -25,7 +25,6 @@ import (
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -102,15 +101,9 @@ func TestReplaceMessage(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
 	assert.Len(t, selectResult.SelectMsg, len(msgs))
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, len(addrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
 
 	notBlockedMsgs := make([]*types.Message, 0)
 	for _, msg := range selectResult.SelectMsg {
@@ -118,6 +111,7 @@ func TestReplaceMessage(t *testing.T) {
 			notBlockedMsgs = append(notBlockedMsgs, msg)
 		}
 	}
+	ms.messageSelector.msgSend(selectResult.ToPushMsg)
 	checkMsgs(ctx, t, ms, msgs, notBlockedMsgs)
 
 	replacedMsgs := make([]*types.Message, 0, len(blockedMsgs))
@@ -585,7 +579,6 @@ func TestMessageService_PushMessage(t *testing.T) {
 }
 
 func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *MessageService {
-	publisher := publisher.NewRpcPublisher(context.TODO(), msh.fullNode, msh.ms.repo.NodeRepo())
 	return &MessageService{
 		repo:           msh.ms.repo,
 		fsRepo:         fsRepo,
@@ -593,7 +586,6 @@ func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *Mess
 		addressService: msh.ms.addressService,
 		walletClient:   msh.walletProxy,
 		triggerPush:    msh.ms.triggerPush,
-		publisher:      publisher,
 		headChans:      make(chan *headChan, 10),
 		tsCache:        newTipsetCache(),
 	}

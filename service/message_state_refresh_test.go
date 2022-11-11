@@ -148,14 +148,10 @@ func TestDoRefreshMessageState(t *testing.T) {
 
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
-		selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-		assert.NoError(t, err)
+		selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
 		assert.Len(t, selectResult.SelectMsg, len(addrs)*10)
 		assert.Len(t, selectResult.ErrMsg, 0)
-		assert.Len(t, selectResult.ModifyAddress, len(addrs))
-		assert.Len(t, selectResult.ExpireMsg, 0)
-		assert.Len(t, selectResult.ToPushMsg, 0)
-		testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
+		assert.Len(t, selectResult.ToPushMsg, len(addrs)*10)
 
 		conflictCount := 20
 		type conflictMessage struct {
@@ -188,7 +184,6 @@ func TestDoRefreshMessageState(t *testing.T) {
 			idx++
 		}
 
-		assert.NoError(t, saveMsgsToDB(ctx, ms, selectResult))
 		for _, msg := range cm.replacedMsgs {
 			selectResult.ToPushMsg = append(selectResult.ToPushMsg, &shared.SignedMessage{
 				Message:   msg.Message,
@@ -200,7 +195,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		defer calcel()
 
 		go func() {
-			ms.multiPushMessages(ctx, selectResult)
+			ms.messageSelector.msgSend(selectResult.ToPushMsg)
 		}()
 		for i, msg := range cm.srcMsgs {
 			res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
@@ -235,7 +230,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		ms := msh.ms
 
 		addrCount := 1
-		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))[:2]
 		authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
 		assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
@@ -255,19 +250,16 @@ func TestDoRefreshMessageState(t *testing.T) {
 
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
-		selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-		assert.NoError(t, err)
+		selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
 		assert.Len(t, selectResult.SelectMsg, 1)
 		assert.Equal(t, msgs[1].ID, selectResult.SelectMsg[0].ID)
 		assert.Len(t, selectResult.ErrMsg, 1)
 		assert.Equal(t, msgs[0].ID, selectResult.ErrMsg[0].id)
 
-		assert.NoError(t, saveMsgsToDB(ctx, ms, selectResult))
-
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
 		defer calcel()
 		go func() {
-			ms.multiPushMessages(ctx, selectResult)
+			ms.messageSelector.msgSend(selectResult.ToPushMsg)
 		}()
 
 		fillMsg := selectResult.SelectMsg[0]

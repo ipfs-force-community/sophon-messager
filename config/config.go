@@ -177,7 +177,7 @@ func DefaultConfig() *Config {
 		Publisher: &PublisherConfig{
 			Concurrency:        5,
 			CacheReleasePeriod: 0,
-			EnableP2P:          true,
+			EnableP2P:          false,
 			EnableMultiNode:    true,
 		},
 	}

@@ -28,7 +28,6 @@ var (
 
 	SelectedMsgNumOfLastRound = stats.Int64("selected_msg_num", "Number of selected messages in the last round", stats.UnitDimensionless)
 	ToPushMsgNumOfLastRound   = stats.Int64("topush_msg_num", "Number of to-push messages in the last round", stats.UnitDimensionless)
-	ExpiredMsgNumOfLastRound  = stats.Int64("expired_msg_num", "Number of expired messages in the last round", stats.UnitDimensionless)
 	ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless)
 
 	ChainHeadStableDelay    = stats.Int64("chain_head_stable_s", "Delay of chain head stabilization", stats.UnitSeconds)
@@ -81,18 +80,17 @@ var (
 	SelectedMsgNumOfLastRoundView = &view.View{
 		Measure:     SelectedMsgNumOfLastRound,
 		Aggregation: view.LastValue(),
+		TagKeys:     []tag.Key{WalletAddress},
 	}
 	ToPushMsgNumOfLastRoundView = &view.View{
 		Measure:     ToPushMsgNumOfLastRound,
 		Aggregation: view.LastValue(),
-	}
-	ExpiredMsgNumOfLastRoundView = &view.View{
-		Measure:     ExpiredMsgNumOfLastRound,
-		Aggregation: view.LastValue(),
+		TagKeys:     []tag.Key{WalletAddress},
 	}
 	ErrMsgNumOfLastRoundView = &view.View{
 		Measure:     ErrMsgNumOfLastRound,
 		Aggregation: view.LastValue(),
+		TagKeys:     []tag.Key{WalletAddress},
 	}
 
 	ChainHeadStableDelayView = &view.View{
@@ -119,7 +117,6 @@ var MessagerNodeViews = []*view.View{
 
 	SelectedMsgNumOfLastRoundView,
 	ToPushMsgNumOfLastRoundView,
-	ExpiredMsgNumOfLastRoundView,
 	ErrMsgNumOfLastRoundView,
 
 	ChainHeadStableDelayView,
