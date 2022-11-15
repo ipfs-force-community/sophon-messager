@@ -46,7 +46,7 @@ type PubSub struct {
 	dht              *dht.IpfsDHT
 	bootstrappers    []peer.AddrInfo
 	period           time.Duration
-	timeOUt          time.Duration
+	timeout          time.Duration
 	minPeerThreshold int
 	expanding        chan struct{}
 }
@@ -126,7 +126,7 @@ func NewPubsub(ctx context.Context,
 		expanding:        make(chan struct{}, 1),
 		minPeerThreshold: finalThreshold,
 		period:           finalPeriod,
-		timeOUt:          finalTimeout,
+		timeout:          finalTimeout,
 	}
 
 	go pubsub.run(ctx)
@@ -209,7 +209,7 @@ func (m *PubSub) expandPeers() {
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.TODO(), m.timeOUt)
+		ctx, cancel := context.WithTimeout(context.TODO(), m.timeout)
 		defer cancel()
 
 		m.doExpand(ctx)

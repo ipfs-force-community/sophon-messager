@@ -31,6 +31,7 @@ func TestMainNodePublishMessage(t *testing.T) {
 	err := publisher.PublishMessages(ctx, msgs)
 	assert.NoError(t, err)
 	runtime.Gosched()
+	time.Sleep(1 * time.Second)
 }
 
 func TestMultiNodePublishMessage(t *testing.T) {
