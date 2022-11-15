@@ -53,7 +53,7 @@ type mysqlMessage struct {
 	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
-	ErrorMsg  string    `gorm:"column:error_info;type:varchar(2048);"`
+	ErrorMsg  string    `gorm:"column:error_msg;type:varchar(2048);"`
 	CreatedAt time.Time `gorm:"column:created_at;index;index:idx_messages_create_at_state_from_addr;NOT NULL"` // 创建时间
 	UpdatedAt time.Time `gorm:"column:updated_at;index;NOT NULL"`                                              // 更新时间
 }
@@ -402,7 +402,7 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 
 func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_info is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_msg is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -505,9 +505,9 @@ func (m *mysqlMessageRepo) MarkBadMessage(id string) error {
 	return m.DB.Debug().Model(&mysqlMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *mysqlMessageRepo) UpdateErrInfo(id string, returnVal string) error {
+func (m *mysqlMessageRepo) UpdateErrMsg(id string, errMsg string) error {
 	updateColumns := map[string]interface{}{
-		"error_info": returnVal,
+		"error_msg":  errMsg,
 		"updated_at": time.Now(),
 	}
 	return m.DB.Model((*mysqlMessage)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error

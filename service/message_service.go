@@ -661,7 +661,7 @@ func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectRe
 
 		for _, m := range selectResult.ErrMsg {
 			log.Infof("update message %s return value with error %s", m.id, m.err)
-			err := txRepo.MessageRepo().UpdateErrInfo(m.id, m.err)
+			err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err)
 			if err != nil {
 				return err
 			}

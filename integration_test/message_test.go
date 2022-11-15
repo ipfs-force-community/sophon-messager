@@ -398,7 +398,7 @@ func testListFailedMessage(ctx context.Context, t *testing.T, api messager.IMess
 	assert.Equal(t, len(msgs), len(list))
 	for _, msg := range list {
 		assert.Equal(t, types.UnFillMsg, msg.State)
-		assert.True(t, strings.Contains(string(msg.Receipt.Return), testhelper.ErrGasLimitNegative.Error()))
+		assert.True(t, strings.Contains(msg.ErrorMsg, testhelper.ErrGasLimitNegative.Error()))
 	}
 
 	// mark bad message
@@ -488,7 +488,7 @@ func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api messager.
 	assert.Equal(t, len(msgs), len(list))
 	for _, msg := range list {
 		assert.Equal(t, types.UnFillMsg, msg.State)
-		assert.True(t, strings.Contains(string(msg.Receipt.Return), testhelper.ErrGasLimitNegative.Error()))
+		assert.True(t, strings.Contains(msg.ErrorMsg, testhelper.ErrGasLimitNegative.Error()))
 	}
 
 	for _, msg := range msgs {
@@ -667,7 +667,7 @@ func testMarkBadMessage(ctx context.Context, t *testing.T, api messager.IMessage
 		res, err := api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, types.UnFillMsg, res.State)
-		assert.True(t, strings.Contains(string(res.Receipt.Return), testhelper.ErrGasLimitNegative.Error()))
+		assert.True(t, strings.Contains(res.ErrorMsg, testhelper.ErrGasLimitNegative.Error()))
 
 		assert.NoError(t, api.MarkBadMessage(ctx, msg.ID))
 		res, err = api.GetMessageByUid(ctx, msg.ID)

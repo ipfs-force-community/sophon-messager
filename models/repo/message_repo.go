@@ -45,5 +45,5 @@ type MessageRepo interface {
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
 	UpdateMessageStateByID(id string, state types.MessageState) error
 	MarkBadMessage(id string) error
-	UpdateErrInfo(id string, returnVal string) error
+	UpdateErrMsg(id string, errMsg string) error
 }

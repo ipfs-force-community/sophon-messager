@@ -570,7 +570,7 @@ func TestMarkBadMessage(t *testing.T) {
 	assert.Equal(t, types.FailedMsg, msg.State)
 }
 
-func TestUpdateErrInfo(t *testing.T) {
+func TestUpdateErrMsg(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
 	msgs := testhelper.NewMessages(2)
@@ -579,7 +579,7 @@ func TestUpdateErrInfo(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	failedInfo := "gas estimate failed"
-	err := messageRepo.UpdateErrInfo(msgs[0].ID, failedInfo)
+	err := messageRepo.UpdateErrMsg(msgs[0].ID, failedInfo)
 	assert.NoError(t, err)
 	msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
 	assert.NoError(t, err)

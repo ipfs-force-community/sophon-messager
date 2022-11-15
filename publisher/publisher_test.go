@@ -118,7 +118,7 @@ func TestMsgCache(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	iPublisher := testhelper.NewMockIMsgPublisher(ctrl)
 
-	publisher, err := NewCachePublisher(ctx, 2, iPublisher)
+	publisher, err := NewCachePublisher(ctx, 1, iPublisher)
 	assert.NoError(t, err)
 	msgs := testhelper.NewShareSignedMessages(10)
 
@@ -137,7 +137,7 @@ func TestMsgCache(t *testing.T) {
 	runtime.Gosched()
 
 	// wait cache to be expired
-	time.Sleep(4 * time.Second)
+	time.Sleep(3 * time.Second)
 	iPublisher.EXPECT().PublishMessages(ctx, msgs).Return(nil).Times(1)
 	err = publisher.PublishMessages(ctx, msgs)
 	assert.NoError(t, err)
