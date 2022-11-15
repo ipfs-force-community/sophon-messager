@@ -18,6 +18,7 @@ import (
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
 )
@@ -40,28 +41,45 @@ var _ INet = &PubSub{}
 var _ IPubsuber = &PubSub{}
 
 type PubSub struct {
-	host          types.RawHost
-	pubsub        *pubsub.PubSub
-	dht           *dht.IpfsDHT
-	bootstrappers []peer.AddrInfo
-	period        time.Duration
-	expanding     chan struct{}
+	host             types.RawHost
+	pubsub           *pubsub.PubSub
+	dht              *dht.IpfsDHT
+	bootstrappers    []peer.AddrInfo
+	period           time.Duration
+	timeOUt          time.Duration
+	minPeerThreshold int
+	expanding        chan struct{}
 }
 
 func NewPubsub(ctx context.Context,
 	listenAddress string,
 	networkName types.NetworkName,
 	bootstrap []string,
+	period time.Duration,
+	threshold int,
 ) (*PubSub, error) {
 
-	// get default bootstrap from net params
+	finalTimeout, finalPeriod, finalThreshold := time.Second*30, time.Second*30, 1
+
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
 	if err != nil {
 		log.Errorf("failed to get default network config: %s", err)
 	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
+		finalThreshold = netconfig.Bootstrap.MinPeerThreshold
+		toml.Unmarshal([]byte(netconfig.Bootstrap.Period), &finalPeriod)
 	}
+	if period != 0 {
+		finalPeriod = period
+	}
+	if threshold != 0 {
+		finalThreshold = threshold
+	}
+	if finalTimeout > finalPeriod {
+		finalTimeout = finalPeriod
+	}
+
 	rawHost, err := buildHost(ctx, listenAddress)
 	if err != nil {
 		return nil, err
@@ -101,12 +119,14 @@ func NewPubsub(ctx context.Context,
 	}
 
 	pubsub := PubSub{
-		host:          peerHost,
-		pubsub:        gsub,
-		period:        5 * time.Second,
-		bootstrappers: bootstrapPeersres,
-		dht:           router,
-		expanding:     make(chan struct{}, 1),
+		host:             peerHost,
+		pubsub:           gsub,
+		bootstrappers:    bootstrapPeersres,
+		dht:              router,
+		expanding:        make(chan struct{}, 1),
+		minPeerThreshold: finalThreshold,
+		period:           finalPeriod,
+		timeOUt:          finalTimeout,
 	}
 
 	go pubsub.run(ctx)
@@ -127,7 +147,12 @@ func (m *PubSub) run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			m.expandPeers()
+			pcount := len(m.host.Network().Peers())
+			if pcount <= m.minPeerThreshold {
+				log.Debug("peer count %d is less than threshold %d, expanding", pcount, m.minPeerThreshold)
+				m.expandPeers()
+			}
+
 		case <-ctx.Done():
 			log.Warnf("stop expand peers: %v", ctx.Err())
 			return
@@ -184,7 +209,7 @@ func (m *PubSub) expandPeers() {
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.TODO(), m.timeOUt)
 		defer cancel()
 
 		m.doExpand(ctx)
@@ -248,7 +273,7 @@ func buildHost(ctx context.Context, address string) (types.RawHost, error) {
 }
 
 func ProvidePubsub(ctx context.Context, networkName types.NetworkName, net *config.Libp2pNetConfig) (*PubSub, error) {
-	return NewPubsub(ctx, net.ListenAddress, networkName, net.BootstrapAddresses)
+	return NewPubsub(ctx, net.ListenAddress, networkName, net.BootstrapAddresses, net.ExpandPeriod, net.MinPeerThreshold)
 }
 
 func NewINet(p *PubSub) INet {
