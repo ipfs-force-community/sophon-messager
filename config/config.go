@@ -83,16 +83,25 @@ type MessageServiceConfig struct {
 type Libp2pNetConfig struct {
 	ListenAddress      string   `toml:"listenAddresses"`
 	BootstrapAddresses []string `toml:"bootstrapAddresses"`
+
+	// MinPeerThreshold determine when to expand peers.
+	// default set to 0 which means use network default config.
+	MinPeerThreshold int `toml:"minPeerThreshold"`
+
+	// ExpandPeriod determine how often to expand peers.
+	// default set to "0s" which means use network default config.
+	// otherwise, it should be a duration string like "5s", "30s".
+	ExpandPeriod time.Duration `toml:"expandPeriod"`
 	// TODO: EnableRelay
 }
 
 type PublisherConfig struct {
-	// CacheReleasePeriod is the period to release massage cache with unit of second
-	// default is 5
-	// set a negative int means disable cache
+	// CacheReleasePeriod is the period to release massage cache with unit of second.
+	// default is 5.
+	// set a negative int means disable cache.
 	Concurrency int `toml:"concurrency"`
 
-	// CacheReleasePeriod is the period to release massage cache with unit of second
+	// CacheReleasePeriod is the period to release massage cache with unit of second.
 	// default is 0 which means auto decide by network parameters that is 1/3 of the block time.
 	// set a negative int means disable cache
 	CacheReleasePeriod int64 `toml:"cacheReleasePeriod"`
@@ -162,6 +171,8 @@ func DefaultConfig() *Config {
 		Libp2pNet: &Libp2pNetConfig{
 			ListenAddress:      "/ip4/0.0.0.0/tcp/0",
 			BootstrapAddresses: []string{},
+			MinPeerThreshold:   0,
+			ExpandPeriod:       0 * time.Second,
 		},
 		Publisher: &PublisherConfig{
 			Concurrency:        5,
