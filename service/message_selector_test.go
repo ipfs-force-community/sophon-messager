@@ -348,7 +348,7 @@ func TestEstimateMessageGas(t *testing.T) {
 	for _, msg := range list {
 		_, ok := msgsMap[msg.ID]
 		assert.True(t, ok)
-		assert.Contains(t, string(msg.Receipt.Return), testhelper.ErrGasLimitNegative.Error())
+		assert.Contains(t, msg.ErrorMsg, testhelper.ErrGasLimitNegative.Error())
 
 		assert.NoError(t, ms.MarkBadMessage(ctx, msg.ID))
 		res, err := ms.GetMessageByUid(ctx, msg.ID)
@@ -554,7 +554,7 @@ func TestSignMessageFailed(t *testing.T) {
 	for _, errInfo := range selectResult.ErrMsg {
 		res, err := ms.GetMessageByUid(ctx, errInfo.id)
 		assert.NoError(t, err)
-		assert.Contains(t, string(res.Receipt.Return), signMsg)
+		assert.Contains(t, res.ErrorMsg, signMsg)
 
 		_, ok := removedAddrMap[res.From]
 		assert.True(t, ok)

@@ -50,7 +50,8 @@ type sqliteMessage struct {
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
 
-	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
+	State    types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
+	ErrorMsg string             `gorm:"column:error_msg;type:varchar(2048);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -80,6 +81,7 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 		Meta:       sqlMsg.Meta.Meta(),
 		WalletName: sqlMsg.WalletName,
 		State:      sqlMsg.State,
+		ErrorMsg:   sqlMsg.ErrorMsg,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
 	}
@@ -120,6 +122,7 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 		WalletName: srcMsg.WalletName,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
+		ErrorMsg:   srcMsg.ErrorMsg,
 		CreatedAt:  srcMsg.CreatedAt,
 		UpdatedAt:  srcMsg.UpdatedAt,
 	}
@@ -400,7 +403,7 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 
 func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_msg is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -503,10 +506,10 @@ func (m *sqliteMessageRepo) MarkBadMessage(id string) error {
 	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *sqliteMessageRepo) UpdateReturnValue(id string, returnVal string) error {
+func (m *sqliteMessageRepo) UpdateErrMsg(id string, errMsg string) error {
 	updateColumns := map[string]interface{}{
-		"receipt_return_value": returnVal,
-		"updated_at":           time.Now(),
+		"error_msg":  errMsg,
+		"updated_at": time.Now(),
 	}
 	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

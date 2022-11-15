@@ -55,7 +55,7 @@ func TestMessage(t *testing.T) {
 	t.Run("mysql test update message state by cid", wrapper(testUpdateMessageStateByCid, r, mock))
 	t.Run("mysql test update message state by id", wrapper(testUpdateMessageStateByID, r, mock))
 	t.Run("mysql test mark bad message", wrapper(testMarkBadMessage, r, mock))
-	t.Run("mysql test update return value", wrapper(testUpdateReturnValue, r, mock))
+	t.Run("mysql test update return value", wrapper(testUpdateErrMsg, r, mock))
 
 	assert.NoError(t, closeDB(mock, sqlDB))
 }
@@ -344,7 +344,7 @@ func testListMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 func testListFailedMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	ids := []string{"msg1", "msg2"}
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state = ? AND receipt_return_value is not null ORDER BY created_at")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state = ? AND error_msg is not null ORDER BY created_at")).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 	res, err := r.MessageRepo().ListFailedMessage()
@@ -513,17 +513,17 @@ func testMarkBadMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	assert.NoError(t, r.MessageRepo().MarkBadMessage(id))
 }
 
-func testUpdateReturnValue(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+func testUpdateErrMsg(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	id := venusTypes.NewUUID().String()
-	returnVal := "val"
+	errMsg := "val"
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta("UPDATE `messages` SET `receipt_return_value`=?,`updated_at`=? WHERE id = ?")).
-		WithArgs(returnVal, anyTime{}, id).
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE `messages` SET `error_msg`=?,`updated_at`=? WHERE id = ?")).
+		WithArgs(errMsg, anyTime{}, id).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	assert.NoError(t, r.MessageRepo().UpdateReturnValue(id, returnVal))
+	assert.NoError(t, r.MessageRepo().UpdateErrMsg(id, errMsg))
 }
 
 func checkMsgWithIDs(t *testing.T, msgs []*types.Message, ids []string) {
