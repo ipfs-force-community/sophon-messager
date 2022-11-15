@@ -26,6 +26,7 @@ import (
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/utils"
 )
 
@@ -49,8 +50,8 @@ type messageSelector struct {
 	sps            *SharedParamsService
 	walletClient   gatewayAPI.IWalletClient
 
-	works   map[address.Address]*work
-	msgSend msgSendFunc
+	works       map[address.Address]*work
+	msgReceiver publisher.MessageReceiver
 }
 
 func newMessageSelector(ctx context.Context,
@@ -60,7 +61,7 @@ func newMessageSelector(ctx context.Context,
 	addressService *AddressService,
 	sps *SharedParamsService,
 	walletClient gatewayAPI.IWalletClient,
-	msgSend msgSendFunc,
+	msgReceiver publisher.MessageReceiver,
 ) (*messageSelector, error) {
 	ms := &messageSelector{
 		ctx:            ctx,
@@ -71,8 +72,8 @@ func newMessageSelector(ctx context.Context,
 		sps:            sps,
 		walletClient:   walletClient,
 
-		msgSend: msgSend,
-		works:   make(map[address.Address]*work),
+		msgReceiver: msgReceiver,
+		works:       make(map[address.Address]*work),
 	}
 
 	addrInfos, err := ms.addressService.ListActiveAddress(ctx)
@@ -83,6 +84,7 @@ func newMessageSelector(ctx context.Context,
 	return ms, ms.tryUpdateWorks(addressMap(addrInfos))
 }
 
+// SelectMessage not concurrency safe
 func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) error {
 	sharedParams, err := ms.sps.GetSharedParams(ctx)
 	if err != nil {
@@ -143,7 +145,11 @@ func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.Tip
 			})
 
 			// send messages to push
-			ms.msgSend(selectResult.ToPushMsg)
+			select {
+			case ms.msgReceiver <- selectResult.ToPushMsg:
+			default:
+				log.Errorf("message receiver channel is full, skip message %v %v", w.addr, len(selectResult.ToPushMsg))
+			}
 		}(w)
 	}
 

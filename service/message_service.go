@@ -36,8 +36,6 @@ const (
 	LookBackLimit        = 900
 )
 
-type msgSendFunc func(msgs []*venusTypes.SignedMessage)
-
 type MessageService struct {
 	repo           repo.Repo
 	fsRepo         filestore.FSRepo
@@ -61,7 +59,7 @@ type MessageService struct {
 
 	blockDelay time.Duration
 
-	msgSend msgSendFunc
+	msgReceiver publisher.MessageReceiver
 }
 
 type headChan struct {
@@ -84,10 +82,7 @@ func NewMessageService(ctx context.Context,
 	walletClient gatewayAPI.IWalletClient,
 	msgReceiver publisher.MessageReceiver,
 ) (*MessageService, error) {
-	msgSend := func(msgs []*venusTypes.SignedMessage) {
-		msgReceiver <- msgs
-	}
-	selector, err := newMessageSelector(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgSend)
+	selector, err := newMessageSelector(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +99,7 @@ func NewMessageService(ctx context.Context,
 		sps:                sps,
 		cleanUnFillMsgFunc: make(chan func() (int, error)),
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
-		msgSend:            msgSend,
+		msgReceiver:        msgReceiver,
 	}
 	ms.refreshMessageState(ctx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
@@ -822,8 +817,11 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		Message:   msg.Message,
 		Signature: *msg.Signature,
 	}
-	ms.msgSend([]*venusTypes.SignedMessage{signedMsg})
-
+	select {
+	case ms.msgReceiver <- []*venusTypes.SignedMessage{signedMsg}:
+	default:
+		return fmt.Errorf("message receiver channel is full")
+	}
 	return nil
 }
 

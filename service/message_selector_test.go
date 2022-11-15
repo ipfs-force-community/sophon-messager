@@ -254,7 +254,7 @@ func TestSelectNum(t *testing.T) {
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
 	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
-	ms.messageSelector.msgSend(selectResult.ToPushMsg)
+	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, len(addrs)*defSelectedNum)
 	checkSelectNum(selectResult.SelectMsg, map[address.Address]int{}, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
@@ -271,7 +271,7 @@ func TestSelectNum(t *testing.T) {
 	ts, err = msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
 	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
-	ms.messageSelector.msgSend(selectResult.ToPushMsg)
+	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, expectNum)
 	checkSelectNum(selectResult.SelectMsg, addrNum, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
@@ -431,7 +431,7 @@ func TestBaseFee(t *testing.T) {
 			assert.Len(t, selectResult.SelectMsg, 0)
 		}
 	}
-	ms.messageSelector.msgSend(selectResult.ToPushMsg)
+	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 }
 
@@ -479,7 +479,7 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.Len(t, selectResult.ErrMsg, len(removedAddrs))
 	assert.Len(t, selectResult.ToPushMsg, len(aliveAddrs)*10)
 
-	ms.messageSelector.msgSend(selectResult.ToPushMsg)
+	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 
 	removedAddrMap := make(map[address.Address]struct{})
