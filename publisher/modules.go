@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+	"sort"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/models/repo"
@@ -34,9 +35,12 @@ func NewMessageReciver(ctx context.Context, p IMsgPublisher) (MessageReceiver, e
 				log.Infof("context done, stop receive message")
 				return
 			case msgs := <-msgReceiver:
-				for addr, msg := range utils.MsgsGroupByAddress(msgs) {
-					if err := p.PublishMessages(ctx, msg); err != nil {
-						log.Warnw("publish message failed", "addr", addr.String(), "msg len", len(msg), "err", err)
+				for addr, tMsgs := range utils.MsgsGroupByAddress(msgs) {
+					sort.Slice(tMsgs, func(i, j int) bool {
+						return tMsgs[i].Message.Nonce < tMsgs[j].Message.Nonce
+					})
+					if err := p.PublishMessages(ctx, tMsgs); err != nil {
+						log.Warnw("publish message failed", "addr", addr.String(), "msg len", len(tMsgs), "err", err)
 					}
 				}
 			}

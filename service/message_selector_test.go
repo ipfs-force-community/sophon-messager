@@ -704,7 +704,7 @@ func selectMsgWithAddress(ctx context.Context,
 	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 	allSelectRes := &MsgSelectResult{}
 	for _, addr := range addrs {
-		work := newWork(addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient)
+		work := newWork(addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient, ms.msgReceiver)
 		appliedNonce, err := ms.msgSelectMgr.getNonceInTipset(ctx, ts)
 		assert.NoError(t, err)
 		addrInfo, err := ms.addressService.GetAddress(ctx, addr)
@@ -722,7 +722,7 @@ func selectMsgWithAddress(ctx context.Context,
 		}
 		allSelectRes.ErrMsg = append(allSelectRes.ErrMsg, selectResult.ErrMsg...)
 
-		assert.NoError(t, ms.msgSelectMgr.saveSelectedMessages(ctx, selectResult))
+		assert.NoError(t, work.saveSelectedMessages(ctx, selectResult))
 	}
 
 	return allSelectRes

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
-	"sync"
 	"time"
 
 	"github.com/filecoin-project/go-address"
@@ -105,82 +103,15 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 	}
 
 	for _, w := range msgSelectMgr.works {
-		if w.getState() == working {
+		select {
+		case w.controlChan <- struct{}{}:
+			go w.startSelectMessage(ctx, appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
+		default:
 			msgSelectLog.Infof("%s is already selecting message, had took %v", w.addr, time.Since(w.start))
-			continue
 		}
-		w.setState(working)
-		w.start = time.Now()
-		go func(w *work) {
-			ctx, cancel := context.WithTimeout(ctx, (msgSelectMgr.cfg.SignMessageTimeout+msgSelectMgr.cfg.EstimateMessageTimeout)*time.Second)
-			defer cancel()
-			defer w.setState(free)
-
-			log := logWithAddress(w.addr)
-			selectResult, err := w.selectMessage(ctx, appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
-			if err != nil {
-				log.Errorf("select message failed %v", err)
-				return
-			}
-			log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | took: %v", len(selectResult.SelectMsg),
-				len(selectResult.ToPushMsg), len(selectResult.ErrMsg), time.Since(w.start))
-
-			recordMetric(ctx, w.addr, selectResult)
-
-			if err := msgSelectMgr.saveSelectedMessages(ctx, selectResult); err != nil {
-				log.Errorf("failed to save selected messages to db %v", err)
-				return
-			}
-
-			for _, msg := range selectResult.SelectMsg {
-				selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
-					Message:   msg.Message,
-					Signature: *msg.Signature,
-				})
-			}
-			sort.Slice(selectResult.ToPushMsg, func(i, j int) bool {
-				return selectResult.ToPushMsg[i].Message.Nonce < selectResult.ToPushMsg[j].Message.Nonce
-			})
-
-			// send messages to push
-			select {
-			case msgSelectMgr.msgReceiver <- selectResult.ToPushMsg:
-			default:
-				log.Errorf("message receiver channel is full, skip message %v %v", w.addr, len(selectResult.ToPushMsg))
-			}
-		}(w)
 	}
 
 	return nil
-}
-
-func (msgSelectMgr *MsgSelectMgr) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
-	startSaveDB := time.Now()
-	log := msgSelectLog.With("address", selectResult.Address.Addr.String())
-	log.Infof("start save messages to database")
-	err := msgSelectMgr.repo.Transaction(func(txRepo repo.TxRepo) error {
-		if len(selectResult.SelectMsg) > 0 {
-			if err := txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg); err != nil {
-				return err
-			}
-
-			addrInfo := selectResult.Address
-			if err := txRepo.AddressRepo().UpdateNonce(ctx, addrInfo.Addr, addrInfo.Nonce); err != nil {
-				return err
-			}
-		}
-
-		for _, m := range selectResult.ErrMsg {
-			msgSelectLog.Infof("update message %s return value with error %s", m.id, m.err)
-			if err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	log.Infof("end save messages to database, took %v, err %v", time.Since(startSaveDB), err)
-
-	return err
 }
 
 func (msgSelectMgr *MsgSelectMgr) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
@@ -221,7 +152,7 @@ func (msgSelectMgr *MsgSelectMgr) tryUpdateWorks(addrInfos map[address.Address]*
 		w, ok := msgSelectMgr.works[addrInfo.Addr]
 		if !ok {
 			msgSelectLog.Infof("add a work %v", addrInfo.Addr)
-			ws[addrInfo.Addr] = newWork(addrInfo.Addr, msgSelectMgr.cfg, msgSelectMgr.fullNode, msgSelectMgr.repo, msgSelectMgr.addressService, msgSelectMgr.walletClient)
+			ws[addrInfo.Addr] = newWork(addrInfo.Addr, msgSelectMgr.cfg, msgSelectMgr.fullNode, msgSelectMgr.repo, msgSelectMgr.addressService, msgSelectMgr.walletClient, msgSelectMgr.msgReceiver)
 		} else {
 			ws[addrInfo.Addr] = w
 			delete(msgSelectMgr.works, addrInfo.Addr)
@@ -229,11 +160,13 @@ func (msgSelectMgr *MsgSelectMgr) tryUpdateWorks(addrInfos map[address.Address]*
 	}
 	for addr, w := range msgSelectMgr.works {
 		if _, ok := ws[addr]; !ok {
-			if w.state == working {
-				ws[addr] = w
-			} else {
-				msgSelectLog.Infof("remove a work %v", addr)
+			select {
+			case w.controlChan <- struct{}{}:
 				delete(msgSelectMgr.works, addr)
+				close(w.controlChan)
+				msgSelectLog.Infof("remove a work %v", addr)
+			default:
+				ws[addr] = w
 			}
 		}
 	}
@@ -276,14 +209,7 @@ func recordMetric(ctx context.Context, addr address.Address, selectResult *MsgSe
 	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
 }
 
-const (
-	free workState = iota
-	working
-)
-
 var errSingMessage = errors.New("sign message faield")
-
-type workState int
 
 type MsgSelectResult struct {
 	Address   *types.Address
@@ -304,11 +230,10 @@ type work struct {
 	repo           repo.Repo
 	addressService *AddressService
 	walletClient   gatewayAPI.IWalletClient
+	msgReceiver    publisher.MessageReceiver
 
-	state workState
-	start time.Time
-
-	lk sync.Mutex
+	start       time.Time
+	controlChan chan struct{}
 }
 
 func newWork(addr address.Address,
@@ -317,6 +242,7 @@ func newWork(addr address.Address,
 	repo repo.Repo,
 	addressService *AddressService,
 	walletClient gatewayAPI.IWalletClient,
+	msgReceiver publisher.MessageReceiver,
 ) *work {
 	return &work{
 		addr:           addr,
@@ -325,7 +251,53 @@ func newWork(addr address.Address,
 		fullNode:       fullNode,
 		repo:           repo,
 		walletClient:   walletClient,
-		state:          free,
+		msgReceiver:    msgReceiver,
+		controlChan:    make(chan struct{}, 1),
+	}
+}
+
+func (w *work) startSelectMessage(ctx context.Context,
+	appliedNonce *utils.NonceMap,
+	addrInfo *types.Address,
+	ts *venusTypes.TipSet,
+	maxAllowPendingMessage uint64,
+	sharedParams *types.SharedSpec,
+) {
+	w.start = time.Now()
+	ctx, cancel := context.WithTimeout(ctx, (w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)*time.Second)
+	defer w.finish()
+	defer cancel()
+
+	log := logWithAddress(w.addr)
+	selectResult, err := w.selectMessage(ctx, appliedNonce, addrInfo, ts, maxAllowPendingMessage, sharedParams)
+	if err != nil {
+		log.Errorf("select message failed %v", err)
+		return
+	}
+	log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | took: %v", len(selectResult.SelectMsg),
+		len(selectResult.ToPushMsg), len(selectResult.ErrMsg), time.Since(w.start))
+
+	recordMetric(ctx, w.addr, selectResult)
+
+	if err := w.saveSelectedMessages(ctx, selectResult); err != nil {
+		log.Errorf("failed to save selected messages to db %v", err)
+		return
+	}
+
+	for _, msg := range selectResult.SelectMsg {
+		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
+			Message:   msg.Message,
+			Signature: *msg.Signature,
+		})
+	}
+
+	if len(selectResult.ToPushMsg) > 0 {
+		// send messages to push
+		select {
+		case w.msgReceiver <- selectResult.ToPushMsg:
+		default:
+			log.Errorf("message receiver channel is full, skip message %v %v", w.addr, len(selectResult.ToPushMsg))
+		}
 	}
 }
 
@@ -552,18 +524,37 @@ func (w *work) signMessage(ctx context.Context, msg *types.Message, accounts []s
 	return sigI.(*crypto.Signature), nil
 }
 
-func (w *work) setState(state workState) {
-	w.lk.Lock()
-	defer w.lk.Unlock()
+func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
+	startSaveDB := time.Now()
+	log := msgSelectLog.With("address", selectResult.Address.Addr.String())
+	log.Infof("start save messages to database")
+	err := w.repo.Transaction(func(txRepo repo.TxRepo) error {
+		if len(selectResult.SelectMsg) > 0 {
+			if err := txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg); err != nil {
+				return err
+			}
 
-	w.state = state
+			addrInfo := selectResult.Address
+			if err := txRepo.AddressRepo().UpdateNonce(ctx, addrInfo.Addr, addrInfo.Nonce); err != nil {
+				return err
+			}
+		}
+
+		for _, m := range selectResult.ErrMsg {
+			msgSelectLog.Infof("update message %s return value with error %s", m.id, m.err)
+			if err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	log.Infof("end save messages to database, took %v, err %v", time.Since(startSaveDB), err)
+
+	return err
 }
 
-func (w *work) getState() workState {
-	w.lk.Lock()
-	defer w.lk.Unlock()
-
-	return w.state
+func (w *work) finish() {
+	<-w.controlChan
 }
 
 func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
