@@ -111,7 +111,7 @@ func TestReplaceMessage(t *testing.T) {
 			notBlockedMsgs = append(notBlockedMsgs, msg)
 		}
 	}
-	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, notBlockedMsgs)
 
 	replacedMsgs := make([]*types.Message, 0, len(blockedMsgs))

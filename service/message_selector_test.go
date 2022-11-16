@@ -186,7 +186,7 @@ func TestSelectMessage(t *testing.T) {
 	defer lc.RequireStop()
 
 	// If an error occurs retrieving nonce in tipset, return that error
-	err = ms.messageSelector.SelectMessage(ctx, &shared.TipSet{})
+	err = ms.msgSelectMgr.SelectMessage(ctx, &shared.TipSet{})
 	assert.Error(t, err)
 
 	totalMsg := len(addrs) * 10
@@ -195,7 +195,7 @@ func TestSelectMessage(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	err = ms.messageSelector.SelectMessage(ctx, ts)
+	err = ms.msgSelectMgr.SelectMessage(ctx, ts)
 	assert.NoError(t, err)
 
 	selectedMsgs := make([]*types.Message, 0, totalMsg)
@@ -254,7 +254,7 @@ func TestSelectNum(t *testing.T) {
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
 	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
-	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, len(addrs)*defSelectedNum)
 	checkSelectNum(selectResult.SelectMsg, map[address.Address]int{}, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
@@ -271,7 +271,7 @@ func TestSelectNum(t *testing.T) {
 	ts, err = msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
 	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
-	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, expectNum)
 	checkSelectNum(selectResult.SelectMsg, addrNum, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
@@ -431,7 +431,7 @@ func TestBaseFee(t *testing.T) {
 			assert.Len(t, selectResult.SelectMsg, 0)
 		}
 	}
-	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 }
 
@@ -479,7 +479,7 @@ func TestSignMessageFailed(t *testing.T) {
 	assert.Len(t, selectResult.ErrMsg, len(removedAddrs))
 	assert.Len(t, selectResult.ToPushMsg, len(aliveAddrs)*10)
 
-	ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 
 	removedAddrMap := make(map[address.Address]struct{})
@@ -704,8 +704,8 @@ func selectMsgWithAddress(ctx context.Context,
 	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 	allSelectRes := &MsgSelectResult{}
 	for _, addr := range addrs {
-		work := newWork(addr, ms.messageSelector.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient)
-		appliedNonce, err := ms.messageSelector.getNonceInTipset(ctx, ts)
+		work := newWork(addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient)
+		appliedNonce, err := ms.msgSelectMgr.getNonceInTipset(ctx, ts)
 		assert.NoError(t, err)
 		addrInfo, err := ms.addressService.GetAddress(ctx, addr)
 		assert.NoError(t, err)
@@ -722,7 +722,7 @@ func selectMsgWithAddress(ctx context.Context,
 		}
 		allSelectRes.ErrMsg = append(allSelectRes.ErrMsg, selectResult.ErrMsg...)
 
-		assert.NoError(t, ms.messageSelector.saveSelectedMessages(ctx, selectResult))
+		assert.NoError(t, ms.msgSelectMgr.saveSelectedMessages(ctx, selectResult))
 	}
 
 	return allSelectRes

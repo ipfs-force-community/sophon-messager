@@ -48,7 +48,7 @@ type MessageService struct {
 
 	tsCache *TipsetCache
 
-	messageSelector *messageSelector
+	msgSelectMgr *MsgSelectMgr
 
 	sps *SharedParamsService
 
@@ -82,7 +82,7 @@ func NewMessageService(ctx context.Context,
 	walletClient gatewayAPI.IWalletClient,
 	msgReceiver publisher.MessageReceiver,
 ) (*MessageService, error) {
-	selector, err := newMessageSelector(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
+	msgSelectMgr, err := newMsgSelectMgr(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func NewMessageService(ctx context.Context,
 		repo:               repo,
 		nodeClient:         nc,
 		fsRepo:             fsRepo,
-		messageSelector:    selector,
+		msgSelectMgr:       msgSelectMgr,
 		headChans:          make(chan *headChan, MaxHeadChangeProcess),
 		addressService:     addressService,
 		walletClient:       walletClient,
@@ -617,7 +617,7 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 			}
 			start := time.Now()
 			log.Infof("start select message %s task wait task %d", newHead.String(), len(ms.triggerPush))
-			err := ms.messageSelector.SelectMessage(ctx, newHead)
+			err := ms.msgSelectMgr.SelectMessage(ctx, newHead)
 			if err != nil {
 				log.Errorf("select message at %s failed %v", newHead.String(), err)
 			}

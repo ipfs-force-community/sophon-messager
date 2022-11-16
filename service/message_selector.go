@@ -41,8 +41,7 @@ func logWithAddress(addr address.Address) *zap.SugaredLogger {
 	return msgSelectLog.With("address", addr.String())
 }
 
-type messageSelector struct {
-	ctx            context.Context
+type MsgSelectMgr struct {
 	repo           repo.Repo
 	cfg            *config.MessageServiceConfig
 	fullNode       v1.FullNode
@@ -54,7 +53,7 @@ type messageSelector struct {
 	msgReceiver publisher.MessageReceiver
 }
 
-func newMessageSelector(ctx context.Context,
+func newMsgSelectMgr(ctx context.Context,
 	repo repo.Repo,
 	cfg *config.MessageServiceConfig,
 	fullNode v1.FullNode,
@@ -62,9 +61,8 @@ func newMessageSelector(ctx context.Context,
 	sps *SharedParamsService,
 	walletClient gatewayAPI.IWalletClient,
 	msgReceiver publisher.MessageReceiver,
-) (*messageSelector, error) {
-	ms := &messageSelector{
-		ctx:            ctx,
+) (*MsgSelectMgr, error) {
+	ms := &MsgSelectMgr{
 		repo:           repo,
 		cfg:            cfg,
 		fullNode:       fullNode,
@@ -85,28 +83,28 @@ func newMessageSelector(ctx context.Context,
 }
 
 // SelectMessage not concurrency safe
-func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) error {
-	sharedParams, err := ms.sps.GetSharedParams(ctx)
+func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTypes.TipSet) error {
+	sharedParams, err := msgSelectMgr.sps.GetSharedParams(ctx)
 	if err != nil {
 		return err
 	}
 
-	activeAddrs, err := ms.addressService.ListActiveAddress(ctx)
+	activeAddrs, err := msgSelectMgr.addressService.ListActiveAddress(ctx)
 	if err != nil {
 		return err
 	}
 	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 	addrInfos := addressMap(activeAddrs)
-	if err := ms.tryUpdateWorks(addrInfos); err != nil {
+	if err := msgSelectMgr.tryUpdateWorks(addrInfos); err != nil {
 		msgSelectLog.Warnf("failed to update work %v", err)
 	}
 
-	appliedNonce, err := ms.getNonceInTipset(ctx, ts)
+	appliedNonce, err := msgSelectMgr.getNonceInTipset(ctx, ts)
 	if err != nil {
 		return err
 	}
 
-	for _, w := range ms.works {
+	for _, w := range msgSelectMgr.works {
 		if w.getState() == working {
 			msgSelectLog.Infof("%s is already selecting message, had took %v", w.addr, time.Since(w.start))
 			continue
@@ -114,7 +112,7 @@ func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.Tip
 		w.setState(working)
 		w.start = time.Now()
 		go func(w *work) {
-			ctx, cancel := context.WithTimeout(ctx, (ms.cfg.SignMessageTimeout+ms.cfg.EstimateMessageTimeout)*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, (msgSelectMgr.cfg.SignMessageTimeout+msgSelectMgr.cfg.EstimateMessageTimeout)*time.Second)
 			defer cancel()
 			defer w.setState(free)
 
@@ -129,7 +127,7 @@ func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.Tip
 
 			recordMetric(ctx, w.addr, selectResult)
 
-			if err := ms.saveSelectedMessages(ctx, selectResult); err != nil {
+			if err := msgSelectMgr.saveSelectedMessages(ctx, selectResult); err != nil {
 				log.Errorf("failed to save selected messages to db %v", err)
 				return
 			}
@@ -146,7 +144,7 @@ func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.Tip
 
 			// send messages to push
 			select {
-			case ms.msgReceiver <- selectResult.ToPushMsg:
+			case msgSelectMgr.msgReceiver <- selectResult.ToPushMsg:
 			default:
 				log.Errorf("message receiver channel is full, skip message %v %v", w.addr, len(selectResult.ToPushMsg))
 			}
@@ -156,11 +154,11 @@ func (ms *messageSelector) SelectMessage(ctx context.Context, ts *venusTypes.Tip
 	return nil
 }
 
-func (ms *messageSelector) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
+func (msgSelectMgr *MsgSelectMgr) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
 	startSaveDB := time.Now()
 	log := msgSelectLog.With("address", selectResult.Address.Addr.String())
 	log.Infof("start save messages to database")
-	err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
+	err := msgSelectMgr.repo.Transaction(func(txRepo repo.TxRepo) error {
 		if len(selectResult.SelectMsg) > 0 {
 			if err := txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg); err != nil {
 				return err
@@ -185,7 +183,7 @@ func (ms *messageSelector) saveSelectedMessages(ctx context.Context, selectResul
 	return err
 }
 
-func (ms *messageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
+func (msgSelectMgr *MsgSelectMgr) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
 	applied := utils.NewNonceMap()
 	// todo change with venus/lotus message for tipset
 	selectMsg := func(m *venusTypes.Message) error {
@@ -203,7 +201,7 @@ func (ms *messageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.
 		return nil
 	}
 
-	msgs, err := ms.fullNode.ChainGetMessagesInTipset(ctx, ts.Key())
+	msgs, err := msgSelectMgr.fullNode.ChainGetMessagesInTipset(ctx, ts.Key())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get message in tipset %v", err)
 	}
@@ -217,29 +215,29 @@ func (ms *messageSelector) getNonceInTipset(ctx context.Context, ts *venusTypes.
 	return applied, nil
 }
 
-func (ms *messageSelector) tryUpdateWorks(addrInfos map[address.Address]*types.Address) error {
+func (msgSelectMgr *MsgSelectMgr) tryUpdateWorks(addrInfos map[address.Address]*types.Address) error {
 	ws := make(map[address.Address]*work, len(addrInfos))
 	for _, addrInfo := range addrInfos {
-		w, ok := ms.works[addrInfo.Addr]
+		w, ok := msgSelectMgr.works[addrInfo.Addr]
 		if !ok {
 			msgSelectLog.Infof("add a work %v", addrInfo.Addr)
-			ws[addrInfo.Addr] = newWork(addrInfo.Addr, ms.cfg, ms.fullNode, ms.repo, ms.addressService, ms.walletClient)
+			ws[addrInfo.Addr] = newWork(addrInfo.Addr, msgSelectMgr.cfg, msgSelectMgr.fullNode, msgSelectMgr.repo, msgSelectMgr.addressService, msgSelectMgr.walletClient)
 		} else {
 			ws[addrInfo.Addr] = w
-			delete(ms.works, addrInfo.Addr)
+			delete(msgSelectMgr.works, addrInfo.Addr)
 		}
 	}
-	for addr, w := range ms.works {
+	for addr, w := range msgSelectMgr.works {
 		if _, ok := ws[addr]; !ok {
 			if w.state == working {
 				ws[addr] = w
 			} else {
 				msgSelectLog.Infof("remove a work %v", addr)
-				delete(ms.works, addr)
+				delete(msgSelectMgr.works, addr)
 			}
 		}
 	}
-	ms.works = ws
+	msgSelectMgr.works = ws
 
 	return nil
 }

@@ -195,7 +195,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		defer calcel()
 
 		go func() {
-			ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+			ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 		}()
 		for i, msg := range cm.srcMsgs {
 			res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
@@ -259,7 +259,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
 		defer calcel()
 		go func() {
-			ms.messageSelector.msgReceiver <- selectResult.ToPushMsg
+			ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 		}()
 
 		fillMsg := selectResult.SelectMsg[0]
