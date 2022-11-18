@@ -23,7 +23,7 @@ func TestMainNodePublishMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mainNode := mockV1.NewMockFullNode(ctrl)
 
-	rpcPublisher := NewRpcPublisher(ctx, mainNode, nil)
+	rpcPublisher := NewRpcPublisher(ctx, mainNode, nil, false)
 	publisher := NewMergePublisher(ctx, rpcPublisher)
 	msgs := testhelper.NewShareSignedMessages(10)
 
@@ -61,7 +61,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	}
 
 	nodeProvider := testhelper.NewMockNodeRepo(ctrl)
-	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider)
+	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider, true)
 
 	t.Run("publish message to multi node", func(t *testing.T) {
 		nodeProvider.EXPECT().ListNode().Return(nodes[:2], nil).Times(1)

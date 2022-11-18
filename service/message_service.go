@@ -43,14 +43,12 @@ type MessageService struct {
 	addressService *AddressService
 	walletClient   gatewayAPI.IWalletClient
 
-	publisher publisher.IMsgPublisher
-
 	triggerPush chan *venusTypes.TipSet
 	headChans   chan *headChan
 
 	tsCache *TipsetCache
 
-	messageSelector *MessageSelector
+	msgSelectMgr *MsgSelectMgr
 
 	sps *SharedParamsService
 
@@ -60,6 +58,8 @@ type MessageService struct {
 	cleanUnFillMsgRes  chan cleanUnFillMsgResult
 
 	blockDelay time.Duration
+
+	msgReceiver publisher.MessageReceiver
 }
 
 type headChan struct {
@@ -79,15 +79,19 @@ func NewMessageService(ctx context.Context,
 	fsRepo filestore.FSRepo,
 	addressService *AddressService,
 	sps *SharedParamsService,
-	walletClient gatewayAPI.IWalletClient, msgPublisher publisher.IMsgPublisher) (*MessageService, error) {
-	selector := NewMessageSelector(repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient)
+	walletClient gatewayAPI.IWalletClient,
+	msgReceiver publisher.MessageReceiver,
+) (*MessageService, error) {
+	msgSelectMgr, err := newMsgSelectMgr(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
+	if err != nil {
+		return nil, err
+	}
 	ms := &MessageService{
 		repo:               repo,
 		nodeClient:         nc,
 		fsRepo:             fsRepo,
-		messageSelector:    selector,
+		msgSelectMgr:       msgSelectMgr,
 		headChans:          make(chan *headChan, MaxHeadChangeProcess),
-		publisher:          msgPublisher,
 		addressService:     addressService,
 		walletClient:       walletClient,
 		tsCache:            newTipsetCache(),
@@ -95,13 +99,13 @@ func NewMessageService(ctx context.Context,
 		sps:                sps,
 		cleanUnFillMsgFunc: make(chan func() (int, error)),
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
+		msgReceiver:        msgReceiver,
 	}
 	ms.refreshMessageState(ctx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
 		log.Infof("load tipset file failed: %v", err)
 	}
 
-	// 本身缺少 global context
 	if fsRepo.Config().Metrics.Enabled {
 		go ms.recordMetricsProc(ctx)
 	}
@@ -289,12 +293,12 @@ func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool,
 	return ms.repo.MessageRepo().HasMessageByUid(id)
 }
 
-func (ms *MessageService) GetMessageByCid(ctx context.Context, id cid.Cid) (*types.Message, error) {
+func (ms *MessageService) GetMessageByCid(ctx context.Context, cid cid.Cid) (*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	msg, err := ms.repo.MessageRepo().GetMessageByCid(id)
+	msg, err := ms.repo.MessageRepo().GetMessageByCid(cid)
 	if err != nil {
 		return nil, err
 	}
@@ -597,129 +601,12 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venu
 
 ///   Message push    ////
 
-func (ms *MessageService) pushMessageToPool(ctx context.Context, ts *venusTypes.TipSet) error {
-	// select message
-	startSelectMsg := time.Now()
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	if err != nil {
-		return err
-	}
-	selectMsgSpent := time.Since(startSelectMsg)
-	log.Infof("current loop select result | SelectMsg: %d | ExpireMsg: %d | ToPushMsg: %d | ErrMsg: %d", len(selectResult.SelectMsg), len(selectResult.ExpireMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg))
-	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
-	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
-	stats.Record(ctx, metrics.ExpiredMsgNumOfLastRound.M(int64(len(selectResult.ExpireMsg))))
-	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
-
-	startSaveDB := time.Now()
-	log.Infof("start to save to database")
-	if err := ms.saveSelectedMessagesToDB(ctx, selectResult); err != nil {
-		return err
-	}
-	saveDBSpent := time.Since(startSaveDB)
-	log.Infof("success to save to database")
-
-	for _, msg := range selectResult.SelectMsg {
-		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &venusTypes.SignedMessage{
-			Message:   msg.Message,
-			Signature: *msg.Signature,
-		})
-	}
-
-	// broad cast push to node in config, push to multi node in db config, publish to pubsub
-	go func() {
-		startPush := time.Now()
-		ms.multiPushMessages(ctx, selectResult)
-		log.Infof("Push message select spent: %v, save db spent: %v, push to node spent: %v",
-			selectMsgSpent,
-			saveDBSpent,
-			time.Since(startPush),
-		)
-	}()
-	return err
-}
-
-func (ms *MessageService) saveSelectedMessagesToDB(ctx context.Context, selectResult *MsgSelectResult) error {
-	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
-		// 保存消息
-		err := txRepo.MessageRepo().ExpireMessage(selectResult.ExpireMsg)
-		if err != nil {
-			return err
-		}
-
-		err = txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg)
-		if err != nil {
-			return err
-		}
-
-		for _, addr := range selectResult.ModifyAddress {
-			err = txRepo.AddressRepo().UpdateNonce(ctx, addr.Addr, addr.Nonce)
-			if err != nil {
-				return err
-			}
-		}
-
-		for _, m := range selectResult.ErrMsg {
-			log.Infof("update message %s return value with error %s", m.id, m.err)
-			err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}); err != nil {
-		log.Errorf("save signed message failed %v", err)
-		return err
-	}
-	return nil
-}
-
-func (ms *MessageService) multiPushMessages(ctx context.Context, selectResult *MsgSelectResult) {
-	pushMsgByAddr := make(map[address.Address][]*venusTypes.SignedMessage)
-	for _, msg := range selectResult.ToPushMsg {
-		if val, ok := pushMsgByAddr[msg.Message.From]; ok {
-			pushMsgByAddr[msg.Message.From] = append(val, msg)
-		} else {
-			pushMsgByAddr[msg.Message.From] = []*venusTypes.SignedMessage{msg}
-		}
-	}
-
-	for addr, msgs := range pushMsgByAddr {
-		sort.Slice(msgs, func(i, j int) bool {
-			return msgs[i].Message.Nonce < msgs[j].Message.Nonce
-		})
-		pushMsgByAddr[addr] = msgs
-	}
-
-	log.Infof("start to push message %d to mpool", len(selectResult.ToPushMsg))
-
-	for addr, msgs := range pushMsgByAddr {
-		err := ms.publisher.PublishMessages(ctx, msgs)
-		if err != nil {
-			log.Errorf("publish message from address %s failed %v", addr, err)
-		}
-	}
-}
-
 func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool) {
-	tm := time.NewTicker(time.Second * 30)
-	defer tm.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
 			log.Warnf("stop push message: %v", ctx.Err())
 			return
-		case <-tm.C:
-			//newHead, err := ms.nodeClient.ChainHead(ctx)
-			//if err != nil {
-			//	log.Errorf("fail to get chain head %v", err)
-			//}
-			//err = ms.pushMessageToPool(ctx, newHead)
-			//if err != nil {
-			//	log.Errorf("push message error %v", err)
-			//}
 		case newHead := <-ms.triggerPush:
 			// Clear all unfill messages by address
 			ms.tryClearUnFillMsg()
@@ -729,12 +616,12 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 				continue
 			}
 			start := time.Now()
-			log.Infof("start to push message %s task wait task %d", newHead.String(), len(ms.triggerPush))
-			err := ms.pushMessageToPool(ctx, newHead)
+			log.Infof("start select message %s task wait task %d", newHead.String(), len(ms.triggerPush))
+			err := ms.msgSelectMgr.SelectMessage(ctx, newHead)
 			if err != nil {
-				log.Errorf("push message error %v", err)
+				log.Errorf("select message at %s failed %v", newHead.String(), err)
 			}
-			log.Infof("end push message spent %d ms", time.Since(start).Milliseconds())
+			log.Infof("end select message spent %d ms", time.Since(start).Milliseconds())
 		}
 	}
 }
@@ -930,10 +817,12 @@ func (ms *MessageService) RepublishMessage(ctx context.Context, id string) error
 		Message:   msg.Message,
 		Signature: *msg.Signature,
 	}
-
-	msgs := []*venusTypes.SignedMessage{signedMsg}
-	err = ms.publisher.PublishMessages(ctx, msgs)
-	return err
+	select {
+	case ms.msgReceiver <- []*venusTypes.SignedMessage{signedMsg}:
+	default:
+		return fmt.Errorf("message receiver channel is full")
+	}
+	return nil
 }
 
 func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *types.Message, accounts []string) (venusTypes.SignedMessage, error) {

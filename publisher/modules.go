@@ -2,10 +2,11 @@ package publisher
 
 import (
 	"context"
+	"sort"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/models/repo"
-	mpubsub "github.com/filecoin-project/venus-messager/publisher/pubsub"
+	"github.com/filecoin-project/venus-messager/utils"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	logging "github.com/ipfs/go-log/v2"
@@ -14,12 +15,38 @@ import (
 
 var log = logging.Logger("publisher")
 
+type MessageReceiver chan []*types.SignedMessage
+
 func Options() fx.Option {
 	return fx.Options(
+		fx.Provide(NewMessageReciver),
 		fx.Provide(NewIMsgPublisher),
-		fx.Provide(newP2pPublisher),
+		fx.Provide(NewP2pPublisher),
 		fx.Provide(newRpcPublisher),
 	)
+}
+
+func NewMessageReciver(ctx context.Context, p IMsgPublisher) (MessageReceiver, error) {
+	msgReceiver := make(MessageReceiver, 100)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				log.Infof("context done, stop receive message")
+				return
+			case msgs := <-msgReceiver:
+				for addr, tMsgs := range utils.MsgsGroupByAddress(msgs) {
+					sort.Slice(tMsgs, func(i, j int) bool {
+						return tMsgs[i].Message.Nonce < tMsgs[j].Message.Nonce
+					})
+					if err := p.PublishMessages(ctx, tMsgs); err != nil {
+						log.Warnw("publish message failed", "addr", addr.String(), "msg len", len(tMsgs), "err", err)
+					}
+				}
+			}
+		}
+	}()
+	return msgReceiver, nil
 }
 
 func NewIMsgPublisher(ctx context.Context, netParams *types.NetworkParams, cfg *config.PublisherConfig, P2pPublisher *P2pPublisher, rpcPublisher *RpcPublisher) (IMsgPublisher, error) {
@@ -60,13 +87,6 @@ func NewIMsgPublisher(ctx context.Context, netParams *types.NetworkParams, cfg *
 	return ret, nil
 }
 
-func newP2pPublisher(pubsub mpubsub.IPubsuber, netName types.NetworkName) (*P2pPublisher, error) {
-	return NewP2pPublisher(pubsub, netName)
-}
-
 func newRpcPublisher(ctx context.Context, nodeClient v1.FullNode, nodeProvider repo.INodeProvider, cfg *config.PublisherConfig) *RpcPublisher {
-	if !cfg.EnableMultiNode {
-		nodeProvider = nil
-	}
-	return NewRpcPublisher(ctx, nodeClient, nodeProvider)
+	return NewRpcPublisher(ctx, nodeClient, nodeProvider, cfg.EnableMultiNode)
 }

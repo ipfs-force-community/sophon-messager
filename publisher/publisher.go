@@ -1,7 +1,6 @@
 package publisher
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -43,49 +42,44 @@ func NewP2pPublisher(pubsub mpubsub.IPubsuber, netName types.NetworkName) (*P2pP
 }
 
 func (p *P2pPublisher) PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error {
-	buf := new(bytes.Buffer)
 	for _, msg := range msgs {
-		err := msg.MarshalCBOR(buf)
+		msgb, err := msg.Serialize()
 		if err != nil {
-			return fmt.Errorf("marshal message failed %w", err)
+			return fmt.Errorf("marshal message %s failed %w", msg.Cid(), err)
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		err = p.topic.Publish(ctx, buf.Bytes())
-		if err != nil {
-			return fmt.Errorf("publish message with p2p net failed %w", err)
+		if err := p.topic.Publish(ctx, msgb); err != nil {
+			return fmt.Errorf("publish message %s failed %w", msg.Cid(), err)
 		}
 	}
 	return nil
 }
 
 type RpcPublisher struct {
-	ctx            context.Context
-	mainNodeThread *nodeThread
-	nodeProvider   repo.INodeProvider
+	ctx             context.Context
+	mainNodeThread  *nodeThread
+	nodeProvider    repo.INodeProvider
+	enableMultiNode bool
 
 	nodeThreads map[types.UUID]*nodeThread
 	lk          sync.RWMutex
 }
 
-func NewRpcPublisher(ctx context.Context, nodeClient v1.FullNode, nodeProvider repo.INodeProvider) *RpcPublisher {
+func NewRpcPublisher(ctx context.Context, nodeClient v1.FullNode, nodeProvider repo.INodeProvider, enableMultiNode bool) *RpcPublisher {
 	nThread := newNodeThread(ctx, nodeClient)
 	return &RpcPublisher{
-		ctx:            ctx,
-		mainNodeThread: nThread,
-		nodeProvider:   nodeProvider,
-		nodeThreads:    make(map[types.UUID]*nodeThread),
-		lk:             sync.RWMutex{},
+		ctx:             ctx,
+		mainNodeThread:  nThread,
+		nodeProvider:    nodeProvider,
+		enableMultiNode: enableMultiNode,
+		nodeThreads:     make(map[types.UUID]*nodeThread),
+		lk:              sync.RWMutex{},
 	}
 }
 
 func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error {
 	p.mainNodeThread.HandleMsg(msgs)
 
-	if p.nodeProvider == nil {
+	if !p.enableMultiNode {
 		return nil
 	}
 
@@ -95,7 +89,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 	}
 
 	newThreadMap := make(map[types.UUID]*nodeThread, len(nodeList))
-	isDirty := false
+	needUpdate := false
 
 	p.lk.RLock()
 	oriLen := len(p.nodeThreads)
@@ -110,7 +104,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 	for _, node := range nodeList {
 		thr, ok := newThreadMap[node.ID]
 		if !ok {
-			isDirty = true
+			needUpdate = true
 			cli, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 			if err != nil {
 				log.Warnf("connect node(%s) %v", node.Name, err)
@@ -125,7 +119,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 		thr.HandleMsg(msgs)
 	}
 
-	if isDirty || len(newThreadMap) != oriLen {
+	if needUpdate || len(newThreadMap) != oriLen {
 		p.lk.Lock()
 		p.nodeThreads = newThreadMap
 		p.lk.Unlock()
@@ -140,8 +134,6 @@ type nodeThread struct {
 }
 
 func newNodeThread(ctx context.Context, nodeClient v1.FullNode) *nodeThread {
-	// TODO: customize log
-	// log = log.With("node", nodeClient.Name())
 	t := &nodeThread{
 		nodeClient: nodeClient,
 		msgChan:    make(chan []*types.SignedMessage, 30),
@@ -160,9 +152,9 @@ func (n *nodeThread) run(ctx context.Context) {
 				if _, err := n.nodeClient.MpoolBatchPush(ctx, msgs); err != nil {
 					//skip error
 					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-						log.Errorf("push message to node fail %v", err)
+						log.Errorf("push message to node failed %v", err)
 					} else {
-						log.Debugf("push message to node fail %v", err)
+						log.Debugf("push message to node failed %v", err)
 					}
 				}
 			}
@@ -180,7 +172,6 @@ type MergePublisher struct {
 }
 
 func NewMergePublisher(ctx context.Context, publishers ...IMsgPublisher) *MergePublisher {
-	// todo add log prefix
 	m := &MergePublisher{
 		ctx:           ctx,
 		subPublishers: publishers,
@@ -195,7 +186,7 @@ func (p *MergePublisher) PublishMessages(ctx context.Context, msgs []*types.Sign
 	for _, publisher := range p.subPublishers {
 		err := publisher.PublishMessages(ctx, msgs)
 		if err != nil {
-			log.Errorf("MergePublisher publish message with sub publisher fail: %v", err)
+			log.Errorf("MergePublisher publish message with sub publisher failed: %v", err)
 		}
 	}
 	return nil

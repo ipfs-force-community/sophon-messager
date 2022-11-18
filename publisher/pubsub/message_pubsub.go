@@ -58,7 +58,6 @@ func NewPubsub(ctx context.Context,
 	period time.Duration,
 	threshold int,
 ) (*PubSub, error) {
-
 	finalTimeout, finalPeriod, finalThreshold := time.Second*30, time.Second*30, 1
 
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
@@ -144,6 +143,7 @@ func (m *PubSub) run(ctx context.Context) {
 	}
 
 	ticker := time.NewTicker(m.period)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
