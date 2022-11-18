@@ -158,6 +158,28 @@ func TestAddrSelectMsgNum(t *testing.T) {
 	}
 }
 
+func BenchmarkSelect(b *testing.B) {
+	var total, chCount, ctxCount int
+	for i := 0; i < b.N; i++ {
+		total++
+		ch := make(chan struct{})
+		close(ch)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		select {
+		case <-ctx.Done():
+			ctxCount++
+		case <-ch:
+			chCount++
+		default:
+			b.Error("select default")
+		}
+	}
+	b.Log(chCount, ctxCount, total)
+	assert.LessOrEqual(b, chCount, total)
+	assert.LessOrEqual(b, ctxCount, total)
+}
+
 func TestSelectMessage(t *testing.T) {
 	// stm: @MESSENGER_SELECTOR_SELECT_MESSAGE_001, @MESSENGER_SELECTOR_SELECT_MESSAGE_002
 	ctx, cancel := context.WithCancel(context.Background())
@@ -704,7 +726,7 @@ func selectMsgWithAddress(ctx context.Context,
 	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 	allSelectRes := &MsgSelectResult{}
 	for _, addr := range addrs {
-		work := newWork(addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient, ms.msgReceiver)
+		work := newWork(ctx, addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient, ms.msgReceiver)
 		appliedNonce, err := ms.msgSelectMgr.getNonceInTipset(ctx, ts)
 		assert.NoError(t, err)
 		addrInfo, err := ms.addressService.GetAddress(ctx, addr)

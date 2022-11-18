@@ -40,6 +40,7 @@ func logWithAddress(addr address.Address) *zap.SugaredLogger {
 }
 
 type MsgSelectMgr struct {
+	ctx            context.Context
 	repo           repo.Repo
 	cfg            *config.MessageServiceConfig
 	fullNode       v1.FullNode
@@ -61,6 +62,7 @@ func newMsgSelectMgr(ctx context.Context,
 	msgReceiver publisher.MessageReceiver,
 ) (*MsgSelectMgr, error) {
 	ms := &MsgSelectMgr{
+		ctx:            ctx,
 		repo:           repo,
 		cfg:            cfg,
 		fullNode:       fullNode,
@@ -103,12 +105,7 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 	}
 
 	for _, w := range msgSelectMgr.works {
-		select {
-		case w.controlChan <- struct{}{}:
-			go w.startSelectMessage(ctx, appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
-		default:
-			msgSelectLog.Infof("%s is already selecting message, had took %v", w.addr, time.Since(w.start))
-		}
+		go w.startSelectMessage(appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
 	}
 
 	return nil
@@ -152,7 +149,7 @@ func (msgSelectMgr *MsgSelectMgr) tryUpdateWorks(addrInfos map[address.Address]*
 		w, ok := msgSelectMgr.works[addrInfo.Addr]
 		if !ok {
 			msgSelectLog.Infof("add a work %v", addrInfo.Addr)
-			ws[addrInfo.Addr] = newWork(addrInfo.Addr, msgSelectMgr.cfg, msgSelectMgr.fullNode, msgSelectMgr.repo, msgSelectMgr.addressService, msgSelectMgr.walletClient, msgSelectMgr.msgReceiver)
+			ws[addrInfo.Addr] = newWork(msgSelectMgr.ctx, addrInfo.Addr, msgSelectMgr.cfg, msgSelectMgr.fullNode, msgSelectMgr.repo, msgSelectMgr.addressService, msgSelectMgr.walletClient, msgSelectMgr.msgReceiver)
 		} else {
 			ws[addrInfo.Addr] = w
 			delete(msgSelectMgr.works, addrInfo.Addr)
@@ -162,8 +159,8 @@ func (msgSelectMgr *MsgSelectMgr) tryUpdateWorks(addrInfos map[address.Address]*
 		if _, ok := ws[addr]; !ok {
 			select {
 			case w.controlChan <- struct{}{}:
+				w.close()
 				delete(msgSelectMgr.works, addr)
-				close(w.controlChan)
 				msgSelectLog.Infof("remove a work %v", addr)
 			default:
 				ws[addr] = w
@@ -224,6 +221,9 @@ type msgErrInfo struct {
 }
 
 type work struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	addr           address.Address
 	cfg            *config.MessageServiceConfig
 	fullNode       v1.FullNode
@@ -236,7 +236,8 @@ type work struct {
 	controlChan chan struct{}
 }
 
-func newWork(addr address.Address,
+func newWork(ctx context.Context,
+	addr address.Address,
 	cfg *config.MessageServiceConfig,
 	fullNode v1.FullNode,
 	repo repo.Repo,
@@ -244,7 +245,10 @@ func newWork(addr address.Address,
 	walletClient gatewayAPI.IWalletClient,
 	msgReceiver publisher.MessageReceiver,
 ) *work {
+	ctx, cancel := context.WithCancel(ctx)
 	return &work{
+		ctx:            ctx,
+		cancel:         cancel,
 		addr:           addr,
 		cfg:            cfg,
 		addressService: addressService,
@@ -256,15 +260,30 @@ func newWork(addr address.Address,
 	}
 }
 
-func (w *work) startSelectMessage(ctx context.Context,
+func (w *work) startSelectMessage(
 	appliedNonce *utils.NonceMap,
 	addrInfo *types.Address,
 	ts *venusTypes.TipSet,
 	maxAllowPendingMessage uint64,
 	sharedParams *types.SharedSpec,
 ) {
+	// first check w.ctx, avoid w.controlChan closed
+	select {
+	case <-w.ctx.Done():
+		msgSelectLog.Infof("context done: %s, %s skip select message", w.ctx.Err(), w.addr)
+		return
+	default:
+	}
+
+	select {
+	case w.controlChan <- struct{}{}:
+	default:
+		msgSelectLog.Infof("%s is already selecting message, had took %v", w.addr, time.Since(w.start))
+		return
+	}
+
 	w.start = time.Now()
-	ctx, cancel := context.WithTimeout(ctx, (w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(w.ctx, (w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)*time.Second)
 	defer w.finish()
 	defer cancel()
 
@@ -555,6 +574,11 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 
 func (w *work) finish() {
 	<-w.controlChan
+}
+
+func (w *work) close() {
+	w.cancel()
+	close(w.controlChan)
 }
 
 func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
