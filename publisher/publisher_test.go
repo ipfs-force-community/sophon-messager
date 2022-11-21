@@ -64,8 +64,8 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider, true)
 
 	t.Run("publish message to multi node", func(t *testing.T) {
-		nodeProvider.EXPECT().ListNode().Return(nodes[:2], nil).Times(1)
-		for _, srv := range servers[:2] {
+		nodeProvider.EXPECT().ListNode().Return(nodes[:3], nil).Times(1)
+		for _, srv := range servers[:3] {
 			srv.FullNode.EXPECT().MpoolBatchPush(gomock.Any(), msgs).Return(nil, nil).Times(1)
 		}
 		err := rpcPublisher.PublishMessages(ctx, msgs)
@@ -73,9 +73,12 @@ func TestMultiNodePublishMessage(t *testing.T) {
 		runtime.Gosched()
 	})
 
+	// wait for messager consume
+	time.Sleep(1 * time.Second)
+
 	t.Run("publish message to multi node after delete node", func(t *testing.T) {
-		nodeProvider.EXPECT().ListNode().Return(nodes[:1], nil).Times(1)
-		for _, srv := range servers[:1] {
+		nodeProvider.EXPECT().ListNode().Return(nodes[1:2], nil).Times(1)
+		for _, srv := range servers[1:2] {
 			srv.FullNode.EXPECT().MpoolBatchPush(gomock.Any(), msgs).Return(nil, nil).Times(1)
 		}
 		err := rpcPublisher.PublishMessages(ctx, msgs)
@@ -92,6 +95,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 		assert.NoError(t, err)
 		runtime.Gosched()
 	})
+
 	// wait goroutine
 	time.Sleep(1 * time.Second)
 }
