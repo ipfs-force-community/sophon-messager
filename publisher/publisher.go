@@ -102,7 +102,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 		threadStruct, ok := p.nodeThreads[node.ID]
 		nodesRemain[node.ID] = struct{}{}
 		if !ok {
-			thrCtx, cancel := context.WithCancel(p.ctx)
+			thrCtx, cancel := context.WithCancel(p.ctx) // nolint ignore lostcancel
 			cli, closer, err := v1.DialFullNodeRPC(thrCtx, node.URL, node.Token, nil)
 			if err != nil {
 				log.Warnf("connect node(%s) fail %v", node.Name, err)
@@ -133,7 +133,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 		}
 	}
 
-	return nil
+	return nil // nolint ignore lostcancel
 }
 
 type nodeThread struct {
