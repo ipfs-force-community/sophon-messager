@@ -3,35 +3,37 @@ package sqlite
 import (
 	"time"
 
+	"github.com/ipfs/go-cid"
+	"gorm.io/gorm"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
-	venustypes "github.com/filecoin-project/venus/venus-shared/types"
-	"github.com/ipfs/go-cid"
-	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/utils"
+
+	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 type sqliteMessage struct {
 	ID      string `gorm:"column:id;type:varchar(256);primary_key"`
-	Version uint64 `gorm:"column:version;type:unsigned bigint"`
+	Version uint64 `gorm:"column:version;type:unsigned bigint;NOT NULL"`
 
 	From  string `gorm:"column:from_addr;type:varchar(256);NOT NULL;index:msg_from;index:idx_from_nonce;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
-	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce"`
+	Nonce uint64 `gorm:"column:nonce;type:unsigned bigint;index:msg_nonce;index:idx_from_nonce;NOT NULL"`
 	To    string `gorm:"column:to;type:varchar(256);NOT NULL"`
 
-	Value mtypes.Int `gorm:"column:value;type:varchar(256);"`
+	Value mtypes.Int `gorm:"column:value;type:varchar(256);default:0"`
 
-	GasLimit   int64      `gorm:"column:gas_limit;type:bigint"`
-	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);"`
-	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);"`
+	GasLimit   int64      `gorm:"column:gas_limit;type:bigint;NOT NULL"`
+	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
+	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);default:0"`
 
-	Method int `gorm:"column:method;type:int"`
+	Method int `gorm:"column:method;type:int;NOT NULL"`
 
 	Params []byte `gorm:"column:params;type:blob;"`
 
@@ -40,16 +42,16 @@ type sqliteMessage struct {
 	UnsignedCid string `gorm:"column:unsigned_cid;type:varchar(256);index:msg_unsigned_cid;"`
 	SignedCid   string `gorm:"column:signed_cid;type:varchar(256);index:msg_signed_cid"`
 
-	Height    int64               `gorm:"column:height;type:bigint;index:msg_height"`
+	Height    int64               `gorm:"column:height;type:bigint;index:msg_height;NOT NULL"`
 	Receipt   *repo.SqlMsgReceipt `gorm:"embedded;embeddedPrefix:receipt_"`
 	TipsetKey string              `gorm:"column:tipset_key;type:varchar(1024);"`
 
 	Meta *mtypes.MsgMeta `gorm:"embedded;embeddedPrefix:meta_"`
 
 	WalletName string `gorm:"column:wallet_name;type:varchar(256)"`
-	FromUser   string `gorm:"column:from_user;type:varchar(256)"`
 
-	State types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;"`
+	State    types.MessageState `gorm:"column:state;type:int;index:msg_state;index:msg_from_state;index:idx_messages_create_at_state_from_addr;NOT NULL"`
+	ErrorMsg string             `gorm:"column:error_msg;type:varchar(2048);"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -77,9 +79,9 @@ func (sqlMsg *sqliteMessage) Message() *types.Message {
 		Receipt:    sqlMsg.Receipt.MsgReceipt(),
 		Signature:  (*crypto.Signature)(sqlMsg.Signature),
 		Meta:       sqlMsg.Meta.Meta(),
-		State:      sqlMsg.State,
 		WalletName: sqlMsg.WalletName,
-		FromUser:   sqlMsg.FromUser,
+		State:      sqlMsg.State,
+		ErrorMsg:   sqlMsg.ErrorMsg,
 		UpdatedAt:  sqlMsg.UpdatedAt,
 		CreatedAt:  sqlMsg.CreatedAt,
 	}
@@ -118,9 +120,9 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 		Receipt:    repo.FromMsgReceipt(srcMsg.Receipt),
 		Meta:       mtypes.FromMeta(srcMsg.Meta),
 		WalletName: srcMsg.WalletName,
-		FromUser:   srcMsg.FromUser,
 		State:      srcMsg.State,
 		IsDeleted:  repo.NotDeleted,
+		ErrorMsg:   srcMsg.ErrorMsg,
 		CreatedAt:  srcMsg.CreatedAt,
 		UpdatedAt:  srcMsg.UpdatedAt,
 	}
@@ -401,7 +403,7 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 
 func (m *sqliteMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND receipt_return_value is not null", types.UnFillMsg).Error
+	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_msg is not null", types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -504,10 +506,10 @@ func (m *sqliteMessageRepo) MarkBadMessage(id string) error {
 	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
 
-func (m *sqliteMessageRepo) UpdateReturnValue(id string, returnVal string) error {
+func (m *sqliteMessageRepo) UpdateErrMsg(id string, errMsg string) error {
 	updateColumns := map[string]interface{}{
-		"receipt_return_value": returnVal,
-		"updated_at":           time.Now(),
+		"error_msg":  errMsg,
+		"updated_at": time.Now(),
 	}
 	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

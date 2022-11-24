@@ -1,16 +1,16 @@
 package pubsub
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"runtime"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/log"
+	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	"github.com/filecoin-project/venus/pkg/net"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -18,13 +18,13 @@ import (
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
+	"go.uber.org/fx"
 )
 
-type IMessagePubSub interface {
-	IPublisher
-	INet
-}
+var ErrPubsubDisabled = errors.New("pubsub is disabled")
+var log = logging.Logger("msg-pubsub")
 
 type INet interface {
 	Connect(ctx context.Context, p peer.AddrInfo) error
@@ -33,37 +33,52 @@ type INet interface {
 	AddrListen(ctx context.Context) (peer.AddrInfo, error)
 }
 
-type IPublisher interface {
-	Publish(ctx context.Context, msg *types.SignedMessage) error
+type IPubsuber interface {
+	GetTopic(topic string) (*pubsub.Topic, error)
 }
 
-var ErrPubsubDisabled = errors.New("pubsub is disabled")
+var _ INet = &PubSub{}
+var _ IPubsuber = &PubSub{}
 
-type MessagePubSub struct {
-	topic         *pubsub.Topic
-	host          types.RawHost
-	pubsub        *pubsub.PubSub
-	log           *log.Logger
-	dht           *dht.IpfsDHT
-	bootstrappers []peer.AddrInfo
-	period        time.Duration
-	expanding     chan struct{}
+type PubSub struct {
+	host             types.RawHost
+	pubsub           *pubsub.PubSub
+	dht              *dht.IpfsDHT
+	bootstrappers    []peer.AddrInfo
+	period           time.Duration
+	timeout          time.Duration
+	minPeerThreshold int
+	expanding        chan struct{}
 }
 
-func NewMessagePubSub(ctx context.Context,
-	logger *log.Logger,
+func NewPubsub(ctx context.Context,
 	listenAddress string,
 	networkName types.NetworkName,
 	bootstrap []string,
-) (*MessagePubSub, error) {
-	// get default bootstrap from net params
+	period time.Duration,
+	threshold int,
+) (*PubSub, error) {
+	finalTimeout, finalPeriod, finalThreshold := time.Second*30, time.Second*30, 1
+
 	netconfig, err := networks.GetNetworkConfig(string(networkName))
 	if err != nil {
-		logger.Errorf("failed to get default network config: %s", err)
+		log.Errorf("failed to get default network config: %s", err)
 	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
+		finalThreshold = netconfig.Bootstrap.MinPeerThreshold
+		_ = toml.Unmarshal([]byte(netconfig.Bootstrap.Period), &finalPeriod)
 	}
+	if period != 0 {
+		finalPeriod = period
+	}
+	if threshold != 0 {
+		finalThreshold = threshold
+	}
+	if finalTimeout > finalPeriod {
+		finalTimeout = finalPeriod
+	}
+
 	rawHost, err := buildHost(ctx, listenAddress)
 	if err != nil {
 		return nil, err
@@ -102,69 +117,57 @@ func NewMessagePubSub(ctx context.Context,
 		return nil, fmt.Errorf("failed to create pubsub: %w", err)
 	}
 
-	topicName := fmt.Sprintf("/fil/msgs/%s", networkName)
-	topic, err := gsub.Join(topicName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to join topic %s: %w", topicName, err)
-	}
-
-	pubsub := MessagePubSub{
-		topic:         topic,
-		host:          peerHost,
-		pubsub:        gsub,
-		period:        5 * time.Second,
-		bootstrappers: bootstrapPeersres,
-		log:           logger,
-		dht:           router,
-		expanding:     make(chan struct{}, 1),
+	pubsub := PubSub{
+		host:             peerHost,
+		pubsub:           gsub,
+		bootstrappers:    bootstrapPeersres,
+		dht:              router,
+		expanding:        make(chan struct{}, 1),
+		minPeerThreshold: finalThreshold,
+		period:           finalPeriod,
+		timeout:          finalTimeout,
 	}
 
 	go pubsub.run(ctx)
 	return &pubsub, nil
 }
 
-func (m *MessagePubSub) Publish(ctx context.Context, msg *types.SignedMessage) error {
-	buf := new(bytes.Buffer)
-	err := msg.MarshalCBOR(buf)
-	if err != nil {
-		return fmt.Errorf("marshal message failed %w", err)
-	}
-
-	err = m.topic.Publish(ctx, buf.Bytes())
-	if err != nil {
-		return fmt.Errorf("publish message failed %w", err)
-	}
-
-	m.log.Debugf("publish message %s", msg.Cid())
-	return nil
+func (m *PubSub) GetTopic(topic string) (*pubsub.Topic, error) {
+	return m.pubsub.Join(topic)
 }
 
-func (m *MessagePubSub) run(ctx context.Context) {
+func (m *PubSub) run(ctx context.Context) {
 	err := m.connectBootstrap(ctx)
 	if err != nil {
-		m.log.Errorf("connect bootstrap failed %s", err)
+		log.Errorf("connect bootstrap failed %s", err)
 	}
 
 	ticker := time.NewTicker(m.period)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			m.expandPeers()
+			pcount := len(m.host.Network().Peers())
+			if pcount <= m.minPeerThreshold {
+				log.Debug("peer count %d is less than threshold %d, expanding", pcount, m.minPeerThreshold)
+				m.expandPeers()
+			}
+
 		case <-ctx.Done():
-			m.log.Warnf("stop expand peers: %v", ctx.Err())
+			log.Warnf("stop expand peers: %v", ctx.Err())
 			return
 		}
 	}
 }
 
-func (m *MessagePubSub) Connect(ctx context.Context, p peer.AddrInfo) error {
+func (m *PubSub) Connect(ctx context.Context, p peer.AddrInfo) error {
 	if swarm, ok := m.host.Network().(*swarm.Swarm); ok {
 		swarm.Backoff().Clear(p.ID)
 	}
 	return m.host.Connect(ctx, p)
 }
 
-func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
+func (m *PubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
 	conns := m.host.Network().Conns()
 	peers := make([]peer.AddrInfo, 0, len(conns))
 	for _, conn := range conns {
@@ -178,27 +181,27 @@ func (m *MessagePubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
 }
 
 // FindPeer searches the libp2p router for a given peer id
-func (m *MessagePubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
+func (m *PubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
 	return m.dht.FindPeer(ctx, peerID)
 }
 
-func (m *MessagePubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
+func (m *PubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
 	return peer.AddrInfo{
 		ID:    m.host.ID(),
 		Addrs: m.host.Addrs(),
 	}, nil
 }
 
-func (m *MessagePubSub) connectBootstrap(ctx context.Context) error {
+func (m *PubSub) connectBootstrap(ctx context.Context) error {
 	for _, bsp := range m.bootstrappers {
 		if err := m.host.Connect(ctx, bsp); err != nil {
-			m.log.Warnf("failed to connect to bootstrap peer: %s %s", bsp, err)
+			log.Warnf("failed to connect to bootstrap peer: %s %s", bsp, err)
 		}
 	}
 	return nil
 }
 
-func (m *MessagePubSub) expandPeers() {
+func (m *PubSub) expandPeers() {
 	select {
 	case m.expanding <- struct{}{}:
 	default:
@@ -206,7 +209,7 @@ func (m *MessagePubSub) expandPeers() {
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.TODO(), m.timeout)
 		defer cancel()
 
 		m.doExpand(ctx)
@@ -215,25 +218,25 @@ func (m *MessagePubSub) expandPeers() {
 	}()
 }
 
-func (m *MessagePubSub) doExpand(ctx context.Context) {
+func (m *PubSub) doExpand(ctx context.Context) {
 	pcount := len(m.host.Network().Peers())
 	if pcount == 0 {
 		if len(m.bootstrappers) == 0 {
-			m.log.Info("no peers connected, and no bootstrappers configured")
+			log.Info("no peers connected, and no bootstrappers configured")
 			return
 		}
 
-		m.log.Info("connecting to bootstrap peers")
+		log.Info("connecting to bootstrap peers")
 		err := m.connectBootstrap(ctx)
 		if err != nil {
-			m.log.Info("failed to connect to bootstrap peers")
+			log.Info("failed to connect to bootstrap peers")
 		}
 		return
 	}
 
 	// if we already have some peers and need more, the dht is really good at connecting to most peers. Use that for now until something better comes along.
 	if err := m.dht.Bootstrap(ctx); err != nil {
-		m.log.Warnf("dht bootstrapping failed: %s", err)
+		log.Warnf("dht bootstrapping failed: %s", err)
 	}
 }
 
@@ -269,29 +272,22 @@ func buildHost(ctx context.Context, address string) (types.RawHost, error) {
 	return libp2p.New(opts...)
 }
 
-type MessagerPubSubStub struct{}
-
-func (m *MessagerPubSubStub) Publish(ctx context.Context, msg *types.SignedMessage) error {
-	return ErrPubsubDisabled
+func ProvidePubsub(ctx context.Context, networkName types.NetworkName, net *config.Libp2pNetConfig) (*PubSub, error) {
+	return NewPubsub(ctx, net.ListenAddress, networkName, net.BootstrapAddresses, net.ExpandPeriod, net.MinPeerThreshold)
 }
 
-func (m *MessagerPubSubStub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
-	return nil, ErrPubsubDisabled
+func NewINet(p *PubSub) INet {
+	return p
 }
 
-func (m *MessagerPubSubStub) Connect(ctx context.Context, p peer.AddrInfo) error {
-	return ErrPubsubDisabled
+func NewIPubsuber(p *PubSub) IPubsuber {
+	return p
 }
 
-func (m *MessagerPubSubStub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
-	return peer.AddrInfo{}, ErrPubsubDisabled
+func Options() fx.Option {
+	return fx.Options(
+		fx.Provide(ProvidePubsub),
+		fx.Provide(NewINet),
+		fx.Provide(NewIPubsuber),
+	)
 }
-
-func (m *MessagerPubSubStub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
-	return peer.AddrInfo{}, ErrPubsubDisabled
-}
-
-var (
-	_ IMessagePubSub = &MessagePubSub{}
-	_ IMessagePubSub = &MessagerPubSubStub{}
-)

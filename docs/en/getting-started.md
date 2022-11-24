@@ -23,7 +23,7 @@ make
 ```
 
 ```bash
-options：
+options:
   --auth-url           url for auth server
   --auth-token         token for auth server
   --node-url           url for connection lotus/venus
@@ -217,7 +217,7 @@ options：
 > send message
 > venus-messager send [command options] [targetAddress] [amount]
 
-```bash
+```
    options:
    --from value         optionally specify the address to send
    --gas-premium value  specify gas price to use in AttoFIL (default: "0")
@@ -226,5 +226,4 @@ options：
    --method value       specify method to invoke (default: 0)
    --params-json value  specify invocation parameters in json
    --params-hex value   specify invocation parameters in hex
-   --account value      optionally specify the account to send
 ```

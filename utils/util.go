@@ -7,24 +7,25 @@ import (
 	"os"
 	"strings"
 
-	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 	"github.com/pelletier/go-toml"
 )
 
-func StringToTipsetKey(str string) (venusTypes.TipSetKey, error) {
+func StringToTipsetKey(str string) (types.TipSetKey, error) {
 	str = strings.TrimLeft(str, "{ ")
 	str = strings.TrimRight(str, " }")
 	var cids []cid.Cid
 	for _, s := range strings.Split(str, " ") {
 		c, err := cid.Decode(s)
 		if err != nil {
-			return venusTypes.TipSetKey{}, err
+			return types.TipSetKey{}, err
 		}
 		cids = append(cids, c)
 	}
 
-	return venusTypes.NewTipSetKey(cids...), nil
+	return types.NewTipSetKey(cids...), nil
 }
 
 // GetLocalIP returns the non loopback local IP of the host
@@ -114,4 +115,12 @@ func WriteConfig(path string, cfg interface{}) error {
 		return err
 	}
 	return os.WriteFile(path, cfgBytes, 0o666)
+}
+
+func MsgsGroupByAddress(msgs []*types.SignedMessage) map[address.Address][]*types.SignedMessage {
+	msgMap := make(map[address.Address][]*types.SignedMessage)
+	for _, msg := range msgs {
+		msgMap[msg.Message.From] = append(msgMap[msg.Message.From], msg)
+	}
+	return msgMap
 }

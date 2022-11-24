@@ -4,34 +4,46 @@ import (
 	"context"
 	"time"
 
+	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"go.uber.org/fx"
+
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-auth/jwtclient"
-	"github.com/filecoin-project/venus-messager/log"
-	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/version"
+	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
-	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"go.uber.org/fx"
+
+	"github.com/filecoin-project/venus-messager/service"
+	"github.com/filecoin-project/venus-messager/version"
 )
 
 type ImplParams struct {
 	fx.In
 	AddressService      *service.AddressService
 	MessageService      *service.MessageService
-	NodeService         *service.NodeService
+	NodeService         service.INodeService
 	SharedParamsService *service.SharedParamsService
-	Logger              *log.Logger
+	Net                 pubsub.INet
+}
+
+func NewMessageImp(implParams ImplParams) *MessageImp {
+	return &MessageImp{
+		AddressSrv: implParams.AddressService,
+		MessageSrv: implParams.MessageService,
+		NodeSrv:    implParams.NodeService,
+		ParamsSrv:  implParams.SharedParamsService,
+		Net:        implParams.Net,
+	}
 }
 
 type MessageImp struct {
 	AddressSrv *service.AddressService
 	MessageSrv *service.MessageService
-	NodeSrv    *service.NodeService
+	NodeSrv    service.INodeService
 	ParamsSrv  *service.SharedParamsService
-	log        *log.Logger
+	Net        pubsub.INet
 }
 
 func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -42,22 +54,12 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
-func (m MessageImp) ForcePushMessage(ctx context.Context, account string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
-}
-
-func (m MessageImp) ForcePushMessageWithId(ctx context.Context, account string, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
-}
-
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	_, account := ipAccountFromContext(ctx)
-	return m.MessageSrv.PushMessage(ctx, account, msg, meta)
+	return m.MessageSrv.PushMessage(ctx, msg, meta)
 }
 
 func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	_, account := ipAccountFromContext(ctx)
-	return m.MessageSrv.PushMessageWithId(ctx, account, id, msg, meta)
+	return m.MessageSrv.PushMessageWithId(ctx, id, msg, meta)
 }
 
 func (m MessageImp) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
@@ -133,8 +135,7 @@ func (m MessageImp) HasAddress(ctx context.Context, addr address.Address) (bool,
 }
 
 func (m MessageImp) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	_, account := ipAccountFromContext(ctx)
-	return m.AddressSrv.WalletHas(ctx, account, addr)
+	return m.AddressSrv.WalletHas(ctx, addr)
 }
 
 func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
@@ -197,51 +198,38 @@ func (m MessageImp) DeleteNode(ctx context.Context, name string) error {
 	return m.NodeSrv.DeleteNode(ctx, name)
 }
 
-func (m MessageImp) SetLogLevel(ctx context.Context, level string) error {
-	return m.log.SetLogLevel(ctx, level)
-}
-
 func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
 	return m.MessageSrv.Send(ctx, params)
 }
 
-func ipAccountFromContext(ctx context.Context) (string, string) {
-	ip, _ := jwtclient.CtxGetTokenLocation(ctx)
-	account, _ := jwtclient.CtxGetName(ctx)
-
-	return ip, account
-}
-
 func (m MessageImp) NetFindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.FindPeer(ctx, peerID)
+	return m.Net.FindPeer(ctx, peerID)
 }
 
 func (m MessageImp) NetConnect(ctx context.Context, pi peer.AddrInfo) error {
-	return m.MessageSrv.Pubsub.Connect(ctx, pi)
+	return m.Net.Connect(ctx, pi)
 }
 
 func (m MessageImp) NetPeers(ctx context.Context) ([]peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.Peers(ctx)
+	return m.Net.Peers(ctx)
 }
 
 func (m MessageImp) NetAddrsListen(ctx context.Context) (peer.AddrInfo, error) {
-	return m.MessageSrv.Pubsub.AddrListen(ctx)
+	return m.Net.AddrListen(ctx)
 }
 
 var _ messager.IMessager = (*MessageImp)(nil)
-
-func NewMessageImp(implParams ImplParams) *MessageImp {
-	return &MessageImp{
-		AddressSrv: implParams.AddressService,
-		MessageSrv: implParams.MessageService,
-		NodeSrv:    implParams.NodeService,
-		ParamsSrv:  implParams.SharedParamsService,
-		log:        implParams.Logger,
-	}
-}
 
 func (m MessageImp) Version(_ context.Context) (venusTypes.Version, error) {
 	return venusTypes.Version{
 		Version: version.Version,
 	}, nil
+}
+
+func (m MessageImp) SetLogLevel(ctx context.Context, subSystem, level string) error {
+	return logging.SetLogLevel(subSystem, level)
+}
+
+func (m MessageImp) LogList(ctx context.Context) ([]string, error) {
+	return logging.GetSubsystems(), nil
 }

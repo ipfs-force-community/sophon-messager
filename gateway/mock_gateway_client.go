@@ -7,7 +7,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/crypto"
-	"github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
+
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 
@@ -72,20 +73,25 @@ func (m *MockWalletProxy) RemoveAddress(account string, addrs []address.Address)
 	return nil
 }
 
-func (m *MockWalletProxy) WalletHas(ctx context.Context, account string, addr address.Address) (bool, error) {
+func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address, accounts []string) (bool, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
-	currAddrs, ok := m.accountAddrs[account]
-	if !ok {
-		return false, fmt.Errorf("not found account %v", account)
-	}
-	_, ok = currAddrs[addr]
 
-	return ok, nil
+	for _, account := range accounts {
+		currAddrs, ok := m.accountAddrs[account]
+		if !ok {
+			continue
+		}
+		if _, ok := currAddrs[addr]; ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
-func (m *MockWalletProxy) WalletSign(ctx context.Context, account string, addr address.Address, toSign []byte, meta types.MsgMeta) (*crypto.Signature, error) {
-	has, err := m.WalletHas(ctx, account, addr)
+func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, accounts []string, toSign []byte, meta types.MsgMeta) (*crypto.Signature, error) {
+	has, err := m.WalletHas(ctx, addr, accounts)
 	if err != nil {
 		return nil, err
 	}
@@ -106,4 +112,4 @@ func (m *MockWalletProxy) ListWalletInfoByWallet(ctx context.Context, wallet str
 	panic("implement me")
 }
 
-var _ gateway.IWalletClient = (*MockWalletProxy)(nil)
+var _ gatewayAPI.IWalletClient = (*MockWalletProxy)(nil)

@@ -8,10 +8,13 @@ import (
 )
 
 type MsgMeta struct {
-	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;"`
-	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            Int            `gorm:"column:max_fee;type:varchar(256);"`
-	GasOverPremium    float64        `gorm:"column:gas_over_premium;type:decimal(10,2);"`
+	ExpireEpoch       abi.ChainEpoch `gorm:"column:expire_epoch;type:bigint;NOT NULL"`
+	GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2)"`
+
+	// todo set GasOverEstimation not null after https://github.com/go-gorm/sqlite/issues/121
+	// GasOverEstimation float64        `gorm:"column:gas_over_estimation;type:decimal(10,2);NOT NULL"`
+	MaxFee         Int     `gorm:"column:max_fee;type:varchar(256);default:0"`
+	GasOverPremium float64 `gorm:"column:gas_over_premium;type:decimal(10,2);"`
 }
 
 func (meta *MsgMeta) Meta() *types.SendSpec {
@@ -31,19 +34,14 @@ func (meta *MsgMeta) Meta() *types.SendSpec {
 func FromMeta(srcMeta *types.SendSpec) *MsgMeta {
 	if srcMeta == nil {
 		return &MsgMeta{
-			ExpireEpoch:       0,
-			GasOverEstimation: 0,
-			MaxFee:            Int{},
+			MaxFee: NewInt(0),
 		}
 	}
-	meta := &MsgMeta{
+
+	return &MsgMeta{
 		ExpireEpoch:       srcMeta.ExpireEpoch,
 		GasOverEstimation: srcMeta.GasOverEstimation,
 		GasOverPremium:    srcMeta.GasOverPremium,
+		MaxFee:            SafeFromGo(srcMeta.MaxFee.Int),
 	}
-
-	if srcMeta.MaxFee.Int != nil {
-		meta.MaxFee = Int{Int: srcMeta.MaxFee.Int}
-	}
-	return meta
 }

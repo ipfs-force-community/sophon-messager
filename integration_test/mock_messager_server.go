@@ -6,32 +6,35 @@ import (
 	"net"
 	"strings"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"go.uber.org/fx"
 
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus/venus-shared/api/messager"
-
-	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
-	gatewayapi "github.com/filecoin-project/venus/venus-shared/api/gateway/v1"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	"go.uber.org/fx"
+
+	"github.com/filecoin-project/go-jsonrpc"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
+
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
+	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
+	"github.com/filecoin-project/venus/venus-shared/api/messager"
 
 	"github.com/filecoin-project/venus-messager/api"
 	ccli "github.com/filecoin-project/venus-messager/cli"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/publisher"
+	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 )
 
 type messagerServer struct {
-	log       *log.Logger
 	walletCli *gateway.MockWalletProxy
 	fullNode  *testhelper.MockFullNode
 
@@ -42,13 +45,13 @@ type messagerServer struct {
 	appStartErr chan error
 }
 
-func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config) (*messagerServer, error) {
+func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config, authClient jwtclient.IAuthClient) (*messagerServer, error) {
 	repoPath, err := homedir.Expand(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	remoteAuthCli := &jwtclient.AuthClient{}
+	remoteAuthClient := &jwtclient.AuthClient{}
 
 	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
 	if err != nil {
@@ -59,16 +62,12 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	if err != nil {
 		return nil, err
 	}
+	utils.SetupLogLevels()
 
-	log, err := log.SetLogger(&cfg.Log)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
-	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
-	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
-	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
+	fmt.Printf("node info url: %s, token: %s\n", cfg.Node.Url, cfg.Node.Token)
+	fmt.Printf("auth info url: %s\n", cfg.JWT.AuthURL)
+	fmt.Printf("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Node.Token)
+	fmt.Printf("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
 
 	fullNode, err := testhelper.NewMockFullNode(ctx, cfg.MessageService.WaitingChainHeadStableDuration*2)
 	if err != nil {
@@ -81,6 +80,10 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 	networkName, err := fullNode.StateNetworkName(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get network name failed %v", err)
+	}
+	networkParams, err := fullNode.StateGetNetworkParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get network params failed %v", err)
 	}
 
 	mAddr, err := ma.NewMultiaddr(cfg.API.Address)
@@ -100,15 +103,18 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 
 	provider := fx.Options(
 		// prover
-		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNetConfig,
-			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics),
-		fx.Supply(log),
+		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNet,
+			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics, cfg.Publisher),
 		fx.Supply(fullNode),
 		fx.Supply(networkName),
-		fx.Supply(remoteAuthCli),
+		fx.Supply(remoteAuthClient),
 		fx.Supply(localAuthCli),
-		fx.Provide(func() gatewayapi.IWalletClient {
+		fx.Supply(networkParams),
+		fx.Provide(func() gatewayAPI.IWalletClient {
 			return walletCli
+		}),
+		fx.Provide(func() jwtclient.IAuthClient {
+			return authClient
 		}),
 		fx.Provide(func() v1.FullNode {
 			return fullNode
@@ -117,8 +123,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 			return fsRepo
 		}),
 
-		// db
-		fx.Provide(models.SetDataBase),
 		// service
 		service.MessagerService(),
 		// api
@@ -137,7 +141,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 
 	invoker := fx.Options(
 		// invoke
-		fx.Invoke(models.AutoMigrate),
 		fx.Invoke(service.StartNodeEvents),
 		fx.Invoke(metrics.SetupJaeger),
 		fx.Invoke(metrics.SetupMetrics),
@@ -148,10 +151,15 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		fx.Invoke(api.RunAPI),
 	)
 
-	app := fx.New(provider, invoker, apiOption)
+	app := fx.New(provider,
+		models.Options(),
+		publisher.Options(),
+		pubsub.Options(),
+		invoker,
+		apiOption,
+	)
 
 	return &messagerServer{
-		log:         log,
 		walletCli:   walletCli,
 		fullNode:    fullNode,
 		token:       string(token),

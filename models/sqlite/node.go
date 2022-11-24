@@ -18,7 +18,7 @@ type sqliteNode struct {
 	Name  string         `gorm:"column:name;type:varchar(256);NOT NULL"`
 	URL   string         `gorm:"column:url;type:varchar(256);NOT NULL"`
 	Token string         `gorm:"column:token;type:varchar(256);NOT NULL"`
-	Type  types.NodeType `gorm:"column:node_type;type:int"`
+	Type  types.NodeType `gorm:"column:node_type;type:int;NOT NULL"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间

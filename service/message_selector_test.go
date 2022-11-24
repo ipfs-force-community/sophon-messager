@@ -7,21 +7,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus/venus-shared/testutil"
-	shared "github.com/filecoin-project/venus/venus-shared/types"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx/fxtest"
+
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/big"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/log"
 	"github.com/filecoin-project/venus-messager/models"
-	"github.com/filecoin-project/venus-messager/pubsub"
+	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
+
+	"github.com/filecoin-project/venus/venus-shared/testutil"
+	shared "github.com/filecoin-project/venus/venus-shared/types"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
 const defaultLocalToken = "defaultLocalToken"
@@ -112,18 +115,14 @@ func TestMergeMsgSpec(t *testing.T) {
 }
 
 func TestAddrSelectMsgNum(t *testing.T) {
-	log := log.New()
 	ctx := context.Background()
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
 	repo, err := models.SetDataBase(fsRepo)
 	assert.NoError(t, err)
 	assert.NoError(t, repo.AutoMigrate())
 
-	sps, err := NewSharedParamsService(ctx, repo, log)
+	sps, err := NewSharedParamsService(ctx, repo)
 	assert.NoError(t, err)
-	msgSelector := &MessageSelector{
-		sps: sps,
-	}
 
 	sharedParams, err := sps.GetSharedParams(ctx)
 	assert.NoError(t, err)
@@ -148,7 +147,7 @@ func TestAddrSelectMsgNum(t *testing.T) {
 		addr2: sharedParams.SelMsgNum,
 	}
 
-	addrNum := msgSelector.addrSelectMsgNum(addrList, sharedParams.SelMsgNum)
+	addrNum := addrSelectMsgNum(addrList, sharedParams.SelMsgNum)
 
 	for _, addrInfo := range addrList {
 		num, ok := addrNum[addrInfo.Addr]
@@ -157,6 +156,28 @@ func TestAddrSelectMsgNum(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, expectNum, num)
 	}
+}
+
+func BenchmarkSelect(b *testing.B) {
+	var total, chCount, ctxCount int
+	for i := 0; i < b.N; i++ {
+		total++
+		ch := make(chan struct{})
+		close(ch)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		select {
+		case <-ctx.Done():
+			ctxCount++
+		case <-ch:
+			chCount++
+		default:
+			b.Error("select default")
+		}
+	}
+	b.Log(chCount, ctxCount, total)
+	assert.LessOrEqual(b, chCount, total)
+	assert.LessOrEqual(b, ctxCount, total)
 }
 
 func TestSelectMessage(t *testing.T) {
@@ -169,48 +190,45 @@ func TestSelectMessage(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
 	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	ts, err := msh.fullNode.ChainHead(ctx)
-	assert.NoError(t, err)
-	res, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
-	assert.Equal(t, &MsgSelectResult{}, res)
-
 	// If an error occurs retrieving nonce in tipset, return that error
-	_, err = ms.messageSelector.SelectMessage(ctx, &shared.TipSet{})
+	err = ms.msgSelectMgr.SelectMessage(ctx, &shared.TipSet{})
 	assert.Error(t, err)
 
 	totalMsg := len(addrs) * 10
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
-	ts, err = msh.fullNode.ChainHead(ctx)
+	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
+	err = ms.msgSelectMgr.SelectMessage(ctx, ts)
 	assert.NoError(t, err)
-	assert.Len(t, selectResult.SelectMsg, totalMsg)
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, len(addrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
 
-	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
+	selectedMsgs := make([]*types.Message, 0, totalMsg)
+	for _, msg := range msgs {
+		res, err := ms.GetMessageByUid(ctx, msg.ID)
+		assert.NoError(t, err)
+		selectedMsgs = append(selectedMsgs, res)
+	}
+	assert.Equal(t, totalMsg, len(selectedMsgs))
+
+	checkMsgs(ctx, t, ms, msgs, selectedMsgs)
 }
 
 func TestSelectNum(t *testing.T) {
@@ -222,24 +240,25 @@ func TestSelectNum(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
 	defSelectedNum := int(DefSharedParams.SelMsgNum)
 	totalMsg := len(addrs) * 50
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	checkSelectNum := func(msgs []*types.Message, addrNum map[address.Address]int, defNum int) {
@@ -256,15 +275,9 @@ func TestSelectNum(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, len(addrs)*defSelectedNum)
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, len(addrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
 	checkSelectNum(selectResult.SelectMsg, map[address.Address]int{}, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 
@@ -279,15 +292,9 @@ func TestSelectNum(t *testing.T) {
 
 	ts, err = msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	assert.Len(t, selectResult.SelectMsg, expectNum)
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, len(addrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
 	checkSelectNum(selectResult.SelectMsg, addrNum, defSelectedNum)
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 }
@@ -302,22 +309,23 @@ func TestEstimateMessageGas(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// will estimate gas failed
 		msg.GasLimit = -1
@@ -327,22 +335,17 @@ func TestEstimateMessageGas(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
 	assert.Len(t, selectResult.SelectMsg, 0)
 	assert.Len(t, selectResult.ErrMsg, len(msgs))
-	assert.Len(t, selectResult.ModifyAddress, 0)
-	assert.Len(t, selectResult.ExpireMsg, 0)
 	assert.Len(t, selectResult.ToPushMsg, 0)
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
 
 	list, err := ms.ListFailedMessage(ctx)
 	assert.NoError(t, err)
 	for _, msg := range list {
 		_, ok := msgsMap[msg.ID]
 		assert.True(t, ok)
-		assert.Contains(t, string(msg.Receipt.Return), testhelper.ErrGasLimitNegative.Error())
+		assert.Contains(t, msg.ErrorMsg, testhelper.ErrGasLimitNegative.Error())
 
 		assert.NoError(t, ms.MarkBadMessage(ctx, msg.ID))
 		res, err := ms.GetMessageByUid(ctx, msg.ID)
@@ -364,7 +367,7 @@ func TestEstimateMessageGas(t *testing.T) {
 		assert.NoError(t, ms.addressService.SetFeeParams(ctx, params))
 	}
 
-	msgs = genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs = genMessages(addrs, len(addrs)*10)
 	for _, msg := range msgs {
 		// use the fee params in the address table
 		msg.Meta = nil
@@ -373,15 +376,14 @@ func TestEstimateMessageGas(t *testing.T) {
 
 	ts, err = msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
 	assert.Len(t, selectResult.SelectMsg, len(msgs))
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, len(addrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+
+	for _, addr := range addrs {
+		addrInfo, err := ms.addressService.GetAddress(ctx, addr)
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(10), addrInfo.Nonce)
+	}
 }
 
 func TestBaseFee(t *testing.T) {
@@ -393,23 +395,24 @@ func TestBaseFee(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
+	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
 	totalMsg := len(addrs) * int(DefSharedParams.SelMsgNum)
-	msgs := genMessages(addrs, account, totalMsg)
+	msgs := genMessages(addrs, totalMsg)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	// global basefee too low
@@ -420,15 +423,12 @@ func TestBaseFee(t *testing.T) {
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
 	assert.Len(t, selectResult.SelectMsg, 0)
 	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, 0)
-	assert.Len(t, selectResult.ExpireMsg, 0)
 	assert.Len(t, selectResult.ToPushMsg, 0)
 
-	// set basefee for address
+	// increase basefee for address
 	heightBaseFeeAddrs := make(map[address.Address]struct{}, addrCount/2)
 	for i, addr := range addrs {
 		if i%2 == 0 {
@@ -443,54 +443,17 @@ func TestBaseFee(t *testing.T) {
 
 	ts, err = msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
-	assert.Len(t, selectResult.SelectMsg, totalMsg/2)
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, addrCount/2)
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	for _, addr := range selectResult.ModifyAddress {
-		_, ok := heightBaseFeeAddrs[addr.Addr]
-		assert.True(t, ok)
-	}
-	for addr := range testhelper.MsgGroupByAddress(selectResult.SelectMsg) {
-		_, ok := heightBaseFeeAddrs[addr]
-		assert.True(t, ok)
-	}
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
-	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 
-	// increase basefee
-	for _, addr := range addrs {
-		if _, ok := heightBaseFeeAddrs[addr]; !ok {
-			addrSpec := types.AddressSpec{
-				Address:    addr,
-				BaseFeeStr: big.Mul(testhelper.DefBaseFee, big.NewInt(2)).String(),
-			}
-			heightBaseFeeAddrs[addr] = struct{}{}
-			assert.NoError(t, ms.addressService.SetFeeParams(ctx, &addrSpec))
+	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	addrMsgs := testhelper.MsgGroupByAddress(selectResult.SelectMsg)
+	for addr, msgs := range addrMsgs {
+		if _, ok := heightBaseFeeAddrs[addr]; ok {
+			assert.Len(t, msgs, int(DefSharedParams.SelMsgNum))
+		} else {
+			assert.Len(t, selectResult.SelectMsg, 0)
 		}
 	}
-	ts, err = msh.fullNode.ChainHead(ctx)
-	assert.NoError(t, err)
-	selectResult, err = ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
-	assert.Len(t, selectResult.SelectMsg, totalMsg/2)
-	assert.Len(t, selectResult.ErrMsg, 0)
-	assert.Len(t, selectResult.ModifyAddress, addrCount/2)
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	for _, addr := range selectResult.ModifyAddress {
-		_, ok := heightBaseFeeAddrs[addr.Addr]
-		assert.True(t, ok)
-	}
-	for addr := range testhelper.MsgGroupByAddress(selectResult.SelectMsg) {
-		_, ok := heightBaseFeeAddrs[addr]
-		assert.True(t, ok)
-	}
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 }
 
@@ -503,39 +466,42 @@ func TestSignMessageFailed(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo)
+	authClient := testhelper.NewMockAuthClient()
+	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 	ms := msh.ms
 
-	account := defaultLocalToken
 	addrCount := 10
+	account := defaultLocalToken
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
+	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(account, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
 	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms, ms.log)
+	_ = StartNodeEvents(lc, msh.fullNode, ms)
 	assert.NoError(t, lc.Start(ctx))
 	defer lc.RequireStop()
 
-	msgs := genMessages(addrs, defaultLocalToken, len(addrs)*10)
+	msgs := genMessages(addrs, len(addrs)*10)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	removedAddrs := addrs[:len(addrs)/2]
 	aliveAddrs := addrs[len(addrs)/2:]
-	assert.NoError(t, msh.walletProxy.RemoveAddress(defaultLocalToken, removedAddrs))
+	assert.NoError(t, msh.walletProxy.RemoveAddress(account, removedAddrs))
+	aliveAddrMap := make(map[address.Address]struct{}, len(aliveAddrs))
+	for _, addr := range aliveAddrs {
+		aliveAddrMap[addr] = struct{}{}
+	}
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
-	selectResult, err := ms.messageSelector.SelectMessage(ctx, ts)
-	assert.NoError(t, err)
-	assert.Len(t, selectResult.SelectMsg, (len(addrs)-len(removedAddrs))*10)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	assert.Len(t, selectResult.SelectMsg, len(aliveAddrs)*10)
 	assert.Len(t, selectResult.ErrMsg, len(removedAddrs))
-	assert.Len(t, selectResult.ModifyAddress, len(aliveAddrs))
-	assert.Len(t, selectResult.ExpireMsg, 0)
-	assert.Len(t, selectResult.ToPushMsg, 0)
-	testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
-	assert.NoError(t, saveAndPushMsgs(ctx, ms, selectResult))
+	assert.Len(t, selectResult.ToPushMsg, len(aliveAddrs)*10)
+
+	ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 	checkMsgs(ctx, t, ms, msgs, selectResult.SelectMsg)
 
 	removedAddrMap := make(map[address.Address]struct{})
@@ -545,7 +511,7 @@ func TestSignMessageFailed(t *testing.T) {
 	for _, errInfo := range selectResult.ErrMsg {
 		res, err := ms.GetMessageByUid(ctx, errInfo.id)
 		assert.NoError(t, err)
-		assert.Contains(t, string(res.Receipt.Return), signMsg)
+		assert.Contains(t, res.ErrorMsg, signMsg)
 
 		_, ok := removedAddrMap[res.From]
 		assert.True(t, ok)
@@ -578,7 +544,7 @@ type messageServiceHelper struct {
 	ms *MessageService
 }
 
-func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay time.Duration, fsRepo filestore.FSRepo) (*messageServiceHelper, error) {
+func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay time.Duration, fsRepo filestore.FSRepo, authClient jwtclient.IAuthClient) (*messageServiceHelper, error) {
 	fullNode, err := testhelper.NewMockFullNode(ctx, blockDelay)
 	if err != nil {
 		return nil, err
@@ -589,7 +555,6 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	log := log.New()
 	repo, err := models.SetDataBase(fsRepo)
 	if err != nil {
 		return nil, err
@@ -599,14 +564,24 @@ func newMessageServiceHelper(ctx context.Context, cfg *config.Config, blockDelay
 		return nil, err
 	}
 
-	addressService := NewAddressService(repo, log, walletProxy)
-	sharedParamsService, err := NewSharedParamsService(ctx, repo, log)
+	addressService := NewAddressService(repo, walletProxy, authClient)
+	sharedParamsService, err := NewSharedParamsService(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	ms, err := NewMessageService(ctx, repo, fullNode, log, fsRepo, addressService, sharedParamsService,
-		NewNodeService(repo, log), walletProxy, &pubsub.MessagerPubSubStub{})
+	rpcPublisher := publisher.NewRpcPublisher(ctx, fullNode, repo.NodeRepo(), false)
+	networkParams := &shared.NetworkParams{BlockDelaySecs: 30}
+	msgPublisher, err := publisher.NewIMsgPublisher(ctx, networkParams, cfg.Publisher, nil, rpcPublisher)
+	if err != nil {
+		return nil, err
+	}
+	msgReceiver, err := publisher.NewMessageReciver(ctx, msgPublisher)
+	if err != nil {
+		return nil, err
+	}
+	ms, err := NewMessageService(ctx, repo, fullNode, fsRepo, addressService, sharedParamsService,
+		walletProxy, msgReceiver)
 	if err != nil {
 		return nil, err
 	}
@@ -625,29 +600,6 @@ func pushMessage(ctx context.Context, ms *MessageService, msgs []*types.Message)
 		if err := ms.pushMessage(ctx, &msgCopy); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func saveAndPushMsgs(ctx context.Context, ms *MessageService, selectResult *MsgSelectResult) error {
-	if err := saveMsgsToDB(ctx, ms, selectResult); err != nil {
-		return err
-	}
-	go func() {
-		ms.multiPushMessages(ctx, selectResult)
-	}()
-	return nil
-}
-
-func saveMsgsToDB(ctx context.Context, ms *MessageService, selectResult *MsgSelectResult) error {
-	if err := ms.saveSelectedMessagesToDB(ctx, selectResult); err != nil {
-		return err
-	}
-	for _, msg := range selectResult.SelectMsg {
-		selectResult.ToPushMsg = append(selectResult.ToPushMsg, &shared.SignedMessage{
-			Message:   msg.Message,
-			Signature: *msg.Signature,
-		})
 	}
 	return nil
 }
@@ -749,15 +701,51 @@ func checkGasFee(t *testing.T, srcMsgs, currMsgs *types.Message, sharedParams *t
 	assert.Equal(t, gasPremium, currMsgs.GasPremium)
 }
 
-func genMessages(addrs []address.Address, account string, count int) []*types.Message {
+func genMessages(addrs []address.Address, count int) []*types.Message {
 	msgs := testhelper.NewMessages(count)
 	sendSpecs := testhelper.MockSendSpecs()
 	for i, msg := range msgs {
-		msg.FromUser = account
-		msg.WalletName = account
 		msg.From = addrs[i%len(addrs)]
 		msg.Meta = sendSpecs[i%len(sendSpecs)]
 	}
 
 	return msgs
+}
+
+func selectMsgWithAddress(ctx context.Context,
+	t *testing.T,
+	msh *messageServiceHelper,
+	addrs []address.Address,
+	ts *shared.TipSet,
+) *MsgSelectResult {
+	ms := msh.ms
+	sharedParams, err := ms.sps.GetSharedParams(ctx)
+	assert.NoError(t, err)
+	activeAddrs, err := ms.addressService.ListActiveAddress(ctx)
+	assert.NoError(t, err)
+	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
+	allSelectRes := &MsgSelectResult{}
+	for _, addr := range addrs {
+		work := newWork(ctx, addr, ms.msgSelectMgr.cfg, msh.fullNode, ms.repo, ms.addressService, ms.walletClient, ms.msgReceiver)
+		appliedNonce, err := ms.msgSelectMgr.getNonceInTipset(ctx, ts)
+		assert.NoError(t, err)
+		addrInfo, err := ms.addressService.GetAddress(ctx, addr)
+		assert.NoError(t, err)
+		selectResult, err := work.selectMessage(ctx, appliedNonce, addrInfo, ts, addrSelMsgNum[addr], sharedParams)
+		assert.NoError(t, err)
+		testhelper.IsSortedByNonce(t, selectResult.SelectMsg)
+
+		allSelectRes.SelectMsg = append(allSelectRes.SelectMsg, selectResult.SelectMsg...)
+		for _, msg := range selectResult.SelectMsg {
+			allSelectRes.ToPushMsg = append(allSelectRes.ToPushMsg, &shared.SignedMessage{
+				Message:   msg.Message,
+				Signature: *msg.Signature,
+			})
+		}
+		allSelectRes.ErrMsg = append(allSelectRes.ErrMsg, selectResult.ErrMsg...)
+
+		assert.NoError(t, work.saveSelectedMessages(ctx, selectResult))
+	}
+
+	return allSelectRes
 }

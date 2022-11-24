@@ -15,17 +15,23 @@ import (
 )
 
 type sqliteAddress struct {
-	ID                shared.UUID        `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr              string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
-	Nonce             uint64             `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
-	Weight            int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
-	SelMsgNum         uint64             `gorm:"column:sel_msg_num;type:unsigned bigint;NOT NULL"`
-	State             types.AddressState `gorm:"column:state;type:int;index;default:1"`
-	GasOverEstimation float64            `gorm:"column:gas_over_estimation;type:decimal(10,2);"`
-	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);"`
-	GasFeeCap         mtypes.Int         `gorm:"column:gas_fee_cap;type:varchar(256);"`
-	GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);"`
-	BaseFee           mtypes.Int         `gorm:"column:base_fee;type:varchar(256);"`
+	ID        shared.UUID        `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr      string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
+	Nonce     uint64             `gorm:"column:nonce;type:unsigned bigint;index;NOT NULL"`
+	Weight    int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	SelMsgNum uint64             `gorm:"column:sel_msg_num;type:unsigned bigint;NOT NULL"`
+	State     types.AddressState `gorm:"column:state;type:int;index;default:1"`
+
+	// todo set GasOverEstimation not null after https://github.com/go-gorm/sqlite/issues/121
+	// GasOverEstimation float64            `gorm:"column:gas_over_estimation;type:decimal(10,2);NOT NULL"`
+	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:decimal(10,2)"`
+	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);default:0"`
+	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
+
+	// todo set GasOverEstimation not null after https://github.com/go-gorm/sqlite/issues/121
+	// GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);NOT NULL"`
+	GasOverPremium float64    `gorm:"column:gas_over_premium;type:decimal(10,2)"`
+	BaseFee        mtypes.Int `gorm:"column:base_fee;type:varchar(256);default:0"`
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间

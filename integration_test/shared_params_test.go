@@ -5,9 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-state-types/big"
-	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/filecoin-project/go-state-types/big"
+
+	"github.com/filecoin-project/venus-auth/jwtclient"
+	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/service"
@@ -19,7 +22,7 @@ func TestSharedParamsAPI(t *testing.T) {
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.SkipPushMessage = true
 	cfg.MessageService.WaitingChainHeadStableDuration = 2 * time.Second
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg)
+	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, &jwtclient.AuthClient{})
 	assert.NoError(t, err)
 
 	go ms.start(ctx)

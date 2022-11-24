@@ -53,7 +53,7 @@ var SendCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:     "account",
 			Usage:    "optionally specify the account to send",
-			Required: true,
+			Required: false,
 		},
 	},
 	Action: func(ctx *cli.Context) error {
@@ -86,7 +86,9 @@ var SendCmd = &cli.Command{
 		}
 		params.From = addr
 
-		params.Account = ctx.String("account")
+		if ctx.IsSet("account") {
+			params.Account = ctx.String("account")
+		}
 
 		if ctx.IsSet("gas-premium") {
 			gp, err := venusTypes.BigFromString(ctx.String("gas-premium"))

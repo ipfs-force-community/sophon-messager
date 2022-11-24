@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/venus-messager/models/mysql"
 	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/models/sqlite"
+	"go.uber.org/fx"
 )
 
 func SetDataBase(fsRepo filestore.FSRepo) (repo.Repo, error) {
@@ -22,4 +23,14 @@ func SetDataBase(fsRepo filestore.FSRepo) (repo.Repo, error) {
 
 func AutoMigrate(repo repo.Repo) error {
 	return repo.AutoMigrate()
+}
+
+func Options() fx.Option {
+	return fx.Options(
+		fx.Provide(SetDataBase),
+		fx.Invoke(AutoMigrate),
+		// repo
+		fx.Provide(repo.NewINodeRepo),
+		fx.Provide(repo.NewINodeProvider),
+	)
 }
