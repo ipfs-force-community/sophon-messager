@@ -14,6 +14,9 @@ type NodeEvents struct {
 }
 
 func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	notifs, err := nd.client.ChainNotify(ctx)
 	if err != nil {
 		return err
