@@ -1,6 +1,6 @@
 module github.com/filecoin-project/venus-messager
 
-go 1.17
+go 1.18
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -10,12 +10,10 @@ require (
 	github.com/filecoin-project/go-address v1.0.0
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-jsonrpc v0.1.5
-	github.com/filecoin-project/go-state-types v0.9.7
-	github.com/filecoin-project/specs-actors v0.9.15
+	github.com/filecoin-project/go-state-types v0.9.8
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/specs-actors/v6 v6.0.2
-	github.com/filecoin-project/venus v1.7.1-0.20221111033125-d2a1c9356a7d
-	github.com/filecoin-project/venus-auth v1.8.0-rc1.0.20221101071442-c2ed29a74e9e
+	github.com/filecoin-project/venus v1.8.1-0.20221124060352-6507f0f062aa
+	github.com/filecoin-project/venus-auth v1.8.1-0.20221124050656-73734ff50be5
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
@@ -229,6 +227,8 @@ require (
 )
 
 require (
+	github.com/filecoin-project/specs-actors v0.9.15 // indirect
+	github.com/filecoin-project/specs-actors/v6 v6.0.2 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect

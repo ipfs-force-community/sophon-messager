@@ -7,109 +7,96 @@ import (
 	"reflect"
 
 	"github.com/filecoin-project/go-bitfield"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
-	market6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/market"
 )
 
 var bitFieldTyp = reflect.TypeOf(bitfield.BitField{})
-
-var poStPartitionTyp = reflect.TypeOf([]miner.PoStPartition{})
+var bytesTyp = reflect.TypeOf([]byte{})
 
 func TryConvertParams(in interface{}) (interface{}, error) {
-	switch val := in.(type) {
-	case *miner.ExtendSectorExpirationParams:
-		out := make(map[string][]map[string]interface{}, len(val.Extensions))
-		for _, extension := range val.Extensions {
-			res, err := convertStructToMap(extension)
-			if err != nil {
-				return nil, err
-			}
-			out["Extensions"] = append(out["Extensions"], res)
-		}
-		return out, nil
-	case *miner.DeclareFaultsRecoveredParams:
-		out := make(map[string][]map[string]interface{}, len(val.Recoveries))
-		for _, recoverie := range val.Recoveries {
-			res, err := convertStructToMap(recoverie)
-			if err != nil {
-				return nil, err
-			}
-			out["Recoveries"] = append(out["Recoveries"], res)
-		}
-		return out, nil
-	case *miner.DeclareFaultsParams:
-		out := make(map[string][]map[string]interface{}, len(val.Faults))
-		for _, fault := range val.Faults {
-			res, err := convertStructToMap(fault)
-			if err != nil {
-				return nil, err
-			}
-			out["Faults"] = append(out["Faults"], res)
-		}
-		return out, nil
-	case *miner5.ProveCommitAggregateParams:
-		return convertStructToMap(val)
-	case *miner.TerminateSectorsParams:
-		out := make(map[string][]map[string]interface{}, len(val.Terminations))
-		for _, termination := range val.Terminations {
-			res, err := convertStructToMap(termination)
-			if err != nil {
-				return nil, err
-			}
-			out["Terminations"] = append(out["Terminations"], res)
-		}
-		return out, nil
-	case *miner.CompactPartitionsParams:
-		return convertStructToMap(val)
-	case *miner.CompactSectorNumbersParams:
-		return convertStructToMap(val)
-	case *miner.SubmitWindowedPoStParams:
-		return convertStructToMap(val)
-	case *market6.PublishStorageDealsReturn:
-		return convertStructToMap(val)
+	rv := reflect.ValueOf(in)
+	if !hasBitfield(rv) {
+		return in, nil
 	}
-
-	return in, nil
+	return convertParams(rv)
 }
 
-func convertStructToMap(in interface{}) (map[string]interface{}, error) {
-	rt := reflect.TypeOf(in)
-	rv := reflect.ValueOf(in)
-	if rt.Kind() == reflect.Ptr {
-		rt = rt.Elem()
+func hasBitfield(v reflect.Value) bool {
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.IsValid() && v.Type().AssignableTo(bitFieldTyp) {
+		return true
+	}
+	switch v.Kind() {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			if hasBitfield(v.Field(i)) {
+				return true
+			}
+		}
+	case reflect.Slice:
+		if v.Len() > 0 {
+			if hasBitfield(v.Index(0)) {
+				return true
+			}
+		}
+	case reflect.Map:
+		if v.Len() > 0 {
+			iter := v.MapRange()
+			for iter.Next() {
+				if hasBitfield(iter.Value()) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func convertParams(rv reflect.Value) (interface{}, error) {
+	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
 	}
-	m := make(map[string]interface{}, rt.NumField())
-	for i := 0; i < rt.NumField(); i++ {
-		if rt.Field(i).Type.AssignableTo(bitFieldTyp) {
-			res, err := convertBitFieldToString(rv.Field(i).Interface().(bitfield.BitField))
+	if rv.IsValid() && rv.Type().AssignableTo(bitFieldTyp) {
+		return convertBitFieldToString(rv.Interface().(bitfield.BitField))
+	}
+	switch rv.Kind() {
+	case reflect.Slice:
+		if rv.IsValid() && rv.Type().AssignableTo(bytesTyp) {
+			return rv.Interface(), nil
+		}
+		vals := make([]interface{}, 0, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			val, err := convertParams(rv.Index(i))
 			if err != nil {
 				return nil, err
 			}
-			m[rt.Field(i).Name] = res
-			continue
+			vals = append(vals, val)
 		}
-		if rt.Field(i).Type.AssignableTo(poStPartitionTyp) {
-			partitions := rv.Field(i).Interface().([]miner.PoStPartition)
-			tmp := make([]map[string]interface{}, 0, len(partitions))
-			for idx := range partitions {
-				res, err := convertBitFieldToString(partitions[idx].Skipped)
-				if err != nil {
-					return nil, err
-				}
-				tmp = append(tmp, map[string]interface{}{
-					"Index":   partitions[idx].Index,
-					"Skipped": res,
-				})
+		return vals, nil
+	case reflect.Struct:
+		vals := make(map[string]interface{}, rv.NumField())
+		for i := 0; i < rv.NumField(); i++ {
+			val, err := convertParams(rv.Field(i))
+			if err != nil {
+				return nil, err
 			}
-			m[rt.Field(i).Name] = tmp
-			continue
+			vals[rv.Type().Field(i).Name] = val
 		}
-		m[rt.Field(i).Name] = rv.Field(i).Interface()
+		return vals, nil
+	case reflect.Map:
+		vals := make(map[interface{}]interface{}, 0)
+		iter := rv.MapRange()
+		for iter.Next() {
+			val, err := convertParams(iter.Value())
+			if err != nil {
+				return nil, err
+			}
+			vals[iter.Key().Interface()] = val
+		}
+		return vals, nil
 	}
-
-	return m, nil
+	return rv.Interface(), nil
 }
 
 func convertBitFieldToString(val bitfield.BitField) (string, error) {
