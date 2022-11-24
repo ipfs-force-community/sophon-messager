@@ -1,0 +1,20 @@
+version: 2.1
+
+orbs:
+  go: venus/go-pkg-test@1.0.1
+jobs:
+  test_all:
+    executor:
+      name: go/default
+      tag: "cimg/go:1.18.1"
+    steps:
+      - go/setup_env:
+          install_ffi: true
+      - go/test:
+          display-name: test_message_service
+          suite: "test_message_service"
+          target: "./service/..."
+workflows:
+  ci:
+    jobs:
+      - test_all

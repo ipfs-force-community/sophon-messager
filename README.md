@@ -1,4 +1,12 @@
-# venus-messager
+<h1 align="center">Venus Messager</h1>
+
+<p align="center">
+ <a href="https://github.com/filecoin-project/venus-messager/actions"><img src="https://github.com/filecoin-project/venus-messager/actions/workflows/build_upload.yml/badge.svg"/></a>
+ <a href="https://codecov.io/gh/filecoin-project/venus-messager"><img src="https://codecov.io/gh/filecoin-project/venus-messager/branch/master/graph/badge.svg?token=J5QWYWkgHT"/></a>
+ <a href="https://goreportcard.com/report/github.com/filecoin-project/venus-messager"><img src="https://goreportcard.com/badge/github.com/filecoin-project/venus-messager"/></a>
+ <a href="https://github.com/filecoin-project/venus-messager/tags"><img src="https://img.shields.io/github/v/tag/filecoin-project/venus-messager"/></a>
+  <br>
+</p>
 
 messager is a component used to manage local messages, with the purpose of saving address messages, managing message status, and controlling the frequency of push messages.
 
@@ -15,8 +23,8 @@ Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporti
 - ✅ Global Gas estimate paraters, address push quantity configuration.
 - ✅ Message-delivery assuring: Auto replace parameters and resend messages whenever there is a failure
 - ✅ Multi-point message delivery through daemon program
-- 🚧 broadcast message through libp2p
-- 🔲 Enhanced API Security
+- ✅ broadcast message through libp2p
+- ✅ Enhanced API Security
 - 🔲 Rich and flexible message sorting options
 
 
