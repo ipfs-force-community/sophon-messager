@@ -123,3 +123,14 @@ ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages i
 # 链head稳定的花费时间
 ChainHeadStableDelay    = stats.Int64("chain_head_stable_s", "Delay of chain head stabilization", stats.UnitSeconds)
 ```
+
+### rpc
+
+```
+# 调用无效RPC方法的次数
+RPCInvalidMethod = stats.Int64("rpc/invalid_method", "Total number of invalid RPC methods called", stats.UnitDimensionless)
+# RPC请求失败的次数
+RPCRequestError  = stats.Int64("rpc/request_error", "Total number of request errors handled", stats.UnitDimensionless)
+# RPC响应失败的次数
+RPCResponseError = stats.Int64("rpc/response_error", "Total number of responses errors handled", stats.UnitDimensionless)
+```
