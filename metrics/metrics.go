@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"github.com/filecoin-project/go-jsonrpc/metrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -103,7 +104,7 @@ var (
 	}
 )
 
-var MessagerNodeViews = []*view.View{
+var MessagerNodeViews = append([]*view.View{
 	WalletBalanceView,
 	WalletChainNonceView,
 	WalletDBNonceView,
@@ -121,4 +122,4 @@ var MessagerNodeViews = []*view.View{
 
 	ChainHeadStableDelayView,
 	ChainHeadStableDurationView,
-}
+}, metrics.DefaultViews...)
