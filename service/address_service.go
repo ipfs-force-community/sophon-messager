@@ -19,11 +19,34 @@ import (
 
 var errAddressNotExists = errors.New("address not exists")
 
+type IAddressService interface {
+	SaveAddress(ctx context.Context, address *types.Address) (venusTypes.UUID, error)
+	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
+	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)
+
+	// WalletHas 1. 检查请求token绑定的 account是否在addr绑定的用户列表中,不在返回false; eg. from01的绑定关系: from01-acc01,from01-acc02, 判断: acc[token] IN (acc01,acc02)
+	// 2. 调用venus-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
+	// venus-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
+	WalletHas(ctx context.Context, addr address.Address) (bool, error)
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)
+	ListAddress(ctx context.Context) ([]*types.Address, error)
+	ListActiveAddress(ctx context.Context) ([]*types.Address, error)
+	DeleteAddress(ctx context.Context, addr address.Address) error
+	ForbiddenAddress(ctx context.Context, addr address.Address) error
+	ActiveAddress(ctx context.Context, addr address.Address) error
+	SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error
+	SetFeeParams(ctx context.Context, params *types.AddressSpec) error
+	ActiveAddresses(ctx context.Context) map[address.Address]struct{}
+	GetAccountsOfSigner(ctx context.Context, addr address.Address) ([]string, error)
+}
+
 type AddressService struct {
 	repo         repo.Repo
 	walletClient gatewayAPI.IWalletClient
 	authClient   jwtclient.IAuthClient
 }
+
+var _ IAddressService = (*AddressService)(nil)
 
 func NewAddressService(repo repo.Repo, walletClient gatewayAPI.IWalletClient, remoteAuthCli jwtclient.IAuthClient) *AddressService {
 	addressService := &AddressService{

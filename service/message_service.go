@@ -36,6 +36,32 @@ const (
 	LookBackLimit        = 900
 )
 
+type IMessageService interface {
+	PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error)
+	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error)
+	HasMessageByUid(ctx context.Context, id string) (bool, error)
+	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
+	GetMessageByCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
+	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+	GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error)
+	GetMessageByUnsignedCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error)
+	ListMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
+	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
+	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)
+	ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
+	ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error)
+	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error
+	UpdateAllFilledMessage(ctx context.Context) (int, error)
+	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
+	ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error)
+	RepublishMessage(ctx context.Context, id string) error
+	MarkBadMessage(ctx context.Context, id string) error
+	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)
+	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)
+	Send(ctx context.Context, params types.QuickSendParams) (string, error)
+}
+
 type MessageService struct {
 	repo           repo.Repo
 	fsRepo         filestore.FSRepo

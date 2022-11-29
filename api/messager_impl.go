@@ -51,8 +51,8 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 }
 
 type MessageImp struct {
-	AddressSrv *service.AddressService
-	MessageSrv *service.MessageService
+	AddressSrv service.IAddressService
+	MessageSrv service.IMessageService
 	NodeSrv    service.INodeService
 	ParamsSrv  *service.SharedParamsService
 	Net        pubsub.INet
