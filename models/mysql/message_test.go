@@ -20,6 +20,85 @@ import (
 	"github.com/filecoin-project/venus-messager/testhelper"
 )
 
+func TestListMessageByParams(t *testing.T) {
+	r, mock, sqlDB := setup(t)
+	// defer
+
+	ids := []string{"msg1", "msg2", "msg3"}
+	from := testutil.AddressProvider()(t)
+	state := types.OnChainMsg
+	walletName := "wallet1"
+	// isAsc := false
+	// pageIndex := 1
+	// pageSize := 3
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ?")).
+		WithArgs(from.String()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ?")).
+		WithArgs(state).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{State: state})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `wallet_name` = ?")).
+		WithArgs(walletName).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{WalletName: walletName})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ?")).
+		WithArgs(from.String(), state).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from, State: state})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND `wallet_name` = ?")).
+		WithArgs(from.String(), state, walletName).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from, WalletName: walletName, State: state})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND `wallet_name` = ? LIMIT 3")).
+		WithArgs(from.String(), state, walletName).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from, WalletName: walletName, State: state, PageIndex: 1, PageSize: 3})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND `wallet_name` = ? LIMIT 1 OFFSET 1")).
+		WithArgs(from.String(), state, walletName).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from, WalletName: walletName, State: state, PageIndex: 2, PageSize: 1})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND `wallet_name` = ?")).
+		WithArgs(from.String(), state, walletName).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+
+	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: from, WalletName: walletName, State: state, PageIndex: 2, PageSize: 0})
+	assert.NoError(t, err)
+	checkMsgWithIDs(t, res, ids)
+
+	assert.NoError(t, closeDB(mock, sqlDB))
+}
+
 func TestMessage(t *testing.T) {
 	r, mock, sqlDB := setup(t)
 
@@ -42,8 +121,6 @@ func TestMessage(t *testing.T) {
 	t.Run("mysql test list message", wrapper(testListMessage, r, mock))
 	t.Run("mysql test list message by from state", wrapper(testListMessageByFromState, r, mock))
 	t.Run("mysql test list message by address", wrapper(testListMessageByAddress, r, mock))
-	t.Run("mysql test list failed message", wrapper(testListFailedMessage, r, mock))
-	t.Run("mysql test list blocked message", wrapper(testListBlockedMessage, r, mock))
 	t.Run("mysql test list unchain message by address", wrapper(testListUnChainMessageByAddress, r, mock))
 	t.Run("mysql test list failed message by address", wrapper(testListFilledMessageByAddress, r, mock))
 	t.Run("mysql test list chain message by height", wrapper(testListChainMessageByHeight, r, mock))
@@ -341,29 +418,89 @@ func testListMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	checkMsgWithIDs(t, res, ids)
 }
 
-func testListFailedMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+func TestListFailedMessage(t *testing.T) {
+	r, mock, sqlDB := setup(t)
 	ids := []string{"msg1", "msg2"}
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state = ? AND error_msg is not null ORDER BY created_at")).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+	t.Run("no param", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg is not null) ORDER BY created_at")).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
-	res, err := r.MessageRepo().ListFailedMessage()
-	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
+		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{})
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("state cover", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg is not null) ORDER BY created_at")).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{State: types.OnChainMsg})
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("indicate from", func(t *testing.T) {
+		addr := testutil.AddressProvider()(t)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND (error_msg is not null) ORDER BY created_at")).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{From: addr})
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("indicate wallet name", func(t *testing.T) {
+		walletName := "wallet1"
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND `wallet_name` = ? AND (error_msg is not null) ORDER BY created_at")).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{WalletName: walletName})
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	assert.NoError(t, closeDB(mock, sqlDB))
 }
 
-func testListBlockedMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+func TestListBlockedMessage(t *testing.T) {
+	r, mock, sqlDB := setup(t)
 	ids := []string{"msg1", "msg2"}
 	from := testutil.AddressProvider()(t)
 	blocked := time.Second * 3
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr = ? AND state = ? AND created_at < ? ORDER BY created_at")).
-		WithArgs(from.String(), types.FillMsg, anyTime{}).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+	t.Run("no param", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND created_at < ? ORDER BY created_at")).
+			WithArgs(types.FillMsg, anyTime{}).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
-	res, err := r.MessageRepo().ListBlockedMessage(from, blocked)
-	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
+		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{}, blocked)
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("param with from", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND created_at < ? ORDER BY created_at")).
+			WithArgs(from.String(), types.FillMsg, anyTime{}).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: from}, blocked)
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("param with wallet name", func(t *testing.T) {
+		walletNmae := "wallet1"
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND `wallet_name` = ? AND created_at < ? ORDER BY created_at")).
+			WithArgs(types.FillMsg, walletNmae, anyTime{}).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{WalletName: walletNmae}, blocked)
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	assert.NoError(t, closeDB(mock, sqlDB))
 }
 
 func testListUnChainMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {

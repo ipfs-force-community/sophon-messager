@@ -533,7 +533,7 @@ func TestMessageService_PushMessage(t *testing.T) {
 		assert.Equal(t, pushedMsg.ID, uidStr)
 
 		{ // list messages
-			msgs, err := msh.ms.ListMessage(ctx)
+			msgs, err := msh.ms.ListMessage(ctx, &types.MsgQueryParams{})
 			assert.NoError(t, err)
 			assert.Equal(t, len(msgs), 1)
 			assert.Equal(t, msgs[0].ID, uidStr)

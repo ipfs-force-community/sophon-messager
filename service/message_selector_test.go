@@ -19,6 +19,7 @@ import (
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
@@ -340,7 +341,7 @@ func TestEstimateMessageGas(t *testing.T) {
 	assert.Len(t, selectResult.ErrMsg, len(msgs))
 	assert.Len(t, selectResult.ToPushMsg, 0)
 
-	list, err := ms.ListFailedMessage(ctx)
+	list, err := ms.ListFailedMessage(ctx, &repo.MsgQueryParams{})
 	assert.NoError(t, err)
 	for _, msg := range list {
 		_, ok := msgsMap[msg.ID]

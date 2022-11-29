@@ -387,6 +387,25 @@ func (m *mysqlMessageRepo) ListMessage() ([]*types.Message, error) {
 	return result, nil
 }
 
+func (m *mysqlMessageRepo) ListMessageByParams(params *repo.MsgQueryParams) ([]*types.Message, error) {
+	var sqlMsgs []*mysqlMessage
+	paramsMap := params.ToMap()
+	var err error
+	if params.IsPaged() {
+		err = m.DB.Where(paramsMap).Limit(params.Limit()).Offset(params.Offset()).Find(&sqlMsgs).Error
+	} else {
+		err = m.DB.Where(paramsMap).Find(&sqlMsgs).Error
+	}
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*types.Message, len(sqlMsgs))
+	for idx, msg := range sqlMsgs {
+		result[idx] = msg.Message()
+	}
+	return result, nil
+}
+
 func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	if err := m.DB.Find(&sqlMsgs, "from_addr=?", addr.String()).Error; err != nil {
@@ -400,9 +419,11 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 	return result, nil
 }
 
-func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
+func (m *mysqlMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "state = ? AND error_msg is not null", types.UnFillMsg).Error
+	p.State = types.UnFillMsg
+	paramsMap := p.ToMap()
+	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg is not null").Error
 	if err != nil {
 		return nil, err
 	}
@@ -413,10 +434,12 @@ func (m *mysqlMessageRepo) ListFailedMessage() ([]*types.Message, error) {
 	return result, nil
 }
 
-func (m *mysqlMessageRepo) ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error) {
+func (m *mysqlMessageRepo) ListBlockedMessage(p *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	t := time.Now().Add(-d)
-	err := m.DB.Order("created_at").Find(&sqlMsgs, "from_addr = ? AND state = ? AND created_at < ?", addr.String(), types.FillMsg, t).Error
+	p.State = types.FillMsg
+	paramsMap := p.ToMap()
+	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "created_at < ?", t).Error
 	if err != nil {
 		return nil, err
 	}

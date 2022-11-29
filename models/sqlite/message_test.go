@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/testhelper"
 	"github.com/filecoin-project/venus-messager/utils"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -224,6 +225,84 @@ func TestGetSignedMessageFromFailedMsg(t *testing.T) {
 	}
 }
 
+func TestListMessageByParams(t *testing.T) {
+	messageRepo := setupRepo(t).MessageRepo()
+
+	addrCases := make([]address.Address, 0)
+	for i := 0; i < 5; i++ {
+		addr, err := address.NewActorAddress(uuid.New().NodeID())
+		assert.NoError(t, err)
+		addrCases = append(addrCases, addr)
+	}
+
+	WalletNameCase := make([]string, 0)
+	for i := 0; i < 5; i++ {
+		WalletNameCase = append(WalletNameCase, uuid.New().String())
+	}
+
+	msgList, err := messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.UnFillMsg, PageIndex: 1, PageSize: 100})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, 0)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.UnFillMsg, PageIndex: 0, PageSize: 100})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, 0)
+
+	msgCount := 100
+	onChainMsgCount := 0
+	addr0Count := 0
+	user0Count := 0
+	user0AndAddr0Count := 0
+
+	msgs := testhelper.NewMessages(msgCount)
+	for _, msg := range msgs {
+		msg.State = types.MessageState(rand.Intn(7))
+		msg.From = addrCases[rand.Intn(len(addrCases))]
+		msg.WalletName = WalletNameCase[rand.Intn(len(WalletNameCase))]
+		if msg.State == types.OnChainMsg {
+			onChainMsgCount++
+		}
+		if msg.From == addrCases[0] {
+			addr0Count++
+		}
+		if msg.WalletName == WalletNameCase[0] {
+			user0Count++
+			if msg.From == addrCases[0] {
+				user0AndAddr0Count++
+			}
+		}
+		assert.NoError(t, messageRepo.CreateMessage(msg))
+	}
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 1, PageSize: msgCount})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, msgCount)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 0, PageSize: msgCount / 2})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, msgCount)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 1, PageSize: msgCount / 2})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, msgCount/2)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.OnChainMsg})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, onChainMsgCount)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: addrCases[0]})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, addr0Count)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{WalletName: WalletNameCase[0]})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, user0Count)
+
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{WalletName: WalletNameCase[0], From: addrCases[0]})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, user0AndAddr0Count)
+}
+
 func TestListMessageByFromState(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
@@ -295,7 +374,7 @@ func TestListMessageByAddress(t *testing.T) {
 func TestListFailedMessage(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
-	msgList, err := messageRepo.ListFailedMessage()
+	msgList, err := messageRepo.ListFailedMessage(&repo.MsgQueryParams{})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, 0)
 
@@ -311,7 +390,7 @@ func TestListFailedMessage(t *testing.T) {
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
 
-	msgList, err = messageRepo.ListFailedMessage()
+	msgList, err = messageRepo.ListFailedMessage(&repo.MsgQueryParams{})
 	assert.NoError(t, err)
 	assert.Equal(t, failedMsgCount, len(msgList))
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
@@ -332,11 +411,11 @@ func TestListBlockedMessage(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	msgList, err := messageRepo.ListBlockedMessage(msgs[0].From, time.Second*2)
+	msgList, err := messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: msgs[0].From}, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(msgList))
 
-	msgList, err = messageRepo.ListBlockedMessage(msgs[1].From, time.Second*2)
+	msgList, err = messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: msgs[1].From}, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(msgList))
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
@@ -585,7 +664,7 @@ func TestUpdateErrMsg(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, failedInfo, msg.ErrorMsg)
 
-	failedMsgs, err := messageRepo.ListFailedMessage()
+	failedMsgs, err := messageRepo.ListFailedMessage(&repo.MsgQueryParams{})
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(failedMsgs), 1)
 }

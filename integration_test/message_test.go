@@ -269,7 +269,7 @@ func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api message
 
 func testListMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
 	msgs := genMessagesAndWait(ctx, t, api, addrs)
-	list, err := api.ListMessage(ctx)
+	list, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list), len(msgs))
 
@@ -342,7 +342,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.
 	assert.Len(t, msgs, pageSize)
 	checkCreatedAt(msgs, isAsc)
 
-	allMsgs, err := api.ListMessage(ctx)
+	allMsgs, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	msgIDs := make(map[address.Address][]string, len(allMsgs))
 	for _, msg := range allMsgs {
@@ -361,7 +361,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.
 }
 
 func testListMessageByAddress(ctx context.Context, t *testing.T, api messager.IMessager) {
-	allMsgs, err := api.ListMessage(ctx)
+	allMsgs, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	msgIDs := make(map[address.Address][]string)
 	for _, msg := range allMsgs {

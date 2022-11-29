@@ -375,12 +375,12 @@ func (ms *MessageService) ListMessageByFromState(ctx context.Context, from addre
 	return msgs, nil
 }
 
-func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
+func (ms *MessageService) ListMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	msgs, err := ms.repo.MessageRepo().ListMessage()
+	msgs, err := ms.repo.MessageRepo().ListMessageByParams(params)
 	if err != nil {
 		return nil, err
 	}
@@ -411,33 +411,16 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	return msgs, nil
 }
 
-func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListFailedMessage()
+func (ms *MessageService) ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListFailedMessage(params)
 }
 
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
-func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	var msgs []*types.Message
-	if addr != address.Undef {
-		return ms.repo.MessageRepo().ListBlockedMessage(addr, d)
-	}
-
-	addrList, err := ms.addressService.ListActiveAddress(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, a := range addrList {
-		msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
-		if err != nil {
-			return nil, err
-		}
-		msgs = append(msgs, msgsT...)
-	}
-
-	return msgs, nil
+func (ms *MessageService) ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListBlockedMessage(params, d)
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
@@ -938,14 +921,14 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
-				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: addr.Addr}, 3*time.Minute)
 				if err != nil {
 					log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
-				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: addr.Addr}, 5*time.Minute)
 				if err != nil {
 					log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
@@ -953,7 +936,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 				}
 			}
 
-			msgs, err := ms.repo.MessageRepo().ListFailedMessage()
+			msgs, err := ms.repo.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{})
 			if err != nil {
 				log.Errorf("get failed msg err: %s", err)
 			} else {
