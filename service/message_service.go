@@ -449,7 +449,25 @@ func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr a
 }
 
 func (ms *MessageService) ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListBlockedMessage(params, d)
+	var msgs []*types.Message
+	if params.From != address.Undef {
+		return ms.repo.MessageRepo().ListBlockedMessage(params, d)
+	}
+
+	addrList, err := ms.addressService.ListActiveAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range addrList {
+		params.From = a.Addr
+		msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(params, d)
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msgsT...)
+	}
+
+	return msgs, nil
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
