@@ -7,6 +7,7 @@ type INodeProvider interface {
 }
 
 //go:generate  mockgen -destination=../../mocks/mock_node_repo.go -package=mocks github.com/filecoin-project/venus-messager/models/repo NodeRepo
+
 type NodeRepo interface {
 	CreateNode(node *types.Node) error
 	SaveNode(node *types.Node) error
