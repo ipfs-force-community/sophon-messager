@@ -27,6 +27,9 @@ import (
 var (
 	// ErrorPermissionDeny is the error message returned when a user does not have permission to perform an action
 	ErrorPermissionDeny = fmt.Errorf("permission deny")
+
+	// ErrorUserNotFound is the error message returned when a user is not found in context
+	ErrorUserNotFound = fmt.Errorf("user not found")
 )
 
 type ImplParams struct {
@@ -150,7 +153,10 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 }
 
 func (m MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) ([]*types.Message, error) {
-	isAdmin, user := m.isAdmin(ctx)
+	isAdmin, user, err := m.isAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if !isAdmin {
 		p.WalletName = user
 	}
@@ -166,7 +172,10 @@ func (m MessageImp) ListMessageByAddress(ctx context.Context, addr address.Addre
 }
 
 func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	isAdmin, user := m.isAdmin(ctx)
+	isAdmin, user, err := m.isAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if isAdmin {
 		return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{})
 	}
@@ -174,11 +183,14 @@ func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, er
 }
 
 func (m MessageImp) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	isAdmin, user := m.isAdmin(ctx)
-	if isAdmin {
-		return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: addr}, d)
+	ok, err := m.checkPermissionByAddr(ctx, addr)
+	if err != nil {
+		return nil, err
 	}
-	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: addr, WalletName: user}, d)
+	if !ok {
+		return nil, ErrorPermissionDeny
+	}
+	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: addr}, d)
 }
 
 func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
@@ -457,6 +469,7 @@ func (m MessageImp) checkPermissionByAddr(ctx context.Context, addrs ...address.
 	return false, nil
 }
 
+// checkPermissionByUser check weather the user has admin permission or is match the username passed in
 func (m MessageImp) checkPermissionByName(ctx context.Context, name string) bool {
 	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
 		return true
@@ -468,14 +481,14 @@ func (m MessageImp) checkPermissionByName(ctx context.Context, name string) bool
 	return user == name
 }
 
-func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, name string) {
+// isAdmin check if the user is admin and return user name
+func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, name string, err error) {
 	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
 		isAdmin = true
 	}
-	temp, exit := jwtclient.CtxGetName(ctx)
-	name = ""
-	if exit {
-		name = temp
+	name, exit := jwtclient.CtxGetName(ctx)
+	if !exit && !isAdmin {
+		err = ErrorUserNotFound
 	}
-	return isAdmin, name
+	return
 }
