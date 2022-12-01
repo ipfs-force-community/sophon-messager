@@ -77,10 +77,6 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		return nil, err
 	}
 
-	networkName, err := fullNode.StateNetworkName(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get network name failed %v", err)
-	}
 	networkParams, err := fullNode.StateGetNetworkParams(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get network params failed %v", err)
@@ -106,7 +102,7 @@ func mockMessagerServer(ctx context.Context, repoPath string, cfg *config.Config
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNet,
 			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics, cfg.Publisher),
 		fx.Supply(fullNode),
-		fx.Supply(networkName),
+		fx.Supply(networkParams.NetworkName),
 		fx.Supply(remoteAuthClient),
 		fx.Supply(localAuthCli),
 		fx.Supply(networkParams),
