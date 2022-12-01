@@ -36,6 +36,8 @@ const (
 	LookBackLimit        = 900
 )
 
+//go:generate  mockgen -destination=../mocks/mock_message_service.go -package=mocks github.com/filecoin-project/venus-messager/service IMessageService
+//go:generate  sed -i s/"github.com\/filecoin-project\/venus\/venus-shared\/internal"/"github.com\/filecoin-project\/venus-messager\/mocks\/internal"/g ../mocks/mock_message_service.go
 type IMessageService interface {
 	PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error)

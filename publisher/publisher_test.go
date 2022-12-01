@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/venus-messager/mocks"
 	"github.com/filecoin-project/venus-messager/testhelper"
+
 	mockV1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	mtypes "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -60,7 +62,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 		}
 	}
 
-	nodeProvider := testhelper.NewMockNodeRepo(ctrl)
+	nodeProvider := mocks.NewMockNodeRepo(ctrl)
 	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider, true)
 
 	t.Run("publish message to multi node", func(t *testing.T) {
@@ -104,8 +106,8 @@ func TestMergePublisher(t *testing.T) {
 	ctx := context.Background()
 	// mock api
 	ctrl := gomock.NewController(t)
-	p1 := testhelper.NewMockIMsgPublisher(ctrl)
-	p2 := testhelper.NewMockIMsgPublisher(ctrl)
+	p1 := mocks.NewMockIMsgPublisher(ctrl)
+	p2 := mocks.NewMockIMsgPublisher(ctrl)
 
 	publisher := NewMergePublisher(ctx, p1, p2)
 	msgs := testhelper.NewShareSignedMessages(10)
@@ -121,7 +123,7 @@ func TestMsgCache(t *testing.T) {
 	ctx := context.Background()
 	// mock api
 	ctrl := gomock.NewController(t)
-	iPublisher := testhelper.NewMockIMsgPublisher(ctrl)
+	iPublisher := mocks.NewMockIMsgPublisher(ctrl)
 
 	publisher, err := NewCachePublisher(ctx, 1, iPublisher)
 	assert.NoError(t, err)
@@ -154,7 +156,7 @@ func TestConcurrentPublisher(t *testing.T) {
 	ctx := context.Background()
 	// mock api
 	ctrl := gomock.NewController(t)
-	iPublisher := testhelper.NewMockIMsgPublisher(ctrl)
+	iPublisher := mocks.NewMockIMsgPublisher(ctrl)
 
 	publisher, err := NewConcurrentPublisher(ctx, 2, iPublisher)
 	assert.NoError(t, err)
@@ -172,8 +174,8 @@ func TestIntergrate(t *testing.T) {
 	ctx := context.Background()
 	// mock api
 	ctrl := gomock.NewController(t)
-	p1 := testhelper.NewMockIMsgPublisher(ctrl)
-	p2 := testhelper.NewMockIMsgPublisher(ctrl)
+	p1 := mocks.NewMockIMsgPublisher(ctrl)
+	p2 := mocks.NewMockIMsgPublisher(ctrl)
 
 	mergePublisher := NewMergePublisher(ctx, p1, p2)
 	concurrentPublisher, err := NewConcurrentPublisher(ctx, 2, mergePublisher)

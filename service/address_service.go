@@ -19,6 +19,7 @@ import (
 
 var errAddressNotExists = errors.New("address not exists")
 
+//go:generate mockgen -destination=../mocks/mock_address_service.go -package=mocks github.com/filecoin-project/venus-messager/service IAddressService
 type IAddressService interface {
 	SaveAddress(ctx context.Context, address *types.Address) (venusTypes.UUID, error)
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
