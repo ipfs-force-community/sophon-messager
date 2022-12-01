@@ -90,16 +90,6 @@ func TestListBlockedMessage(t *testing.T) {
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
 		p.msgSrv.EXPECT().ListBlockedMessage(gomock.Any(), gomock.Any(), gomock.Any()).Do(func(ctx context.Context, param *types.MsgQueryParams, d time.Duration) {
 			dict := param.ToMap()
 			assert.Equal(t, 1, len(dict))
@@ -110,29 +100,11 @@ func TestListBlockedMessage(t *testing.T) {
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
 		_, err := p.impl.ListBlockedMessage(p.ctxUserW, p.addr2, time.Second)
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
 
 	t.Run("no user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
 		_, err := p.impl.ListBlockedMessage(p.ctx, p.addr2, time.Second)
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -142,49 +114,21 @@ func TestGetMessageByUid(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		_, err := p.impl.GetMessageByUid(p.ctxAdmin, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		_, err := p.impl.GetMessageByUid(p.ctxUserR, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		_, err := p.impl.GetMessageByUid(p.ctxUserW, "message_id")
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
 
 	t.Run("no user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		_, err := p.impl.GetMessageByUid(p.ctx, "message_id")
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -314,15 +258,6 @@ func TestRecoverFailedMsg(t *testing.T) {
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
 		p.msgSrv.EXPECT().RecoverFailedMsg(gomock.Any(), gomock.Any())
 
 		_, err := p.impl.RecoverFailedMsg(p.ctxUserR, p.addr2)
@@ -330,15 +265,6 @@ func TestRecoverFailedMsg(t *testing.T) {
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
 		_, err := p.impl.RecoverFailedMsg(p.ctxUserW, p.addr2)
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -348,39 +274,18 @@ func TestRepublishMessage(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().RepublishMessage(gomock.Any(), gomock.Any())
 		err := p.impl.RepublishMessage(p.ctxAdmin, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().RepublishMessage(gomock.Any(), gomock.Any())
 		err := p.impl.RepublishMessage(p.ctxUserR, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		err := p.impl.RepublishMessage(p.ctxUserW, "message_id")
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -390,39 +295,18 @@ func TestUpdateMessageStateByID(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().UpdateMessageStateByID(gomock.Any(), gomock.Any(), gomock.Any())
 		err := p.impl.UpdateMessageStateByID(p.ctxAdmin, "message_id", types.UnFillMsg)
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().UpdateMessageStateByID(gomock.Any(), gomock.Any(), gomock.Any())
 		err := p.impl.UpdateMessageStateByID(p.ctxUserR, "message_id", types.UnFillMsg)
 		assert.NoError(t, err)
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		err := p.impl.UpdateMessageStateByID(p.ctxUserW, "message_id", types.UnFillMsg)
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -432,39 +316,18 @@ func TestMarkBadMessage(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().MarkBadMessage(gomock.Any(), gomock.Any())
 		err := p.impl.MarkBadMessage(p.ctxAdmin, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().MarkBadMessage(gomock.Any(), gomock.Any())
 		err := p.impl.MarkBadMessage(p.ctxUserR, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		err := p.impl.MarkBadMessage(p.ctxUserW, "message_id")
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -474,39 +337,18 @@ func TestUpdateFilledMessageByID(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().UpdateFilledMessageByID(gomock.Any(), gomock.Any())
 		_, err := p.impl.UpdateFilledMessageByID(p.ctxAdmin, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		p.msgSrv.EXPECT().UpdateFilledMessageByID(gomock.Any(), gomock.Any())
 		_, err := p.impl.UpdateFilledMessageByID(p.ctxUserR, "message_id")
 		assert.NoError(t, err)
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
-			msg := testhelper.NewMessage()
-			msg.ID = id
-			msg.WalletName = p.userR
-			return msg, nil
-		})
-
 		_, err := p.impl.UpdateFilledMessageByID(p.ctxUserW, "message_id")
 		assert.Equal(t, ErrorPermissionDeny, err)
 	})
@@ -546,17 +388,6 @@ func TestPushMessage(t *testing.T) {
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
-
 		msg := testhelper.NewMessage()
 		msg.From = p.addr2
 		p.msgSrv.EXPECT().PushMessage(gomock.Any(), gomock.Any(), gomock.Any())
@@ -565,17 +396,6 @@ func TestPushMessage(t *testing.T) {
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
-
 		msg := testhelper.NewMessage()
 		msg.From = p.addr2
 		_, err := p.impl.PushMessage(p.ctxUserW, &msg.Message, &types.SendSpec{})
@@ -595,17 +415,6 @@ func TestPushMessageWithId(t *testing.T) {
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
-
 		msg := testhelper.NewMessage()
 		msg.From = p.addr2
 		p.msgSrv.EXPECT().PushMessageWithId(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
@@ -614,17 +423,6 @@ func TestPushMessageWithId(t *testing.T) {
 	})
 
 	t.Run("wrong user", func(t *testing.T) {
-		p.authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-			ret := []*vauth.OutputUser{}
-
-			for _, user := range p.addr2user[addr] {
-				ret = append(ret, &vauth.OutputUser{
-					Name: user,
-				})
-			}
-			return ret, nil
-		})
-
 		msg := testhelper.NewMessage()
 		msg.From = p.addr2
 		_, err := p.impl.PushMessageWithId(p.ctxUserW, "msg_id", &msg.Message, &types.SendSpec{})
@@ -636,14 +434,12 @@ func TestHasMessageByUid(t *testing.T) {
 	p := getTestParams(t)
 
 	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().HasMessageByUid(gomock.Any(), gomock.Any())
 		ok, err := p.impl.HasMessageByUid(p.ctxAdmin, "message_id")
 		assert.True(t, ok)
 		assert.NoError(t, err)
 	})
 
 	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().HasMessageByUid(gomock.Any(), gomock.Any())
 		ok, err := p.impl.HasMessageByUid(p.ctxUserR, "message_id")
 		assert.True(t, ok)
 		assert.NoError(t, err)
