@@ -199,13 +199,18 @@ func runAction(cctx *cli.Context) error {
 	}
 	ticker.Stop()
 
-	networkName, err := client.StateNetworkName(ctx)
-	if err != nil {
-		return fmt.Errorf("get network name failed %v", err)
-	}
 	networkParams, err := client.StateGetNetworkParams(ctx)
 	if err != nil {
 		return fmt.Errorf("get network params failed %v", err)
+	}
+
+	// The 2k network block delay is 4s, which will be less than WaitingChainHeadStableDuration (8s)
+	// and will not push messages
+	if networkParams.BlockDelaySecs <= uint64(cfg.MessageService.WaitingChainHeadStableDuration) {
+		cfg.MessageService.WaitingChainHeadStableDuration = time.Duration(networkParams.BlockDelaySecs) / 2
+		if err := fsRepo.ReplaceConfig(cfg); err != nil {
+			return err
+		}
 	}
 
 	if err := ccli.LoadBuiltinActors(ctx, client); err != nil {
@@ -236,8 +241,7 @@ func runAction(cctx *cli.Context) error {
 		// prover
 		fx.Supply(cfg, &cfg.DB, &cfg.API, &cfg.JWT, &cfg.Node, &cfg.Log, &cfg.MessageService, cfg.Libp2pNet,
 			&cfg.Gateway, &cfg.RateLimit, cfg.Trace, cfg.Metrics, cfg.Publisher),
-		fx.Supply(log),
-		fx.Supply(networkName),
+		fx.Supply(networkParams.NetworkName),
 		fx.Supply(networkParams),
 		fx.Supply(remoteAuthCli),
 		fx.Supply(localAuthCli),
