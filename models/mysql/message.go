@@ -421,7 +421,7 @@ func (m *mysqlMessageRepo) ListMessageByAddress(addr address.Address) ([]*types.
 
 func (m *mysqlMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	p.State = types.UnFillMsg
+	p.State = []types.MessageState{types.UnFillMsg}
 	paramsMap := p.ToMap()
 	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg is not null").Error
 	if err != nil {
@@ -437,7 +437,7 @@ func (m *mysqlMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.M
 func (m *mysqlMessageRepo) ListBlockedMessage(p *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	t := time.Now().Add(-d)
-	p.State = types.FillMsg
+	p.State = []types.MessageState{types.FillMsg}
 	paramsMap := p.ToMap()
 	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "created_at < ?", t).Error
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc/auth"
-	vauth "github.com/filecoin-project/venus-auth/auth"
+	v_auth "github.com/filecoin-project/venus-auth/auth"
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/mocks"
 	"github.com/filecoin-project/venus-messager/testhelper"
@@ -17,6 +17,57 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
 )
+
+//go:generate mockgen -destination=../mocks/mock_auth_client.go -package=mocks github.com/filecoin-project/venus-auth/jwtclient IAuthClient
+
+func TestIsAdmin(t *testing.T) {
+	p := getTestParams(t)
+
+	t.Run("admin user", func(t *testing.T) {
+		isAdmin, signers, err := p.impl.isAdmin(p.ctxAdmin)
+		assert.NoError(t, err)
+		assert.True(t, isAdmin)
+		assert.Equal(t, 0, len(signers))
+	})
+
+	t.Run("normal user", func(t *testing.T) {
+		isAdmin, signers, err := p.impl.isAdmin(p.ctxUserR)
+		assert.NoError(t, err)
+		assert.False(t, isAdmin)
+		assert.Equal(t, len(p.user2addr[p.userR]), len(signers))
+	})
+
+	t.Run("no user", func(t *testing.T) {
+		isAdmin, signers, err := p.impl.isAdmin(p.ctx)
+		assert.Error(t, err)
+		assert.False(t, isAdmin)
+		assert.Equal(t, 0, len(signers))
+	})
+}
+
+func TestCheckPermissionBySigner(t *testing.T) {
+	p := getTestParams(t)
+
+	t.Run("admin user", func(t *testing.T) {
+		err := p.impl.checkPermissionBySigner(p.ctxAdmin, p.addr1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("right user", func(t *testing.T) {
+		err := p.impl.checkPermissionBySigner(p.ctxUserR, p.addr1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("wrong user", func(t *testing.T) {
+		err := p.impl.checkPermissionBySigner(p.ctxUserW, p.addr2)
+		assert.Equal(t, ErrorPermissionDeny, err)
+	})
+
+	t.Run("no user", func(t *testing.T) {
+		err := p.impl.checkPermissionBySigner(p.ctx, p.addr1)
+		assert.Equal(t, ErrorUserNotFound, err)
+	})
+}
 
 func TestListMessage(t *testing.T) {
 	p := getTestParams(t)
@@ -35,7 +86,6 @@ func TestListMessage(t *testing.T) {
 		p.msgSrv.EXPECT().ListMessage(gomock.Any(), gomock.Any()).Do(func(ctx context.Context, param *types.MsgQueryParams) {
 			dict := param.ToMap()
 			assert.Equal(t, 1, len(dict))
-			assert.Equal(t, p.userR, dict["wallet_name"])
 		})
 		_, err := p.impl.ListMessage(p.ctxUserR, &types.MsgQueryParams{})
 		assert.NoError(t, err)
@@ -64,7 +114,6 @@ func TestListFailedMessage(t *testing.T) {
 		p.msgSrv.EXPECT().ListFailedMessage(gomock.Any(), gomock.Any()).Do(func(ctx context.Context, param *types.MsgQueryParams) {
 			dict := param.ToMap()
 			assert.Equal(t, 1, len(dict))
-			assert.Equal(t, p.userR, dict["wallet_name"])
 		})
 		_, err := p.impl.ListFailedMessage(p.ctxUserR)
 		assert.NoError(t, err)
@@ -106,7 +155,7 @@ func TestListBlockedMessage(t *testing.T) {
 
 	t.Run("no user", func(t *testing.T) {
 		_, err := p.impl.ListBlockedMessage(p.ctx, p.addr2, time.Second)
-		assert.Equal(t, ErrorPermissionDeny, err)
+		assert.Equal(t, ErrorUserNotFound, err)
 	})
 }
 
@@ -130,7 +179,7 @@ func TestGetMessageByUid(t *testing.T) {
 
 	t.Run("no user", func(t *testing.T) {
 		_, err := p.impl.GetMessageByUid(p.ctx, "message_id")
-		assert.Equal(t, ErrorPermissionDeny, err)
+		assert.Equal(t, ErrorUserNotFound, err)
 	})
 }
 
@@ -141,7 +190,6 @@ func TestGetMessageBySignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageBySignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.SignedCid = &id
-			msg.WalletName = p.userR
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -153,7 +201,7 @@ func TestGetMessageBySignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageBySignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.SignedCid = &id
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -165,7 +213,7 @@ func TestGetMessageBySignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageBySignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.SignedCid = &id
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -181,7 +229,6 @@ func TestGetMessageByUnsignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByUnsignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.UnsignedCid = &id
-			msg.WalletName = p.userR
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -193,7 +240,7 @@ func TestGetMessageByUnsignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByUnsignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.UnsignedCid = &id
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -205,7 +252,7 @@ func TestGetMessageByUnsignedCid(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByUnsignedCid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id cid.Cid) (*types.Message, error) {
 			msg := testhelper.NewMessage()
 			msg.UnsignedCid = &id
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		test_cid := cid.NewCidV1(cid.Raw, []byte("test"))
@@ -220,7 +267,6 @@ func TestGetMessageByFromAndNonce(t *testing.T) {
 	t.Run("admin user", func(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByFromAndNonce(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error) {
 			msg := testhelper.NewMessage()
-			msg.WalletName = p.userR
 			return msg, nil
 		})
 		_, err := p.impl.GetMessageByFromAndNonce(p.ctxAdmin, p.addr1, 1)
@@ -230,7 +276,7 @@ func TestGetMessageByFromAndNonce(t *testing.T) {
 	t.Run("right user", func(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByFromAndNonce(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error) {
 			msg := testhelper.NewMessage()
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		_, err := p.impl.GetMessageByFromAndNonce(p.ctxUserR, p.addr1, 1)
@@ -240,7 +286,7 @@ func TestGetMessageByFromAndNonce(t *testing.T) {
 	t.Run("wrong user", func(t *testing.T) {
 		p.msgSrv.EXPECT().GetMessageByFromAndNonce(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error) {
 			msg := testhelper.NewMessage()
-			msg.WalletName = p.userR
+			msg.From = p.addr2
 			return msg, nil
 		})
 		_, err := p.impl.GetMessageByFromAndNonce(p.ctxUserW, p.addr1, 1)
@@ -688,7 +734,7 @@ type msgSrvTestParams struct {
 	ctxAdmin   context.Context
 	addr1      address.Address
 	addr2      address.Address
-	addr2user  map[string][]string
+	user2addr  map[string][]string
 }
 
 func getTestParams(t *testing.T) *msgSrvTestParams {
@@ -710,10 +756,10 @@ func getTestParams(t *testing.T) *msgSrvTestParams {
 	userW := randString(10)
 	addr1 := testhelper.RandAddresses(t, 1)[0]
 	addr2 := testhelper.RandAddresses(t, 1)[0]
-	addr2user := map[string][]string{
-		addr1.String(): {userR, userW},
-		addr2.String(): {
-			userR,
+	user2addr := map[string][]string{
+		userR: {addr1.String(), addr2.String()},
+		userW: {
+			addr1.String(),
 		},
 	}
 
@@ -724,18 +770,28 @@ func getTestParams(t *testing.T) *msgSrvTestParams {
 	msgSrv.EXPECT().GetMessageByUid(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, id string) (*types.Message, error) {
 		msg := testhelper.NewMessage()
 		msg.ID = id
-		msg.WalletName = userR
+		msg.From = addr2
 		return msg, nil
 	}).AnyTimes()
 
-	authClient.EXPECT().GetUserBySigner(gomock.Any()).DoAndReturn(func(addr string) ([]*vauth.OutputUser, error) {
-		ret := []*vauth.OutputUser{}
-		for _, user := range addr2user[addr] {
-			ret = append(ret, &vauth.OutputUser{
-				Name: user,
-			})
+	authClient.EXPECT().SignerExistInUser(gomock.Any(), gomock.Any()).DoAndReturn(func(user string, target string) (bool, error) {
+		for _, addr := range user2addr[user] {
+			if addr == target {
+				return true, nil
+			}
 		}
-		return ret, nil
+		return false, nil
+	}).AnyTimes()
+
+	authClient.EXPECT().ListSigners(gomock.Any()).DoAndReturn(func(user string) (v_auth.ListSignerResp, error) {
+		addrs := make([]*v_auth.OutputSigner, 0)
+		for _, addr := range user2addr[user] {
+			resp := v_auth.OutputSigner{
+				Signer: addr,
+			}
+			addrs = append(addrs, &resp)
+		}
+		return addrs, nil
 	}).AnyTimes()
 
 	return &msgSrvTestParams{
@@ -751,7 +807,7 @@ func getTestParams(t *testing.T) *msgSrvTestParams {
 		ctxAdmin:   ctxAdmin,
 		addr1:      addr1,
 		addr2:      addr2,
-		addr2user:  addr2user,
+		user2addr:  user2addr,
 	}
 }
 

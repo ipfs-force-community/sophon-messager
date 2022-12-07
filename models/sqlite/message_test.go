@@ -235,41 +235,39 @@ func TestListMessageByParams(t *testing.T) {
 		addrCases = append(addrCases, addr)
 	}
 
-	WalletNameCase := make([]string, 0)
-	for i := 0; i < 5; i++ {
-		WalletNameCase = append(WalletNameCase, uuid.New().String())
-	}
-
-	msgList, err := messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.UnFillMsg, PageIndex: 1, PageSize: 100})
+	msgList, err := messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.UnFillMsg}, PageIndex: 1, PageSize: 100})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, 0)
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.UnFillMsg, PageIndex: 0, PageSize: 100})
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.UnFillMsg}, PageIndex: 0, PageSize: 100})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, 0)
 
 	msgCount := 100
 	onChainMsgCount := 0
+	unFillMsgCount := 0
 	addr0Count := 0
-	user0Count := 0
-	user0AndAddr0Count := 0
+	addr1Count := 0
+	addr0onChainMsgCount := 0
 
 	msgs := testhelper.NewMessages(msgCount)
 	for _, msg := range msgs {
 		msg.State = types.MessageState(rand.Intn(7))
 		msg.From = addrCases[rand.Intn(len(addrCases))]
-		msg.WalletName = WalletNameCase[rand.Intn(len(WalletNameCase))]
 		if msg.State == types.OnChainMsg {
 			onChainMsgCount++
+			if msg.From == addrCases[0] {
+				addr0onChainMsgCount++
+			}
+		}
+		if msg.State == types.UnFillMsg {
+			unFillMsgCount++
 		}
 		if msg.From == addrCases[0] {
 			addr0Count++
 		}
-		if msg.WalletName == WalletNameCase[0] {
-			user0Count++
-			if msg.From == addrCases[0] {
-				user0AndAddr0Count++
-			}
+		if msg.From == addrCases[1] {
+			addr1Count++
 		}
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
@@ -278,6 +276,7 @@ func TestListMessageByParams(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, msgList, msgCount)
 
+	// invalid page index (page size) will be ignored
 	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 0, PageSize: msgCount / 2})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, msgCount)
@@ -286,21 +285,31 @@ func TestListMessageByParams(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, msgList, msgCount/2)
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: types.OnChainMsg})
+	// one state
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.OnChainMsg}})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, onChainMsgCount)
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: addrCases[0]})
+	// many state
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.OnChainMsg, types.UnFillMsg}})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, onChainMsgCount+unFillMsgCount)
+
+	// one addr
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{addrCases[0]}})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, addr0Count)
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{WalletName: WalletNameCase[0]})
+	// many addr
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{addrCases[0], addrCases[1]}})
 	assert.NoError(t, err)
-	assert.Len(t, msgList, user0Count)
+	assert.Len(t, msgList, addr0Count+addr1Count)
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{WalletName: WalletNameCase[0], From: addrCases[0]})
+	// addr and state
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{addrCases[0]}, State: []types.MessageState{types.OnChainMsg}})
 	assert.NoError(t, err)
-	assert.Len(t, msgList, user0AndAddr0Count)
+	assert.Len(t, msgList, addr0onChainMsgCount)
+
 }
 
 func TestListMessageByFromState(t *testing.T) {
@@ -411,11 +420,11 @@ func TestListBlockedMessage(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	msgList, err := messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: msgs[0].From}, time.Second*2)
+	msgList, err := messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{msgs[0].From}}, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(msgList))
 
-	msgList, err = messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: msgs[1].From}, time.Second*2)
+	msgList, err = messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{msgs[1].From}}, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(msgList))
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))

@@ -67,12 +67,12 @@ var _ messager.IMessager = (*MessageImp)(nil)
 func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error) {
 	msg, err := m.MessageSrv.GetMessageByUid(ctx, id)
 	if err != nil {
-		return false, fmt.Errorf("get message by id error: %w", err)
+		return false, fmt.Errorf("get message by id error or permission deny")
 	}
-	if m.checkPermissionByName(ctx, msg.WalletName) {
-		return true, nil
+	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
+		return false, fmt.Errorf("get message by id error or permission deny")
 	}
-	return false, fmt.Errorf("the message not exist or permission deny")
+	return true, nil
 }
 
 func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
@@ -80,30 +80,22 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return nil, ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return nil, check_err
 	}
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	ok, err := m.checkPermissionByAddr(ctx, msg.From)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
 		return "", err
-	}
-	if !ok {
-		return "", ErrorPermissionDeny
 	}
 	return m.MessageSrv.PushMessage(ctx, msg, meta)
 }
 
 func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	ok, err := m.checkPermissionByAddr(ctx, msg.From)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
 		return "", err
-	}
-	if !ok {
-		return "", ErrorPermissionDeny
 	}
 	return m.MessageSrv.PushMessageWithId(ctx, id, msg, meta)
 }
@@ -113,8 +105,8 @@ func (m MessageImp) GetMessageByUid(ctx context.Context, id string) (*types.Mess
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return nil, ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return nil, check_err
 	}
 	return msg, nil
 }
@@ -124,8 +116,8 @@ func (m MessageImp) GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*ty
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return nil, ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return nil, check_err
 	}
 	return msg, nil
 }
@@ -135,8 +127,8 @@ func (m MessageImp) GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return nil, ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return nil, check_err
 	}
 	return msg, nil
 }
@@ -146,19 +138,26 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return nil, ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return nil, check_err
 	}
 	return msg, nil
 }
 
 func (m MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) ([]*types.Message, error) {
-	isAdmin, user, err := m.isAdmin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !isAdmin {
-		p.WalletName = user
+	// only admin can list all message
+	if len(p.From) == 0 {
+		ok, signers, err := m.isAdmin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			p.From = signers
+		}
+	} else {
+		if err := m.checkPermissionBySigner(ctx, p.From...); err != nil {
+			return nil, err
+		}
 	}
 	return m.MessageSrv.ListMessage(ctx, p)
 }
@@ -172,25 +171,21 @@ func (m MessageImp) ListMessageByAddress(ctx context.Context, addr address.Addre
 }
 
 func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	isAdmin, user, err := m.isAdmin(ctx)
+	isAdmin, signers, err := m.isAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if isAdmin {
 		return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{})
 	}
-	return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{WalletName: user})
+	return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{From: signers})
 }
 
 func (m MessageImp) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return nil, err
 	}
-	if !ok {
-		return nil, ErrorPermissionDeny
-	}
-	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: addr}, d)
+	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: []address.Address{addr}}, d)
 }
 
 func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
@@ -198,8 +193,8 @@ func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return check_err
 	}
 	return m.MessageSrv.UpdateMessageStateByID(ctx, id, state)
 }
@@ -213,8 +208,8 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	if err != nil {
 		return "", fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return "", ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return "", check_err
 	}
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
@@ -224,10 +219,10 @@ func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMess
 	if err != nil {
 		return cid.Undef, fmt.Errorf("get message by id error: %w", err)
 	}
-	if m.checkPermissionByName(ctx, msg.WalletName) {
-		return m.MessageSrv.ReplaceMessage(ctx, params)
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return cid.Undef, check_err
 	}
-	return cid.Undef, ErrorPermissionDeny
+	return m.MessageSrv.ReplaceMessage(ctx, params)
 }
 
 func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
@@ -235,10 +230,10 @@ func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if m.checkPermissionByName(ctx, msg.WalletName) {
-		return m.MessageSrv.RepublishMessage(ctx, id)
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return check_err
 	}
-	return ErrorPermissionDeny
+	return m.MessageSrv.RepublishMessage(ctx, id)
 }
 
 func (m MessageImp) MarkBadMessage(ctx context.Context, id string) error {
@@ -246,52 +241,36 @@ func (m MessageImp) MarkBadMessage(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if !m.checkPermissionByName(ctx, msg.WalletName) {
-		return ErrorPermissionDeny
+	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
+		return check_err
 	}
 	return m.MessageSrv.MarkBadMessage(ctx, id)
 }
 
 func (m MessageImp) RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return nil, err
-	}
-	if !ok {
-		return nil, ErrorPermissionDeny
 	}
 	return m.MessageSrv.RecoverFailedMsg(ctx, addr)
 }
 
 func (m MessageImp) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return nil, err
-	}
-	if !ok {
-		return nil, ErrorPermissionDeny
 	}
 	return m.AddressSrv.GetAddress(ctx, addr)
 }
 
 func (m MessageImp) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return false, err
-	}
-	if !ok {
-		return false, ErrorPermissionDeny
 	}
 	return m.AddressSrv.HasAddress(ctx, addr)
 }
 
 func (m MessageImp) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return false, err
-	}
-	if !ok {
-		return false, ErrorPermissionDeny
 	}
 	return m.AddressSrv.WalletHas(ctx, addr)
 }
@@ -303,12 +282,7 @@ func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	}
 	var result []*types.Address
 	for _, msg := range msgs {
-		ok, err := m.checkPermissionByAddr(ctx, msg.Addr)
-		if err != nil {
-			log.Errorf("check permission error: %s", err)
-			continue
-		}
-		if ok {
+		if err := m.checkPermissionBySigner(ctx, msg.Addr); err == nil {
 			result = append(result, msg)
 		}
 	}
@@ -316,45 +290,29 @@ func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
 }
 
 func (m MessageImp) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return err
-	}
-	if !ok {
-		return ErrorPermissionDeny
 	}
 	return m.AddressSrv.UpdateNonce(ctx, addr, nonce)
 }
 
 func (m MessageImp) DeleteAddress(ctx context.Context, addr address.Address) error {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return err
-	}
-	if !ok {
-		return ErrorPermissionDeny
 	}
 	return m.AddressSrv.DeleteAddress(ctx, addr)
 }
 
 func (m MessageImp) ForbiddenAddress(ctx context.Context, addr address.Address) error {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return err
-	}
-	if !ok {
-		return ErrorPermissionDeny
 	}
 	return m.AddressSrv.ForbiddenAddress(ctx, addr)
 }
 
 func (m MessageImp) ActiveAddress(ctx context.Context, addr address.Address) error {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return err
-	}
-	if !ok {
-		return ErrorPermissionDeny
 	}
 	return m.AddressSrv.ActiveAddress(ctx, addr)
 }
@@ -364,23 +322,15 @@ func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, n
 }
 
 func (m MessageImp) SetFeeParams(ctx context.Context, params *types.AddressSpec) error {
-	ok, err := m.checkPermissionByAddr(ctx, params.Address)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, params.Address); err != nil {
 		return err
-	}
-	if !ok {
-		return ErrorPermissionDeny
 	}
 	return m.AddressSrv.SetFeeParams(ctx, params)
 }
 
 func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
-	ok, err := m.checkPermissionByAddr(ctx, addr)
-	if err != nil {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
 		return 0, err
-	}
-	if !ok {
-		return 0, ErrorPermissionDeny
 	}
 	return m.MessageSrv.ClearUnFillMessage(ctx, addr)
 }
@@ -414,6 +364,9 @@ func (m MessageImp) DeleteNode(ctx context.Context, name string) error {
 }
 
 func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
+	if err := m.checkPermissionBySigner(ctx, params.From); err != nil {
+		return "", err
+	}
 	return m.MessageSrv.Send(ctx, params)
 }
 
@@ -447,48 +400,52 @@ func (m MessageImp) LogList(ctx context.Context) ([]string, error) {
 	return logging.GetSubsystems(), nil
 }
 
-func (m MessageImp) checkPermissionByAddr(ctx context.Context, addrs ...address.Address) (bool, error) {
+func (m MessageImp) checkPermissionBySigner(ctx context.Context, addrs ...address.Address) error {
 	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
-		return true, nil
+		return nil
 	}
 	user, exist := jwtclient.CtxGetName(ctx)
 	if !exist {
-		return false, nil
+		return ErrorUserNotFound
 	}
-	for _, addr := range addrs {
-		auth_users, err := m.AuthClient.GetUserBySigner(addr.String())
-		if err != nil {
-			return false, fmt.Errorf("get auth user by signer %s failed: %s", addr.String(), err)
-		}
-		for _, auth_user := range auth_users {
-			if auth_user.Name == user {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
 
-// checkPermissionByUser check weather the user has admin permission or is match the username passed in
-func (m MessageImp) checkPermissionByName(ctx context.Context, name string) bool {
-	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
-		return true
+	for _, wAddr := range addrs {
+		ok, err := m.AuthClient.SignerExistInUser(user, wAddr.String())
+		if err != nil {
+			return fmt.Errorf("check signer exist in user fail %s failed when check permission: %s", wAddr.String(), err)
+		}
+		if !ok {
+			return ErrorPermissionDeny
+		}
 	}
-	user, exist := jwtclient.CtxGetName(ctx)
-	if !exist {
-		return false
-	}
-	return user == name
+	return nil
 }
 
 // isAdmin check if the user is admin and return user name
-func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, name string, err error) {
+func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, signers []address.Address, err error) {
+
+	signers = []address.Address{}
+	err = nil
+
 	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
-		isAdmin = true
+		return true, nil, nil
 	}
-	name, exit := jwtclient.CtxGetName(ctx)
+	user, exit := jwtclient.CtxGetName(ctx)
 	if !exit && !isAdmin {
 		err = ErrorUserNotFound
+		return false, nil, err
 	}
-	return
+	resp, err := m.AuthClient.ListSigners(user)
+	if err != nil {
+		return false, nil, err
+	}
+	for _, res := range resp {
+		addr, err := address.NewFromString(res.Signer)
+		if err != nil {
+			return false, nil, err
+		}
+		signers = append(signers, addr)
+	}
+
+	return false, signers, nil
 }
