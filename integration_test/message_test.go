@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
@@ -24,89 +25,83 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
+func TestHasMessageByUid(t *testing.T) {
+	p := prepare(t)
+	defer p.closer()
+
+	t.Run("test has message by uid", func(t *testing.T) {
+		testHasMessageByUid(p.ctx, t, p.api, p.addrs)
+	})
+	assert.NoError(t, p.ms.stop(p.ctx))
+}
+
+func TestMarkBadMessage(t *testing.T) {
+	p := prepare(t)
+	defer p.closer()
+
+	t.Run("test mark bad message", func(t *testing.T) {
+		testMarkBadMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+	})
+	assert.NoError(t, p.ms.stop(p.ctx))
+}
+
 func TestMessageAPI(t *testing.T) {
-	ctx := context.Background()
-	cfg := config.DefaultConfig()
-	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
-	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	authClient := testhelper.NewMockAuthClient()
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
-	assert.NoError(t, err)
-
-	go ms.start(ctx)
-	assert.NoError(t, <-ms.appStartErr)
-
-	addrCount := 10
-	account := defaultLocalToken
-	addrs := testhelper.RandAddresses(t, addrCount)
-	authClient.AddMockUserAndSigner(account, addrs)
-	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
-	assert.NoError(t, ms.fullNode.AddActors(addrs))
-
-	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
-	assert.NoError(t, err)
-	defer closer()
+	p := prepare(t)
+	defer p.closer()
 
 	t.Run("test push message", func(t *testing.T) {
-		testPushMessage(ctx, t, api, addrs)
+		testPushMessage(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test push message with id", func(t *testing.T) {
-		testPushMessageWithID(ctx, t, api, addrs)
-	})
-	t.Run("test has message by uid", func(t *testing.T) {
-		testHasMessageByUid(ctx, t, api, addrs)
+		testPushMessageWithID(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test get message by uid", func(t *testing.T) {
-		testGetMessageByUid(ctx, t, api, addrs)
+		testGetMessageByUid(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test wait message", func(t *testing.T) {
-		testWaitMessage(ctx, t, api, addrs)
+		testWaitMessage(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test get message by signed cid", func(t *testing.T) {
-		testGetMessageBySignedCID(ctx, t, api, addrs)
+		testGetMessageBySignedCID(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test get message By unsigned cid", func(t *testing.T) {
-		testGetMessageByUnsignedCID(ctx, t, api, addrs)
+		testGetMessageByUnsignedCID(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test get message by from and nonce", func(t *testing.T) {
-		testGetMessageByFromAndNonce(ctx, t, api, addrs)
+		testGetMessageByFromAndNonce(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test list message", func(t *testing.T) {
-		testListMessage(ctx, t, api, addrs)
+		testListMessage(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test list message by from state", func(t *testing.T) {
-		testListMessageByFromState(ctx, t, api, addrs)
+		testListMessageByFromState(p.ctx, t, p.api, p.addrs)
 	})
 	t.Run("test list message by address", func(t *testing.T) {
-		testListMessageByAddress(ctx, t, api)
+		testListMessageByAddress(p.ctx, t, p.api)
 	})
 	t.Run("test list failed message", func(t *testing.T) {
-		testListFailedMessage(ctx, t, api, addrs, blockDelay)
+		testListFailedMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test list blocked message", func(t *testing.T) {
-		testListBlockedMessage(ctx, t, api, addrs, blockDelay)
+		testListBlockedMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test update message state by id", func(t *testing.T) {
-		testUpdateMessageStateByID(ctx, t, api, addrs, blockDelay)
+		testUpdateMessageStateByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test update all filled message", func(t *testing.T) {
-		testUpdateAllFilledMessage(ctx, t, api, addrs, blockDelay)
+		testUpdateAllFilledMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test update filled message by id", func(t *testing.T) {
-		testUpdateFilledMessageByID(ctx, t, api, addrs, blockDelay)
+		testUpdateFilledMessageByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test replace message", func(t *testing.T) {
-		testReplaceMessage(ctx, t, api, addrs, blockDelay)
-	})
-	t.Run("test mark bad message", func(t *testing.T) {
-		testMarkBadMessage(ctx, t, api, addrs, blockDelay)
+		testReplaceMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test recover failed msg", func(t *testing.T) {
-		testRecoverFailedMsg(ctx, t, api, addrs, blockDelay)
+		testRecoverFailedMsg(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 
-	assert.NoError(t, ms.stop(ctx))
+	assert.NoError(t, p.ms.stop(p.ctx))
 }
 
 func testPushMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
@@ -155,7 +150,7 @@ func testHasMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 	}
 
 	has, err := api.HasMessageByUid(ctx, shared.NewUUID().String())
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.False(t, has)
 }
 
@@ -675,7 +670,7 @@ func testMarkBadMessage(ctx context.Context, t *testing.T, api messager.IMessage
 		assert.Equal(t, types.FailedMsg, res.State)
 	}
 
-	assert.NoError(t, api.MarkBadMessage(ctx, shared.NewUUID().String()))
+	assert.Error(t, api.MarkBadMessage(ctx, shared.NewUUID().String()))
 }
 
 func testRecoverFailedMsg(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
@@ -755,4 +750,55 @@ func checkSendSpec(t *testing.T, expect, actual *types.SendSpec) {
 	}
 	assert.Equal(t, expect.GasOverPremium, actual.GasOverPremium)
 	assert.Equal(t, expect.GasOverEstimation, actual.GasOverEstimation)
+}
+
+type testParams struct {
+	ctx        context.Context
+	cfg        *config.Config
+	authClient *testhelper.AuthClient
+	ms         *messagerServer
+	addrCount  int
+	account    string
+	addrs      []address.Address
+	api        messager.IMessager
+	blockDelay time.Duration
+	closer     func()
+}
+
+func prepare(t *testing.T) *testParams {
+	ctx := context.Background()
+	ctx = auth.WithPerm(ctx, []string{"admin", "sign", "write", "read"})
+	cfg := config.DefaultConfig()
+	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
+	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
+	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+	authClient := testhelper.NewMockAuthClient()
+	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
+	assert.NoError(t, err)
+
+	go ms.start(ctx)
+	assert.NoError(t, <-ms.appStartErr)
+
+	addrCount := 10
+	account := defaultLocalToken
+	addrs := testhelper.RandAddresses(t, addrCount)
+	authClient.AddMockUserAndSigner(account, addrs)
+	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
+	assert.NoError(t, ms.fullNode.AddActors(addrs))
+
+	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
+	assert.NoError(t, err)
+
+	return &testParams{
+		ctx:        ctx,
+		cfg:        cfg,
+		authClient: authClient,
+		ms:         ms,
+		addrCount:  addrCount,
+		account:    account,
+		addrs:      addrs,
+		api:        api,
+		blockDelay: blockDelay,
+		closer:     closer,
+	}
 }
