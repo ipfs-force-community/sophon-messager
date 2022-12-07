@@ -226,13 +226,6 @@ func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMess
 }
 
 func (m MessageImp) RepublishMessage(ctx context.Context, id string) error {
-	msg, err := m.MessageSrv.GetMessageByUid(ctx, id)
-	if err != nil {
-		return fmt.Errorf("get message by id error: %w", err)
-	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return check_err
-	}
 	return m.MessageSrv.RepublishMessage(ctx, id)
 }
 

@@ -316,27 +316,6 @@ func TestRecoverFailedMsg(t *testing.T) {
 	})
 }
 
-func TestRepublishMessage(t *testing.T) {
-	p := getTestParams(t)
-
-	t.Run("admin user", func(t *testing.T) {
-		p.msgSrv.EXPECT().RepublishMessage(gomock.Any(), gomock.Any())
-		err := p.impl.RepublishMessage(p.ctxAdmin, "message_id")
-		assert.NoError(t, err)
-	})
-
-	t.Run("right user", func(t *testing.T) {
-		p.msgSrv.EXPECT().RepublishMessage(gomock.Any(), gomock.Any())
-		err := p.impl.RepublishMessage(p.ctxUserR, "message_id")
-		assert.NoError(t, err)
-	})
-
-	t.Run("wrong user", func(t *testing.T) {
-		err := p.impl.RepublishMessage(p.ctxUserW, "message_id")
-		assert.Equal(t, ErrorPermissionDeny, err)
-	})
-}
-
 func TestUpdateMessageStateByID(t *testing.T) {
 	p := getTestParams(t)
 
