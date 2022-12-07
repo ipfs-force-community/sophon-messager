@@ -311,6 +311,9 @@ func (m MessageImp) ActiveAddress(ctx context.Context, addr address.Address) err
 }
 
 func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
+	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+		return err
+	}
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
