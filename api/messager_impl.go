@@ -211,6 +211,9 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
 		return "", checkErr
 	}
+	if msg.State == types.OnChainMsg || msg.State == types.ReplacedMsg {
+		return "", fmt.Errorf("message state(%s) has been final, can not update", msg.State)
+	}
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
 
