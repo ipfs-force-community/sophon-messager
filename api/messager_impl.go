@@ -80,8 +80,8 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return nil, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return nil, checkErr
 	}
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
@@ -105,8 +105,8 @@ func (m MessageImp) GetMessageByUid(ctx context.Context, id string) (*types.Mess
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return nil, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return nil, checkErr
 	}
 	return msg, nil
 }
@@ -116,8 +116,8 @@ func (m MessageImp) GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*ty
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return nil, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return nil, checkErr
 	}
 	return msg, nil
 }
@@ -127,8 +127,8 @@ func (m MessageImp) GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return nil, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return nil, checkErr
 	}
 	return msg, nil
 }
@@ -138,8 +138,8 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return nil, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return nil, checkErr
 	}
 	return msg, nil
 }
@@ -147,11 +147,11 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 func (m MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) ([]*types.Message, error) {
 	// only admin can list all message
 	if len(p.From) == 0 {
-		ok, signers, err := m.isAdmin(ctx)
+		isAdmin, signers, err := m.isAdmin(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		if !isAdmin {
 			p.From = signers
 		}
 	} else {
@@ -193,8 +193,8 @@ func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return checkErr
 	}
 	return m.MessageSrv.UpdateMessageStateByID(ctx, id, state)
 }
@@ -208,8 +208,8 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	if err != nil {
 		return "", fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return "", check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return "", checkErr
 	}
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)
 }
@@ -219,8 +219,8 @@ func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMess
 	if err != nil {
 		return cid.Undef, fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return cid.Undef, check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return cid.Undef, checkErr
 	}
 	return m.MessageSrv.ReplaceMessage(ctx, params)
 }
@@ -234,8 +234,8 @@ func (m MessageImp) MarkBadMessage(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if check_err := m.checkPermissionBySigner(ctx, msg.From); check_err != nil {
-		return check_err
+	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+		return checkErr
 	}
 	return m.MessageSrv.MarkBadMessage(ctx, id)
 }
