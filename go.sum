@@ -418,8 +418,8 @@ github.com/filecoin-project/specs-storage v0.4.1/go.mod h1:Z2eK6uMwAOSLjek6+sy0j
 github.com/filecoin-project/storetheindex v0.3.5/go.mod h1:0r3d0kSpK63O6AvLr1CjAINLi+nWD49clzcnKV+GLpI=
 github.com/filecoin-project/test-vectors/schema v0.0.5/go.mod h1:iQ9QXLpYWL3m7warwvK1JC/pTri8mnfEmKygNDqqY6E=
 github.com/filecoin-project/venus v1.2.4/go.mod h1:hJULXHGAnWuq5S5KRtPkwbT8DqgM9II7NwyNU7t59D0=
-github.com/filecoin-project/venus v1.8.1-0.20221206065020-0f692839ff50 h1:r695DsXILSKW+A2HUBAG1LWkhyuuUp+0AvP77SSL5v0=
-github.com/filecoin-project/venus v1.8.1-0.20221206065020-0f692839ff50/go.mod h1:AnTMHZERLQH9oOSGohEVJAwDfQAHcwLXQuAjjmHIvh4=
+github.com/filecoin-project/venus v1.8.1-0.20221213072628-2c129f3a24a0 h1:pZWB2Kavf0BWkche6I6vuJvAGJ69iN7ObaixORwy/Hw=
+github.com/filecoin-project/venus v1.8.1-0.20221213072628-2c129f3a24a0/go.mod h1:BJn0TSnkDTX8R3duiCpgPKDYU5ybrPCgJlkxZi/wmTs=
 github.com/filecoin-project/venus-auth v1.3.2/go.mod h1:m5Jog2GYxztwP7w3m/iJdv/V1/bTcAVU9rm/CbhxRQU=
 github.com/filecoin-project/venus-auth v1.8.1-0.20221207020240-59930e46e79c h1:5JaXKjQ8LNgTu4tOucezwIqw78sHLV9RtN7PZmAZ5SM=
 github.com/filecoin-project/venus-auth v1.8.1-0.20221207020240-59930e46e79c/go.mod h1:Ckj8F/iuSgXnCb9LvH0IiPR7swJZQAhabDOxVycLGWs=
@@ -919,8 +919,8 @@ github.com/ipfs/go-merkledag v0.2.4/go.mod h1:SQiXrtSts3KGNmgOzMICy5c0POOpUNQLvB
 github.com/ipfs/go-merkledag v0.3.2/go.mod h1:fvkZNNZixVW6cKSZ/JfLlON5OlgTXNdRLz0p6QG/I2M=
 github.com/ipfs/go-merkledag v0.4.0/go.mod h1:XshXBkhyeS63YNGisLL1uDSfuTyrQIxVUOg3ojR5MOE=
 github.com/ipfs/go-merkledag v0.5.1/go.mod h1:cLMZXx8J08idkp5+id62iVftUQV+HlYJ3PIhDfZsjA4=
-github.com/ipfs/go-merkledag v0.8.0 h1:ZUda+sh/MGZX4Z13DE/VQT4GmKWm4H95Nje4qcL/yPE=
-github.com/ipfs/go-merkledag v0.8.0/go.mod h1:/RmH1kOs7qDMNtGKPh4d/UErNMVuAMpPS/tP57a3aoY=
+github.com/ipfs/go-merkledag v0.8.1 h1:N3yrqSre/ffvdwtHL4MXy0n7XH+VzN8DlzDrJySPa94=
+github.com/ipfs/go-merkledag v0.8.1/go.mod h1:uYUlWE34GhbcTjGuUDEcdPzsEtOdnOupL64NgSRjmWI=
 github.com/ipfs/go-metrics-interface v0.0.1 h1:j+cpbjYvu4R8zbleSs36gvB7jR+wsL2fGD6n0jO4kdg=
 github.com/ipfs/go-metrics-interface v0.0.1/go.mod h1:6s6euYU4zowdslK0GKHmqaIZ3j/b/tL7HTWtJ4VPgWY=
 github.com/ipfs/go-metrics-prometheus v0.0.2/go.mod h1:ELLU99AQQNi+zX6GCGm2lAgnzdSH3u5UVlCdqSXnEks=
