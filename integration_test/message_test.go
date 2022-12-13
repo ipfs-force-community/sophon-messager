@@ -45,6 +45,16 @@ func TestMarkBadMessage(t *testing.T) {
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
 
+func TestUpdateFilledMessageByID(t *testing.T) {
+	p := prepare(t)
+	defer p.closer()
+
+	t.Run("test update filled message by id", func(t *testing.T) {
+		testUpdateFilledMessageByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
+	})
+	assert.NoError(t, p.ms.stop(p.ctx))
+}
+
 func TestMessageAPI(t *testing.T) {
 	p := prepare(t)
 	defer p.closer()
@@ -90,9 +100,6 @@ func TestMessageAPI(t *testing.T) {
 	})
 	t.Run("test update all filled message", func(t *testing.T) {
 		testUpdateAllFilledMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
-	})
-	t.Run("test update filled message by id", func(t *testing.T) {
-		testUpdateFilledMessageByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
 	})
 	t.Run("test replace message", func(t *testing.T) {
 		testReplaceMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
@@ -539,7 +546,7 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api messager
 		assert.NoError(t, err)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
 	}
-	ctx, cancel := context.WithTimeout(ctx, blockDelay*2)
+	ctx, cancel := context.WithTimeout(ctx, blockDelay*4)
 	defer cancel()
 	wg := sync.WaitGroup{}
 
@@ -552,9 +559,7 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api messager
 			select {
 			case <-ticker.C:
 				_, err := api.UpdateFilledMessageByID(ctx, msg.ID)
-				if err != nil {
-					assert.True(t, strings.Contains(err.Error(), "not found "))
-				} else {
+				if err == nil || strings.Contains(err.Error(), "has been final") {
 					res, err := api.GetMessageByUid(ctx, msg.ID)
 					assert.NoError(t, err)
 					if res.SignedCid != nil {
@@ -563,6 +568,8 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api messager
 						assert.False(t, res.TipSetKey.IsEmpty())
 						return
 					}
+				} else {
+					assert.True(t, strings.Contains(err.Error(), "not found "))
 				}
 			case <-ctx.Done():
 				assert.NoError(t, ctx.Err())
