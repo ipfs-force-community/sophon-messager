@@ -63,7 +63,8 @@ var FromFlag = &cli.StringFlag{
 }
 
 var verboseFlag = &cli.BoolFlag{
-	Name:  "verbose",
-	Usage: "verbose address",
-	Value: false,
+	Name:    "verbose",
+	Usage:   "verbose address",
+	Aliases: []string{"v"},
+	Value:   false,
 }
