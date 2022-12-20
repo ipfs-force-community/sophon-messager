@@ -121,6 +121,9 @@ func checkErr(err error) {
 }
 
 func (f *MockFullNode) AddActors(addrs []address.Address) error {
+	f.l.Lock()
+	defer f.l.Unlock()
+
 	var err error
 	for _, addr := range addrs {
 		if addr.Protocol() == address.ID {
@@ -464,17 +467,20 @@ func (f *MockFullNode) ChainGetMessagesInTipset(ctx context.Context, key types.T
 func (f *MockFullNode) ChainHead(ctx context.Context) (*types.TipSet, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
+
 	return f.currTS, nil
 }
 
 func (f *MockFullNode) StateGetActor(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*types.Actor, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
+
 	actor, ok := f.actors[addr]
 	if !ok {
 		return nil, fmt.Errorf("not found actor %v", addr)
 	}
-	return actor, nil
+	actorCp := *actor
+	return &actorCp, nil
 }
 
 func (f *MockFullNode) GasBatchEstimateMessageGas(ctx context.Context, estimateMessages []*types.EstimateMessage, fromNonce uint64, tsk types.TipSetKey) ([]*types.EstimateResult, error) {

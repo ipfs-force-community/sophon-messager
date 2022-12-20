@@ -248,7 +248,7 @@ func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, to
 // todo better batch update
 func (m *sqliteMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.SaveMessage(msg)
+		err := m.UpdateMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -261,12 +261,18 @@ func (m *sqliteMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
-// SaveMessage used to update message and create message with CreateMessage
-func (m *sqliteMessageRepo) SaveMessage(msg *types.Message) error {
+// UpdateMessage used to update message and create message with CreateMessage
+func (m *sqliteMessageRepo) UpdateMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 
 	return m.DB.Save(sqlMsg).Error
+}
+
+func (m *sqliteMessageRepo) UpdateMessageByState(msg *types.Message, state types.MessageState) error {
+	sqlMsg := fromMessage(msg)
+	sqlMsg.UpdatedAt = time.Now()
+	return m.DB.Where("state = ?", state).Updates(sqlMsg).Error
 }
 
 func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

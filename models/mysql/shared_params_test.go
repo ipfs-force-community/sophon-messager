@@ -50,40 +50,36 @@ func testSetSharedParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	}
 
 	mysqlParams := fromSharedParams(*params)
+	updateSql, updateArgs := genUpdateSQL(mysqlParams, true)
+	updateArgs = append(updateArgs, uint(1))
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `shared_params` WHERE id = ? LIMIT 1")).
 		WithArgs(1).WillReturnError(gorm.ErrRecordNotFound)
-
-	args := getStructFieldValue(mysqlParams)
-	args[0], args[len(args)-1] = args[len(args)-1], args[0]
-
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genUpdateSQL(mysqlParams))).
-		WithArgs().
+	mock.ExpectExec(regexp.QuoteMeta(updateSql)).
+		WithArgs(updateArgs...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
+	id, err := r.SharedParamsRepo().SetSharedParams(ctx, params) //create
+	assert.NoError(t, err)
+	assert.Equal(t, uint(1), id)
 
 	// update params but ID not 1
 	params2 := *params
 	params2.ID = 3
 	mysqlParams2 := fromSharedParams(params2)
+	updateSql2, updateArgs2 := genUpdateSQL(mysqlParams2, true)
+	updateArgs2 = append(updateArgs2, uint(1))
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `shared_params` WHERE id = ? LIMIT 1")).
 		WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"gas_over_estimation"}).AddRow(params.GasOverEstimation))
-
-	args = getStructFieldValue(mysqlParams2)
-	args[0], args[len(args)-1] = args[len(args)-1], uint(1)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genUpdateSQL(mysqlParams2))).
-		WithArgs().
+	mock.ExpectExec(regexp.QuoteMeta(updateSql2)).
+		WithArgs(updateArgs2...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	id, err := r.SharedParamsRepo().SetSharedParams(ctx, params)
-	assert.NoError(t, err)
-	assert.Equal(t, uint(1), id)
-
-	id, err = r.SharedParamsRepo().SetSharedParams(ctx, &params2)
+	id, err = r.SharedParamsRepo().SetSharedParams(ctx, &params2) //update
 	assert.NoError(t, err)
 	assert.Equal(t, uint(1), id)
 }

@@ -276,7 +276,7 @@ func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, top
 // todo better batch update
 func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.SaveMessage(msg)
+		err := m.UpdateMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -289,10 +289,16 @@ func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
-func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
+func (m *mysqlMessageRepo) UpdateMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Save(sqlMsg).Error
+}
+
+func (m *mysqlMessageRepo) UpdateMessageByState(msg *types.Message, state types.MessageState) error {
+	sqlMsg := fromMessage(msg)
+	sqlMsg.UpdatedAt = time.Now()
+	return m.DB.Where("`state` = ?", state).Updates(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

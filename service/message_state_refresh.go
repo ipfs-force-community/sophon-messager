@@ -116,7 +116,7 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 				localMsg.Receipt = msg.receipt
 				localMsg.Height = int64(msg.height)
 				localMsg.TipSetKey = msg.tsk
-				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+				if err = txRepo.MessageRepo().UpdateMessage(localMsg); err != nil {
 					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.signedCID, err)
 				}
 				replaceMsg[localMsg.ID] = localMsg

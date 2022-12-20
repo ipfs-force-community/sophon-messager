@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"testing"
@@ -25,7 +26,8 @@ func TestMessage(t *testing.T) {
 
 	t.Run("mysql test expire message", wrapper(testExpireMessage, r, mock))
 	t.Run("mysql test create message", wrapper(testCreateMessage, r, mock))
-	t.Run("mysql test save message", wrapper(testSaveMessage, r, mock))
+	t.Run("mysql test update message", wrapper(testUpdateMessage, r, mock))
+	t.Run("mysql test update message by state", wrapper(testUpdateMessageByState, r, mock))
 	t.Run("mysql test batch save message", wrapper(testBatchSaveMessage, r, mock))
 
 	t.Run("mysql test get message by from and nonce", wrapper(testGetMessageByFromAndNonce, r, mock))
@@ -77,10 +79,10 @@ func testCreateMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	msg := testhelper.NewMessage()
 
 	mysqlMsg := fromMessage(msg)
-
+	insertSql, insertArgs := genInsertSQL(mysqlMsg)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlMsg))).
-		WithArgs(getStructFieldValue(mysqlMsg)...).
+	mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+		WithArgs(insertArgs...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
@@ -92,14 +94,11 @@ func testBatchSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 
 	for _, msg := range msgs {
 		mysqlMsg := fromMessage(msg)
-		args := getStructFieldValue(mysqlMsg)
-		id := args[0]
-		tmpArgs := args[1:]
-		tmpArgs = append(tmpArgs, id)
-
+		updateSql, updateArgs := genUpdateSQL(mysqlMsg, false)
+		updateArgs = append(updateArgs, mysqlMsg.ID)
 		mock.ExpectBegin()
-		mock.ExpectExec(regexp.QuoteMeta(genUpdateSQL(mysqlMsg))).
-			WithArgs(tmpArgs...).
+		mock.ExpectExec(regexp.QuoteMeta(updateSql)).
+			WithArgs(updateArgs...).
 			WillReturnResult(sqlmock.NewResult(0, 0))
 		mock.ExpectCommit()
 
@@ -107,9 +106,10 @@ func testBatchSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 			WithArgs(mysqlMsg.ID).
 			WillReturnError(gorm.ErrRecordNotFound)
 
+		insertSql, insertArgs := genInsertSQL(mysqlMsg)
 		mock.ExpectBegin()
-		mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlMsg))).
-			WithArgs(args...).
+		mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+			WithArgs(insertArgs...).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 	}
@@ -117,18 +117,15 @@ func testBatchSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	assert.NoError(t, r.MessageRepo().BatchSaveMessage(msgs))
 }
 
-func testSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+func testUpdateMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	msg := testhelper.NewMessage()
 
 	mysqlMsg := fromMessage(msg)
-	args := getStructFieldValue(mysqlMsg)
-	id := args[0]
-	tmpArgs := args[1:]
-	tmpArgs = append(tmpArgs, id)
-
+	updateSql, updateArgs := genUpdateSQL(mysqlMsg, false)
+	updateArgs = append(updateArgs, mysqlMsg.ID)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genUpdateSQL(mysqlMsg))).
-		WithArgs(tmpArgs...).
+	mock.ExpectExec(regexp.QuoteMeta(updateSql)).
+		WithArgs(updateArgs...).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectCommit()
 
@@ -136,13 +133,31 @@ func testSaveMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WithArgs(mysqlMsg.ID).
 		WillReturnError(gorm.ErrRecordNotFound)
 
+	insertSql, insertArgs := genInsertSQL(mysqlMsg)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlMsg))).
+	mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+		WithArgs(insertArgs...).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	assert.NoError(t, r.MessageRepo().UpdateMessage(msg))
+}
+
+func testUpdateMessageByState(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+	msg := testhelper.NewMessage()
+	mysqlMsg := fromMessage(msg)
+
+	updateSql, args := genUpdateSQL(mysqlMsg, true, "state", "id")
+	args = append(args, types.FillMsg)
+	args = append(args, msg.ID)
+
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(updateSql)).
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	assert.NoError(t, r.MessageRepo().SaveMessage(msg))
+	assert.NoError(t, r.MessageRepo().UpdateMessageByState(msg, types.FillMsg))
 }
 
 func testGetMessageByFromAndNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
