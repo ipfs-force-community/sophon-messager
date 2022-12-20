@@ -1,16 +1,21 @@
 package utils
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-cid"
 	"github.com/pelletier/go-toml"
+	"golang.org/x/xerrors"
 )
 
 func StringToTipsetKey(str string) (types.TipSetKey, error) {
@@ -123,4 +128,25 @@ func MsgsGroupByAddress(msgs []*types.SignedMessage) map[address.Address][]*type
 		msgMap[msg.Message.From] = append(msgMap[msg.Message.From], msg)
 	}
 	return msgMap
+}
+
+func GenToken(pl interface{}) (string, error) {
+	secret, err := RandSecret()
+	if err != nil {
+		return "", xerrors.Errorf("rand secret %v", err)
+	}
+	tk, err := jwt.Sign(pl, jwt.NewHS256(secret))
+	if err != nil {
+		return core.EmptyString, xerrors.Errorf("gen token failed :%s", err)
+	}
+	return string(tk), nil
+}
+
+// RandSecret If the daemon does not have a secret key configured, it is automatically generated
+func RandSecret() ([]byte, error) {
+	sk, err := ioutil.ReadAll(io.LimitReader(rand.Reader, 32))
+	if err != nil {
+		return nil, err
+	}
+	return sk, nil
 }

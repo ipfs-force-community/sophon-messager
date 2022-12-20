@@ -23,33 +23,45 @@ import (
 func TestListMessageByParams(t *testing.T) {
 	r, mock, sqlDB := setup(t)
 
-	ids := []string{"msg1", "msg2", "msg3"}
-	from := testutil.AddressProvider()(t)
+	from1 := testutil.AddressProvider()(t)
+	from2 := testutil.AddressProvider()(t)
 	state := types.OnChainMsg
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ?")).
-		WithArgs(from.String()).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+	t.Run("by from", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ?")).
+			WithArgs(from1.String()).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	res, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{from}})
-	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
+		_, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{from1}})
+		assert.NoError(t, err)
+	})
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ?")).
-		WithArgs(state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+	t.Run("by state", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ?")).
+			WithArgs(state).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{state}})
-	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
+		_, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{state}})
+		assert.NoError(t, err)
+	})
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ?")).
-		WithArgs(from.String(), state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+	t.Run("by from and state", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ?")).
+			WithArgs(from1.String(), state).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	res, err = r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{from}, State: []types.MessageState{state}})
-	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
+		_, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{from1}, State: []types.MessageState{state}})
+		assert.NoError(t, err)
+	})
+
+	t.Run("by multi address", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` IN (?,?)")).
+			WithArgs(from1.String(), from2.String()).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+		_, err := r.MessageRepo().ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{from1, from2}})
+		assert.NoError(t, err)
+	})
 
 	assert.NoError(t, closeDB(mock, sqlDB))
 }
@@ -307,17 +319,14 @@ func testGetSignedMessageFromFailedMsg(t *testing.T, r repo.Repo, mock sqlmock.S
 }
 
 func testListMessage(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
-	ids := []string{"msg1", "msg2", "msg3"}
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages`")).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	res, err := r.MessageRepo().ListMessage()
+	_, err := r.MessageRepo().ListMessage()
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
 }
 
 func testListMessageByFromState(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
-	ids := []string{"msg1", "msg2", "msg3"}
 	from := testutil.AddressProvider()(t)
 	state := types.OnChainMsg
 	isAsc := false
@@ -326,38 +335,35 @@ func testListMessageByFromState(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr = ? AND state = ? ORDER BY created_at DESC LIMIT 3")).
 		WithArgs(from.String(), state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	// from is empty
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state = ? ORDER BY created_at DESC LIMIT 3")).
 		WithArgs(state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	// isAsc = true
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr = ? AND state = ? ORDER BY created_at ASC LIMIT 3")).
 		WithArgs(from.String(), state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	// pageIndex = 2 pageSize = 2
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr = ? AND state = ? ORDER BY created_at DESC LIMIT 2 OFFSET 2")).
 		WithArgs(from.String(), state).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("msg1"))
 
-	res, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
+	_, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
 
-	res, err = r.MessageRepo().ListMessageByFromState(address.Undef, state, isAsc, pageIndex, pageSize)
+	_, err = r.MessageRepo().ListMessageByFromState(address.Undef, state, isAsc, pageIndex, pageSize)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
 
-	res, err = r.MessageRepo().ListMessageByFromState(from, state, true, pageIndex, pageSize)
+	_, err = r.MessageRepo().ListMessageByFromState(from, state, true, pageIndex, pageSize)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
 
-	res, err = r.MessageRepo().ListMessageByFromState(from, state, isAsc, 2, 2)
+	res, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, 2, 2)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, []string{ids[2]})
+	checkMsgWithIDs(t, res, []string{"msg1"})
 }
 
 func testListMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
@@ -438,26 +444,23 @@ func TestListBlockedMessage(t *testing.T) {
 }
 
 func testListUnChainMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
-	ids := []string{"msg1", "msg2", "msg3", "msg4"}
 	from := testutil.AddressProvider()(t)
 	topN := 3
 
 	mock.ExpectQuery(regexp.QuoteMeta(fmt.Sprintf("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at LIMIT %d", topN))).
 		WithArgs(from.String(), types.UnFillMsg).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	zero := 0
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at")).
 		WithArgs(from.String(), types.UnFillMsg).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]).AddRow(ids[3]))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
-	res, err := r.MessageRepo().ListUnChainMessageByAddress(from, topN)
+	_, err := r.MessageRepo().ListUnChainMessageByAddress(from, topN)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids[:3])
 
-	res, err = r.MessageRepo().ListUnChainMessageByAddress(from, zero)
+	_, err = r.MessageRepo().ListUnChainMessageByAddress(from, zero)
 	assert.NoError(t, err)
-	checkMsgWithIDs(t, res, ids)
 }
 
 func testListFilledMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {

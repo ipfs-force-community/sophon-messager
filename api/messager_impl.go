@@ -11,6 +11,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
@@ -19,17 +20,8 @@ import (
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/version"
 
-	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/jwtclient"
-)
-
-var (
-	// ErrorPermissionDeny is the error message returned when a user does not have permission to perform an action
-	ErrorPermissionDeny = fmt.Errorf("permission deny")
-
-	// ErrorUserNotFound is the error message returned when a user is not found in context
-	ErrorUserNotFound = fmt.Errorf("user not found")
 )
 
 type ImplParams struct {
@@ -69,7 +61,7 @@ func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error
 	if err != nil {
 		return false, fmt.Errorf("get message by id error or permission deny")
 	}
-	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return false, fmt.Errorf("get message by id error or permission deny")
 	}
 	return true, nil
@@ -80,21 +72,21 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return nil, checkErr
 	}
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return "", err
 	}
 	return m.MessageSrv.PushMessage(ctx, msg, meta)
 }
 
 func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	if err := m.checkPermissionBySigner(ctx, msg.From); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return "", err
 	}
 	return m.MessageSrv.PushMessageWithId(ctx, id, msg, meta)
@@ -105,7 +97,7 @@ func (m MessageImp) GetMessageByUid(ctx context.Context, id string) (*types.Mess
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return nil, checkErr
 	}
 	return msg, nil
@@ -116,7 +108,7 @@ func (m MessageImp) GetMessageBySignedCid(ctx context.Context, cid cid.Cid) (*ty
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return nil, checkErr
 	}
 	return msg, nil
@@ -127,7 +119,7 @@ func (m MessageImp) GetMessageByUnsignedCid(ctx context.Context, cid cid.Cid) (*
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return nil, checkErr
 	}
 	return msg, nil
@@ -138,7 +130,7 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 	if err != nil {
 		return nil, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return nil, checkErr
 	}
 	return msg, nil
@@ -147,15 +139,18 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 func (m MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) ([]*types.Message, error) {
 	// only admin can list all message
 	if len(p.From) == 0 {
-		isAdmin, signers, err := m.isAdmin(ctx)
+		isAdmin, signers, err := IsAdmin(ctx, m.AuthClient)
 		if err != nil {
 			return nil, err
 		}
 		if !isAdmin {
+			if len(signers) == 0 {
+				return nil, nil
+			}
 			p.From = signers
 		}
 	} else {
-		if err := m.checkPermissionBySigner(ctx, p.From...); err != nil {
+		if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, p.From...); err != nil {
 			return nil, err
 		}
 	}
@@ -171,18 +166,21 @@ func (m MessageImp) ListMessageByAddress(ctx context.Context, addr address.Addre
 }
 
 func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	isAdmin, signers, err := m.isAdmin(ctx)
+	isAdmin, signers, err := IsAdmin(ctx, m.AuthClient)
 	if err != nil {
 		return nil, err
 	}
 	if isAdmin {
 		return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{})
 	}
+	if len(signers) == 0 {
+		return nil, nil
+	}
 	return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{From: signers})
 }
 
 func (m MessageImp) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return nil, err
 	}
 	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: []address.Address{addr}}, d)
@@ -193,7 +191,7 @@ func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return checkErr
 	}
 	return m.MessageSrv.UpdateMessageStateByID(ctx, id, state)
@@ -208,7 +206,7 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	if err != nil {
 		return "", fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return "", checkErr
 	}
 	if msg.State == types.OnChainMsg || msg.State == types.ReplacedMsg {
@@ -222,7 +220,7 @@ func (m MessageImp) ReplaceMessage(ctx context.Context, params *types.ReplacMess
 	if err != nil {
 		return cid.Undef, fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return cid.Undef, checkErr
 	}
 	return m.MessageSrv.ReplaceMessage(ctx, params)
@@ -237,35 +235,35 @@ func (m MessageImp) MarkBadMessage(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("get message by id error: %w", err)
 	}
-	if checkErr := m.checkPermissionBySigner(ctx, msg.From); checkErr != nil {
+	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return checkErr
 	}
 	return m.MessageSrv.MarkBadMessage(ctx, id)
 }
 
 func (m MessageImp) RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return nil, err
 	}
 	return m.MessageSrv.RecoverFailedMsg(ctx, addr)
 }
 
 func (m MessageImp) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return nil, err
 	}
 	return m.AddressSrv.GetAddress(ctx, addr)
 }
 
 func (m MessageImp) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return false, err
 	}
 	return m.AddressSrv.HasAddress(ctx, addr)
 }
 
 func (m MessageImp) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return false, err
 	}
 	return m.AddressSrv.WalletHas(ctx, addr)
@@ -278,7 +276,7 @@ func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	}
 	var result []*types.Address
 	for _, msg := range msgs {
-		if err := m.checkPermissionBySigner(ctx, msg.Addr); err == nil {
+		if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.Addr); err == nil {
 			result = append(result, msg)
 		}
 	}
@@ -286,49 +284,49 @@ func (m MessageImp) ListAddress(ctx context.Context) ([]*types.Address, error) {
 }
 
 func (m MessageImp) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return err
 	}
 	return m.AddressSrv.UpdateNonce(ctx, addr, nonce)
 }
 
 func (m MessageImp) DeleteAddress(ctx context.Context, addr address.Address) error {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return err
 	}
 	return m.AddressSrv.DeleteAddress(ctx, addr)
 }
 
 func (m MessageImp) ForbiddenAddress(ctx context.Context, addr address.Address) error {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return err
 	}
 	return m.AddressSrv.ForbiddenAddress(ctx, addr)
 }
 
 func (m MessageImp) ActiveAddress(ctx context.Context, addr address.Address) error {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return err
 	}
 	return m.AddressSrv.ActiveAddress(ctx, addr)
 }
 
 func (m MessageImp) SetSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return err
 	}
 	return m.AddressSrv.SetSelectMsgNum(ctx, addr, num)
 }
 
 func (m MessageImp) SetFeeParams(ctx context.Context, params *types.AddressSpec) error {
-	if err := m.checkPermissionBySigner(ctx, params.Address); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, params.Address); err != nil {
 		return err
 	}
 	return m.AddressSrv.SetFeeParams(ctx, params)
 }
 
 func (m MessageImp) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
-	if err := m.checkPermissionBySigner(ctx, addr); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
 		return 0, err
 	}
 	return m.MessageSrv.ClearUnFillMessage(ctx, addr)
@@ -363,7 +361,7 @@ func (m MessageImp) DeleteNode(ctx context.Context, name string) error {
 }
 
 func (m MessageImp) Send(ctx context.Context, params types.QuickSendParams) (string, error) {
-	if err := m.checkPermissionBySigner(ctx, params.From); err != nil {
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, params.From); err != nil {
 		return "", err
 	}
 	return m.MessageSrv.Send(ctx, params)
@@ -399,29 +397,8 @@ func (m MessageImp) LogList(ctx context.Context) ([]string, error) {
 	return logging.GetSubsystems(), nil
 }
 
-func (m MessageImp) checkPermissionBySigner(ctx context.Context, addrs ...address.Address) error {
-	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
-		return nil
-	}
-	user, exist := jwtclient.CtxGetName(ctx)
-	if !exist {
-		return ErrorUserNotFound
-	}
-
-	for _, wAddr := range addrs {
-		ok, err := m.AuthClient.SignerExistInUser(user, wAddr.String())
-		if err != nil {
-			return fmt.Errorf("check signer exist in user fail %s failed when check permission: %s", wAddr.String(), err)
-		}
-		if !ok {
-			return ErrorPermissionDeny
-		}
-	}
-	return nil
-}
-
-// isAdmin check if the user is admin and return user name
-func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, signers []address.Address, err error) {
+// IsAdmin check if the user is admin and return signers of the user
+func IsAdmin(ctx context.Context, client jwtclient.IAuthClient) (isAdmin bool, signers []address.Address, err error) {
 
 	signers = []address.Address{}
 	err = nil
@@ -431,19 +408,15 @@ func (m MessageImp) isAdmin(ctx context.Context) (isAdmin bool, signers []addres
 	}
 	user, exit := jwtclient.CtxGetName(ctx)
 	if !exit && !isAdmin {
-		err = ErrorUserNotFound
+		err = jwtclient.ErrorUserNotFound
 		return false, nil, err
 	}
-	resp, err := m.AuthClient.ListSigners(user)
+	resp, err := client.ListSigners(ctx, user)
 	if err != nil {
 		return false, nil, err
 	}
 	for _, res := range resp {
-		addr, err := address.NewFromString(res.Signer)
-		if err != nil {
-			return false, nil, err
-		}
-		signers = append(signers, addr)
+		signers = append(signers, res.Signer)
 	}
 
 	return false, signers, nil

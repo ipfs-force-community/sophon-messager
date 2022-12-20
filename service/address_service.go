@@ -19,8 +19,6 @@ import (
 
 var errAddressNotExists = errors.New("address not exists")
 
-//go:generate mockgen -destination=../mocks/mock_address_service.go -package=mocks github.com/filecoin-project/venus-messager/service IAddressService
-
 type IAddressService interface {
 	SaveAddress(ctx context.Context, address *types.Address) (venusTypes.UUID, error)
 	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
@@ -199,7 +197,7 @@ func (addressService *AddressService) ActiveAddresses(ctx context.Context) map[a
 }
 
 func (addressService *AddressService) GetAccountsOfSigner(ctx context.Context, addr address.Address) ([]string, error) {
-	users, err := addressService.authClient.GetUserBySigner(addr.String())
+	users, err := addressService.authClient.GetUserBySigner(ctx, addr)
 	if err != nil {
 		return nil, err
 	}

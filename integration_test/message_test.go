@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"strings"
 	"sync"
@@ -9,14 +10,18 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus-auth/auth"
+	"github.com/filecoin-project/venus-auth/core"
+	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -30,7 +35,7 @@ func TestHasMessageByUid(t *testing.T) {
 	defer p.closer()
 
 	t.Run("test has message by uid", func(t *testing.T) {
-		testHasMessageByUid(p.ctx, t, p.api, p.addrs)
+		testHasMessageByUid(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
@@ -40,7 +45,7 @@ func TestMarkBadMessage(t *testing.T) {
 	defer p.closer()
 
 	t.Run("test mark bad message", func(t *testing.T) {
-		testMarkBadMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testMarkBadMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
@@ -50,7 +55,17 @@ func TestUpdateFilledMessageByID(t *testing.T) {
 	defer p.closer()
 
 	t.Run("test update filled message by id", func(t *testing.T) {
-		testUpdateFilledMessageByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testUpdateFilledMessageByID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
+	})
+	assert.NoError(t, p.ms.stop(p.ctx))
+}
+
+func TestListMessage(t *testing.T) {
+	p := prepare(t)
+	defer p.closer()
+
+	t.Run("test list message", func(t *testing.T) {
+		testListMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
@@ -60,58 +75,55 @@ func TestMessageAPI(t *testing.T) {
 	defer p.closer()
 
 	t.Run("test push message", func(t *testing.T) {
-		testPushMessage(p.ctx, t, p.api, p.addrs)
+		testPushMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test push message with id", func(t *testing.T) {
-		testPushMessageWithID(p.ctx, t, p.api, p.addrs)
+		testPushMessageWithID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test get message by uid", func(t *testing.T) {
-		testGetMessageByUid(p.ctx, t, p.api, p.addrs)
+		testGetMessageByUid(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test wait message", func(t *testing.T) {
-		testWaitMessage(p.ctx, t, p.api, p.addrs)
+		testWaitMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test get message by signed cid", func(t *testing.T) {
-		testGetMessageBySignedCID(p.ctx, t, p.api, p.addrs)
+		testGetMessageBySignedCID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test get message By unsigned cid", func(t *testing.T) {
-		testGetMessageByUnsignedCID(p.ctx, t, p.api, p.addrs)
+		testGetMessageByUnsignedCID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test get message by from and nonce", func(t *testing.T) {
-		testGetMessageByFromAndNonce(p.ctx, t, p.api, p.addrs)
-	})
-	t.Run("test list message", func(t *testing.T) {
-		testListMessage(p.ctx, t, p.api, p.addrs)
+		testGetMessageByFromAndNonce(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test list message by from state", func(t *testing.T) {
-		testListMessageByFromState(p.ctx, t, p.api, p.addrs)
+		testListMessageByFromState(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test list message by address", func(t *testing.T) {
-		testListMessageByAddress(p.ctx, t, p.api)
+		testListMessageByAddress(p.ctx, t, p.apiAdmin, p.apiSign)
 	})
 	t.Run("test list failed message", func(t *testing.T) {
-		testListFailedMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testListFailedMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test list blocked message", func(t *testing.T) {
-		testListBlockedMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testListBlockedMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test update message state by id", func(t *testing.T) {
-		testUpdateMessageStateByID(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testUpdateMessageStateByID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test update all filled message", func(t *testing.T) {
-		testUpdateAllFilledMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testUpdateAllFilledMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test replace message", func(t *testing.T) {
-		testReplaceMessage(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testReplaceMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test recover failed msg", func(t *testing.T) {
-		testRecoverFailedMsg(p.ctx, t, p.api, p.addrs, p.blockDelay)
+		testRecoverFailedMsg(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
 
-func testPushMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testPushMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	sendSpecs := testhelper.MockSendSpecs()
 
@@ -120,6 +132,9 @@ func testPushMessage(ctx context.Context, t *testing.T, api messager.IMessager, 
 		id, err := api.PushMessage(ctx, &msg.Message, meta)
 		assert.NoError(t, err)
 
+		_, err = apiSign.PushMessage(ctx, &msg.Message, meta)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+
 		res, err := api.GetMessageByUid(ctx, id)
 		assert.NoError(t, err)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
@@ -127,7 +142,7 @@ func testPushMessage(ctx context.Context, t *testing.T, api messager.IMessager, 
 	}
 }
 
-func testPushMessageWithID(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testPushMessageWithID(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	sendSpecs := testhelper.MockSendSpecs()
 
@@ -137,6 +152,9 @@ func testPushMessageWithID(ctx context.Context, t *testing.T, api messager.IMess
 		assert.NoError(t, err)
 		assert.Equal(t, msg.ID, id)
 
+		_, err = apiSign.PushMessageWithId(ctx, msg.ID, &msg.Message, meta)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+
 		res, err := api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
@@ -144,7 +162,7 @@ func testPushMessageWithID(ctx context.Context, t *testing.T, api messager.IMess
 	}
 }
 
-func testHasMessageByUid(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testHasMessageByUid(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
@@ -154,6 +172,10 @@ func testHasMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 		has, err := api.HasMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		assert.True(t, has)
+
+		_, err = apiSign.HasMessageByUid(ctx, msg.ID)
+		assert.Equal(t, "get message by id error or permission deny", err.Error())
+
 	}
 
 	has, err := api.HasMessageByUid(ctx, shared.NewUUID().String())
@@ -161,7 +183,7 @@ func testHasMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 	assert.False(t, has)
 }
 
-func testGetMessageByUid(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testGetMessageByUid(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	sendSpecs := testhelper.MockSendSpecs()
 
@@ -174,6 +196,9 @@ func testGetMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 		assert.NoError(t, err)
 		checkSendSpec(t, meta, res.Meta)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
+
+		_, err = apiSign.GetMessageByUid(ctx, id)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	res, err := api.GetMessageByUid(ctx, shared.NewUUID().String())
@@ -181,7 +206,7 @@ func testGetMessageByUid(ctx context.Context, t *testing.T, api messager.IMessag
 	assert.Nil(t, res)
 }
 
-func testWaitMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testWaitMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	sendSpecs := testhelper.MockSendSpecs()
 
@@ -190,6 +215,11 @@ func testWaitMessage(ctx context.Context, t *testing.T, api messager.IMessager, 
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, meta)
 		assert.NoError(t, err)
 		assert.Equal(t, msg.ID, id)
+	}
+
+	for _, msg := range msgs {
+		_, err := apiSign.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	for _, msg := range msgs {
@@ -224,7 +254,7 @@ func genMessagesAndWait(ctx context.Context, t *testing.T, api messager.IMessage
 	return newMsgs
 }
 
-func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessagesAndWait(ctx, t, api, addrs)
 	for _, msg := range msgs {
 		res, err := api.GetMessageByUnsignedCid(ctx, *msg.UnsignedCid)
@@ -232,6 +262,9 @@ func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api messager
 		assert.GreaterOrEqual(t, res.Confidence, msg.Confidence)
 		msg.Confidence = res.Confidence
 		assert.Equal(t, msg, res)
+
+		_, err = apiSign.GetMessageByUnsignedCid(ctx, *msg.UnsignedCid)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
@@ -239,7 +272,7 @@ func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api messager
 	assert.Nil(t, res)
 }
 
-func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessagesAndWait(ctx, t, api, addrs)
 	for _, msg := range msgs {
 		res, err := api.GetMessageBySignedCid(ctx, *msg.SignedCid)
@@ -247,6 +280,9 @@ func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api messager.I
 		assert.GreaterOrEqual(t, res.Confidence, msg.Confidence)
 		msg.Confidence = res.Confidence
 		assert.Equal(t, msg, res)
+
+		_, err = apiSign.GetMessageBySignedCid(ctx, *msg.SignedCid)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
@@ -254,7 +290,7 @@ func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api messager.I
 	assert.Nil(t, res)
 }
 
-func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessagesAndWait(ctx, t, api, addrs)
 	for _, msg := range msgs {
 		res, err := api.GetMessageByFromAndNonce(ctx, msg.From, msg.Nonce)
@@ -262,6 +298,9 @@ func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api message
 		assert.GreaterOrEqual(t, res.Confidence, msg.Confidence)
 		msg.Confidence = res.Confidence
 		assert.Equal(t, msg, res)
+
+		_, err = apiSign.GetMessageByFromAndNonce(ctx, msg.From, msg.Nonce)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	res, err := api.GetMessageByFromAndNonce(ctx, testutil.AddressProvider()(t), 1)
@@ -269,11 +308,15 @@ func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api message
 	assert.Nil(t, res)
 }
 
-func testListMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testListMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	msgs := genMessagesAndWait(ctx, t, api, addrs)
 	list, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list), len(msgs))
+
+	listNull, err := apiSign.ListMessage(ctx, &types.MsgQueryParams{})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(listNull))
 
 	msgMap := make(map[string]*types.Message, len(list))
 	for _, msg := range list {
@@ -289,7 +332,7 @@ func testListMessage(ctx context.Context, t *testing.T, api messager.IMessager, 
 	}
 }
 
-func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
+func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
 	// insert message
 	genMessagesAndWait(ctx, t, api, addrs)
 	genMessagesAndWait(ctx, t, api, addrs)
@@ -362,7 +405,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.
 	}
 }
 
-func testListMessageByAddress(ctx context.Context, t *testing.T, api messager.IMessager) {
+func testListMessageByAddress(ctx context.Context, t *testing.T, api, apiSign messager.IMessager) {
 	allMsgs, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	msgIDs := make(map[address.Address][]string)
@@ -380,7 +423,7 @@ func testListMessageByAddress(ctx context.Context, t *testing.T, api messager.IM
 	}
 }
 
-func testListFailedMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testListFailedMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		msg.Message.GasLimit = -1
@@ -412,9 +455,13 @@ func testListFailedMessage(ctx context.Context, t *testing.T, api messager.IMess
 		assert.NoError(t, err)
 		assert.Equal(t, types.FailedMsg, res.State)
 	}
+
+	listNull, err := apiSign.ListFailedMessage(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(listNull))
 }
 
-func testListBlockedMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testListBlockedMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	addrMsg := make(map[address.Address][]*types.Message, len(addrs))
 	for _, msg := range msgs {
@@ -435,6 +482,9 @@ func testListBlockedMessage(ctx context.Context, t *testing.T, api messager.IMes
 		list, err := api.ListBlockedMessage(ctx, addr, blockDelay)
 		assert.NoError(t, err)
 		assert.Equal(t, len(msgs), len(list))
+
+		_, err = apiSign.ListBlockedMessage(ctx, addr, blockDelay)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 
 		for i, msg := range list {
 			idx := len(msgs) - 1 - i
@@ -470,7 +520,7 @@ func testListBlockedMessage(ctx context.Context, t *testing.T, api messager.IMes
 	}
 }
 
-func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		msg.Message.GasLimit = -1
@@ -495,6 +545,8 @@ func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api messager.
 
 	for _, msg := range msgs {
 		assert.NoError(t, api.UpdateMessageStateByID(ctx, msg.ID, types.FailedMsg))
+		err := apiSign.UpdateMessageStateByID(ctx, msg.ID, types.FailedMsg)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 
 		res, err := api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
@@ -502,7 +554,7 @@ func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api messager.
 	}
 }
 
-func testUpdateAllFilledMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testUpdateAllFilledMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
@@ -535,7 +587,7 @@ func testUpdateAllFilledMessage(ctx context.Context, t *testing.T, api messager.
 	}
 }
 
-func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
@@ -579,13 +631,16 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api messager
 	}
 
 	for i := range msgs {
+		_, err := apiSign.UpdateFilledMessageByID(ctx, msgs[i].ID)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+
 		wg.Add(1)
 		go update(msgs[i])
 	}
 	wg.Wait()
 }
 
-func testReplaceMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testReplaceMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		msg.GasPremium = big.Sub(testhelper.MinPackedPremium, big.NewInt(100))
@@ -610,6 +665,9 @@ func testReplaceMessage(ctx context.Context, t *testing.T, api messager.IMessage
 		c, err := api.ReplaceMessage(ctx, param)
 		assert.NoError(t, err)
 		assert.True(t, c.Defined())
+
+		_, err = apiSign.ReplaceMessage(ctx, param)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 
 	check := func(idx int, msg *types.Message) {
@@ -650,7 +708,7 @@ func testReplaceMessage(ctx context.Context, t *testing.T, api messager.IMessage
 	}
 }
 
-func testMarkBadMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testMarkBadMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		msg.Message.GasLimit = -1
@@ -675,12 +733,16 @@ func testMarkBadMessage(ctx context.Context, t *testing.T, api messager.IMessage
 		res, err = api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, types.FailedMsg, res.State)
+
+		err = apiSign.MarkBadMessage(ctx, msg.ID)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+
 	}
 
 	assert.Error(t, api.MarkBadMessage(ctx, shared.NewUUID().String()))
 }
 
-func testRecoverFailedMsg(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testRecoverFailedMsg(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	addrIDs := make(map[address.Address]map[string]struct{})
 	for _, msg := range msgs {
@@ -715,6 +777,9 @@ func testRecoverFailedMsg(ctx context.Context, t *testing.T, api messager.IMessa
 			_, ok := ids[id]
 			assert.True(t, ok)
 		}
+
+		_, err = apiSign.RecoverFailedMsg(ctx, addr)
+		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
 	}
 }
 
@@ -767,33 +832,52 @@ type testParams struct {
 	addrCount  int
 	account    string
 	addrs      []address.Address
-	api        messager.IMessager
+	apiAdmin   messager.IMessager
+	apiSign    messager.IMessager
 	blockDelay time.Duration
 	closer     func()
 }
 
 func prepare(t *testing.T) *testParams {
 	ctx := context.Background()
-	ctx = auth.WithPerm(ctx, []string{"admin", "sign", "write", "read"})
+	// ctx = auth.WithPerm(ctx, []string{"admin", "sign", "write", "read"})
 	cfg := config.DefaultConfig()
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	authClient := testhelper.NewMockAuthClient()
+	authClient := testhelper.NewMockAuthClient(t)
 	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
 	assert.NoError(t, err)
 
 	go ms.start(ctx)
 	assert.NoError(t, <-ms.appStartErr)
 
+	// account with local token of admin perm and 10 signers
 	addrCount := 10
 	account := defaultLocalToken
 	addrs := testhelper.RandAddresses(t, addrCount)
-	authClient.AddMockUserAndSigner(account, addrs)
+	authClient.Init(account, addrs)
 	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
 	assert.NoError(t, ms.fullNode.AddActors(addrs))
 
-	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
+	apiAdmin, closer, err := newMessagerClient(ctx, ms.port, ms.token)
+	assert.NoError(t, err)
+
+	// account with token of sign permission and no signers
+	accountSign := "accountSign"
+	playLoad := &auth.JWTPayload{
+		Name: accountSign,
+		Perm: core.PermSign,
+	}
+	tokenSign, err := utils.GenToken(playLoad)
+	assert.NoError(t, err)
+	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, token string) (*auth.VerifyResponse, error) {
+		if token == tokenSign {
+			return playLoad, nil
+		}
+		return nil, errors.New("not exist")
+	}).AnyTimes()
+	apiSign, closer2, err := newMessagerClient(ctx, ms.port, tokenSign)
 	assert.NoError(t, err)
 
 	return &testParams{
@@ -804,8 +888,10 @@ func prepare(t *testing.T) *testParams {
 		addrCount:  addrCount,
 		account:    account,
 		addrs:      addrs,
-		api:        api,
+		apiAdmin:   apiAdmin,
+		apiSign:    apiSign,
+
 		blockDelay: blockDelay,
-		closer:     closer,
+		closer:     func() { closer(); closer2() },
 	}
 }
