@@ -38,10 +38,11 @@ func testCreateNode(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	}
 
 	mysqlNode := fromNode(node)
+	insertSql, insertArgs := genInsertSQL(mysqlNode)
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlNode))).
-		WithArgs(getStructFieldValue(mysqlNode)...).
+	mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+		WithArgs(insertArgs...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
@@ -58,15 +59,12 @@ func testSaveNode(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	}
 
 	mysqlNode := fromNode(node)
-	args := getStructFieldValue(mysqlNode)
-	id := args[0]
-	tmpArgs := args[1:]
-	tmpArgs = append(tmpArgs, id)
-	updateSQL := genUpdateSQL(mysqlNode)
+	updateSql, updateArgs := genUpdateSQL(mysqlNode, false)
+	updateArgs = append(updateArgs, mysqlNode.ID)
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(updateSQL)).
-		WithArgs(tmpArgs...).
+	mock.ExpectExec(regexp.QuoteMeta(updateSql)).
+		WithArgs(updateArgs...).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectCommit()
 
@@ -74,9 +72,10 @@ func testSaveNode(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WithArgs(mysqlNode.ID).
 		WillReturnError(gorm.ErrRecordNotFound)
 
+	insertSql, insertArgs := genInsertSQL(mysqlNode)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlNode))).
-		WithArgs(args...).
+	mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+		WithArgs(insertArgs...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

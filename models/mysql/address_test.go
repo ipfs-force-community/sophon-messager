@@ -45,15 +45,12 @@ func testSaveAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	assert.NoError(t, err)
 
 	mysqlAddr := fromAddress(addrInfo)
-	args := getStructFieldValue(mysqlAddr)
-	id := args[0]
-	tmpArgs := args[1:]
-	tmpArgs = append(tmpArgs, id)
-	updateSQL := genUpdateSQL(mysqlAddr)
+	updateSQL, updateArgs := genUpdateSQL(mysqlAddr, false)
+	updateArgs = append(updateArgs, mysqlAddr.ID)
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(updateSQL)).
-		WithArgs(tmpArgs...).
+		WithArgs(updateArgs...).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectCommit()
 
@@ -61,9 +58,10 @@ func testSaveAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WithArgs(mysqlAddr.ID).
 		WillReturnError(gorm.ErrRecordNotFound)
 
+	insertSql, insertArgs := genInsertSQL(mysqlAddr)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(genInsertSQL(mysqlAddr))).
-		WithArgs(args...).
+	mock.ExpectExec(regexp.QuoteMeta(insertSql)).
+		WithArgs(insertArgs...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

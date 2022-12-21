@@ -763,13 +763,11 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 		return cid.Undef, err
 	}
 
-	if err := ms.repo.MessageRepo().SaveMessage(msg); err != nil {
+	if err := ms.repo.MessageRepo().UpdateMessageByState(msg, types.FillMsg); err != nil {
 		return cid.Undef, err
 	}
 
-	_, err = ms.nodeClient.MpoolBatchPush(ctx, []*venusTypes.SignedMessage{&signedMsg})
-
-	return signedMsg.Cid(), err
+	return signedMsg.Cid(), ms.RepublishMessage(ctx, params.ID)
 }
 
 func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) error {

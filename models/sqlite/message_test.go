@@ -53,12 +53,12 @@ func TestSaveAndGetMessage(t *testing.T) {
 
 	// test save message
 	oneMsg := testhelper.NewMessage()
-	assert.NoError(t, messageRepo.SaveMessage(oneMsg))
+	assert.NoError(t, messageRepo.UpdateMessage(oneMsg))
 	res, err := messageRepo.GetMessageByUid(oneMsg.ID)
 	assert.NoError(t, err)
 	testhelper.Equal(t, oneMsg, res)
 	// save again, we expect CreateAt not change and UpdateAt changed
-	assert.NoError(t, messageRepo.SaveMessage(oneMsg))
+	assert.NoError(t, messageRepo.UpdateMessage(oneMsg))
 	res2, err := messageRepo.GetMessageByUid(oneMsg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, res.CreatedAt, res2.CreatedAt)
@@ -79,7 +79,7 @@ func TestSaveAndGetMessage(t *testing.T) {
 	msgCid := msg.Cid()
 	msg.SignedCid = &msgCid
 	msg.UnsignedCid = &msgCid
-	assert.NoError(t, messageRepo.SaveMessage(msg))
+	assert.NoError(t, messageRepo.UpdateMessage(msg))
 	res, err = messageRepo.GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
 	testhelper.Equal(t, msg, res)
@@ -139,7 +139,7 @@ func TestGetMessageState(t *testing.T) {
 
 	for _, state := range []types.MessageState{types.UnFillMsg, types.FillMsg, types.OnChainMsg, types.FailedMsg} {
 		msg.State = state
-		err = messageRepo.SaveMessage(msg)
+		err = messageRepo.UpdateMessage(msg)
 		assert.NoError(t, err)
 		msgState, err := messageRepo.GetMessageState(msg.ID)
 		assert.NoError(t, err)
@@ -550,6 +550,42 @@ func TestUpdateMessageStateByID(t *testing.T) {
 
 	res, err := messageRepo.GetMessageByUid(msg.ID)
 	assert.NoError(t, err)
+	assert.Equal(t, types.OnChainMsg, res.State)
+}
+
+func TestUpdateMessageByID(t *testing.T) {
+	messageRepo := setupRepo(t).MessageRepo()
+	msg := testhelper.NewSignedMessages(1)[0]
+	msg.State = types.FillMsg
+	assert.NoError(t, messageRepo.CreateMessage(msg))
+
+	//success
+	msg.GasFeeCap = abi.NewTokenAmount(10)
+	msg.GasLimit = 1
+	msg.GasPremium = abi.NewTokenAmount(5)
+	msg.State = types.OnChainMsg
+	err := messageRepo.UpdateMessageByState(msg, types.FillMsg)
+	assert.NoError(t, err)
+
+	res, err := messageRepo.GetMessageByUid(msg.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(10), res.GasFeeCap.Uint64())
+	assert.Equal(t, uint64(5), res.GasPremium.Uint64())
+	assert.Equal(t, int64(1), res.GasLimit)
+	assert.Equal(t, types.OnChainMsg, res.State)
+
+	// failed
+	msg.GasFeeCap = abi.NewTokenAmount(20)
+	msg.GasLimit = 2
+	msg.GasPremium = abi.NewTokenAmount(10)
+	err = messageRepo.UpdateMessageByState(msg, types.FillMsg)
+	assert.NoError(t, err)
+
+	res, err = messageRepo.GetMessageByUid(msg.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(10), res.GasFeeCap.Uint64())
+	assert.Equal(t, uint64(5), res.GasPremium.Uint64())
+	assert.Equal(t, int64(1), res.GasLimit)
 	assert.Equal(t, types.OnChainMsg, res.State)
 }
 
