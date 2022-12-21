@@ -1,16 +1,15 @@
 package utils
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-auth/core"
+	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-cid"
@@ -131,7 +130,7 @@ func MsgsGroupByAddress(msgs []*types.SignedMessage) map[address.Address][]*type
 }
 
 func GenToken(pl interface{}) (string, error) {
-	secret, err := RandSecret()
+	secret, err := jwtclient.RandSecret()
 	if err != nil {
 		return "", xerrors.Errorf("rand secret %v", err)
 	}
@@ -140,13 +139,4 @@ func GenToken(pl interface{}) (string, error) {
 		return core.EmptyString, xerrors.Errorf("gen token failed :%s", err)
 	}
 	return string(tk), nil
-}
-
-// RandSecret If the daemon does not have a secret key configured, it is automatically generated
-func RandSecret() ([]byte, error) {
-	sk, err := ioutil.ReadAll(io.LimitReader(rand.Reader, 32))
-	if err != nil {
-		return nil, err
-	}
-	return sk, nil
 }

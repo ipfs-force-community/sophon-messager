@@ -139,11 +139,11 @@ func (m MessageImp) GetMessageByFromAndNonce(ctx context.Context, from address.A
 func (m MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) ([]*types.Message, error) {
 	// only admin can list all message
 	if len(p.From) == 0 {
-		isAdmin, signers, err := IsAdmin(ctx, m.AuthClient)
-		if err != nil {
-			return nil, err
-		}
-		if !isAdmin {
+		if !isAdmin(ctx) {
+			signers, err := getSigners(ctx, m.AuthClient)
+			if err != nil {
+				return nil, err
+			}
 			if len(signers) == 0 {
 				return nil, nil
 			}
@@ -166,12 +166,12 @@ func (m MessageImp) ListMessageByAddress(ctx context.Context, addr address.Addre
 }
 
 func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	isAdmin, signers, err := IsAdmin(ctx, m.AuthClient)
+	if isAdmin(ctx) {
+		return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{})
+	}
+	signers, err := getSigners(ctx, m.AuthClient)
 	if err != nil {
 		return nil, err
-	}
-	if isAdmin {
-		return m.MessageSrv.ListFailedMessage(ctx, &types.MsgQueryParams{})
 	}
 	if len(signers) == 0 {
 		return nil, nil
@@ -397,27 +397,25 @@ func (m MessageImp) LogList(ctx context.Context) ([]string, error) {
 	return logging.GetSubsystems(), nil
 }
 
-// IsAdmin check if the user is admin and return signers of the user
-func IsAdmin(ctx context.Context, client jwtclient.IAuthClient) (isAdmin bool, signers []address.Address, err error) {
+// isAdmin check if the user is admin and return signers of the user
+func isAdmin(ctx context.Context) bool {
+	return auth.HasPerm(ctx, nil, core.PermAdmin)
+}
 
-	signers = []address.Address{}
-	err = nil
+func getSigners(ctx context.Context, client jwtclient.IAuthClient) ([]address.Address, error) {
+	signers := []address.Address{}
 
-	if auth.HasPerm(ctx, []auth.Permission{}, core.PermAdmin) {
-		return true, nil, nil
-	}
 	user, exit := jwtclient.CtxGetName(ctx)
-	if !exit && !isAdmin {
-		err = jwtclient.ErrorUserNotFound
-		return false, nil, err
+	if !exit {
+		return nil, jwtclient.ErrorUserNotFound
 	}
 	resp, err := client.ListSigners(ctx, user)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 	for _, res := range resp {
 		signers = append(signers, res.Signer)
 	}
 
-	return false, signers, nil
+	return signers, nil
 }
