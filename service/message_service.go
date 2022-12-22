@@ -724,15 +724,21 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 			if err != nil {
 				return cid.Undef, err
 			}
-			maxFee := addrInfo.MaxFee
-			sharedParams, err := ms.sps.GetSharedParams(ctx)
-			if err != nil {
-				return cid.Undef, err
+			if !addrInfo.MaxFee.NilOrZero() {
+				mss.MaxFee = addrInfo.MaxFee
+			} else {
+				sharedParams, err := ms.sps.GetSharedParams(ctx)
+				if err != nil {
+					return cid.Undef, err
+				}
+				if !sharedParams.MaxFee.NilOrZero() {
+					mss.MaxFee = sharedParams.MaxFee
+				}
 			}
-			if maxFee.NilOrZero() {
-				maxFee = sharedParams.MaxFee
-			}
-			mss.MaxFee = maxFee
+		}
+
+		if !msg.Meta.MaxFee.NilOrZero() && !mss.MaxFee.NilOrZero() && msg.Meta.MaxFee.GreaterThan(mss.MaxFee) {
+			return cid.Undef, fmt.Errorf("MaxFee(%v) is less than msg.Meta.MaxFee(%v)", params.MaxFee, msg.Meta.MaxFee)
 		}
 
 		CapGasFee(&msg.Message, mss.MaxFee)

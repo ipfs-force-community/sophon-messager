@@ -109,7 +109,7 @@ func TestMergeMsgSpec(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		gasSpec := mergeMsgSpec(test.globalSpec, test.sendSpec, test.addrInfo, test.msg)
+		gasSpec := mergeMsgSpec(test.globalSpec, test.sendSpec, test.addrInfo)
 		assert.Equal(t, test.expect, gasSpec)
 	}
 }
@@ -672,7 +672,7 @@ func checkGasFee(t *testing.T, srcMsgs, currMsgs *types.Message, sharedParams *t
 	if srcMsgs.Meta != nil {
 		meta = srcMsgs.Meta
 	}
-	gasSpec := mergeMsgSpec(sharedParams, meta, addrInfo, srcMsgs)
+	gasSpec := mergeMsgSpec(sharedParams, meta, addrInfo)
 	gasLimit := testhelper.DefGasUsed
 	gasPremium := testhelper.DefGasPremium
 	if gasSpec.GasOverEstimation != 0 {

@@ -489,7 +489,7 @@ func (w *work) estimateMessage(ctx context.Context,
 
 	for _, msg := range msgs {
 		// global msg meta
-		newMsgMeta := mergeMsgSpec(sharedParams, msg.Meta, addrInfo, msg)
+		newMsgMeta := mergeMsgSpec(sharedParams, msg.Meta, addrInfo)
 
 		if msg.GasFeeCap.NilOrZero() && !newMsgMeta.GasFeeCap.NilOrZero() {
 			msg.GasFeeCap = newMsgMeta.GasFeeCap
@@ -605,21 +605,21 @@ type GasSpec struct {
 	BaseFee           big.Int
 }
 
-func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
+func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrInfo *types.Address) *GasSpec {
 	newMsgMeta := &GasSpec{
 		GasOverEstimation: sendSpec.GasOverEstimation,
 		GasOverPremium:    sendSpec.GasOverPremium,
 		MaxFee:            sendSpec.MaxFee,
 	}
 
-	if sendSpec.GasOverEstimation == 0 {
+	if newMsgMeta.GasOverEstimation == 0 {
 		if addrInfo.GasOverEstimation != 0 {
 			newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
 		} else if globalSpec != nil {
 			newMsgMeta.GasOverEstimation = globalSpec.GasOverEstimation
 		}
 	}
-	if sendSpec.MaxFee.NilOrZero() {
+	if newMsgMeta.MaxFee.NilOrZero() {
 		if !addrInfo.MaxFee.NilOrZero() {
 			newMsgMeta.MaxFee = addrInfo.MaxFee
 		} else if globalSpec != nil {
@@ -627,20 +627,18 @@ func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrIn
 		}
 	}
 
-	if msg.GasFeeCap.NilOrZero() {
-		if !addrInfo.GasFeeCap.NilOrZero() {
-			newMsgMeta.GasFeeCap = addrInfo.GasFeeCap
-		} else if globalSpec != nil {
-			newMsgMeta.GasFeeCap = globalSpec.GasFeeCap
-		}
-	}
-
-	if sendSpec.GasOverPremium == 0 {
+	if newMsgMeta.GasOverPremium == 0 {
 		if addrInfo.GasOverPremium != 0 {
 			newMsgMeta.GasOverPremium = addrInfo.GasOverPremium
 		} else if globalSpec.GasOverPremium != 0 {
 			newMsgMeta.GasOverPremium = globalSpec.GasOverPremium
 		}
+	}
+
+	if !addrInfo.GasFeeCap.NilOrZero() {
+		newMsgMeta.GasFeeCap = addrInfo.GasFeeCap
+	} else if globalSpec != nil {
+		newMsgMeta.GasFeeCap = globalSpec.GasFeeCap
 	}
 
 	if !addrInfo.BaseFee.NilOrZero() {
