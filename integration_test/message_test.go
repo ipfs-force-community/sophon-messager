@@ -14,14 +14,15 @@ import (
 	"github.com/filecoin-project/venus-auth/auth"
 	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/service"
 	"github.com/filecoin-project/venus-messager/testhelper"
-	"github.com/filecoin-project/venus-messager/utils"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -869,7 +870,7 @@ func prepare(t *testing.T) *testParams {
 		Name: accountSign,
 		Perm: core.PermSign,
 	}
-	tokenSign, err := utils.GenToken(playLoad)
+	tokenSign, err := genToken(playLoad)
 	assert.NoError(t, err)
 	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, token string) (*auth.VerifyResponse, error) {
 		if token == tokenSign {
@@ -894,4 +895,16 @@ func prepare(t *testing.T) *testParams {
 		blockDelay: blockDelay,
 		closer:     func() { closer(); closer2() },
 	}
+}
+
+func genToken(pl interface{}) (string, error) {
+	secret, err := jwtclient.RandSecret()
+	if err != nil {
+		return "", xerrors.Errorf("rand secret %v", err)
+	}
+	tk, err := jwt.Sign(pl, jwt.NewHS256(secret))
+	if err != nil {
+		return core.EmptyString, xerrors.Errorf("gen token failed :%s", err)
+	}
+	return string(tk), nil
 }

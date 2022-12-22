@@ -23,7 +23,6 @@ import (
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/testhelper"
-	"github.com/filecoin-project/venus-messager/utils"
 )
 
 const defaultLocalToken = "defaultLocalToken"
@@ -58,7 +57,7 @@ func TestAddressAPI(t *testing.T) {
 		Name: accountSign,
 		Perm: core.PermSign,
 	}
-	tokenSign, err := utils.GenToken(playLoad)
+	tokenSign, err := genToken(playLoad)
 	assert.NoError(t, err)
 	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, token string) (*auth.VerifyResponse, error) {
 		if token == tokenSign {
