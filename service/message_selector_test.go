@@ -52,15 +52,10 @@ func TestMergeMsgSpec(t *testing.T) {
 	}
 	emptyAddrInfo := &types.Address{}
 
-	msg := testhelper.NewMessage()
-	msg2 := testhelper.NewMessage()
-	msg2.GasFeeCap = testhelper.DefGasFeeCap
-
 	tests := []struct {
 		globalSpec *types.SharedSpec
 		sendSpec   *types.SendSpec
 		addrInfo   *types.Address
-		msg        *types.Message
 
 		expect *GasSpec
 	}{
@@ -68,43 +63,37 @@ func TestMergeMsgSpec(t *testing.T) {
 			globalSpec: DefSharedParams,
 			sendSpec:   emptySendSpec,
 			addrInfo:   emptyAddrInfo,
-			msg:        msg,
 			expect:     &GasSpec{GasOverEstimation: DefSharedParams.GasOverEstimation, MaxFee: DefSharedParams.MaxFee, GasOverPremium: 0, GasFeeCap: DefSharedParams.GasFeeCap, BaseFee: DefSharedParams.BaseFee},
 		},
 		{
 			defSharedParams,
 			sendSpec,
 			addrInfo,
-			msg,
 			&GasSpec{GasOverEstimation: sendSpec.GasOverEstimation, MaxFee: sendSpec.MaxFee, GasOverPremium: sendSpec.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defSharedParams,
 			emptySendSpec,
 			addrInfo,
-			msg,
 			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defSharedParams,
 			emptySendSpec,
 			emptyAddrInfo,
-			msg,
 			&GasSpec{GasOverEstimation: defSharedParams.GasOverEstimation, MaxFee: defSharedParams.MaxFee, GasOverPremium: defSharedParams.GasOverPremium, GasFeeCap: defSharedParams.GasFeeCap, BaseFee: defSharedParams.BaseFee},
 		},
 		{
 			defSharedParams,
 			emptySendSpec,
 			addrInfo,
-			msg2,
-			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, BaseFee: addrInfo.BaseFee},
+			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
 		{
 			defSharedParams,
 			emptySendSpec,
 			emptyAddrInfo,
-			msg2,
-			&GasSpec{GasOverEstimation: defSharedParams.GasOverEstimation, MaxFee: defSharedParams.MaxFee, GasOverPremium: defSharedParams.GasOverPremium, BaseFee: defSharedParams.BaseFee},
+			&GasSpec{GasOverEstimation: defSharedParams.GasOverEstimation, MaxFee: defSharedParams.MaxFee, GasOverPremium: defSharedParams.GasOverPremium, GasFeeCap: defSharedParams.GasFeeCap, BaseFee: defSharedParams.BaseFee},
 		},
 	}
 
