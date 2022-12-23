@@ -105,19 +105,19 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 			// 若只按 `from` 和 `nonce` 查询，查到的是第一条消息，这样第二条消息一直是 `FillMsg`
 			localMsg, err := txRepo.MessageRepo().GetMessageByFromNonceAndState(msg.msg.From, msg.msg.Nonce, types.FillMsg)
 			if err != nil {
-				msgStateLog.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.signedCID, msg.msg.From)
-				invalidMsgs[msg.signedCID] = struct{}{}
+				msgStateLog.Warnf("msg %s not exist in local db maybe address %s send out of messager", msg.unsignedCID, msg.msg.From)
+				invalidMsgs[msg.unsignedCID] = struct{}{}
 				continue
 			}
-			if localMsg.SignedCid != nil && !(*localMsg.SignedCid).Equals(msg.signedCID) {
-				msgStateLog.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.signedCID, localMsg.ID)
+			if localMsg.UnsignedCid != nil && !(*localMsg.UnsignedCid).Equals(msg.unsignedCID) {
+				msgStateLog.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.unsignedCID, localMsg.ID)
 				// replace msg
 				localMsg.State = types.ReplacedMsg
 				localMsg.Receipt = msg.receipt
 				localMsg.Height = int64(msg.height)
 				localMsg.TipSetKey = msg.tsk
 				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
-					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.signedCID, err)
+					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.unsignedCID, err)
 				}
 				replaceMsg[localMsg.ID] = localMsg
 			} else {
@@ -165,11 +165,11 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 }
 
 type applyMessage struct {
-	signedCID cid.Cid
-	msg       *venustypes.Message
-	height    abi.ChainEpoch
-	tsk       venustypes.TipSetKey
-	receipt   *venustypes.MessageReceipt
+	unsignedCID cid.Cid
+	msg         *venustypes.Message
+	height      abi.ChainEpoch
+	tsk         venustypes.TipSetKey
+	receipt     *venustypes.MessageReceipt
 }
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]applyMessage, error) {
@@ -195,11 +195,11 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 			msg := msgs[i].Message
 			if _, ok := addrs[msg.From]; ok {
 				applyMsgs = append(applyMsgs, applyMessage{
-					height:    ts.Height(),
-					tsk:       ts.Key(),
-					receipt:   receipts[i],
-					msg:       msg,
-					signedCID: msgs[i].Cid,
+					height:      ts.Height(),
+					tsk:         ts.Key(),
+					receipt:     receipts[i],
+					msg:         msg,
+					unsignedCID: msg.Cid(),
 				})
 			}
 		}
