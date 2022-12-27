@@ -57,14 +57,7 @@ type MessageImp struct {
 var _ messager.IMessager = (*MessageImp)(nil)
 
 func (m MessageImp) HasMessageByUid(ctx context.Context, id string) (bool, error) {
-	msg, err := m.MessageSrv.GetMessageByUid(ctx, id)
-	if err != nil {
-		return false, fmt.Errorf("get message by id error or permission deny")
-	}
-	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
-		return false, fmt.Errorf("get message by id error or permission deny")
-	}
-	return true, nil
+	return m.MessageSrv.HasMessageByUid(ctx, id)
 }
 
 func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {

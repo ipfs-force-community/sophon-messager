@@ -173,14 +173,10 @@ func testHasMessageByUid(ctx context.Context, t *testing.T, api, apiSign message
 		has, err := api.HasMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		assert.True(t, has)
-
-		_, err = apiSign.HasMessageByUid(ctx, msg.ID)
-		assert.Equal(t, "get message by id error or permission deny", err.Error())
-
 	}
 
 	has, err := api.HasMessageByUid(ctx, shared.NewUUID().String())
-	assert.Error(t, err)
+	assert.NoError(t, err)
 	assert.False(t, has)
 }
 
