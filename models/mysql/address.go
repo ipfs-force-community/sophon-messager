@@ -15,17 +15,13 @@ import (
 )
 
 type mysqlAddress struct {
-	ID                shared.UUID        `gorm:"column:id;type:varchar(256);primary_key"`
-	Addr              string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
-	Nonce             uint64             `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
-	Weight            int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
-	SelMsgNum         uint64             `gorm:"column:sel_msg_num;type:bigint unsigned;NOT NULL"`
-	State             types.AddressState `gorm:"column:state;type:int;index;default:1"`
-	GasOverEstimation float64            `gorm:"column:gas_over_estimation;type:decimal(10,2);NOT NULL"`
-	MaxFee            mtypes.Int         `gorm:"column:max_fee;type:varchar(256);default:0"`
-	GasFeeCap         mtypes.Int         `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
-	GasOverPremium    float64            `gorm:"column:gas_over_premium;type:decimal(10,2);NOT NULL"`
-	BaseFee           mtypes.Int         `gorm:"column:base_fee;type:varchar(256);default:0"`
+	ID     shared.UUID        `gorm:"column:id;type:varchar(256);primary_key"`
+	Addr   string             `gorm:"column:addr;type:varchar(256);uniqueIndex;NOT NULL"`
+	Nonce  uint64             `gorm:"column:nonce;type:bigint unsigned;index;NOT NULL"`
+	Weight int64              `gorm:"column:weight;type:bigint;index;NOT NULL"`
+	State  types.AddressState `gorm:"column:state;type:int;index;default:1"`
+
+	SelectSpec
 
 	IsDeleted int       `gorm:"column:is_deleted;index;default:-1;NOT NULL"` // 是否删除 1:是  -1:否
 	CreatedAt time.Time `gorm:"column:created_at;index;NOT NULL"`            // 创建时间
@@ -38,20 +34,22 @@ func (s mysqlAddress) TableName() string {
 
 func fromAddress(addr *types.Address) *mysqlAddress {
 	return &mysqlAddress{
-		ID:                addr.ID,
-		Addr:              addr.Addr.String(),
-		Nonce:             addr.Nonce,
-		Weight:            addr.Weight,
-		SelMsgNum:         addr.SelMsgNum,
-		State:             addr.State,
-		GasOverEstimation: addr.GasOverEstimation,
-		GasOverPremium:    addr.GasOverPremium,
-		MaxFee:            mtypes.SafeFromGo(addr.MaxFee.Int),
-		GasFeeCap:         mtypes.SafeFromGo(addr.GasFeeCap.Int),
-		BaseFee:           mtypes.SafeFromGo(addr.BaseFee.Int),
-		IsDeleted:         addr.IsDeleted,
-		CreatedAt:         addr.CreatedAt,
-		UpdatedAt:         addr.UpdatedAt,
+		ID:     addr.ID,
+		Addr:   addr.Addr.String(),
+		Nonce:  addr.Nonce,
+		Weight: addr.Weight,
+		State:  addr.State,
+		SelectSpec: SelectSpec{
+			SelMsgNum:         addr.SelMsgNum,
+			GasOverEstimation: addr.GasOverEstimation,
+			GasOverPremium:    addr.GasOverPremium,
+			MaxFee:            mtypes.SafeFromGo(addr.MaxFee.Int),
+			GasFeeCap:         mtypes.SafeFromGo(addr.GasFeeCap.Int),
+			BaseFee:           mtypes.SafeFromGo(addr.BaseFee.Int),
+		},
+		IsDeleted: addr.IsDeleted,
+		CreatedAt: addr.CreatedAt,
+		UpdatedAt: addr.UpdatedAt,
 	}
 }
 
@@ -61,20 +59,22 @@ func (s mysqlAddress) Address() (*types.Address, error) {
 		return nil, err
 	}
 	return &types.Address{
-		ID:                s.ID,
-		Addr:              addr,
-		Nonce:             s.Nonce,
-		Weight:            s.Weight,
-		SelMsgNum:         s.SelMsgNum,
-		State:             s.State,
-		MaxFee:            big.Int(mtypes.SafeFromGo(s.MaxFee.Int)),
-		GasFeeCap:         big.Int(mtypes.SafeFromGo(s.GasFeeCap.Int)),
-		BaseFee:           big.Int(mtypes.SafeFromGo(s.BaseFee.Int)),
-		GasOverPremium:    s.GasOverPremium,
-		GasOverEstimation: s.GasOverEstimation,
-		IsDeleted:         s.IsDeleted,
-		CreatedAt:         s.CreatedAt,
-		UpdatedAt:         s.UpdatedAt,
+		ID:     s.ID,
+		Addr:   addr,
+		Nonce:  s.Nonce,
+		Weight: s.Weight,
+		State:  s.State,
+		SelectSpec: types.SelectSpec{
+			SelMsgNum:         s.SelMsgNum,
+			GasOverEstimation: s.GasOverEstimation,
+			GasOverPremium:    s.GasOverPremium,
+			MaxFee:            big.Int(mtypes.SafeFromGo(s.MaxFee.Int)),
+			GasFeeCap:         big.Int(mtypes.SafeFromGo(s.GasFeeCap.Int)),
+			BaseFee:           big.Int(mtypes.SafeFromGo(s.BaseFee.Int)),
+		},
+		IsDeleted: s.IsDeleted,
+		CreatedAt: s.CreatedAt,
+		UpdatedAt: s.UpdatedAt,
 	}, nil
 }
 

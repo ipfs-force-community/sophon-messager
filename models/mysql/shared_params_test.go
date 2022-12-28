@@ -40,13 +40,15 @@ func testGetSharedParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 func testSetSharedParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	ctx := context.Background()
 	params := &types.SharedSpec{
-		ID:                1,
-		GasOverEstimation: 1.25,
-		MaxFee:            big.NewInt(100),
-		GasFeeCap:         big.NewInt(1000),
-		BaseFee:           big.NewInt(1001),
-		GasOverPremium:    4.4,
-		SelMsgNum:         10,
+		ID: 1,
+		SelectSpec: types.SelectSpec{
+			GasOverEstimation: 1.25,
+			MaxFee:            big.NewInt(100),
+			GasFeeCap:         big.NewInt(1000),
+			BaseFee:           big.NewInt(1001),
+			GasOverPremium:    4.4,
+			SelMsgNum:         10,
+		},
 	}
 
 	mysqlParams := fromSharedParams(*params)

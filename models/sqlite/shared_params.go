@@ -14,37 +14,34 @@ import (
 
 type sqliteSharedParams struct {
 	ID uint `gorm:"primary_key;column:id;type:INT unsigned AUTO_INCREMENT;NOT NULL" json:"id"`
-
-	GasOverEstimation float64    `gorm:"column:gas_over_estimation;type:REAL;NOT NULL"`
-	MaxFee            mtypes.Int `gorm:"column:max_fee;type:varchar(256);NOT NULL;default:0"`
-	GasFeeCap         mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);NOT NULL;default:0"`
-	GasOverPremium    float64    `gorm:"column:gas_over_premium;type:REAL;NOT NULL;default:0"`
-	BaseFee           mtypes.Int `gorm:"column:base_fee;type:varchar(256);default:0"`
-
-	SelMsgNum uint64 `gorm:"column:sel_msg_num;type:UNSIGNED BIG INT;NOT NULL"`
+	SelectSpec
 }
 
 func fromSharedParams(sp types.SharedSpec) *sqliteSharedParams {
 	return &sqliteSharedParams{
-		ID:                sp.ID,
-		GasOverEstimation: sp.GasOverEstimation,
-		MaxFee:            mtypes.SafeFromGo(sp.MaxFee.Int),
-		GasFeeCap:         mtypes.SafeFromGo(sp.GasFeeCap.Int),
-		BaseFee:           mtypes.SafeFromGo(sp.BaseFee.Int),
-		GasOverPremium:    sp.GasOverPremium,
-		SelMsgNum:         sp.SelMsgNum,
+		ID: sp.ID,
+		SelectSpec: SelectSpec{
+			BaseFee:           mtypes.SafeFromGo(sp.BaseFee.Int),
+			SelMsgNum:         sp.SelMsgNum,
+			GasOverEstimation: sp.GasOverEstimation,
+			MaxFee:            mtypes.SafeFromGo(sp.MaxFee.Int),
+			GasFeeCap:         mtypes.SafeFromGo(sp.GasFeeCap.Int),
+			GasOverPremium:    sp.GasOverPremium,
+		},
 	}
 }
 
 func (ssp sqliteSharedParams) SharedParams() *types.SharedSpec {
 	return &types.SharedSpec{
-		ID:                ssp.ID,
-		GasOverEstimation: ssp.GasOverEstimation,
-		MaxFee:            big.Int(mtypes.SafeFromGo(ssp.MaxFee.Int)),
-		GasFeeCap:         big.Int(mtypes.SafeFromGo(ssp.GasFeeCap.Int)),
-		BaseFee:           big.Int(mtypes.SafeFromGo(ssp.BaseFee.Int)),
-		GasOverPremium:    ssp.GasOverPremium,
-		SelMsgNum:         ssp.SelMsgNum,
+		ID: ssp.ID,
+		SelectSpec: types.SelectSpec{
+			GasOverEstimation: ssp.GasOverEstimation,
+			MaxFee:            big.Int(mtypes.SafeFromGo(ssp.MaxFee.Int)),
+			GasFeeCap:         big.Int(mtypes.SafeFromGo(ssp.GasFeeCap.Int)),
+			BaseFee:           big.Int(mtypes.SafeFromGo(ssp.BaseFee.Int)),
+			GasOverPremium:    ssp.GasOverPremium,
+			SelMsgNum:         ssp.SelMsgNum,
+		},
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/filecoin-project/venus-messager/testhelper"
+
 	"gorm.io/gorm"
 
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
@@ -38,7 +40,7 @@ func TestNode(t *testing.T) {
 	t.Run("get node", func(t *testing.T) {
 		res, err := nodeRepo.GetNode(node2.Name)
 		assert.NoError(t, err)
-		assert.Equal(t, node2, res)
+		testhelper.Equal(t, node2, res)
 
 		_, err = nodeRepo.GetNode(randName)
 		assert.Equal(t, gorm.ErrRecordNotFound, err)
@@ -52,14 +54,15 @@ func TestNode(t *testing.T) {
 		assert.NoError(t, nodeRepo.SaveNode(node))
 		res, err := nodeRepo.GetNode(node.Name)
 		assert.NoError(t, err)
-		assert.Equal(t, node, res)
+		testhelper.Equal(t, node, res)
 	})
 
 	t.Run("list node", func(t *testing.T) {
 		list, err := nodeRepo.ListNode()
 		assert.NoError(t, err)
 		assert.Equal(t, len(list), 3)
-		assert.Equal(t, []*types.Node{node, node2, node3}, list)
+
+		testhelper.Equal(t, []*types.Node{node, node2, node3}, list)
 	})
 
 	t.Run("has node", func(t *testing.T) {

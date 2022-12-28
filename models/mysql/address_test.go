@@ -285,21 +285,24 @@ func testUpdateFeeParams(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 func newAddressInfo(t *testing.T) (*types.Address, error) {
 	randNum := rand.Int63n(1000)
 	return &types.Address{
-		ID:        venustypes.NewUUID(),
-		Addr:      testutil.AddressProvider()(t),
-		Nonce:     uint64(randNum),
-		Weight:    randNum,
-		SelMsgNum: uint64(randNum),
+		ID:     venustypes.NewUUID(),
+		Addr:   testutil.AddressProvider()(t),
+		Nonce:  uint64(randNum),
+		Weight: randNum,
 		// Any zero value like 0, '', false won’t be saved into the database for those fields defined default value,
 		// you might want to use pointer type or Scanner/Valuer to avoid this.
-		State:             types.AddressState(rand.Intn(4) + 1),
-		GasOverEstimation: float64(randNum),
-		GasOverPremium:    float64(randNum),
-		MaxFee:            big.NewInt(randNum),
-		GasFeeCap:         big.NewInt(randNum),
-		BaseFee:           big.NewInt(randNum),
-		IsDeleted:         repo.NotDeleted,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		State: types.AddressState(rand.Intn(4) + 1),
+		SelectSpec: types.SelectSpec{
+			GasOverEstimation: float64(randNum),
+			GasOverPremium:    float64(randNum),
+			MaxFee:            big.NewInt(randNum),
+			GasFeeCap:         big.NewInt(randNum),
+			BaseFee:           big.NewInt(randNum),
+
+			SelMsgNum: uint64(randNum),
+		},
+		IsDeleted: repo.NotDeleted,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}, nil
 }

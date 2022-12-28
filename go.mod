@@ -249,4 +249,6 @@ require (
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
 
+replace github.com/filecoin-project/venus => /Users/lijunlong/code/venus
+
 replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20211201033628-fc1430d095f6
