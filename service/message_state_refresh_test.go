@@ -29,13 +29,13 @@ func TestDoRefreshMessageState(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
+	authClient := testhelper.NewMockAuthClient(t)
 	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	authClient.Init(defaultLocalToken, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 
@@ -127,14 +127,14 @@ func TestDoRefreshMessageState(t *testing.T) {
 		cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 		blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 		fsRepo := filestore.NewMockFileStore(t.TempDir())
-		authClient := testhelper.NewMockAuthClient()
+		authClient := testhelper.NewMockAuthClient(t)
 		msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 		assert.NoError(t, err)
 		ms := msh.ms
 
 		addrCount := 10
 		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-		authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+		authClient.Init(defaultLocalToken, addrs)
 		assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
@@ -224,14 +224,14 @@ func TestDoRefreshMessageState(t *testing.T) {
 		cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 		blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 		fsRepo := filestore.NewMockFileStore(t.TempDir())
-		authClient := testhelper.NewMockAuthClient()
+		authClient := testhelper.NewMockAuthClient(t)
 		msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 		assert.NoError(t, err)
 		ms := msh.ms
 
 		addrCount := 1
 		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))[:2]
-		authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+		authClient.Init(defaultLocalToken, addrs)
 		assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 		assert.NoError(t, msh.fullNode.AddActors(addrs))
 
@@ -280,13 +280,13 @@ func TestUpdateMessageState(t *testing.T) {
 	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
+	authClient := testhelper.NewMockAuthClient(t)
 	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
 	assert.NoError(t, err)
 
 	addrCount := 10
 	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
+	authClient.Init(defaultLocalToken, addrs)
 	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
 	assert.NoError(t, msh.fullNode.AddActors(addrs))
 

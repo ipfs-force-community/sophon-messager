@@ -19,7 +19,7 @@ import (
 
 var log = logging.Logger("api")
 
-func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
+func BindRateLimit(msgImp *MessageImp, remoteAuthCli jwtclient.IAuthClient, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
@@ -43,7 +43,7 @@ func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, rate
 
 // RunAPI bind rpc call and start rpc
 // todo
-func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli *jwtclient.AuthClient, lst net.Listener, msgImp messager.IMessager) error {
+func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli jwtclient.IAuthClient, lst net.Listener, msgImp messager.IMessager) error {
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", msgImp)
 	handler := http.NewServeMux()

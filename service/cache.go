@@ -27,7 +27,7 @@ func newTipsetCache() *TipsetCache {
 }
 
 func (tsCache *TipsetCache) Load(path string) error {
-	b, err := utils.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -81,5 +81,5 @@ func (tsCache *TipsetCache) List() []*venusTypes.TipSet {
 // Save original data will be cleared
 func (tsCache *TipsetCache) Save(filePath string) error {
 	tsCache.reduce()
-	return utils.WriteFile(filePath, tsCache)
+	return utils.WriteJson(filePath, tsCache)
 }

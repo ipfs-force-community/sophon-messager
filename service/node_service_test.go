@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/filecoin-project/venus-messager/mocks"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ func TestNodeService(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockNodeRepo := testhelper.NewMockNodeRepo(mockCtrl)
+	mockNodeRepo := mocks.NewMockNodeRepo(mockCtrl)
 	nodeService := NewNodeService(mockNodeRepo)
 	tempStore := make(map[string]*types.Node)
 

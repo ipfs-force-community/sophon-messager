@@ -12,6 +12,7 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 )
 
+type MsgQueryParams = types.MsgQueryParams
 type MessageRepo interface {
 	ExpireMessage(msg []*types.Message) error
 	BatchSaveMessage(msg []*types.Message) error
@@ -32,14 +33,15 @@ type MessageRepo interface {
 	ListMessage() ([]*types.Message, error)
 	ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
-	ListFailedMessage() ([]*types.Message, error)
-	ListBlockedMessage(addr address.Address, d time.Duration) ([]*types.Message, error)
+	ListFailedMessage(*MsgQueryParams) ([]*types.Message, error)
+	ListBlockedMessage(p *MsgQueryParams, d time.Duration) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListChainMessageByHeight(height abi.ChainEpoch) ([]*types.Message, error)
 	ListUnFilledMessage(addr address.Address) ([]*types.Message, error)
 	ListSignedMsgs() ([]*types.Message, error)
 	ListFilledMessageBelowNonce(addr address.Address, nonce uint64) ([]*types.Message, error)
+	ListMessageByParams(*MsgQueryParams) ([]*types.Message, error)
 
 	UpdateMessageInfoByCid(unsignedCid string, receipt *venustypes.MessageReceipt, height abi.ChainEpoch, state types.MessageState, tsKey venustypes.TipSetKey) error
 	UpdateMessageStateByCid(unsignedCid string, state types.MessageState) error
