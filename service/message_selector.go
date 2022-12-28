@@ -560,7 +560,7 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 		}
 
 		for _, m := range selectResult.ErrMsg {
-			msgSelectLog.Infof("update message %s return value with error %s", m.id, m.err)
+			msgSelectLog.Infof("update message %s error info with error %s", m.id, m.err)
 			if err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err); err != nil {
 				return err
 			}
