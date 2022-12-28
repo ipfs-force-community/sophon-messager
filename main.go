@@ -51,6 +51,7 @@ func main() {
 			ccli.MsgCmds,
 			ccli.AddrCmds,
 			ccli.SharedParamsCmds,
+			ccli.ActorCfgCmds,
 			ccli.NodeCmds,
 			ccli.LogCmds,
 			ccli.SendCmd,

@@ -891,6 +891,22 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 	}
 }
 
+func (ms *MessageService) SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error {
+	return ms.repo.ActorCfgRepo().SaveActorCfg(ctx, actorCfg)
+}
+
+func (ms *MessageService) UpdateActorCfg(ctx context.Context, id venusTypes.UUID, changeSpecParams *types.ChangeGasSpecParams) error {
+	return ms.repo.ActorCfgRepo().UpdateSelectSpecById(ctx, id, changeSpecParams)
+}
+
+func (ms *MessageService) ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error) {
+	return ms.repo.ActorCfgRepo().ListActorCfg(ctx)
+}
+
+func (ms *MessageService) GetActorCfgByID(ctx context.Context, id venusTypes.UUID) (*types.ActorCfg, error) {
+	return ms.repo.ActorCfgRepo().GetActorCfgByID(ctx, id)
+}
+
 func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 	tm := time.NewTicker(time.Second * 60)
 	defer tm.Stop()

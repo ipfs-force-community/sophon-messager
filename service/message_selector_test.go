@@ -44,11 +44,23 @@ func TestMergeMsgSpec(t *testing.T) {
 	emptySendSpec := &types.SendSpec{}
 
 	addrInfo := &types.Address{
-		GasOverEstimation: 1.5,
-		MaxFee:            big.NewInt(50000),
-		GasFeeCap:         big.NewInt(50000),
-		GasOverPremium:    5.0,
-		BaseFee:           big.NewInt(50001),
+		FeeSpec: types.FeeSpec{
+			GasOverEstimation: 1.5,
+			MaxFee:            big.NewInt(50000),
+			GasFeeCap:         big.NewInt(50000),
+			GasOverPremium:    5.0,
+			BaseFee:           big.NewInt(50001),
+		},
+	}
+
+	actorCfg := &types.ActorCfg{
+		FeeSpec: types.FeeSpec{
+			GasOverEstimation: 2.0,
+			MaxFee:            big.NewInt(60000),
+			GasFeeCap:         big.NewInt(60000),
+			GasOverPremium:    6.0,
+			BaseFee:           big.NewInt(60001),
+		},
 	}
 	emptyAddrInfo := &types.Address{}
 
@@ -60,6 +72,7 @@ func TestMergeMsgSpec(t *testing.T) {
 		globalSpec *types.SharedSpec
 		sendSpec   *types.SendSpec
 		addrInfo   *types.Address
+		actorCfg   *types.ActorCfg
 		msg        *types.Message
 
 		expect *GasSpec
@@ -75,6 +88,7 @@ func TestMergeMsgSpec(t *testing.T) {
 			defSharedParams,
 			sendSpec,
 			addrInfo,
+			nil,
 			msg,
 			&GasSpec{GasOverEstimation: sendSpec.GasOverEstimation, MaxFee: sendSpec.MaxFee, GasOverPremium: sendSpec.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
@@ -82,6 +96,7 @@ func TestMergeMsgSpec(t *testing.T) {
 			defSharedParams,
 			emptySendSpec,
 			addrInfo,
+			nil,
 			msg,
 			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, GasFeeCap: addrInfo.GasFeeCap, BaseFee: addrInfo.BaseFee},
 		},
@@ -89,6 +104,7 @@ func TestMergeMsgSpec(t *testing.T) {
 			defSharedParams,
 			emptySendSpec,
 			emptyAddrInfo,
+			nil,
 			msg,
 			&GasSpec{GasOverEstimation: defSharedParams.GasOverEstimation, MaxFee: defSharedParams.MaxFee, GasOverPremium: defSharedParams.GasOverPremium, GasFeeCap: defSharedParams.GasFeeCap, BaseFee: defSharedParams.BaseFee},
 		},
@@ -96,6 +112,7 @@ func TestMergeMsgSpec(t *testing.T) {
 			defSharedParams,
 			emptySendSpec,
 			addrInfo,
+			nil,
 			msg2,
 			&GasSpec{GasOverEstimation: addrInfo.GasOverEstimation, MaxFee: addrInfo.MaxFee, GasOverPremium: addrInfo.GasOverPremium, BaseFee: addrInfo.BaseFee},
 		},
@@ -103,13 +120,22 @@ func TestMergeMsgSpec(t *testing.T) {
 			defSharedParams,
 			emptySendSpec,
 			emptyAddrInfo,
+			nil,
 			msg2,
 			&GasSpec{GasOverEstimation: defSharedParams.GasOverEstimation, MaxFee: defSharedParams.MaxFee, GasOverPremium: defSharedParams.GasOverPremium, BaseFee: defSharedParams.BaseFee},
+		},
+		{
+			defSharedParams,
+			emptySendSpec,
+			emptyAddrInfo,
+			actorCfg,
+			msg2,
+			&GasSpec{GasOverEstimation: actorCfg.GasOverEstimation, MaxFee: actorCfg.MaxFee, GasOverPremium: actorCfg.GasOverPremium, BaseFee: actorCfg.BaseFee},
 		},
 	}
 
 	for _, test := range tests {
-		gasSpec := mergeMsgSpec(test.globalSpec, test.sendSpec, test.addrInfo, test.msg)
+		gasSpec := mergeMsgSpec(test.globalSpec, test.sendSpec, test.addrInfo, test.actorCfg, test.msg)
 		assert.Equal(t, test.expect, gasSpec)
 	}
 }
@@ -672,7 +698,7 @@ func checkGasFee(t *testing.T, srcMsgs, currMsgs *types.Message, sharedParams *t
 	if srcMsgs.Meta != nil {
 		meta = srcMsgs.Meta
 	}
-	gasSpec := mergeMsgSpec(sharedParams, meta, addrInfo, srcMsgs)
+	gasSpec := mergeMsgSpec(sharedParams, meta, addrInfo, nil, srcMsgs)
 	gasLimit := testhelper.DefGasUsed
 	gasPremium := testhelper.DefGasPremium
 	if gasSpec.GasOverEstimation != 0 {

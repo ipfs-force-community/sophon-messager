@@ -15,6 +15,10 @@ type Repo struct {
 	*gorm.DB
 }
 
+func (d Repo) ActorCfgRepo() repo.ActorCfgRepo {
+	return newMysqlActorCfgRepo(d.DB)
+}
+
 func (d Repo) MessageRepo() repo.MessageRepo {
 	return newMysqlMessageRepo(d.DB)
 }
@@ -32,20 +36,7 @@ func (d Repo) NodeRepo() repo.NodeRepo {
 }
 
 func (d Repo) AutoMigrate() error {
-	err := d.GetDb().AutoMigrate(mysqlMessage{})
-	if err != nil {
-		return err
-	}
-
-	if err := d.GetDb().AutoMigrate(mysqlAddress{}); err != nil {
-		return err
-	}
-
-	if err := d.GetDb().AutoMigrate(mysqlSharedParams{}); err != nil {
-		return err
-	}
-
-	return d.GetDb().AutoMigrate(mysqlNode{})
+	return d.GetDb().AutoMigrate(mysqlActorCfg{}, mysqlMessage{}, mysqlAddress{}, mysqlSharedParams{}, mysqlNode{})
 }
 
 func (d Repo) GetDb() *gorm.DB {
@@ -69,6 +60,18 @@ var _ repo.TxRepo = (*TxMysqlRepo)(nil)
 
 type TxMysqlRepo struct {
 	*gorm.DB
+}
+
+func (t *TxMysqlRepo) ActorCfgRepo() repo.ActorCfgRepo {
+	return newMysqlActorCfgRepo(t.DB)
+}
+
+func (t *TxMysqlRepo) SharedParamsRepo() repo.SharedParamsRepo {
+	return newMysqlSharedParamsRepo(t.DB)
+}
+
+func (t *TxMysqlRepo) NodeRepo() repo.NodeRepo {
+	return newMysqlNodeRepo(t.DB)
 }
 
 func (t *TxMysqlRepo) MessageRepo() repo.MessageRepo {

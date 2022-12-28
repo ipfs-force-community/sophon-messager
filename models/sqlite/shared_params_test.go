@@ -15,13 +15,15 @@ func TestSharedParams(t *testing.T) {
 
 	ctx := context.Background()
 	params := &messager.SharedSpec{
-		ID:                1,
-		GasOverEstimation: 1.5,
-		MaxFee:            big.NewInt(10),
-		GasFeeCap:         big.NewInt(100),
-		BaseFee:           big.NewInt(1000),
-		GasOverPremium:    1.6,
-		SelMsgNum:         30,
+		ID:        1,
+		SelMsgNum: 30,
+		FeeSpec: messager.FeeSpec{
+			GasOverEstimation: 1.5,
+			MaxFee:            big.NewInt(10),
+			GasFeeCap:         big.NewInt(100),
+			BaseFee:           big.NewInt(1000),
+			GasOverPremium:    1.6,
+		},
 	}
 	_, err := r.SetSharedParams(ctx, params)
 	assert.Nil(t, err)
@@ -32,13 +34,15 @@ func TestSharedParams(t *testing.T) {
 
 	// update params but ID not 1
 	params2 := &messager.SharedSpec{
-		ID:                3,
-		GasOverEstimation: 3.5,
-		MaxFee:            big.NewInt(310),
-		GasFeeCap:         big.NewInt(3100),
-		BaseFee:           big.NewInt(0),
-		GasOverPremium:    3.6,
-		SelMsgNum:         10,
+		ID:        3,
+		SelMsgNum: 10,
+		FeeSpec: messager.FeeSpec{
+			GasOverEstimation: 3.5,
+			MaxFee:            big.NewInt(310),
+			GasFeeCap:         big.NewInt(3100),
+			BaseFee:           big.NewInt(0),
+			GasOverPremium:    3.6,
+		},
 	}
 	_, err = r.SetSharedParams(ctx, params2)
 	assert.Nil(t, err)

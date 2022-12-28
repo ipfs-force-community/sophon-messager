@@ -189,3 +189,19 @@ node_type | int | 节点类型
 is_deleted | int | 是否删除，-1：否，1：是
 created_at | datetime | 创建时间
 updated_at | datetime | 更新时间
+
+5. actor费用配置表
+
+name | type            | desc
+---|-----------------|---|
+id | varchar(256)    | primary key
+actor_v | uint            | actor版本
+code | varchar(256)    | 代码
+method| unsigned bigint | 方法号
+gas_over_estimation | decimal(10,2)   | gas limit的系数
+gas_over_estimation | decimal(10,2)   | gas premium的系数
+max_fee | varchar(256)    | 最大费用
+base_fee | varchar(256)    | 基础费用阈值
+gas_fee_cap | varchar(256)    |
+created_at | datetime        | 创建时间
+updated_at | datetime        | 更新时间
