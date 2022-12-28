@@ -582,7 +582,7 @@ var markBadCmd = &cli.Command{
 			}
 			for _, msg := range msgs {
 				if msg.State == types.UnFillMsg {
-					if msg.Receipt != nil && len(msg.Receipt.Return) > 0 {
+					if len(msg.ErrorMsg) > 0 {
 						err = client.MarkBadMessage(cctx.Context, msg.ID)
 						if err != nil {
 							fmt.Printf("mark msg %s as bad failed: %v\n", msg.ID, err)
