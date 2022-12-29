@@ -48,7 +48,7 @@ func outputWithTable(msgs []*types.Message, verbose bool, nodeAPI v1.FullNode) e
 			"GasPremium": msg.Msg.GasPremium,
 			"Method":     msg.Msg.Method,
 			"State":      msg.State,
-			"ErrorMsg":   msgT.ErrorMsg,
+			"ErrorMsg":   msg.ErrorMsg,
 			"CreateAt":   msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		if !verbose {
@@ -114,8 +114,8 @@ type message struct {
 	Meta *types.SendSpec
 
 	WalletName string
-
-	State string
+	ErrorMsg   string
+	State      string
 
 	UpdatedAt time.Time
 	CreatedAt time.Time
@@ -137,6 +137,7 @@ func transformMessage(msg *types.Message, nodeAPI v1.FullNode) *message {
 		Meta:        msg.Meta,
 		WalletName:  msg.WalletName,
 		State:       msg.State.String(),
+		ErrorMsg:    msg.ErrorMsg,
 
 		UpdatedAt: msg.UpdatedAt,
 		CreatedAt: msg.CreatedAt,
