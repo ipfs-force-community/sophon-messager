@@ -9,8 +9,6 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/filecoin-project/go-state-types/big"
-
 	actors2 "github.com/filecoin-project/venus/venus-shared/actors"
 
 	"github.com/filecoin-project/venus/venus-shared/utils"
@@ -136,7 +134,7 @@ var updateActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing feecap failed %v", err)
 			}
-			changeGasSpecParams.GasFeeCap = big.Int(gasFeeCap)
+			changeGasSpecParams.GasFeeCap = gasFeeCap
 		}
 
 		if ctx.IsSet(maxFeeFlag.Name) {
@@ -145,7 +143,7 @@ var updateActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing maxfee failed %v", err)
 			}
-			changeGasSpecParams.MaxFee = big.Int(maxfee)
+			changeGasSpecParams.MaxFee = maxfee
 		}
 
 		if ctx.IsSet(basefeeFlag.Name) {
@@ -154,7 +152,7 @@ var updateActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing maxfee failed %v", err)
 			}
-			changeGasSpecParams.BaseFee = big.Int(basefee)
+			changeGasSpecParams.BaseFee = basefee
 		}
 		if !hasUpdate {
 			return errors.New("no new params to update")
@@ -245,7 +243,7 @@ var addActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing feecap failed %v", err)
 			}
-			newActorCfg.GasFeeCap = big.Int(gasFeeCap)
+			newActorCfg.GasFeeCap = gasFeeCap
 		}
 
 		if ctx.IsSet(maxFeeFlag.Name) {
@@ -254,7 +252,7 @@ var addActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing maxfee failed %v", err)
 			}
-			newActorCfg.MaxFee = big.Int(maxfee)
+			newActorCfg.MaxFee = maxfee
 		}
 
 		if ctx.IsSet(basefeeFlag.Name) {
@@ -263,7 +261,7 @@ var addActorCfgCmd = &cli.Command{
 			if err != nil {
 				return fmt.Errorf("parsing maxfee failed %v", err)
 			}
-			newActorCfg.BaseFee = big.Int(basefee)
+			newActorCfg.BaseFee = basefee
 		}
 		if !hasArgument {
 			return errors.New("no argument to save")

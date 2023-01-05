@@ -47,6 +47,7 @@ func setup(t *testing.T) (repo.Repo, sqlmock.Sqlmock, *sql.DB) {
 		Conn: sqlDB,
 	}))
 	assert.NoError(t, err)
+	gormDB = gormDB.Debug()
 
 	return Repo{DB: gormDB}, mock, sqlDB
 }

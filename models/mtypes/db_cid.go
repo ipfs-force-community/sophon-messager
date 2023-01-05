@@ -53,11 +53,3 @@ func (c DBCid) String() string {
 func (c DBCid) Cid() cid.Cid {
 	return cid.Cid(c)
 }
-
-func (c DBCid) cidPtr() *cid.Cid {
-	if c == UndefDBCid {
-		return nil
-	}
-	cid := cid.Cid(c)
-	return &cid
-}

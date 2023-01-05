@@ -18,10 +18,6 @@ type FeeSpec struct {
 
 type sqliteUint64 uint64
 
-func newSqliteUint64(val uint64) sqliteUint64 {
-	return sqliteUint64(val)
-}
-
 func (c *sqliteUint64) Scan(value interface{}) error {
 	switch value := value.(type) {
 	case int64:

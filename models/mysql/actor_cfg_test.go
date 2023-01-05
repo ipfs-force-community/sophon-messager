@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/ipfs/go-cid"
+
 	"github.com/filecoin-project/venus-messager/models/mtypes"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -104,6 +106,16 @@ func testGetActorTypeByMethodType(t *testing.T, r repo.Repo, mock sqlmock.Sqlmoc
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, actorCfg, *actorCfgR)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `actor_cfg` WHERE code = ? and method = ? LIMIT 1")).
+		WithArgs(mtypes.UndefDBCid, 1).
+		WillReturnError(gorm.ErrRecordNotFound)
+
+	_, err = r.ActorCfgRepo().GetActorCfgByMethodType(ctx, &types.MethodType{
+		Code:   cid.Undef,
+		Method: 1,
+	})
+	assert.Equal(t, gorm.ErrRecordNotFound, err)
 }
 
 func testListActorType(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
@@ -141,20 +153,37 @@ func assertActorCfgArrValue(t *testing.T, expectVal, actualVal []*types.ActorCfg
 
 func testDeleteActorCfgByMethodType(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	ctx := context.Background()
-	var actorCfg types.ActorCfg
-	testutil.Provide(t, &actorCfg)
+	t.Run("correct ", func(t *testing.T) {
+		var actorCfg types.ActorCfg
+		testutil.Provide(t, &actorCfg)
 
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `actor_cfg` WHERE code = ? and method = ?")).
-		WithArgs(mtypes.NewDBCid(actorCfg.Code), actorCfg.Method).
-		WillReturnResult(driverResult{0, 1})
-	mock.ExpectCommit()
+		mock.ExpectBegin()
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `actor_cfg` WHERE code = ? and method = ?")).
+			WithArgs(mtypes.NewDBCid(actorCfg.Code), actorCfg.Method).
+			WillReturnResult(driverResult{0, 1})
+		mock.ExpectCommit()
 
-	err := r.ActorCfgRepo().DelActorCfgByMethodType(ctx, &types.MethodType{
-		Code:   actorCfg.Code,
-		Method: actorCfg.Method,
+		err := r.ActorCfgRepo().DelActorCfgByMethodType(ctx, &types.MethodType{
+			Code:   actorCfg.Code,
+			Method: actorCfg.Method,
+		})
+		assert.NoError(t, err)
 	})
-	assert.NoError(t, err)
+
+	t.Run("code cid is undefined", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `actor_cfg` WHERE code = ? and method = ?")).
+			WithArgs(mtypes.UndefDBCid, 0).
+			WillReturnResult(driverResult{0, 1})
+		mock.ExpectCommit()
+
+		err := r.ActorCfgRepo().DelActorCfgByMethodType(ctx, &types.MethodType{
+			Code:   cid.Undef,
+			Method: 0,
+		})
+		assert.NoError(t, err)
+	})
+
 }
 
 func testDeleteActorCfgById(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {

@@ -109,7 +109,7 @@ func Test_fromActorCfg(t *testing.T) {
 	}
 
 	for _, actorCfg := range expectActorCfgs[5:] {
-		assert.NoError(t, actorCfgRepo.DelActorCfgByMethodType(ctx, &types.MethodType{actorCfg.Code, actorCfg.Method}))
+		assert.NoError(t, actorCfgRepo.DelActorCfgByMethodType(ctx, &types.MethodType{Code: actorCfg.Code, Method: actorCfg.Method}))
 	}
 
 	actorsR, err := actorCfgRepo.ListActorCfg(ctx)

@@ -732,9 +732,9 @@ func genMessages(addrs []address.Address, count int) []*types.Message {
 	sendSpecs := testhelper.MockSendSpecs()
 	for i, msg := range msgs {
 		msg.From = addrs[i%len(addrs)]
+		msg.To = addrs[i%len(addrs)]
 		msg.Meta = sendSpecs[i%len(sendSpecs)]
 	}
-
 	return msgs
 }
 

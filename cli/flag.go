@@ -74,12 +74,6 @@ var outputTypeFlag = &cli.StringFlag{
 	Value: "table",
 }
 
-var uuidFlag = &cli.StringFlag{
-	Name:     "id",
-	Usage:    "uuid type, ",
-	Required: true,
-}
-
 var FromFlag = &cli.StringFlag{
 	Name:  "from",
 	Usage: "address to send message",

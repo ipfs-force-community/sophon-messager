@@ -11,7 +11,6 @@ import (
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/testhelper"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -40,11 +39,6 @@ func TestActorCfgAPI(t *testing.T) {
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
 	assert.NoError(t, err)
 	defer closer()
-
-	allAddrs := make([]address.Address, 0, len(addrs))
-	for _, addr := range addrs {
-		allAddrs = append(allAddrs, testhelper.ResolveAddr(t, addr))
-	}
 
 	actorCfgs := make([]*types.ActorCfg, 5)
 	testutil.Provide(t, &actorCfgs)

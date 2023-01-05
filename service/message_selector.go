@@ -604,7 +604,6 @@ func (w *work) getActorCfg(ctx context.Context, msg *types.Message, nv network.V
 		w.actorCache.Add(key, actor)
 	}
 
-	fmt.Println(actor.Code)
 	actorCfg, err := w.repo.ActorCfgRepo().GetActorCfgByMethodType(ctx, &types.MethodType{
 		Code:   actor.Code,
 		Method: msg.Method,

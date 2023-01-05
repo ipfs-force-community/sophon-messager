@@ -91,7 +91,9 @@ func OpenSqlite(fsRepo filestore.FSRepo) (repo.Repo, error) {
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
-	db = db.Debug()
+	if fsRepo.Config().DB.Sqlite.Debug {
+		db = db.Debug()
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {

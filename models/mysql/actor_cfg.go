@@ -2,7 +2,10 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/actors"
 
@@ -83,12 +86,16 @@ func newMysqlActorCfgRepo(db *gorm.DB) *mysqlActorCfgRepo {
 }
 
 func (s *mysqlActorCfgRepo) SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error {
+	if actorCfg.Code == cid.Undef {
+		return errors.New("code cid is undefined")
+	}
+
 	return s.DB.Save(fromActorCfg(actorCfg)).Error
 }
 
 func (s *mysqlActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error) {
 	var a mysqlActorCfg
-	if err := s.DB.Take(&a, "code = ? and method = ?", methodType.Code.String(), methodType.Method).Error; err != nil {
+	if err := s.DB.Take(&a, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error; err != nil {
 		return nil, err
 	}
 
@@ -119,7 +126,7 @@ func (s *mysqlActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCfg
 }
 
 func (s *mysqlActorCfgRepo) DelActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) error {
-	return s.DB.Delete(mysqlActorCfg{}, "code = ? and method = ?", methodType.Code.String(), methodType.Method).Error
+	return s.DB.Delete(mysqlActorCfg{}, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error
 }
 
 func (s *mysqlActorCfgRepo) DelActorCfgById(ctx context.Context, id shared.UUID) error {

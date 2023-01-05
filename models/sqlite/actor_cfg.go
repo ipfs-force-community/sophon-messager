@@ -2,7 +2,10 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/actors"
 
@@ -83,12 +86,15 @@ func newSqliteActorCfgRepo(db *gorm.DB) *sqliteActorCfgRepo {
 }
 
 func (s *sqliteActorCfgRepo) SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error {
+	if actorCfg.Code == cid.Undef {
+		return errors.New("code cid is undefined")
+	}
 	return s.DB.Save(fromActorCfg(actorCfg)).Error
 }
 
 func (s *sqliteActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error) {
 	var a sqliteActorCfg
-	if err := s.DB.Take(&a, "code = ? and method = ?", methodType.Code.String(), sqliteUint64(methodType.Method)).Error; err != nil {
+	if err := s.DB.Take(&a, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error; err != nil {
 		return nil, err
 	}
 
@@ -119,7 +125,7 @@ func (s *sqliteActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCf
 }
 
 func (s *sqliteActorCfgRepo) DelActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) error {
-	return s.DB.Delete(sqliteActorCfg{}, "code = ? and method = ?", methodType.Code.String(), sqliteUint64(methodType.Method)).Error
+	return s.DB.Delete(sqliteActorCfg{}, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error
 }
 
 func (s *sqliteActorCfgRepo) DelActorCfgById(ctx context.Context, id shared.UUID) error {
