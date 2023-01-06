@@ -14,6 +14,10 @@ type SqlLiteRepo struct {
 	*gorm.DB
 }
 
+func (d SqlLiteRepo) ActorCfgRepo() repo.ActorCfgRepo {
+	return newSqliteActorCfgRepo(d.DB)
+}
+
 func (d SqlLiteRepo) MessageRepo() repo.MessageRepo {
 	return newSqliteMessageRepo(d.DB)
 }
@@ -31,20 +35,7 @@ func (d SqlLiteRepo) NodeRepo() repo.NodeRepo {
 }
 
 func (d SqlLiteRepo) AutoMigrate() error {
-	err := d.GetDb().AutoMigrate(sqliteMessage{})
-	if err != nil {
-		return err
-	}
-
-	if err := d.GetDb().AutoMigrate(sqliteAddress{}); err != nil {
-		return err
-	}
-
-	if err := d.GetDb().AutoMigrate(sqliteSharedParams{}); err != nil {
-		return err
-	}
-
-	return d.GetDb().AutoMigrate(sqliteNode{})
+	return d.GetDb().AutoMigrate(sqliteMessage{}, sqliteActorCfg{}, sqliteAddress{}, sqliteSharedParams{}, sqliteNode{})
 }
 
 func (d SqlLiteRepo) GetDb() *gorm.DB {
@@ -62,6 +53,18 @@ var _ repo.TxRepo = (*TxSqlliteRepo)(nil)
 
 type TxSqlliteRepo struct {
 	*gorm.DB
+}
+
+func (t *TxSqlliteRepo) ActorCfgRepo() repo.ActorCfgRepo {
+	return newSqliteActorCfgRepo(t.DB)
+}
+
+func (t *TxSqlliteRepo) SharedParamsRepo() repo.SharedParamsRepo {
+	return newSqliteSharedParamsRepo(t.DB)
+}
+
+func (t *TxSqlliteRepo) NodeRepo() repo.NodeRepo {
+	return newSqliteNodeRepo(t.DB)
 }
 
 func (t *TxSqlliteRepo) MessageRepo() repo.MessageRepo {

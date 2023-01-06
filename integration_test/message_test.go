@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strings"
 	"sync"
@@ -43,7 +44,7 @@ func TestMessageAPI(t *testing.T) {
 	authClient.AddMockUserAndSigner(account, addrs)
 	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
 	assert.NoError(t, ms.fullNode.AddActors(addrs))
-
+	fmt.Printf("xxxxxxxxx %v\n", addrs)
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
 	assert.NoError(t, err)
 	defer closer()
@@ -720,6 +721,7 @@ func genMessageWithAddress(addrs []address.Address) []*types.Message {
 	msgs := testhelper.NewMessages(len(addrs) * 2)
 	for _, msg := range msgs {
 		msg.From = addrs[rand.Intn(len(addrs))]
+		msg.To = addrs[rand.Intn(len(addrs))]
 	}
 
 	return msgs

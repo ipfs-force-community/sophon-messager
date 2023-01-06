@@ -18,7 +18,7 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-var tw = tablewriter.New(
+var msgTw = tablewriter.New(
 	tablewriter.Col("ID"),
 	tablewriter.Col("To"),
 	tablewriter.Col("From"),
@@ -68,11 +68,11 @@ func outputWithTable(msgs []*types.Message, verbose bool, nodeAPI v1.FullNode) e
 		if msg.Receipt != nil {
 			row["ExitCode"] = msg.Receipt.ExitCode
 		}
-		tw.Write(row)
+		msgTw.Write(row)
 	}
 
 	buf := new(bytes.Buffer)
-	if err := tw.Flush(buf); err != nil {
+	if err := msgTw.Flush(buf); err != nil {
 		return err
 	}
 	fmt.Println(buf)
@@ -185,4 +185,13 @@ func methodToStr(nodeAPI v1.FullNode, msg venusTypes.Message) string {
 	}
 
 	return methodStr
+}
+
+func resolveBuiltinMethodName(methodType types.MethodType) string {
+	methodMeta, found := utils.MethodsMap[methodType.Code][methodType.Method]
+	if !found {
+		return ""
+	}
+
+	return methodMeta.Name
 }
