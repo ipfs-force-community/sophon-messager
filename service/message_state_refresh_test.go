@@ -200,7 +200,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		for i, msg := range cm.srcMsgs {
 			res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
 			assert.NoError(t, err)
-			assert.Equal(t, types.ReplacedMsg, res.State)
+			assert.Equal(t, types.NonceConflictMsg, res.State)
 			assert.Equal(t, msg.Method, res.Method)
 			assert.Equal(t, msg.GasLimit, res.GasLimit)
 			assert.Equal(t, msg.GasFeeCap, res.GasFeeCap)

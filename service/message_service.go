@@ -245,7 +245,7 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			case types.UnKnown:
 				continue
 			// OnChain
-			case types.ReplacedMsg:
+			case types.NonceConflictMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
 				}
@@ -258,8 +258,6 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			// Error
 			case types.FailedMsg:
 				return msg, nil
-			case types.NoWalletMsg:
-				return nil, errors.New("msg failed due to wallet disappear")
 			}
 
 		case <-tm.C:
@@ -286,7 +284,7 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 }
 
 func isChainMsg(msgState types.MessageState) bool {
-	return msgState == types.OnChainMsg || msgState == types.ReplacedMsg
+	return msgState == types.OnChainMsg || msgState == types.NonceConflictMsg
 }
 
 func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
