@@ -125,8 +125,8 @@ require (
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
 	github.com/ipfs/go-verifcid v0.0.1 // indirect
 	github.com/ipld/go-car v0.4.0 // indirect
-	github.com/ipld/go-codec-dagpb v1.3.2 // indirect
-	github.com/ipld/go-ipld-prime v0.17.0 // indirect
+	github.com/ipld/go-codec-dagpb v1.5.0 // indirect
+	github.com/ipld/go-ipld-prime v0.18.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
