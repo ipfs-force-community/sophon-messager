@@ -555,7 +555,7 @@ func estimateGasLimit(msg *types.Message, spec *types.MessageSendSpec) error {
 	return nil
 }
 
-func (f *MockFullNode) MpoolBatchPush(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error) {
+func (f *MockFullNode) MpoolBatchPushUntrusted(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	cids := make([]cid.Cid, 0, len(smsgs))
