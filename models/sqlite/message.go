@@ -234,7 +234,7 @@ func (m *sqliteMessageRepo) ListChainMessageByHeight(height abi.ChainEpoch) ([]*
 // ListUnChainMessageByAddress if topN is less than or equal to 0, `Limit` has no effect
 func (m *sqliteMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
+	err := m.DB.Limit(topN).Order("created_at DESC").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
