@@ -10,21 +10,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/go-address"
 	v1Mock "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
+	"go.uber.org/fx/fxtest"
 
 	"github.com/golang/mock/gomock"
 
 	"github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/fx/fxtest"
 
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/filestore"
+	"github.com/filecoin-project/venus-messager/gateway"
+	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -37,28 +40,21 @@ func TestVerifyNetworkName(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.SkipPushMessage = true
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+	msh := newMessageServiceHelper(ctx, t)
+	ms := msh.MessageService
+	msh.MessageService.tsCache.Save(msh.fsRepo.TipsetFile())
 
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
 	tipsetCache := &TipsetCache{
 		NetworkName: string(shared.NetworkNameMain),
 	}
-	assert.NoError(t, tipsetCache.Save(fsRepo.TipsetFile()))
-
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
-	assert.NoError(t, err)
+	assert.NoError(t, tipsetCache.Save(msh.fsRepo.TipsetFile()))
 
 	networkName, err := msh.fullNode.StateNetworkName(ctx)
 	assert.NoError(t, err)
-
-	msh.ms.tsCache.NetworkName = string(shared.NetworkNameButterfly)
-	err = msh.ms.verifyNetworkName()
-
+	ms.tsCache.NetworkName = string(shared.NetworkNameButterfly)
+	err = ms.verifyNetworkName()
 	expectErrStr := fmt.Sprintf("network name not match, expect %s, actual %s, please remove `%s`",
-		networkName, msh.ms.tsCache.NetworkName, fsRepo.TipsetFile())
+		networkName, ms.tsCache.NetworkName, msh.fsRepo.TipsetFile())
 	assert.Equal(t, expectErrStr, err.Error())
 }
 
@@ -68,26 +64,11 @@ func TestReplaceMessage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.SkipPushMessage = true
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-	assert.NoError(t, err)
-	ms := msh.ms
-
-	addrCount := 10
-	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
-	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
-	assert.NoError(t, msh.fullNode.AddActors(addrs))
-
-	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, ms)
-	assert.NoError(t, lc.Start(ctx))
-	defer lc.RequireStop()
+	msh := newMessageServiceHelper(ctx, t)
+	addrs := msh.genAddresses()
+	ms := msh.MessageService
+	msh.start()
+	defer msh.stop()
 
 	blockedMsgs := make(map[string]*types.Message, 0)
 	msgs := genMessages(addrs, len(addrs)*10)
@@ -159,22 +140,17 @@ func TestReconnectCheck(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
-	assert.NoError(t, err)
+	msh := newMessageServiceHelper(ctx, t)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		assert.NoError(t, ms.ReconnectCheck(ctx, ts))
 	})
 
 	t.Run("head not change", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -182,7 +158,7 @@ func TestReconnectCheck(t *testing.T) {
 	})
 
 	t.Run("normal", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -191,10 +167,10 @@ func TestReconnectCheck(t *testing.T) {
 		expectHeight := abi.ChainEpoch(5) + ts.Height()
 		tsMap := make(map[abi.ChainEpoch]shared.TipSet, 5)
 
-		ticker := time.NewTicker(blockDelay)
+		ticker := time.NewTicker(msh.blockDelay)
 		defer ticker.Stop()
 
-		ctx, cancel := context.WithTimeout(ctx, blockDelay*2*time.Duration(expectHeight))
+		ctx, cancel := context.WithTimeout(ctx, msh.blockDelay*2*time.Duration(expectHeight))
 		defer cancel()
 
 		for expectTS.Height() < expectHeight {
@@ -221,7 +197,7 @@ func TestReconnectCheck(t *testing.T) {
 	})
 
 	t.Run("test with revert", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -230,10 +206,10 @@ func TestReconnectCheck(t *testing.T) {
 		expectHeight := abi.ChainEpoch(10) + ts.Height()
 		revertHeight := abi.ChainEpoch(5) + ts.Height()
 
-		ticker := time.NewTicker(blockDelay)
+		ticker := time.NewTicker(msh.blockDelay)
 		defer ticker.Stop()
 
-		ctx, cancel := context.WithTimeout(ctx, blockDelay*2*time.Duration(expectHeight))
+		ctx, cancel := context.WithTimeout(ctx, msh.blockDelay*2*time.Duration(expectHeight))
 		defer cancel()
 
 		revertSignal := &testhelper.RevertSignal{ExpectRevertCount: 3, RevertedTS: make(chan []*shared.TipSet, 1)}
@@ -273,15 +249,10 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, testhelper.NewMockAuthClient())
-	assert.NoError(t, err)
+	msh := newMessageServiceHelper(ctx, t)
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		apply := []*shared.TipSet{ts}
@@ -296,7 +267,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	})
 
 	t.Run("head not change", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -313,12 +284,13 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	getExpectTS := func(currTS *shared.TipSet, expectHeight abi.ChainEpoch) (*shared.TipSet, map[abi.ChainEpoch]shared.TipSet, error) {
 		expectTS := currTS
 		tsMap := make(map[abi.ChainEpoch]shared.TipSet, expectHeight)
-		ticker := time.NewTicker(blockDelay)
+		ticker := time.NewTicker(msh.blockDelay)
 		defer ticker.Stop()
 
-		ctx, cancel := context.WithTimeout(ctx, blockDelay*2*time.Duration(expectHeight))
+		ctx, cancel := context.WithTimeout(ctx, msh.blockDelay*2*time.Duration(expectHeight))
 		defer cancel()
 
+		var err error
 		for expectTS.Height() < expectHeight {
 			select {
 			case <-ticker.C:
@@ -326,14 +298,14 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 				assert.NoError(t, err)
 				tsMap[expectTS.Height()] = *expectTS
 			case <-ctx.Done():
-				return nil, nil, fmt.Errorf("context done: %v", err)
+				return nil, nil, fmt.Errorf("context done: %v", ctx.Err())
 			}
 		}
 		return expectTS, tsMap, nil
 	}
 
 	t.Run("head no gap", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -353,7 +325,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	})
 
 	t.Run("normal", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -375,7 +347,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	})
 
 	t.Run("test with revert apply multiple tipset", func(t *testing.T) {
-		ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+		ms := newMessageService(msh)
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
@@ -384,10 +356,10 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		expectHeight := abi.ChainEpoch(10) + ts.Height()
 		revertHeight := abi.ChainEpoch(7) + ts.Height()
 
-		ticker := time.NewTicker(blockDelay)
+		ticker := time.NewTicker(msh.blockDelay)
 		defer ticker.Stop()
 
-		ctx, cancel := context.WithTimeout(ctx, blockDelay*2*time.Duration(expectHeight))
+		ctx, cancel := context.WithTimeout(ctx, msh.blockDelay*2*time.Duration(expectHeight))
 		defer cancel()
 
 		revertSignal := &testhelper.RevertSignal{ExpectRevertCount: 4, RevertedTS: make(chan []*shared.TipSet, 1)}
@@ -422,7 +394,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 
 	t.Run("test with revert", func(t *testing.T) {
 		testRevert := func(revertFrom, applyFrom int) {
-			ms := newMessageService(msh, filestore.NewMockFileStore(t.TempDir()))
+			ms := newMessageService(msh)
 			var tipSets []*shared.TipSet
 			var revert []*shared.TipSet
 			var parent []cid.Cid
@@ -487,24 +459,12 @@ func TestMessageService_PushMessage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-	assert.NoError(t, err)
-
-	account := defaultLocalToken
+	msh := newMessageServiceHelper(ctx, t)
 	addr := testutil.BlsAddressProvider()(t)
-	assert.NoError(t, msh.fullNode.AddActors([]address.Address{addr}))
-	authClient.AddMockUserAndSigner(account, []address.Address{addr})
-	assert.NoError(t, msh.walletProxy.AddAddress(account, []address.Address{addr}))
-
-	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
-	assert.NoError(t, lc.Start(ctx))
-	defer lc.RequireStop()
+	msh.addAddresses([]address.Address{addr})
+	ms := msh.MessageService
+	msh.start()
+	defer msh.stop()
 
 	var pushedMsg *types.Message
 
@@ -515,30 +475,30 @@ func TestMessageService_PushMessage(t *testing.T) {
 		// stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
 		rawMsg := testhelper.NewUnsignedMessage()
 		rawMsg.From = addr
-		uidStr, err := msh.ms.PushMessage(ctx, &rawMsg, nil)
+		uidStr, err := ms.PushMessage(ctx, &rawMsg, nil)
 		assert.NoError(t, err)
 		_, err = shared.ParseUUID(uidStr)
 		assert.NoError(t, err)
 
 		// pushing message would be failed
 		pushFailedMsg := testhelper.NewUnsignedMessage()
-		_, err = msh.ms.PushMessage(ctx, &pushFailedMsg, nil)
+		_, err = ms.PushMessage(ctx, &pushFailedMsg, nil)
 		assert.Error(t, err)
 		// msg with uuid not exists, expect an error
-		_, err = msh.ms.GetMessageByUid(ctx, shared.NewUUID().String())
+		_, err = ms.GetMessageByUid(ctx, shared.NewUUID().String())
 		assert.Error(t, err)
 
-		pushedMsg, err = msh.ms.GetMessageByUid(ctx, uidStr)
+		pushedMsg, err = ms.GetMessageByUid(ctx, uidStr)
 		assert.NoError(t, err)
 		assert.Equal(t, pushedMsg.ID, uidStr)
 
 		{ // list messages
-			msgs, err := msh.ms.ListMessage(ctx)
+			msgs, err := ms.ListMessage(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, len(msgs), 1)
 			assert.Equal(t, msgs[0].ID, uidStr)
 
-			msgs, err = msh.ms.ListMessageByAddress(ctx, addr)
+			msgs, err = ms.ListMessageByAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, len(msgs), 1)
 			assert.Equal(t, msgs[0].ID, uidStr)
@@ -547,9 +507,9 @@ func TestMessageService_PushMessage(t *testing.T) {
 
 	t.Run("wait message:", func(t *testing.T) {
 		// stm: @MESSENGER_SERVICE_WAIT_MESSAGE_001, @MESSENGER_SERVICE_WAIT_MESSAGE_002
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*3)
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*1)
 		defer cancel()
-		_, err := waitMsgWithTimeout(ctx, msh.ms, shared.NewUUID().String())
+		_, err := waitMsgWithTimeout(ctx, ms, shared.NewUUID().String())
 		assert.Error(t, err)
 
 		wg := sync.WaitGroup{}
@@ -558,7 +518,7 @@ func TestMessageService_PushMessage(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				res, err := waitMsgWithTimeout(ctx, msh.ms, msgID)
+				res, err := waitMsgWithTimeout(ctx, ms, msgID)
 				if expectErr {
 					assert.Error(t, err)
 					return
@@ -578,14 +538,126 @@ func TestMessageService_PushMessage(t *testing.T) {
 	})
 }
 
-func newMessageService(msh *messageServiceHelper, fsRepo filestore.FSRepo) *MessageService {
+type messageServiceHelper struct {
+	ctx context.Context
+
+	t  *testing.T
+	lc *fxtest.Lifecycle
+
+	fullNode    *testhelper.MockFullNode
+	walletProxy *gateway.MockWalletProxy
+	authClient  *testhelper.AuthClient
+	*MessageService
+
+	addrs      []address.Address
+	token      string
+	blockDelay time.Duration
+}
+
+type options struct {
+	skipPushMessage bool
+}
+type opt = func(opts *options)
+
+func skipPushMessage() opt {
+	return func(opts *options) {
+		opts.skipPushMessage = true
+	}
+}
+
+func newMessageServiceHelper(ctx context.Context, t *testing.T, opts ...opt) *messageServiceHelper {
+	opt := &options{}
+	for _, o := range opts {
+		o(opt)
+	}
+
+	cfg := config.DefaultConfig()
+	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 1
+	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
+	if opt.skipPushMessage {
+		cfg.MessageService.SkipPushMessage = opt.skipPushMessage
+	}
+
+	fsRepo := filestore.NewMockFileStore(t.TempDir())
+	assert.NoError(t, fsRepo.ReplaceConfig(cfg))
+
+	fullNode, err := testhelper.NewMockFullNode(ctx, blockDelay)
+	assert.NoError(t, err)
+
+	repo, err := models.SetDataBase(fsRepo)
+	assert.NoError(t, err)
+	assert.NoError(t, repo.AutoMigrate())
+
+	authClient := testhelper.NewMockAuthClient()
+	walletProxy := gateway.NewMockWalletProxy()
+	addressService := NewAddressService(repo, walletProxy, authClient)
+	sharedParamsService, err := NewSharedParamsService(ctx, repo)
+	assert.NoError(t, err)
+
+	rpcPublisher := publisher.NewRpcPublisher(ctx, fullNode, repo.NodeRepo(), false)
+	networkParams := &shared.NetworkParams{BlockDelaySecs: 30}
+	msgPublisher, err := publisher.NewIMsgPublisher(ctx, networkParams, cfg.Publisher, nil, rpcPublisher)
+	assert.NoError(t, err)
+
+	msgReceiver, err := publisher.NewMessageReciver(ctx, msgPublisher)
+	assert.NoError(t, err)
+	ms, err := NewMessageService(ctx, repo, fullNode, fsRepo, addressService, sharedParamsService,
+		walletProxy, msgReceiver)
+	assert.NoError(t, err)
+
+	return &messageServiceHelper{
+		ctx:            ctx,
+		t:              t,
+		lc:             fxtest.NewLifecycle(t),
+		fullNode:       fullNode,
+		walletProxy:    walletProxy,
+		authClient:     authClient,
+		MessageService: ms,
+		token:          defaultLocalToken,
+		blockDelay:     blockDelay,
+	}
+}
+
+func (msh *messageServiceHelper) start() {
+	_ = StartNodeEvents(msh.lc, msh.fullNode, msh.MessageService)
+	assert.NoError(msh.t, msh.lc.Start(msh.ctx))
+}
+
+func (msh *messageServiceHelper) stop() {
+	msh.lc.RequireStop()
+}
+
+func (msh *messageServiceHelper) genAddresses() []address.Address {
+	addrCount := 10
+	addrs := testhelper.ResolveAddrs(msh.t, testhelper.RandAddresses(msh.t, addrCount))
+	msh.addAddresses(addrs)
+
+	return addrs
+}
+
+func (msh *messageServiceHelper) addAddresses(addrs []address.Address) {
+	account := msh.token
+	msh.addrs = addrs
+	msh.authClient.AddMockUserAndSigner(account, addrs)
+	assert.NoError(msh.t, msh.walletProxy.AddAddress(account, addrs))
+	assert.NoError(msh.t, msh.fullNode.AddActors(addrs))
+}
+
+func (msh *messageServiceHelper) genAndPushMessages(count int) []*types.Message {
+	msgs := genMessages(msh.addrs, count)
+	assert.NoError(msh.t, pushMessage(msh.ctx, msh.MessageService, msgs))
+
+	return msgs
+}
+
+func newMessageService(msh *messageServiceHelper) *MessageService {
 	return &MessageService{
-		repo:           msh.ms.repo,
-		fsRepo:         fsRepo,
+		repo:           msh.MessageService.repo,
+		fsRepo:         filestore.NewMockFileStore(msh.t.TempDir()),
 		nodeClient:     msh.fullNode,
-		addressService: msh.ms.addressService,
+		addressService: msh.MessageService.addressService,
 		walletClient:   msh.walletProxy,
-		triggerPush:    msh.ms.triggerPush,
+		triggerPush:    msh.MessageService.triggerPush,
 		headChans:      make(chan *headChan, 10),
 		tsCache:        newTipsetCache(),
 	}

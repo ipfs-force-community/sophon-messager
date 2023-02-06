@@ -173,7 +173,7 @@ func GenBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Ci
 		BeaconEntries:         nil,
 		WinPoStProof:          nil,
 		Parents:               parents,
-		ParentWeight:          big.Int{},
+		ParentWeight:          big.NewInt(100),
 		Height:                height,
 		ParentStateRoot:       c,
 		ParentMessageReceipts: c,
