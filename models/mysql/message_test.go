@@ -386,12 +386,12 @@ func testListUnChainMessageByAddress(t *testing.T, r repo.Repo, mock sqlmock.Sql
 	from := testutil.AddressProvider()(t)
 	topN := 3
 
-	mock.ExpectQuery(regexp.QuoteMeta(fmt.Sprintf("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at LIMIT %d", topN))).
+	mock.ExpectQuery(regexp.QuoteMeta(fmt.Sprintf("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at DESC LIMIT %d", topN))).
 		WithArgs(from.String(), types.UnFillMsg).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]))
 
 	zero := 0
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr=? AND state=? ORDER BY created_at DESC")).
 		WithArgs(from.String(), types.UnFillMsg).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]).AddRow(ids[2]).AddRow(ids[3]))
 

@@ -370,7 +370,7 @@ func TestListUnChainMessageByAddress(t *testing.T) {
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 
 	sorted := sort.SliceIsSorted(msgList, func(i, j int) bool {
-		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
+		return msgList[i].CreatedAt.After(msgList[j].CreatedAt)
 	})
 	assert.True(t, sorted)
 
