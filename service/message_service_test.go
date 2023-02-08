@@ -42,7 +42,7 @@ func TestVerifyNetworkName(t *testing.T) {
 
 	msh := newMessageServiceHelper(ctx, t)
 	ms := msh.MessageService
-	msh.MessageService.tsCache.Save(msh.fsRepo.TipsetFile())
+	assert.NoError(t, msh.MessageService.tsCache.Save(msh.fsRepo.TipsetFile()))
 
 	tipsetCache := &TipsetCache{
 		NetworkName: string(shared.NetworkNameMain),
