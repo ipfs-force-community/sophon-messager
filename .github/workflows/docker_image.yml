@@ -4,6 +4,7 @@ on:
   push:
     branches: ['prep/**', 'release/**', 'test/**', master]
     tags: ['**']
+  workflow_dispatch:
 
 jobs:
 
