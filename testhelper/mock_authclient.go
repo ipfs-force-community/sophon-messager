@@ -70,6 +70,10 @@ func (m *AuthClient) Init(account string, addrs []address.Address) {
 	}).AnyTimes()
 }
 
+func (m *AuthClient) UpsertMiner(ctx context.Context, user string, miner string, openMining bool) (bool, error) {
+	panic("implement me")
+}
+
 func NewMockAuthClient(t *testing.T) *AuthClient {
 	ctrl := gomock.NewController(t)
 	return &AuthClient{

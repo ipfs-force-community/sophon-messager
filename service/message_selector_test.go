@@ -15,6 +15,7 @@ import (
 
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/venus-shared/testutil"

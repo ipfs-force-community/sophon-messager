@@ -202,7 +202,7 @@ func (m MessageImp) UpdateFilledMessageByID(ctx context.Context, id string) (str
 	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return "", checkErr
 	}
-	if msg.State == types.OnChainMsg || msg.State == types.ReplacedMsg {
+	if msg.State == types.OnChainMsg || msg.State == types.NonceConflictMsg {
 		return "", fmt.Errorf("message state(%s) has been final, can not update", msg.State)
 	}
 	return m.MessageSrv.UpdateFilledMessageByID(ctx, id)

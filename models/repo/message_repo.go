@@ -13,6 +13,7 @@ import (
 )
 
 type MsgQueryParams = types.MsgQueryParams
+
 type MessageRepo interface {
 	ExpireMessage(msg []*types.Message) error
 	BatchSaveMessage(msg []*types.Message) error
