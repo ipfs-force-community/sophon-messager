@@ -21,7 +21,7 @@ func TestLimitWrap(t *testing.T) {
 		fx.Supply(&config.RateLimitConfig{
 			Redis: "test url",
 		}),
-		fx.Provide(func() *jwtclient.AuthClient {
+		fx.Provide(func() jwtclient.IAuthClient {
 			return &jwtclient.AuthClient{}
 		}),
 		fx.Supply(&api.MessageImp{}),

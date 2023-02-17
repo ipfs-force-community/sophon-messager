@@ -27,6 +27,7 @@ import (
 	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/gateway"
 	"github.com/filecoin-project/venus-messager/models"
+	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus-messager/publisher"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
@@ -493,7 +494,7 @@ func TestMessageService_PushMessage(t *testing.T) {
 		assert.Equal(t, pushedMsg.ID, uidStr)
 
 		{ // list messages
-			msgs, err := ms.ListMessage(ctx)
+			msgs, err := ms.ListMessage(ctx, &repo.MsgQueryParams{})
 			assert.NoError(t, err)
 			assert.Equal(t, len(msgs), 1)
 			assert.Equal(t, msgs[0].ID, uidStr)
@@ -588,7 +589,7 @@ func newMessageServiceHelper(ctx context.Context, t *testing.T, opts ...opt) *me
 	assert.NoError(t, err)
 	assert.NoError(t, repo.AutoMigrate())
 
-	authClient := testhelper.NewMockAuthClient()
+	authClient := testhelper.NewMockAuthClient(t)
 	walletProxy := gateway.NewMockWalletProxy()
 	addressService := NewAddressService(repo, walletProxy, authClient)
 	sharedParamsService, err := NewSharedParamsService(ctx, repo)
@@ -638,7 +639,7 @@ func (msh *messageServiceHelper) genAddresses() []address.Address {
 func (msh *messageServiceHelper) addAddresses(addrs []address.Address) {
 	account := msh.token
 	msh.addrs = addrs
-	msh.authClient.AddMockUserAndSigner(account, addrs)
+	msh.authClient.Init(account, addrs)
 	assert.NoError(msh.t, msh.walletProxy.AddAddress(account, addrs))
 	assert.NoError(msh.t, msh.fullNode.AddActors(addrs))
 }

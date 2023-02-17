@@ -16,7 +16,8 @@ tools:
 	go build -o venus-messager-tools ./tools/main.go
 .PHONY: tools
 
-
+gen:
+	go generate ./...
 
 
 lint:

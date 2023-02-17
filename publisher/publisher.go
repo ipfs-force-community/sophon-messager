@@ -19,6 +19,8 @@ import (
 var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
 var errMinimumNonce = errors.New("minimum expected nonce")
 
+//go:generate mockgen -destination=../mocks/mock_msg_publisher.go -package=mocks github.com/filecoin-project/venus-messager/publisher IMsgPublisher
+
 type IMsgPublisher interface {
 	// PublishMessages publish messages to chain
 	PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error
