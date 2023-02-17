@@ -17,7 +17,8 @@ type MessageRepo interface {
 	ExpireMessage(msg []*types.Message) error
 	BatchSaveMessage(msg []*types.Message) error
 	CreateMessage(msg *types.Message) error
-	SaveMessage(msg *types.Message) error
+	UpdateMessage(msg *types.Message) error
+	UpdateMessageByState(msg *types.Message, state types.MessageState) error
 
 	GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error)
 	GetMessageByFromNonceAndState(from address.Address, nonce uint64, state types.MessageState) (*types.Message, error)

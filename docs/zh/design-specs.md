@@ -78,7 +78,7 @@ UnFillMsg：  未签名
 FillMsg：    已签名
 OnChainMsg： 已上链
 FailedMsg：  失败
-ReplacedMsg：被替换
+NonceConflictMsg：被替换
 NoWalletMsg：未找到钱包
 ```
 

@@ -112,11 +112,11 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 			if localMsg.SignedCid != nil && !(*localMsg.SignedCid).Equals(msg.signedCID) {
 				msgStateLog.Warnf("replace message old msg cid %s, new msg cid %s, id %s", localMsg.SignedCid, msg.signedCID, localMsg.ID)
 				// replace msg
-				localMsg.State = types.ReplacedMsg
+				localMsg.State = types.NonceConflictMsg
 				localMsg.Receipt = msg.receipt
 				localMsg.Height = int64(msg.height)
 				localMsg.TipSetKey = msg.tsk
-				if err = txRepo.MessageRepo().SaveMessage(localMsg); err != nil {
+				if err = txRepo.MessageRepo().UpdateMessage(localMsg); err != nil {
 					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.signedCID, err)
 				}
 				replaceMsg[localMsg.ID] = localMsg

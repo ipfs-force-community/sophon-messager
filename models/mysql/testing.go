@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"gorm.io/gorm/utils/tests"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -53,165 +56,95 @@ func closeDB(mock sqlmock.Sqlmock, sqlDB *sql.DB) error {
 	return sqlDB.Close()
 }
 
-func getStructFieldValue(obj interface{}) []driver.Value {
-	rv := reflect.ValueOf(obj)
-	rt := reflect.TypeOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-		rt = rt.Elem()
-	}
-	vals := make([]driver.Value, 0, rv.NumField())
-	for i := 0; i < rv.NumField(); i++ {
-		_, ok := rv.Field(i).Interface().(time.Time)
-		if ok {
-			vals = append(vals, anyTime{})
-			continue
-		}
-		tagVal := rt.Field(i).Tag.Get(gormTag)
-		isEmbedded := isEmbedded(tagVal)
-		if !isEmbedded {
-			vals = append(vals, rv.Field(i).Interface())
-			continue
-		}
-		embeddedStruct := rv.Field(i).Elem()
-		for j := 0; j < embeddedStruct.NumField(); j++ {
-			_, ok := embeddedStruct.Field(j).Interface().(time.Time)
-			if ok {
-				vals = append(vals, anyTime{})
-				continue
-			}
-			vals = append(vals, embeddedStruct.Field(j).Interface())
-		}
-	}
-	return vals
-}
+var db, _ = gorm.Open(tests.DummyDialector{}, nil)
+var timeT = reflect.TypeOf(time.Time{})
 
-var gormTag = "gorm"
-
-func genUpdateSQL(obj interface{}) string {
-	rt := reflect.TypeOf(obj)
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-		rt = rt.Elem()
-	}
+func genInsertSQL(obj interface{}) (string, []driver.Value) {
 	tabler, ok := obj.(schema.Tabler)
 	if !ok {
 		panic("not implement schema.Tabler")
 	}
-	// id is primary key, eg. UPDATE `table_name` SET `name`=?,`addr`=? WHERE id = ?"
-	primaryKey := ""
-	filedLen := rv.NumField()
-	buf := &bytes.Buffer{}
-	buf.WriteString(fmt.Sprintf("UPDATE `%s` SET ", tabler.TableName()))
-	for i := 0; i < filedLen; i++ {
-		tagVal := rt.Field(i).Tag.Get(gormTag)
-		isEmbedded := isEmbedded(tagVal)
-		if !isEmbedded {
-			columnStr := getColumn(tagVal)
-			if isPrimaryKey(tagVal) {
-				primaryKey = columnStr
-				continue
-			}
-			if i < filedLen-1 {
-				buf.WriteString(fmt.Sprintf("`%s`=?,", columnStr))
-			} else {
-				buf.WriteString(fmt.Sprintf("`%s`=?", columnStr))
-			}
-		} else {
-			embeddedStruct := rv.Field(i).Elem()
-			embeddedStructLen := embeddedStruct.NumField()
-			prefix := getEmbeddedPrefix(tagVal)
-			for j := 0; j < embeddedStruct.NumField(); j++ {
-				tagVal := reflect.TypeOf(embeddedStruct.Interface()).Field(j).Tag.Get(gormTag)
-				columnStr := getColumn(tagVal)
-				if i < filedLen-1 || j < embeddedStructLen-1 {
-					buf.WriteString(fmt.Sprintf("`%s%s`=?,", prefix, columnStr))
-				} else {
-					buf.WriteString(fmt.Sprintf("`%s%s`=?", prefix, columnStr))
-				}
-			}
+
+	objSchema, _ := schema.Parse(obj, &sync.Map{}, db.NamingStrategy)
+	insertValues := reflect.ValueOf(obj)
+	var insertCols []string
+	var insertArgs []driver.Value
+	for _, dbName := range objSchema.DBNames {
+		field := objSchema.LookUpField(dbName)
+		if field.FieldType == timeT {
+			insertCols = append(insertCols, field.DBName)
+			insertArgs = append(insertArgs, anyTime{})
+			continue
 		}
+		fieldV, _ := field.ValueOf(insertValues)
+		insertCols = append(insertCols, field.DBName)
+		insertArgs = append(insertArgs, fieldV)
 	}
-	buf.WriteString(fmt.Sprintf(" WHERE `%s` = ?", primaryKey))
-	return buf.String()
-}
 
-func isPrimaryKey(str string) bool {
-	return strings.Contains(str, "primary_key")
-}
-
-func getColumn(str string) string {
-	// eg. str=column:id;type:varchar(256);primary_key or str=primary_key;column:id;type:varchar(256)
-	for _, one := range strings.Split(str, ";") {
-		if strings.Contains(one, "column") {
-			return strings.Split(one, ":")[1]
-		}
-	}
-	panic("not found column from " + str)
-}
-
-func genInsertSQL(obj interface{}) string {
-	rt := reflect.TypeOf(obj)
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-		rt = rt.Elem()
-	}
-	tabler, ok := obj.(schema.Tabler)
-	if !ok {
-		panic("not implement schema.Tabler")
-	}
-	// eg. INSERT INTO `table_name` (`id`,`name`) VALUES (?,?)"
-	filedLen := rv.NumField()
-	buf := &bytes.Buffer{}
-	vals := ""
+	buf := bytes.NewBuffer(nil)
 	buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (", tabler.TableName()))
-	for i := 0; i < filedLen; i++ {
-		tagVal := rt.Field(i).Tag.Get(gormTag)
-		isEmbedded := isEmbedded(tagVal)
-		if !isEmbedded {
-			columnStr := getColumn(tagVal)
-			if i < filedLen-1 {
-				buf.WriteString(fmt.Sprintf("`%s`,", columnStr))
-				vals += "?,"
-			} else {
-				buf.WriteString(fmt.Sprintf("`%s`", columnStr))
-				vals += "?"
-			}
+	for index, col := range insertCols {
+		if index == len(insertCols)-1 {
+			buf.WriteString(fmt.Sprintf("`%s`", col))
 		} else {
-			embeddedStruct := rv.Field(i).Elem()
-			embeddedStructLen := embeddedStruct.NumField()
-			prefix := getEmbeddedPrefix(tagVal)
-			for j := 0; j < embeddedStruct.NumField(); j++ {
-				tagVal := reflect.TypeOf(embeddedStruct.Interface()).Field(j).Tag.Get(gormTag)
-				columnStr := getColumn(tagVal)
-				if i < filedLen-1 || j < embeddedStructLen-1 {
-					buf.WriteString(fmt.Sprintf("`%s%s`,", prefix, columnStr))
-					vals += "?,"
-				} else {
-					buf.WriteString(fmt.Sprintf("`%s%s`", prefix, columnStr))
-					vals += "?"
-				}
-			}
+			buf.WriteString(fmt.Sprintf("`%s`,", col))
 		}
 	}
 	buf.WriteString(") VALUES (")
-	buf.WriteString(vals)
+	buf.WriteString(strings.TrimRight(strings.Repeat("?,", len(insertCols)), ","))
 	buf.WriteString(")")
-	return buf.String()
+	return buf.String(), insertArgs
 }
 
-func isEmbedded(str string) bool {
-	return strings.Contains(str, "embedded") && strings.Contains(str, "embeddedPrefix")
-}
+func genUpdateSQL(obj interface{}, skipZero bool, where ...string) (string, []driver.Value) {
+	tabler, ok := obj.(schema.Tabler)
+	if !ok {
+		panic("not implement schema.Tabler")
+	}
 
-func getEmbeddedPrefix(str string) string {
-	// eg. str=embedded;embeddedPrefix:receipt_
-	for _, one := range strings.Split(str, ";") {
-		if strings.Contains(one, "embeddedPrefix") {
-			return strings.Split(one, ":")[1]
+	objSchema, _ := schema.Parse(obj, &sync.Map{}, db.NamingStrategy)
+	updatingValue := reflect.ValueOf(obj)
+	var updateCols []string
+	var updateArgs []driver.Value
+	for _, dbName := range objSchema.DBNames {
+		field := objSchema.LookUpField(dbName)
+		if field.PrimaryKey {
+			continue
+		}
+		if field.FieldType == timeT {
+			updateCols = append(updateCols, field.DBName)
+			updateArgs = append(updateArgs, anyTime{})
+			continue
+		}
+		if fieldV, isZero := field.ValueOf(updatingValue); !(skipZero && isZero) {
+			updateCols = append(updateCols, field.DBName)
+			updateArgs = append(updateArgs, fieldV)
 		}
 	}
-	panic("not found embedded prefix from " + str)
+
+	buf := &bytes.Buffer{}
+	buf.WriteString(fmt.Sprintf("UPDATE `%s` SET ", tabler.TableName()))
+
+	for index, col := range updateCols {
+		if index == len(updateCols)-1 {
+			buf.WriteString(fmt.Sprintf("`%s`=?", col))
+		} else {
+			buf.WriteString(fmt.Sprintf("`%s`=?,", col))
+		}
+	}
+
+	if len(where) == 0 {
+		for _, pri := range objSchema.PrimaryFields {
+			where = append(where, pri.DBName)
+		}
+	}
+
+	for index, wh := range where {
+		if index == 0 {
+			buf.WriteString(fmt.Sprintf(" WHERE `%s` = ?", wh))
+		} else {
+			buf.WriteString(fmt.Sprintf(" AND `%s` = ?", wh))
+		}
+	}
+	return buf.String(), updateArgs
 }

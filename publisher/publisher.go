@@ -161,7 +161,7 @@ func (n *nodeThread) run(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case msgs := <-n.msgChan:
-				if _, err := n.nodeClient.MpoolBatchPush(ctx, msgs); err != nil {
+				if _, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
 					//skip error
 					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
 						log.Errorf("push message to node %s failed %v", n.name, err)

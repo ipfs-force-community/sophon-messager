@@ -29,7 +29,7 @@ func TestMainNodePublishMessage(t *testing.T) {
 	publisher := NewMergePublisher(ctx, rpcPublisher)
 	msgs := testhelper.NewShareSignedMessages(10)
 
-	mainNode.EXPECT().MpoolBatchPush(ctx, msgs).Return(nil, nil).Times(1)
+	mainNode.EXPECT().MpoolBatchPushUntrusted(ctx, msgs).Return(nil, nil).Times(1)
 	err := publisher.PublishMessages(ctx, msgs)
 	assert.NoError(t, err)
 	runtime.Gosched()
@@ -43,7 +43,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	// mock api
 	ctrl := gomock.NewController(t)
 	mainNode := mockV1.NewMockFullNode(ctrl)
-	mainNode.EXPECT().MpoolBatchPush(ctx, msgs).Return(nil, nil).AnyTimes()
+	mainNode.EXPECT().MpoolBatchPushUntrusted(ctx, msgs).Return(nil, nil).AnyTimes()
 
 	servers := make([]*testhelper.FullNodeServer, 4)
 	for i := 0; i < 4; i++ {
@@ -68,7 +68,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	t.Run("publish message to multi node", func(t *testing.T) {
 		nodeProvider.EXPECT().ListNode().Return(nodes[:3], nil).Times(1)
 		for _, srv := range servers[:3] {
-			srv.FullNode.EXPECT().MpoolBatchPush(gomock.Any(), msgs).Return(nil, nil).Times(1)
+			srv.FullNode.EXPECT().MpoolBatchPushUntrusted(gomock.Any(), msgs).Return(nil, nil).Times(1)
 		}
 		err := rpcPublisher.PublishMessages(ctx, msgs)
 		assert.NoError(t, err)
@@ -81,7 +81,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	t.Run("publish message to multi node after delete node", func(t *testing.T) {
 		nodeProvider.EXPECT().ListNode().Return(nodes[1:2], nil).Times(1)
 		for _, srv := range servers[1:2] {
-			srv.FullNode.EXPECT().MpoolBatchPush(gomock.Any(), msgs).Return(nil, nil).Times(1)
+			srv.FullNode.EXPECT().MpoolBatchPushUntrusted(gomock.Any(), msgs).Return(nil, nil).Times(1)
 		}
 		err := rpcPublisher.PublishMessages(ctx, msgs)
 		assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestMultiNodePublishMessage(t *testing.T) {
 	t.Run("publish message to multi node after add node", func(t *testing.T) {
 		nodeProvider.EXPECT().ListNode().Return(nodes[:4], nil).Times(1)
 		for _, srv := range servers[:4] {
-			srv.FullNode.EXPECT().MpoolBatchPush(gomock.Any(), msgs).Return(nil, nil).Times(1)
+			srv.FullNode.EXPECT().MpoolBatchPushUntrusted(gomock.Any(), msgs).Return(nil, nil).Times(1)
 		}
 		err := rpcPublisher.PublishMessages(ctx, msgs)
 		assert.NoError(t, err)

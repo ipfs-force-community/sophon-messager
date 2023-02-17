@@ -262,7 +262,7 @@ func (m *mysqlMessageRepo) ListChainMessageByHeight(height abi.ChainEpoch) ([]*t
 // ListUnChainMessageByAddress if topN is less than or equal to 0, `Limit` has no effect
 func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
-	err := m.DB.Limit(topN).Order("created_at").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
+	err := m.DB.Limit(topN).Order("created_at DESC").Find(&sqlMsgs, "from_addr=? AND state=?", addr.String(), types.UnFillMsg).Error
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func (m *mysqlMessageRepo) ListUnChainMessageByAddress(addr address.Address, top
 // todo better batch update
 func (m *mysqlMessageRepo) BatchSaveMessage(msgs []*types.Message) error {
 	for _, msg := range msgs {
-		err := m.SaveMessage(msg)
+		err := m.UpdateMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -289,10 +289,16 @@ func (m *mysqlMessageRepo) CreateMessage(msg *types.Message) error {
 	return m.DB.Create(sqlMsg).Error
 }
 
-func (m *mysqlMessageRepo) SaveMessage(msg *types.Message) error {
+func (m *mysqlMessageRepo) UpdateMessage(msg *types.Message) error {
 	sqlMsg := fromMessage(msg)
 	sqlMsg.UpdatedAt = time.Now()
 	return m.DB.Save(sqlMsg).Error
+}
+
+func (m *mysqlMessageRepo) UpdateMessageByState(msg *types.Message, state types.MessageState) error {
+	sqlMsg := fromMessage(msg)
+	sqlMsg.UpdatedAt = time.Now()
+	return m.DB.Where("`state` = ?", state).Updates(sqlMsg).Error
 }
 
 func (m *mysqlMessageRepo) GetMessageByUid(id string) (*types.Message, error) {

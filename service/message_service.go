@@ -271,7 +271,7 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			case types.UnKnown:
 				continue
 			// OnChain
-			case types.ReplacedMsg:
+			case types.NonceConflictMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
 				}
@@ -284,8 +284,6 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			// Error
 			case types.FailedMsg:
 				return msg, nil
-			case types.NoWalletMsg:
-				return nil, errors.New("msg failed due to wallet disappear")
 			}
 
 		case <-tm.C:
@@ -312,7 +310,7 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 }
 
 func isChainMsg(msgState types.MessageState) bool {
-	return msgState == types.OnChainMsg || msgState == types.ReplacedMsg
+	return msgState == types.OnChainMsg || msgState == types.NonceConflictMsg
 }
 
 func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -784,13 +782,11 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 		return cid.Undef, err
 	}
 
-	if err := ms.repo.MessageRepo().SaveMessage(msg); err != nil {
+	if err := ms.repo.MessageRepo().UpdateMessageByState(msg, types.FillMsg); err != nil {
 		return cid.Undef, err
 	}
 
-	_, err = ms.nodeClient.MpoolBatchPush(ctx, []*venusTypes.SignedMessage{&signedMsg})
-
-	return signedMsg.Cid(), err
+	return signedMsg.Cid(), ms.RepublishMessage(ctx, params.ID)
 }
 
 func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) error {
