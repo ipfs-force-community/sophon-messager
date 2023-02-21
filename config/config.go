@@ -145,7 +145,7 @@ func DefaultConfig() *Config {
 			Level: "info",
 		},
 		API: APIConfig{
-			Address: "/ip4/0.0.0.0/tcp/39812",
+			Address: "/ip4/127.0.0.1/tcp/39812",
 		},
 		Node: NodeConfig{
 			Url:   "/ip4/127.0.0.1/tcp/3453",

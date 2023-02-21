@@ -72,6 +72,11 @@ var runCmd = &cli.Command{
 	Usage: "run messager",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
+			Name:  "listen",
+			Usage: "specify endpoint for listen",
+			Value: "/ip4/127.0.0.1/tcp/39812",
+		},
+		&cli.StringFlag{
 			Name:  "auth-url",
 			Usage: "url for auth server",
 		},
@@ -326,6 +331,10 @@ func runAction(cctx *cli.Context) error {
 }
 
 func updateFlag(cfg *config.Config, ctx *cli.Context) error {
+	if ctx.IsSet("listen") {
+		cfg.API.Address = ctx.String("listen")
+	}
+
 	if ctx.IsSet("auth-url") {
 		cfg.JWT.AuthURL = ctx.String("auth-url")
 	}

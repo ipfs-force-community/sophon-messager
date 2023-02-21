@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
+	github.com/etherlabsio/healthcheck/v2 v2.0.0
 	github.com/fatih/color v1.13.0
 	github.com/filecoin-project/go-address v1.1.0
 	github.com/filecoin-project/go-bitfield v0.2.4
