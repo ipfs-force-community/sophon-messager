@@ -75,22 +75,38 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
+func (m MessageImp) resolveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	if addr.Protocol() == address.ID {
+		addrTmp, err := m.NodeClient.StateAccountKey(ctx, addr, venusTypes.EmptyTSK)
+		if err != nil {
+			return address.Undef, fmt.Errorf("getting key address %s failed: %w", addr, err)
+		}
+		log.Infof("Push from ID address (%s), adjusting to %s", addr, addrTmp)
+
+		addr = addrTmp
+	}
+
+	return addr, nil
+}
+
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	id := venusTypes.NewUUID().String()
-	return m.MessageSrv.PushMessageWithId(ctx, id, msg, meta)
+	var err error
+	msg.From, err = m.resolveAddress(ctx, msg.From)
+	if err != nil {
+		return "", err
+	}
+	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
+		return "", err
+	}
+	return m.MessageSrv.PushMessage(ctx, msg, meta)
 }
 
 func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	// replace address
-	if msg.From.Protocol() == address.ID {
-		fromA, err := m.NodeClient.StateAccountKey(ctx, msg.From, venusTypes.EmptyTSK)
-		if err != nil {
-			return "", fmt.Errorf("getting key address %s failed: %w", msg.From, err)
-		}
-		log.Warnf("Push from ID address (%s), adjusting to %s", msg.From, fromA)
-		msg.From = fromA
+	var err error
+	msg.From, err = m.resolveAddress(ctx, msg.From)
+	if err != nil {
+		return "", err
 	}
-
 	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return "", err
 	}
