@@ -12,7 +12,7 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.10.0-rc3
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.10.0-rc2
+	github.com/filecoin-project/venus v1.10.0-rc3
 	github.com/filecoin-project/venus-auth v1.10.0-rc2
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -225,7 +225,8 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/hraban/lrucache v0.0.0-20201130153820-17052bf09781 // indirect
-	github.com/ipfs/go-block-format v0.0.3 // indirect
+	github.com/ipfs/go-block-format v0.1.1 // indirect
+	github.com/ipfs/go-libipfs v0.4.1 // indirect
 	github.com/ipsn/go-secp256k1 v0.0.0-20180726113642-9d62b9f0bc52 // indirect
 	github.com/libp2p/go-libp2p-core v0.20.1 // indirect
 	github.com/libp2p/go-yamux/v4 v4.0.0 // indirect
@@ -245,4 +246,4 @@ require (
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
 
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.7-0.20230214070559-dbe74781184a
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.7-0.20230220074347-8db78dbc20d4
