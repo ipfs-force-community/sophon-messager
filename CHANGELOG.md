@@ -1,5 +1,10 @@
 # venus-message changelog
 
+## v1.10.0-rc3
+
+1. 升级 venus 和 go-jsonrpc 版本
+2. 推送消息接口先解析地址再验证权限
+
 ## v1.10.0-rc1
 
 支持 Filecoin NV18 网络升级
