@@ -13,6 +13,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-messager/publisher/pubsub"
+	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -32,6 +33,7 @@ type ImplParams struct {
 	SharedParamsService *service.SharedParamsService
 	Net                 pubsub.INet
 	AuthClient          jwtclient.IAuthClient
+	NodeClient          v1.FullNode
 }
 
 func NewMessageImp(implParams ImplParams) *MessageImp {
@@ -42,6 +44,7 @@ func NewMessageImp(implParams ImplParams) *MessageImp {
 		ParamsSrv:  implParams.SharedParamsService,
 		Net:        implParams.Net,
 		AuthClient: implParams.AuthClient,
+		NodeClient: implParams.NodeClient,
 	}
 }
 
@@ -52,6 +55,7 @@ type MessageImp struct {
 	ParamsSrv  *service.SharedParamsService
 	Net        pubsub.INet
 	AuthClient jwtclient.IAuthClient
+	NodeClient v1.FullNode
 }
 
 var _ messager.IMessager = (*MessageImp)(nil)
@@ -71,7 +75,26 @@ func (m MessageImp) WaitMessage(ctx context.Context, id string, confidence uint6
 	return m.MessageSrv.WaitMessage(ctx, id, confidence)
 }
 
+func (m MessageImp) resolveAddress(ctx context.Context, addr address.Address) (address.Address, error) {
+	if addr.Protocol() == address.ID {
+		addrTmp, err := m.NodeClient.StateAccountKey(ctx, addr, venusTypes.EmptyTSK)
+		if err != nil {
+			return address.Undef, fmt.Errorf("getting key address %s failed: %w", addr, err)
+		}
+		log.Infof("Push from ID address (%s), adjusting to %s", addr, addrTmp)
+
+		addr = addrTmp
+	}
+
+	return addr, nil
+}
+
 func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	var err error
+	msg.From, err = m.resolveAddress(ctx, msg.From)
+	if err != nil {
+		return "", err
+	}
 	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return "", err
 	}
@@ -79,6 +102,11 @@ func (m MessageImp) PushMessage(ctx context.Context, msg *venusTypes.Message, me
 }
 
 func (m MessageImp) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
+	var err error
+	msg.From, err = m.resolveAddress(ctx, msg.From)
+	if err != nil {
+		return "", err
+	}
 	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); err != nil {
 		return "", err
 	}
