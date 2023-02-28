@@ -188,7 +188,7 @@ state:
   2:  FillMsg
   3:  OnChainMsg
   4:  FailedMsg
-  5:  ReplacedMsg
+  5:  NonceConflictMsg
   6:  NoWalletMsg
 `,
 		},

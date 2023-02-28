@@ -19,6 +19,8 @@ import (
 var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
 var errMinimumNonce = errors.New("minimum expected nonce")
 
+//go:generate mockgen -destination=../mocks/mock_msg_publisher.go -package=mocks github.com/filecoin-project/venus-messager/publisher IMsgPublisher
+
 type IMsgPublisher interface {
 	// PublishMessages publish messages to chain
 	PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error
@@ -159,7 +161,7 @@ func (n *nodeThread) run(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case msgs := <-n.msgChan:
-				if _, err := n.nodeClient.MpoolBatchPush(ctx, msgs); err != nil {
+				if _, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
 					//skip error
 					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
 						log.Errorf("push message to node %s failed %v", n.name, err)

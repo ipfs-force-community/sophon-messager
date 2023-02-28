@@ -10,10 +10,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/fx/fxtest"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/filestore"
 	"github.com/filecoin-project/venus-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
@@ -25,24 +22,11 @@ func TestDoRefreshMessageState(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-	assert.NoError(t, err)
-
-	addrCount := 10
-	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
-	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
-	assert.NoError(t, msh.fullNode.AddActors(addrs))
-
-	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
-	assert.NoError(t, lc.Start(ctx))
-	defer lc.RequireStop()
+	msh := newMessageServiceHelper(ctx, t)
+	addrs := msh.genAddresses()
+	ms := msh.MessageService
+	msh.start()
+	defer msh.lc.RequireStop()
 
 	t.Run("normal", func(t *testing.T) {
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
@@ -51,12 +35,12 @@ func TestDoRefreshMessageState(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
 			msgs := genMessages(addrs, len(addrs)*10)
-			assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
+			assert.NoError(t, pushMessage(ctx, ms, msgs))
 			go func(msgs []*types.Message) {
 				defer wg.Done()
 
 				for _, msg := range msgs {
-					res := waitMsgAndCheck(ctx, t, msg.ID, msh.ms)
+					res := waitMsgAndCheck(ctx, t, msg.ID, ms)
 
 					msgLookup, err := msh.fullNode.StateSearchMsg(ctx, shared.EmptyTSK, *res.SignedCid, constants.LookbackNoLimit, true)
 					assert.NoError(t, err)
@@ -70,7 +54,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 	})
 
 	t.Run("revert", func(t *testing.T) {
-		ticker := time.NewTicker(blockDelay)
+		ticker := time.NewTicker(msh.blockDelay)
 		defer ticker.Stop()
 
 		loop := 10
@@ -80,7 +64,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 			select {
 			case <-ticker.C:
 				msgs := genMessages(addrs, len(addrs)*2*(i+1))
-				assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
+				assert.NoError(t, pushMessage(ctx, ms, msgs))
 				if i == 6 {
 					msh.fullNode.SendRevertSignal(rs)
 				}
@@ -99,11 +83,11 @@ func TestDoRefreshMessageState(t *testing.T) {
 			}
 		}
 
-		time.Sleep(blockDelay*2 + time.Second)
+		time.Sleep(msh.blockDelay*2 + time.Second)
 
 		revertedMsgCount := 0
 		for signedCID, tsk := range mayRevertMsg {
-			res, err := msh.ms.GetMessageBySignedCid(ctx, signedCID)
+			res, err := ms.GetMessageBySignedCid(ctx, signedCID)
 			assert.NoError(t, err)
 			if !res.TipSetKey.Equals(tsk) {
 				revertedMsgCount++
@@ -122,29 +106,15 @@ func TestDoRefreshMessageState(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		cfg := config.DefaultConfig()
-		cfg.MessageService.SkipPushMessage = true
-		cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-		blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-		fsRepo := filestore.NewMockFileStore(t.TempDir())
-		authClient := testhelper.NewMockAuthClient()
-		msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-		assert.NoError(t, err)
-		ms := msh.ms
+		msh := newMessageServiceHelper(ctx, t)
+		defer msh.lc.RequireStop()
 
-		addrCount := 10
-		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-		authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
-		assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
-		assert.NoError(t, msh.fullNode.AddActors(addrs))
+		msh.genAddresses()
+		addrs := msh.addrs
+		ms := msh.MessageService
+		msh.start()
 
-		lc := fxtest.NewLifecycle(t)
-		_ = StartNodeEvents(lc, msh.fullNode, ms)
-		assert.NoError(t, lc.Start(ctx))
-		defer lc.RequireStop()
-
-		msgs := genMessages(addrs, len(addrs)*10)
-		assert.NoError(t, pushMessage(ctx, ms, msgs))
+		_ = msh.genAndPushMessages(len(addrs) * 10)
 
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
@@ -198,9 +168,9 @@ func TestDoRefreshMessageState(t *testing.T) {
 			ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 		}()
 		for i, msg := range cm.srcMsgs {
-			res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
+			res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
 			assert.NoError(t, err)
-			assert.Equal(t, types.ReplacedMsg, res.State)
+			assert.Equal(t, types.NonceConflictMsg, res.State)
 			assert.Equal(t, msg.Method, res.Method)
 			assert.Equal(t, msg.GasLimit, res.GasLimit)
 			assert.Equal(t, msg.GasFeeCap, res.GasFeeCap)
@@ -219,26 +189,12 @@ func TestDoRefreshMessageState(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		cfg := config.DefaultConfig()
-		cfg.MessageService.SkipPushMessage = true
-		cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-		blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-		fsRepo := filestore.NewMockFileStore(t.TempDir())
-		authClient := testhelper.NewMockAuthClient()
-		msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-		assert.NoError(t, err)
-		ms := msh.ms
-
-		addrCount := 1
-		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))[:2]
-		authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
-		assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
-		assert.NoError(t, msh.fullNode.AddActors(addrs))
-
-		lc := fxtest.NewLifecycle(t)
-		_ = StartNodeEvents(lc, msh.fullNode, ms)
-		assert.NoError(t, lc.Start(ctx))
-		defer lc.RequireStop()
+		msh := newMessageServiceHelper(ctx, t)
+		addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, 1))[:2]
+		msh.addAddresses(addrs)
+		ms := msh.MessageService
+		msh.start()
+		defer msh.lc.RequireStop()
 
 		// first message will estimate gas failed
 		// second message will on chain
@@ -263,7 +219,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		}()
 
 		fillMsg := selectResult.SelectMsg[0]
-		res, err := waitMsgWithTimeout(ctx, msh.ms, fillMsg.ID)
+		res, err := waitMsgWithTimeout(ctx, ms, fillMsg.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, fillMsg.ID, res.ID)
 		assert.Equal(t, types.OnChainMsg, res.State)
@@ -276,27 +232,14 @@ func TestUpdateMessageState(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.DefaultConfig()
-	cfg.MessageService.WaitingChainHeadStableDuration = time.Second * 2
-	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
-	fsRepo := filestore.NewMockFileStore(t.TempDir())
-	authClient := testhelper.NewMockAuthClient()
-	msh, err := newMessageServiceHelper(ctx, cfg, blockDelay, fsRepo, authClient)
-	assert.NoError(t, err)
-
-	addrCount := 10
-	addrs := testhelper.ResolveAddrs(t, testhelper.RandAddresses(t, addrCount))
-	authClient.AddMockUserAndSigner(defaultLocalToken, addrs)
-	assert.NoError(t, msh.walletProxy.AddAddress(defaultLocalToken, addrs))
-	assert.NoError(t, msh.fullNode.AddActors(addrs))
-
-	lc := fxtest.NewLifecycle(t)
-	_ = StartNodeEvents(lc, msh.fullNode, msh.ms)
-	assert.NoError(t, lc.Start(ctx))
-	defer lc.RequireStop()
+	msh := newMessageServiceHelper(ctx, t)
+	addrs := msh.genAddresses()
+	ms := msh.MessageService
+	msh.start()
+	defer msh.lc.RequireStop()
 
 	msgs := genMessages(addrs, len(addrs)*10*5)
-	assert.NoError(t, pushMessage(ctx, msh.ms, msgs))
+	assert.NoError(t, pushMessage(ctx, ms, msgs))
 
 	ts, err := msh.fullNode.ChainHead(ctx)
 	assert.NoError(t, err)
@@ -305,7 +248,7 @@ func TestUpdateMessageState(t *testing.T) {
 	defer cancel2()
 
 	for _, msg := range msgs {
-		res, err := waitMsgWithTimeout(ctx, msh.ms, msg.ID)
+		res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
 		assert.NoError(t, err)
 
 		assert.Equal(t, types.OnChainMsg, res.State)

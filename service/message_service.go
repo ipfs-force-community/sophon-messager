@@ -36,6 +36,32 @@ const (
 	LookBackLimit        = 900
 )
 
+type IMessageService interface {
+	PushMessage(ctx context.Context, msg *venusTypes.Message, meta *types.SendSpec) (string, error)
+	PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error)
+	HasMessageByUid(ctx context.Context, id string) (bool, error)
+	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
+	GetMessageByCid(ctx context.Context, cid cid.Cid) (*types.Message, error)
+	GetMessageByFromAndNonce(ctx context.Context, from address.Address, nonce uint64) (*types.Message, error)
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
+	GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error)
+	GetMessageByUnsignedCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error)
+	ListMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
+	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
+	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)
+	ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
+	ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error)
+	UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error
+	UpdateAllFilledMessage(ctx context.Context) (int, error)
+	UpdateFilledMessageByID(ctx context.Context, id string) (string, error)
+	ReplaceMessage(ctx context.Context, params *types.ReplacMessageParams) (cid.Cid, error)
+	RepublishMessage(ctx context.Context, id string) error
+	MarkBadMessage(ctx context.Context, id string) error
+	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)
+	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)
+	Send(ctx context.Context, params types.QuickSendParams) (string, error)
+}
+
 type MessageService struct {
 	repo           repo.Repo
 	fsRepo         filestore.FSRepo
@@ -245,7 +271,7 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			case types.UnKnown:
 				continue
 			// OnChain
-			case types.ReplacedMsg:
+			case types.NonceConflictMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
 				}
@@ -258,8 +284,6 @@ func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence
 			// Error
 			case types.FailedMsg:
 				return msg, nil
-			case types.NoWalletMsg:
-				return nil, errors.New("msg failed due to wallet disappear")
 			}
 
 		case <-tm.C:
@@ -286,7 +310,7 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 }
 
 func isChainMsg(msgState types.MessageState) bool {
-	return msgState == types.OnChainMsg || msgState == types.ReplacedMsg
+	return msgState == types.OnChainMsg || msgState == types.NonceConflictMsg
 }
 
 func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
@@ -375,12 +399,12 @@ func (ms *MessageService) ListMessageByFromState(ctx context.Context, from addre
 	return msgs, nil
 }
 
-func (ms *MessageService) ListMessage(ctx context.Context) ([]*types.Message, error) {
+func (ms *MessageService) ListMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	msgs, err := ms.repo.MessageRepo().ListMessage()
+	msgs, err := ms.repo.MessageRepo().ListMessageByParams(params)
 	if err != nil {
 		return nil, err
 	}
@@ -411,33 +435,28 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	return msgs, nil
 }
 
-func (ms *MessageService) ListFailedMessage(ctx context.Context) ([]*types.Message, error) {
-	return ms.repo.MessageRepo().ListFailedMessage()
+func (ms *MessageService) ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
+	return ms.repo.MessageRepo().ListFailedMessage(params)
 }
 
 func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
-func (ms *MessageService) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	var msgs []*types.Message
-	if addr != address.Undef {
-		return ms.repo.MessageRepo().ListBlockedMessage(addr, d)
+func (ms *MessageService) ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
+	if len(params.From) > 0 {
+		return ms.repo.MessageRepo().ListBlockedMessage(params, d)
 	}
 
 	addrList, err := ms.addressService.ListActiveAddress(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for _, a := range addrList {
-		msgsT, err := ms.repo.MessageRepo().ListBlockedMessage(a.Addr, d)
-		if err != nil {
-			return nil, err
-		}
-		msgs = append(msgs, msgsT...)
-	}
 
-	return msgs, nil
+	for _, a := range addrList {
+		params.From = append(params.From, a.Addr)
+	}
+	return ms.repo.MessageRepo().ListBlockedMessage(params, d)
 }
 
 func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
@@ -952,14 +971,14 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 					stats.Record(ctx, metrics.NumOfFillMsg.M(int64(len(msgs))))
 				}
 
-				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 3*time.Minute)
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{addr.Addr}}, 3*time.Minute)
 				if err != nil {
 					log.Errorf("get blocked three minutes msg err: %s", err)
 				} else {
 					stats.Record(ctx, metrics.NumOfMsgBlockedThreeMinutes.M(int64(len(msgs))))
 				}
 
-				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(addr.Addr, 5*time.Minute)
+				msgs, err = ms.repo.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{addr.Addr}}, 5*time.Minute)
 				if err != nil {
 					log.Errorf("get blocked five minutes msg err: %s", err)
 				} else {
@@ -967,7 +986,7 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 				}
 			}
 
-			msgs, err := ms.repo.MessageRepo().ListFailedMessage()
+			msgs, err := ms.repo.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{})
 			if err != nil {
 				log.Errorf("get failed msg err: %s", err)
 			} else {

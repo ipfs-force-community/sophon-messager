@@ -60,7 +60,7 @@ func NewPubsub(ctx context.Context,
 ) (*PubSub, error) {
 	finalTimeout, finalPeriod, finalThreshold := time.Second*30, time.Second*30, 1
 
-	netconfig, err := networks.GetNetworkConfig(string(networkName))
+	netconfig, err := networks.GetNetworkConfigFromName(string(networkName))
 	if err != nil {
 		log.Errorf("failed to get default network config: %s", err)
 	}

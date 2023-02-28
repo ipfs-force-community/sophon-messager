@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/etherlabsio/healthcheck/v2"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -19,7 +20,7 @@ import (
 
 var log = logging.Logger("api")
 
-func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
+func BindRateLimit(msgImp *MessageImp, remoteAuthCli jwtclient.IAuthClient, rateLimitCfg *config.RateLimitConfig) (messager.IMessager, error) {
 	var msgAPI messager.IMessagerStruct
 	permission.PermissionProxy(msgImp, &msgAPI)
 
@@ -43,16 +44,18 @@ func BindRateLimit(msgImp *MessageImp, remoteAuthCli *jwtclient.AuthClient, rate
 
 // RunAPI bind rpc call and start rpc
 // todo
-func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli *jwtclient.AuthClient, lst net.Listener, msgImp messager.IMessager) error {
+func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuthCli jwtclient.IAuthClient, lst net.Listener, msgImp messager.IMessager) error {
 	srv := jsonrpc.NewServer()
 	srv.Register("Message", msgImp)
-	handler := http.NewServeMux()
-	handler.Handle("/rpc/v0", srv)
-	authMux := jwtclient.NewAuthMux(localAuthCli, jwtclient.WarpIJwtAuthClient(remoteAuthCli), handler)
-	authMux.TrustHandle("/debug/pprof/", http.DefaultServeMux)
+	authMux := jwtclient.NewAuthMux(localAuthCli, jwtclient.WarpIJwtAuthClient(remoteAuthCli), srv)
+
+	mux := http.NewServeMux()
+	mux.Handle("/rpc/v0", authMux)
+	mux.Handle("/debug/pprof/", http.DefaultServeMux)
+	mux.Handle("/healthcheck", healthcheck.Handler())
 
 	apiserv := &http.Server{
-		Handler: authMux,
+		Handler: mux,
 	}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
