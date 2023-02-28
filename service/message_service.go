@@ -60,6 +60,11 @@ type IMessageService interface {
 	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)
 	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)
 	Send(ctx context.Context, params types.QuickSendParams) (string, error)
+
+	SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error
+	UpdateActorCfg(ctx context.Context, id venusTypes.UUID, changeSpecParams *types.ChangeGasSpecParams) error
+	ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error)
+	GetActorCfgByID(ctx context.Context, id venusTypes.UUID) (*types.ActorCfg, error)
 }
 
 type MessageService struct {

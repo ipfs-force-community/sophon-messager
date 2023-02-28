@@ -23,7 +23,7 @@ func TestActorCfgAPI(t *testing.T) {
 	cfg.API.Address = "/ip4/0.0.0.0/tcp/0"
 	cfg.MessageService.SkipPushMessage = true
 	cfg.MessageService.WaitingChainHeadStableDuration = 2 * time.Second
-	authClient := testhelper.NewMockAuthClient()
+	authClient := testhelper.NewMockAuthClient(t)
 	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
 	assert.NoError(t, err)
 
@@ -33,7 +33,7 @@ func TestActorCfgAPI(t *testing.T) {
 	account := defaultLocalToken
 	addrCount := 10
 	addrs := testhelper.RandAddresses(t, addrCount)
-	authClient.AddMockUserAndSigner(account, addrs)
+	authClient.Init(account, addrs)
 	assert.NoError(t, ms.walletCli.AddAddress(account, addrs))
 
 	api, closer, err := newMessagerClient(ctx, ms.port, ms.token)
