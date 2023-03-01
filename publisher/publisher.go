@@ -164,9 +164,9 @@ func (n *nodeThread) run(ctx context.Context) {
 				if _, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
 					//skip error
 					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-						log.Errorf("push message to node %s failed %v", n.name, err)
+						log.Errorf("failed to push message node: %s, address: %v, error: %v", n.name, msgs[0].Message.From, err)
 					} else {
-						log.Debugf("push message to node failed %v", err)
+						log.Debugf("failed to push message %v", err)
 					}
 				}
 			}
