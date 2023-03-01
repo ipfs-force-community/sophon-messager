@@ -51,6 +51,7 @@ func main() {
 			ccli.MsgCmds,
 			ccli.AddrCmds,
 			ccli.SharedParamsCmds,
+			ccli.ActorCfgCmds,
 			ccli.NodeCmds,
 			ccli.LogCmds,
 			ccli.SendCmd,
@@ -163,7 +164,7 @@ func runAction(cctx *cli.Context) error {
 	log.Infof("defalut timeout: %v, sign message timeout: %v, estimate message timeout: %v", cfg.MessageService.DefaultTimeout,
 		cfg.MessageService.SignMessageTimeout, cfg.MessageService.EstimateMessageTimeout)
 
-	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL)
+	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL, cfg.JWT.Token)
 	if err != nil {
 		return err
 	}
@@ -348,8 +349,10 @@ func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 	}
 
 	if ctx.IsSet("auth-token") {
-		cfg.Node.Token = ctx.String("auth-token")
-		cfg.Gateway.Token = ctx.String("auth-token")
+		token := ctx.String("auth-token")
+		cfg.Node.Token = token
+		cfg.Gateway.Token = token
+		cfg.JWT.Token = token
 	}
 
 	if ctx.IsSet("node-token") {

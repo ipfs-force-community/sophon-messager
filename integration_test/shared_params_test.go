@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/go-state-types/big"
-
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
@@ -37,13 +36,15 @@ func TestSharedParamsAPI(t *testing.T) {
 	assert.Equal(t, service.DefSharedParams, res)
 
 	params := &types.SharedSpec{
-		ID:                1,
-		GasOverEstimation: 10,
-		MaxFee:            big.NewInt(11111111),
-		GasFeeCap:         big.NewInt(11111112),
-		BaseFee:           big.NewInt(10000),
-		GasOverPremium:    10,
-		SelMsgNum:         100,
+		ID:        1,
+		SelMsgNum: 100,
+		FeeSpec: types.FeeSpec{
+			GasOverEstimation: 10,
+			MaxFee:            big.NewInt(11111111),
+			GasFeeCap:         big.NewInt(11111112),
+			BaseFee:           big.NewInt(10000),
+			GasOverPremium:    10,
+		},
 	}
 	assert.NoError(t, api.SetSharedParams(ctx, params))
 

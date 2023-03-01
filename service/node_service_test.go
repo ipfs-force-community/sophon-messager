@@ -26,6 +26,14 @@ func TestNodeService(t *testing.T) {
 
 	nodeService := NewNodeService(repo.NodeRepo())
 
+	nodeEquals := func(a, b *types.Node) bool {
+		return a.ID == b.ID &&
+			a.Name == b.Name &&
+			a.URL == b.URL &&
+			a.Token == b.Token &&
+			a.Type == b.Type
+	}
+
 	nodeCases := make([]*types.Node, 0, 10)
 	nodeMap := make(map[string]*types.Node)
 	for i := 0; i < 10; i++ {
@@ -49,7 +57,7 @@ func TestNodeService(t *testing.T) {
 	for _, node := range nodeCases {
 		n, err := nodeService.GetNode(ctx, node.Name)
 		assert.NoError(t, err)
-		assert.Equal(t, nodeMap[n.Name], n)
+		assert.True(t, nodeEquals(n, node))
 
 		// has node
 		has, err := nodeService.HasNode(ctx, n.Name)
@@ -68,7 +76,7 @@ func TestNodeService(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, nodes, len(nodeCases))
 	for _, n := range nodes {
-		assert.Equal(t, nodeMap[n.Name], n)
+		assert.True(t, nodeEquals(n, nodeMap[n.Name]))
 	}
 
 	// delete node

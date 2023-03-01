@@ -221,22 +221,10 @@ var setFeeParamsCmd = &cli.Command{
 	Usage:     "Address setting fee associated configuration",
 	ArgsUsage: "<address>",
 	Flags: []cli.Flag{
-		&cli.Float64Flag{
-			Name:  "gas-overestimation",
-			Usage: "Estimate the coefficient of gas",
-		},
-		&cli.StringFlag{
-			Name:  "gas-feecap",
-			Usage: "Gas feecap for a message (burn and pay to miner, attoFIL/GasUnit)",
-		},
-		&cli.StringFlag{
-			Name:  "max-fee",
-			Usage: "Spend up to X attoFIL for message",
-		},
-		&cli.StringFlag{
-			Name:  "base-fee",
-			Usage: "",
-		},
+		gasOverEstimationFlag,
+		gasFeeCapFlag,
+		maxFeeFlag,
+		basefeeFlag,
 		GasOverPremiumFlag,
 	},
 	Action: func(ctx *cli.Context) error {
@@ -251,11 +239,11 @@ var setFeeParamsCmd = &cli.Command{
 		}
 
 		params := &messager.AddressSpec{
-			GasOverEstimation: ctx.Float64("gas-overestimation"),
+			GasOverEstimation: ctx.Float64(gasOverEstimationFlag.Name),
 			GasOverPremium:    ctx.Float64(GasOverPremiumFlag.Name),
-			MaxFeeStr:         ctx.String("max-fee"),
-			GasFeeCapStr:      ctx.String("gas-feecap"),
-			BaseFeeStr:        ctx.String("base-fee"),
+			MaxFeeStr:         ctx.String(maxFeeFlag.Name),
+			GasFeeCapStr:      ctx.String(gasFeeCapFlag.Name),
+			BaseFeeStr:        ctx.String(basefeeFlag.Name),
 		}
 		params.Address, err = address.NewFromString(ctx.Args().First())
 		if err != nil {

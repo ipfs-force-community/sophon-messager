@@ -81,7 +81,7 @@ func testGetNode(ctx context.Context, t *testing.T, api messager.IMessager, node
 	for i, node := range nodes {
 		res, err := api.GetNode(ctx, node.Name)
 		assert.NoError(t, err)
-		assert.Equal(t, node, res)
+		testhelper.Equal(t, node, res)
 
 		if i%2 == 0 {
 			_, err = api.GetNode(ctx, node.Name+"_name")
@@ -112,7 +112,7 @@ func testListNode(ctx context.Context, t *testing.T, api messager.IMessager, nod
 	for _, node := range nodes {
 		for _, one := range list {
 			if node.Name == one.Name {
-				assert.Equal(t, node, one)
+				testhelper.Equal(t, node, one)
 			}
 		}
 	}

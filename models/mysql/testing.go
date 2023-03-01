@@ -47,6 +47,7 @@ func setup(t *testing.T) (repo.Repo, sqlmock.Sqlmock, *sql.DB) {
 		Conn: sqlDB,
 	}))
 	assert.NoError(t, err)
+	gormDB = gormDB.Debug()
 
 	return Repo{DB: gormDB}, mock, sqlDB
 }
@@ -147,4 +148,75 @@ func genUpdateSQL(obj interface{}, skipZero bool, where ...string) (string, []dr
 		}
 	}
 	return buf.String(), updateArgs
+}
+
+func genSelectResult(obj interface{}, selColumns ...string) *sqlmock.Rows {
+	inCol := func(col string) bool {
+		if len(selColumns) == 0 {
+			return true
+		}
+		for _, selCol := range selColumns {
+			if selCol == col {
+				return true
+			}
+		}
+		return false
+	}
+	originT := reflect.TypeOf(obj)
+	originValue := reflect.ValueOf(obj)
+	targetT := originT
+	if originT.Kind() == reflect.Slice || originT.Kind() == reflect.Array {
+		targetT = originT.Elem()
+		if targetT.Kind() == reflect.Ptr {
+			targetT = targetT.Elem()
+		}
+	}
+	emptyVal := reflect.New(targetT).Interface()
+	fmt.Println(emptyVal)
+	objSchema, _ := schema.Parse(emptyVal, &sync.Map{}, db.NamingStrategy)
+
+	var columns []string
+	for _, dbName := range objSchema.DBNames {
+		if !inCol(dbName) {
+			continue
+		}
+		columns = append(columns, dbName)
+	}
+	mockRows := sqlmock.NewRows(columns)
+
+	getRow := func(val reflect.Value) []driver.Value {
+		var row []driver.Value
+		for _, colName := range columns {
+			field := objSchema.LookUpField(colName)
+			fieldV, _ := field.ValueOf(val)
+			row = append(row, fieldV)
+		}
+		return row
+	}
+
+	if originT.Kind() == reflect.Slice || originT.Kind() == reflect.Array {
+		vLen := originValue.Len()
+		for i := 0; i < vLen; i++ {
+			oneRow := getRow(originValue.Index(i))
+			mockRows.AddRow(oneRow...)
+		}
+	} else {
+		oneRow := getRow(originValue)
+		mockRows.AddRow(oneRow...)
+	}
+	return mockRows
+}
+
+var _ driver.Result = (*driverResult)(nil)
+
+type driverResult struct {
+	lastInsertId, rowAffected int64
+}
+
+func (d driverResult) LastInsertId() (int64, error) {
+	return 0, nil
+}
+
+func (d driverResult) RowsAffected() (int64, error) {
+	return 1, nil
 }
