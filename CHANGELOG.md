@@ -1,5 +1,10 @@
 # venus-message changelog
 
+## v1.10.0
+
+* 升级 venus 和 venus-auth 版本到 v1.10.0
+* 升级 go-jsonrpc 版本到 v0.1.7
+
 ## v1.10.0-rc3
 
 1. 升级 venus 和 go-jsonrpc 版本
