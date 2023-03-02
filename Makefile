@@ -7,7 +7,7 @@ endif
 
 GOFLAGS+=-ldflags="$(ldflags)"
 
-build: tools
+build:
 	rm -rf venus-messager
 	go build $(GOFLAGS) -o venus-messager .
 
