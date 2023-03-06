@@ -81,7 +81,7 @@ func (m MessageImp) resolveAddress(ctx context.Context, addr address.Address) (a
 		if err != nil {
 			return address.Undef, fmt.Errorf("getting key address %s failed: %w", addr, err)
 		}
-		log.Infof("Push from ID address (%s), adjusting to %s", addr, addrTmp)
+		log.Infof("resolve ID address from %s to %s", addr, addrTmp)
 
 		addr = addrTmp
 	}

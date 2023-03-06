@@ -527,11 +527,16 @@ func (w *work) estimateMessage(ctx context.Context,
 func (w *work) signMessage(ctx context.Context, msg *types.Message, accounts []string) (*crypto.Signature, error) {
 	data, err := msg.Message.ToStorageBlock()
 	if err != nil {
-		return nil, fmt.Errorf("serialize message %s failed %v", msg.ID, err)
+		return nil, fmt.Errorf("serialize message failed: %v", err)
+	}
+
+	sb, err := msg.Message.SigningBytes(venusTypes.AddressProtocol2SignType(msg.Message.From.Protocol()))
+	if err != nil {
+		return nil, fmt.Errorf("get signing bytes failed: %v", err)
 	}
 
 	signMsgCtx, signMsgCancel := context.WithTimeout(ctx, w.cfg.SignMessageTimeout)
-	sigI, err := handleTimeout(signMsgCtx, w.walletClient.WalletSign, []interface{}{w.addr, accounts, msg.Message.Cid().Bytes(), venusTypes.MsgMeta{
+	sigI, err := handleTimeout(signMsgCtx, w.walletClient.WalletSign, []interface{}{w.addr, accounts, sb, venusTypes.MsgMeta{
 		Type:  venusTypes.MTChainMsg,
 		Extra: data.RawData(),
 	}})
