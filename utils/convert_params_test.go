@@ -7,6 +7,7 @@ import (
 
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/builtin/v10/eam"
 	"github.com/filecoin-project/go-state-types/proof"
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
@@ -228,6 +229,53 @@ func TestTryConvertParams(t *testing.T) {
 		}
 		equalMarshal(t, expect, res)
 	})
+
+	t.Run("test convert CreateReturn", func(t *testing.T) {
+		addr := testutil.AddressProvider()(t)
+		ethAddr := [20]byte{92, 41, 100, 227, 56, 253, 50, 107, 148, 193, 190, 112, 83, 185, 97, 122, 70, 160, 60, 177}
+		cr := eam.CreateReturn{
+			ActorID:       5917,
+			RobustAddress: &addr,
+			EthAddress:    ethAddr,
+		}
+		res, err := TryConvertParams(cr)
+		assert.NoError(t, err)
+		expect := map[string]interface{}{
+			"ActorID":       5917,
+			"RobustAddress": addr.String(),
+			"EthAddress":    "0x5c2964e338fd326b94c1be7053b9617a46a03cb1",
+		}
+		equalMarshal(t, expect, res)
+
+		cr2 := eam.CreateReturn{
+			ActorID:       0,
+			RobustAddress: nil,
+			EthAddress:    [20]byte{},
+		}
+		res2, err := TryConvertParams(cr2)
+		assert.NoError(t, err)
+		expect2 := map[string]interface{}{
+			"ActorID":       0,
+			"RobustAddress": nil,
+			"EthAddress":    "0x0000000000000000000000000000000000000000",
+		}
+		equalMarshal(t, expect2, res2)
+	})
+
+	t.Run("test convert ActiveBeneficiary", func(t *testing.T) {
+		addr := testutil.AddressProvider()(t)
+		ab := &types.ActiveBeneficiary{
+			Beneficiary: addr,
+			Term: types.BeneficiaryTerm{
+				Quota:      abi.NewTokenAmount(100),
+				UsedQuota:  abi.NewTokenAmount(100),
+				Expiration: 100,
+			},
+		}
+		res, err := TryConvertParams(ab)
+		assert.NoError(t, err)
+		assert.Equal(t, ab, res)
+	})
 }
 
 func equalMarshal(t *testing.T, expect, actual interface{}) {
@@ -240,7 +288,7 @@ func equalMarshal(t *testing.T, expect, actual interface{}) {
 
 func TestHasBitfield(t *testing.T) {
 	cases := []struct {
-		typ    interface{}
+		typ    any
 		expect bool
 	}{
 		{&types.ExtendSectorExpirationParams{}, true},
@@ -256,10 +304,11 @@ func TestHasBitfield(t *testing.T) {
 		{&types.PublishStorageDealsReturn{}, true},
 		{&types.ActiveBeneficiary{}, false},
 		{&types.ActivateDealsParams{}, false},
+		{&eam.CreateReturn{}, true},
 	}
 	for _, c := range cases {
 		testutil.Provide(t, c.typ)
-		if actual := hasBitfield(reflect.ValueOf(c.typ)); actual != c.expect {
+		if actual := isNeedConvert(reflect.ValueOf(c.typ)); actual != c.expect {
 			t.Errorf("call %T failed, actual %v, expect %v", c.typ, actual, c.expect)
 		}
 	}
