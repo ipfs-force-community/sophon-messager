@@ -1,5 +1,10 @@
 # venus-message changelog
 
+## v1.10.1
+
+* 支持 delegated 地址的消息 [[#323](https://github.com/filecoin-project/venus-messager/pull/323)]
+* 升级 venus 和 venus-auth 版本到 v1.10.1
+
 ## v1.10.0
 
 * 升级 venus 和 venus-auth 版本到 v1.10.0
