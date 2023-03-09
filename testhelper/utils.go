@@ -84,6 +84,16 @@ func Equal(t *testing.T, expect, actual interface{}) {
 	expectRT := reflect.TypeOf(expect)
 	actualRV := reflect.ValueOf(actual)
 	assert.Equal(t, expectRV.Kind(), actualRV.Kind())
+
+	if expectRV.Kind() == reflect.Array || expectRT.Kind() == reflect.Slice {
+		assert.Equal(t, expectRV.Len(), actualRV.Len())
+		mLen := expectRV.Len()
+		for i := 0; i < mLen; i++ {
+			Equal(t, expectRV.Index(i).Interface(), actualRV.Index(i).Interface())
+		}
+		return
+	}
+
 	if expectRV.Kind() == reflect.Ptr {
 		expectRV = expectRV.Elem()
 		expectRT = expectRT.Elem()
@@ -91,6 +101,7 @@ func Equal(t *testing.T, expect, actual interface{}) {
 	if actualRV.Kind() == reflect.Ptr {
 		actualRV = actualRV.Elem()
 	}
+
 	assert.Equal(t, expectRV.NumField(), actualRV.NumField())
 	for i := 0; i < expectRV.NumField(); i++ {
 		expectVal, ok := expectRV.Field(i).Interface().(time.Time)
@@ -102,9 +113,9 @@ func Equal(t *testing.T, expect, actual interface{}) {
 		actualVal, ok := actualRV.Field(i).Interface().(time.Time)
 		assert.True(t, ok)
 		if expectVal.IsZero() {
-			assert.True(t, actualVal.After(expectVal))
+			assert.True(t, actualVal == expectVal || actualVal.After(expectVal), expectRT.Field(i).Name)
 		} else if expectRT.Field(i).Name == "UpdatedAt" {
-			assert.True(t, actualVal.After(expectVal))
+			assert.True(t, actualVal == expectVal || actualVal.After(expectVal), expectRT.Field(i).Name)
 		} else {
 			assert.Equal(t, expectVal.Format(timeFormat), actualVal.Format(timeFormat))
 		}

@@ -60,6 +60,11 @@ type IMessageService interface {
 	RecoverFailedMsg(ctx context.Context, addr address.Address) ([]string, error)
 	ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error)
 	Send(ctx context.Context, params types.QuickSendParams) (string, error)
+
+	SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error
+	UpdateActorCfg(ctx context.Context, id venusTypes.UUID, changeSpecParams *types.ChangeGasSpecParams) error
+	ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error)
+	GetActorCfgByID(ctx context.Context, id venusTypes.UUID) (*types.ActorCfg, error)
 }
 
 type MessageService struct {
@@ -908,6 +913,22 @@ func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.A
 	case <-ctx.Done():
 		return 0, ctx.Err()
 	}
+}
+
+func (ms *MessageService) SaveActorCfg(ctx context.Context, actorCfg *types.ActorCfg) error {
+	return ms.repo.ActorCfgRepo().SaveActorCfg(ctx, actorCfg)
+}
+
+func (ms *MessageService) UpdateActorCfg(ctx context.Context, id venusTypes.UUID, changeSpecParams *types.ChangeGasSpecParams) error {
+	return ms.repo.ActorCfgRepo().UpdateSelectSpecById(ctx, id, changeSpecParams)
+}
+
+func (ms *MessageService) ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error) {
+	return ms.repo.ActorCfgRepo().ListActorCfg(ctx)
+}
+
+func (ms *MessageService) GetActorCfgByID(ctx context.Context, id venusTypes.UUID) (*types.ActorCfg, error) {
+	return ms.repo.ActorCfgRepo().GetActorCfgByID(ctx, id)
 }
 
 func (ms *MessageService) recordMetricsProc(ctx context.Context) {

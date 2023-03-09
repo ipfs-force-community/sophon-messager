@@ -79,6 +79,7 @@ func TestAddressAPI(t *testing.T) {
 	addrMsgs := make(map[address.Address][]*types.Message, len(addrs))
 	for _, msg := range msgs {
 		msg.From = addrs[rand.Intn(addrCount)]
+		msg.To = addrs[rand.Intn(addrCount)]
 		id, err := apiWithLocalToken.PushMessageWithId(ctx, msg.ID, &msg.Message, msg.Meta)
 		assert.NoError(t, err)
 		assert.Equal(t, msg.ID, id)

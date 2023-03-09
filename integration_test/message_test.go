@@ -784,6 +784,7 @@ func genMessageWithAddress(addrs []address.Address) []*types.Message {
 	msgs := testhelper.NewMessages(len(addrs) * 2)
 	for _, msg := range msgs {
 		msg.From = addrs[rand.Intn(len(addrs))]
+		msg.To = addrs[rand.Intn(len(addrs))]
 	}
 
 	return msgs

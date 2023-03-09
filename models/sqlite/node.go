@@ -33,11 +33,21 @@ func fromNode(node *types.Node) *sqliteNode {
 		Token:     node.Token,
 		Type:      node.Type,
 		IsDeleted: repo.NotDeleted,
+		CreatedAt: node.CreatedAt,
+		UpdatedAt: node.UpdatedAt,
 	}
 }
 
 func (sqliteNode sqliteNode) Node() *types.Node {
-	return automapper.MustMapper(&sqliteNode, TNode).(*types.Node)
+	return &types.Node{
+		ID:        sqliteNode.ID,
+		Name:      sqliteNode.Name,
+		URL:       sqliteNode.URL,
+		Token:     sqliteNode.Token,
+		Type:      sqliteNode.Type,
+		CreatedAt: sqliteNode.CreatedAt,
+		UpdatedAt: sqliteNode.UpdatedAt,
+	}
 }
 
 func (sqliteNode sqliteNode) TableName() string {
@@ -56,6 +66,7 @@ func newSqliteNodeRepo(db *gorm.DB) sqliteNodeRepo {
 
 func (s sqliteNodeRepo) CreateNode(node *types.Node) error {
 	sNode := fromNode(node)
+	sNode.CreatedAt = time.Now()
 	return s.DB.Create(sNode).Error
 }
 

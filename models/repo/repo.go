@@ -22,15 +22,15 @@ type Repo interface {
 	DbClose() error
 	AutoMigrate() error
 
+	TxRepo
+}
+
+type TxRepo interface {
+	ActorCfgRepo() ActorCfgRepo
 	MessageRepo() MessageRepo
 	AddressRepo() AddressRepo
 	SharedParamsRepo() SharedParamsRepo
 	NodeRepo() NodeRepo
-}
-
-type TxRepo interface {
-	MessageRepo() MessageRepo
-	AddressRepo() AddressRepo
 }
 
 type ISqlField interface {
@@ -84,3 +84,5 @@ func FromMsgReceipt(receipt *types.MessageReceipt) *SqlMsgReceipt {
 	s.ExitCode = receipt.ExitCode
 	return &s
 }
+
+var ErrRecordNotFound = gorm.ErrRecordNotFound

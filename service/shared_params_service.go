@@ -15,13 +15,15 @@ import (
 var DefaultMaxFee = venusTypes.MustParseFIL("0.07")
 
 var DefSharedParams = &types.SharedSpec{
-	ID:                1,
-	GasOverEstimation: 1.25,
-	MaxFee:            big.Int{Int: DefaultMaxFee.Int},
-	GasFeeCap:         big.NewInt(0),
-	GasOverPremium:    0,
-	SelMsgNum:         20,
-	BaseFee:           big.NewInt(0),
+	ID:        1,
+	SelMsgNum: 20,
+	FeeSpec: types.FeeSpec{
+		BaseFee:           big.NewInt(0),
+		GasOverEstimation: 1.25,
+		MaxFee:            big.Int{Int: DefaultMaxFee.Int},
+		GasFeeCap:         big.NewInt(0),
+		GasOverPremium:    0,
+	},
 }
 
 type SharedParamsService struct {

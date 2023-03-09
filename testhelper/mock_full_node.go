@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/filecoin-project/go-state-types/network"
+
 	"github.com/asaskevich/EventBus"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -364,6 +366,9 @@ func (f *MockFullNode) StateNetworkName(ctx context.Context) (types.NetworkName,
 	return types.NetworkNameMain, nil
 }
 
+func (f *MockFullNode) StateNetworkVersion(arg0 context.Context, arg1 types.TipSetKey) (network.Version, error) {
+	return network.Version17, nil
+}
 func (f *MockFullNode) StateGetNetworkParams(ctx context.Context) (*types.NetworkParams, error) {
 	return &types.NetworkParams{
 		NetworkName:    types.NetworkNameMain,
@@ -475,6 +480,13 @@ func (f *MockFullNode) StateGetActor(ctx context.Context, addr address.Address, 
 	f.l.Lock()
 	defer f.l.Unlock()
 
+	if addr.Protocol() == address.ID {
+		var err error
+		addr, err = ResolveIDAddr(addr)
+		if err != nil {
+			return nil, err
+		}
+	}
 	actor, ok := f.actors[addr]
 	if !ok {
 		return nil, fmt.Errorf("not found actor %v", addr)

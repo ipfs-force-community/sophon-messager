@@ -33,7 +33,7 @@ type sqliteMessage struct {
 	GasFeeCap  mtypes.Int `gorm:"column:gas_fee_cap;type:varchar(256);default:0"`
 	GasPremium mtypes.Int `gorm:"column:gas_premium;type:varchar(256);default:0"`
 
-	Method int `gorm:"column:method;type:int;NOT NULL"`
+	Method sqliteUint64 `gorm:"column:method;type:int;NOT NULL"`
 
 	Params []byte `gorm:"column:params;type:blob;"`
 
@@ -113,7 +113,7 @@ func fromMessage(srcMsg *types.Message) *sqliteMessage {
 		GasLimit:   srcMsg.GasLimit,
 		GasFeeCap:  mtypes.SafeFromGo(srcMsg.GasFeeCap.Int),
 		GasPremium: mtypes.SafeFromGo(srcMsg.GasPremium.Int),
-		Method:     int(srcMsg.Method),
+		Method:     sqliteUint64(srcMsg.Method),
 		Params:     srcMsg.Params,
 		Signature:  (*repo.SqlSignature)(srcMsg.Signature),
 		Height:     srcMsg.Height,

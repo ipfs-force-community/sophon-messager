@@ -14,6 +14,23 @@ var GasOverPremiumFlag = &cli.Float64Flag{
 	Usage: "",
 }
 
+var gasOverEstimationFlag = &cli.Float64Flag{
+	Name:  "gas-overestimation",
+	Usage: "Estimate the coefficient of gas",
+}
+var gasFeeCapFlag = &cli.StringFlag{
+	Name:  "gas-feecap",
+	Usage: "Gas feecap for a message (burn and pay to miner, attoFIL/GasUnit)",
+}
+var maxFeeFlag = &cli.StringFlag{
+	Name:  "max-fee",
+	Usage: "Spend up to X attoFIL for message",
+}
+var basefeeFlag = &cli.StringFlag{
+	Name:  "base-fee",
+	Usage: "",
+}
+
 func ParseFlagToReplaceMessaeParams(cctx *cli.Context) (*messager.ReplacMessageParams, error) {
 	params := messager.ReplacMessageParams{
 		Auto:           cctx.Bool("auto"),

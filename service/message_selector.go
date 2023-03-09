@@ -4,7 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
+
+	"github.com/filecoin-project/go-state-types/network"
+
+	lru "github.com/hashicorp/golang-lru"
+
+	"gorm.io/gorm"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -113,7 +120,6 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 
 func (msgSelectMgr *MsgSelectMgr) getNonceInTipset(ctx context.Context, ts *venusTypes.TipSet) (*utils.NonceMap, error) {
 	applied := utils.NewNonceMap()
-	// todo change with venus/lotus message for tipset
 	selectMsg := func(m *venusTypes.Message) error {
 		// The first match for a sender is guaranteed to have correct nonce -- the block isn't valid otherwise
 		if _, ok := applied.Get(m.From); !ok {
@@ -234,6 +240,8 @@ type work struct {
 
 	start       time.Time
 	controlChan chan struct{}
+
+	actorCache *lru.ARCCache
 }
 
 func newWork(ctx context.Context,
@@ -246,6 +254,7 @@ func newWork(ctx context.Context,
 	msgReceiver publisher.MessageReceiver,
 ) *work {
 	ctx, cancel := context.WithCancel(ctx)
+	cache, _ := lru.NewARC(100)
 	return &work{
 		ctx:            ctx,
 		cancel:         cancel,
@@ -257,6 +266,7 @@ func newWork(ctx context.Context,
 		walletClient:   walletClient,
 		msgReceiver:    msgReceiver,
 		controlChan:    make(chan struct{}, 1),
+		actorCache:     cache,
 	}
 }
 
@@ -485,11 +495,18 @@ func (w *work) estimateMessage(ctx context.Context,
 	addrInfo *types.Address,
 ) ([]*venusTypes.EstimateResult, []*types.Message, error) {
 	candidateMessages := make([]*types.Message, 0, len(msgs))
-	estimateMesssages := make([]*venusTypes.EstimateMessage, 0, len(msgs))
+	estimateMessages := make([]*venusTypes.EstimateMessage, 0, len(msgs))
 
+	nv, err := w.fullNode.StateNetworkVersion(ctx, venusTypes.EmptyTSK)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, msg := range msgs {
-		// global msg meta
-		newMsgMeta := mergeMsgSpec(sharedParams, msg.Meta, addrInfo, msg)
+		actorCfg, err := w.getActorCfg(ctx, msg, nv)
+		if err != nil {
+			return nil, nil, err
+		}
+		newMsgMeta := mergeMsgSpec(sharedParams, msg.Meta, addrInfo, actorCfg, msg)
 
 		if msg.GasFeeCap.NilOrZero() && !newMsgMeta.GasFeeCap.NilOrZero() {
 			msg.GasFeeCap = newMsgMeta.GasFeeCap
@@ -502,7 +519,7 @@ func (w *work) estimateMessage(ctx context.Context,
 		}
 
 		candidateMessages = append(candidateMessages, msg)
-		estimateMesssages = append(estimateMesssages, &venusTypes.EstimateMessage{
+		estimateMessages = append(estimateMessages, &venusTypes.EstimateMessage{
 			Msg: &msg.Message,
 			Spec: &venusTypes.MessageSendSpec{
 				MaxFee:            newMsgMeta.MaxFee,
@@ -519,7 +536,7 @@ func (w *work) estimateMessage(ctx context.Context,
 	estimateMsgCtx, estimateMsgCancel := context.WithTimeout(ctx, w.cfg.EstimateMessageTimeout)
 	defer estimateMsgCancel()
 
-	estimateResult, err := w.fullNode.GasBatchEstimateMessageGas(estimateMsgCtx, estimateMesssages, addrInfo.Nonce, ts.Key())
+	estimateResult, err := w.fullNode.GasBatchEstimateMessageGas(estimateMsgCtx, estimateMessages, addrInfo.Nonce, ts.Key())
 
 	return estimateResult, candidateMessages, err
 }
@@ -577,6 +594,34 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 	return err
 }
 
+func (w *work) getActorCfg(ctx context.Context, msg *types.Message, nv network.Version) (*types.ActorCfg, error) {
+	key := msg.To.String() + "-" + strconv.Itoa(int(nv))
+	var actor *venusTypes.Actor
+	actorI, has := w.actorCache.Get(key)
+	if has {
+		actor = actorI.(*venusTypes.Actor)
+	} else {
+		var err error
+		actor, err = w.fullNode.StateGetActor(ctx, msg.To, venusTypes.EmptyTSK)
+		if err != nil {
+			return nil, err
+		}
+		w.actorCache.Add(key, actor)
+	}
+
+	actorCfg, err := w.repo.ActorCfgRepo().GetActorCfgByMethodType(ctx, &types.MethodType{
+		Code:   actor.Code,
+		Method: msg.Method,
+	})
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return actorCfg, nil
+}
+
 func (w *work) finish() {
 	<-w.controlChan
 }
@@ -610,46 +655,58 @@ type GasSpec struct {
 	BaseFee           big.Int
 }
 
-func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrInfo *types.Address, msg *types.Message) *GasSpec {
+func mergeMsgSpec(globalSpec *types.SharedSpec, sendSpec *types.SendSpec, addrInfo *types.Address, actorCfg *types.ActorCfg, msg *types.Message) *GasSpec {
 	newMsgMeta := &GasSpec{
 		GasOverEstimation: sendSpec.GasOverEstimation,
 		GasOverPremium:    sendSpec.GasOverPremium,
 		MaxFee:            sendSpec.MaxFee,
 	}
 
-	if sendSpec.GasOverEstimation == 0 {
-		if addrInfo.GasOverEstimation != 0 {
-			newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
-		} else if globalSpec != nil {
-			newMsgMeta.GasOverEstimation = globalSpec.GasOverEstimation
-		}
+	//msg > addr > actor > global
+	if sendSpec.GasOverEstimation != 0 {
+		newMsgMeta.GasOverEstimation = sendSpec.GasOverEstimation
+	} else if addrInfo.GasOverEstimation != 0 {
+		newMsgMeta.GasOverEstimation = addrInfo.GasOverEstimation
+	} else if actorCfg != nil && actorCfg.GasOverEstimation != 0 {
+		newMsgMeta.GasOverEstimation = actorCfg.GasOverEstimation
+	} else if globalSpec != nil {
+		newMsgMeta.GasOverEstimation = globalSpec.GasOverEstimation
 	}
-	if sendSpec.MaxFee.NilOrZero() {
-		if !addrInfo.MaxFee.NilOrZero() {
-			newMsgMeta.MaxFee = addrInfo.MaxFee
-		} else if globalSpec != nil {
-			newMsgMeta.MaxFee = globalSpec.MaxFee
-		}
+
+	if !sendSpec.MaxFee.NilOrZero() {
+		newMsgMeta.MaxFee = sendSpec.MaxFee
+	} else if !addrInfo.MaxFee.NilOrZero() {
+		newMsgMeta.MaxFee = addrInfo.MaxFee
+	} else if actorCfg != nil && !actorCfg.MaxFee.NilOrZero() {
+		newMsgMeta.MaxFee = actorCfg.MaxFee
+	} else if globalSpec != nil {
+		newMsgMeta.MaxFee = globalSpec.MaxFee
+	}
+
+	if sendSpec.GasOverPremium != 0 {
+		newMsgMeta.GasOverPremium = sendSpec.GasOverPremium
+	} else if addrInfo.GasOverPremium != 0 {
+		newMsgMeta.GasOverPremium = addrInfo.GasOverPremium
+	} else if actorCfg != nil && actorCfg.GasOverPremium != 0 {
+		newMsgMeta.GasOverPremium = actorCfg.GasOverPremium
+	} else if globalSpec.GasOverPremium != 0 {
+		newMsgMeta.GasOverPremium = globalSpec.GasOverPremium
 	}
 
 	if msg.GasFeeCap.NilOrZero() {
 		if !addrInfo.GasFeeCap.NilOrZero() {
 			newMsgMeta.GasFeeCap = addrInfo.GasFeeCap
+		} else if actorCfg != nil && !actorCfg.GasFeeCap.NilOrZero() {
+			newMsgMeta.GasFeeCap = actorCfg.GasFeeCap
 		} else if globalSpec != nil {
 			newMsgMeta.GasFeeCap = globalSpec.GasFeeCap
 		}
 	}
 
-	if sendSpec.GasOverPremium == 0 {
-		if addrInfo.GasOverPremium != 0 {
-			newMsgMeta.GasOverPremium = addrInfo.GasOverPremium
-		} else if globalSpec.GasOverPremium != 0 {
-			newMsgMeta.GasOverPremium = globalSpec.GasOverPremium
-		}
-	}
-
 	if !addrInfo.BaseFee.NilOrZero() {
 		newMsgMeta.BaseFee = addrInfo.BaseFee
+	} else if actorCfg != nil && !actorCfg.BaseFee.NilOrZero() {
+		newMsgMeta.BaseFee = actorCfg.BaseFee
 	} else if globalSpec != nil {
 		newMsgMeta.BaseFee = globalSpec.BaseFee
 	}

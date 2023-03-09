@@ -476,7 +476,8 @@ func TestMessageService_PushMessage(t *testing.T) {
 		// stm: @MESSENGER_SERVICE_LIST_MESSAGE_001
 		rawMsg := testhelper.NewUnsignedMessage()
 		rawMsg.From = addr
-		uidStr, err := ms.PushMessage(ctx, &rawMsg, nil)
+		rawMsg.To = addr
+		uidStr, err := msh.PushMessage(ctx, &rawMsg, nil)
 		assert.NoError(t, err)
 		_, err = shared.ParseUUID(uidStr)
 		assert.NoError(t, err)
