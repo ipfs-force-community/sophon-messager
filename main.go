@@ -7,6 +7,7 @@ import (
 	"net"
 	_ "net/http/pprof"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/filecoin-project/venus-messager/publisher"
@@ -15,8 +16,10 @@ import (
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/utils"
+	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
@@ -222,6 +225,9 @@ func runAction(cctx *cli.Context) error {
 	if err := ccli.LoadBuiltinActors(ctx, client); err != nil {
 		return err
 	}
+	if err := setEip155ChainID(string(networkParams.NetworkName)); err != nil {
+		return fmt.Errorf("failed to set Eip155ChainID: %v", err)
+	}
 
 	mAddr, err := ma.NewMultiaddr(cfg.API.Address)
 	if err != nil {
@@ -400,4 +406,25 @@ func hasFSRepo(repoPath string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// setEip155ChainID set the Eip155ChainID by different network.
+// Use Eip155ChainID in https://github.com/filecoin-project/venus/blob/master/venus-shared/actors/types/message.go#L230
+func setEip155ChainID(networkName string) error {
+	var eip155ChainID int
+
+	// 2k
+	if strings.Contains(networkName, "localnet-") {
+		eip155ChainID = networks.Net2k().Network.Eip155ChainID
+	} else {
+		netCfg, err := networks.GetNetworkConfigFromName(networkName)
+		if err != nil {
+			return err
+		}
+		eip155ChainID = netCfg.Network.Eip155ChainID
+	}
+	log.Infof("Eip155ChainID: %d", eip155ChainID)
+	types.SetEip155ChainID(eip155ChainID)
+
+	return nil
 }

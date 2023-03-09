@@ -1,5 +1,20 @@
 # venus-message changelog
 
+## v1.10.1
+
+* 支持 delegated 地址的消息 [[#323](https://github.com/filecoin-project/venus-messager/pull/323)]
+* 升级 venus 和 venus-auth 版本到 v1.10.1
+
+## v1.10.0
+
+* 升级 venus 和 venus-auth 版本到 v1.10.0
+* 升级 go-jsonrpc 版本到 v0.1.7
+
+## v1.10.0-rc3
+
+1. 升级 venus 和 go-jsonrpc 版本
+2. 推送消息接口先解析地址再验证权限
+
 ## v1.10.0-rc1
 
 支持 Filecoin NV18 网络升级

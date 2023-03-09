@@ -2,41 +2,50 @@ package utils
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"reflect"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
-var bitFieldTyp = reflect.TypeOf(bitfield.BitField{})
-var bytesTyp = reflect.TypeOf([]byte{})
+var (
+	bitFieldTyp   = reflect.TypeOf(bitfield.BitField{})
+	bytesTyp      = reflect.TypeOf([]byte{})
+	ethAddressTyp = reflect.TypeOf(types.EthAddress{})
+	addrTyp       = reflect.TypeOf(address.Address{})
+)
 
 func TryConvertParams(in interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(in)
-	if !hasBitfield(rv) {
+	if !isNeedConvert(rv) {
 		return in, nil
 	}
 	return convertParams(rv)
 }
 
-func hasBitfield(v reflect.Value) bool {
+func isNeedConvert(v reflect.Value) bool {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	if v.IsValid() && v.Type().AssignableTo(bitFieldTyp) {
-		return true
+	if v.IsValid() {
+		if v.Type().AssignableTo(bitFieldTyp) || v.Type().AssignableTo(ethAddressTyp) {
+			return true
+		}
 	}
 	switch v.Kind() {
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if hasBitfield(v.Field(i)) {
+			if isNeedConvert(v.Field(i)) {
 				return true
 			}
 		}
 	case reflect.Slice:
 		if v.Len() > 0 {
-			if hasBitfield(v.Index(0)) {
+			if isNeedConvert(v.Index(0)) {
 				return true
 			}
 		}
@@ -44,7 +53,7 @@ func hasBitfield(v reflect.Value) bool {
 		if v.Len() > 0 {
 			iter := v.MapRange()
 			for iter.Next() {
-				if hasBitfield(iter.Value()) {
+				if isNeedConvert(iter.Value()) {
 					return true
 				}
 			}
@@ -53,12 +62,24 @@ func hasBitfield(v reflect.Value) bool {
 	return false
 }
 
-func convertParams(rv reflect.Value) (interface{}, error) {
+func convertParams(rv reflect.Value) (any, error) {
 	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return nil, nil
+		}
 		rv = rv.Elem()
 	}
-	if rv.IsValid() && rv.Type().AssignableTo(bitFieldTyp) {
-		return convertBitFieldToString(rv.Interface().(bitfield.BitField))
+
+	if rv.IsValid() {
+		if rv.Type().AssignableTo(bitFieldTyp) {
+			return convertBitFieldToString(rv.Interface().(bitfield.BitField))
+		}
+		if rv.Type().AssignableTo(ethAddressTyp) {
+			return hexEthAddress(rv.Interface().([20]byte)), nil
+		}
+		if rv.Type().AssignableTo(addrTyp) {
+			return rv.Interface(), nil
+		}
 	}
 	switch rv.Kind() {
 	case reflect.Slice:
@@ -146,4 +167,8 @@ func merge(list []uint64) [][]uint64 {
 	}
 
 	return res
+}
+
+func hexEthAddress(ethAddr types.EthAddress) string {
+	return "0x" + hex.EncodeToString(ethAddr[:])
 }
