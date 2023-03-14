@@ -23,9 +23,9 @@ import (
 
 type mysqlActorCfg struct {
 	ID           shared.UUID  `gorm:"column:id;type:varchar(256);primary_key;"` // 主键
-	ActorVersion int          `gorm:"column:actor_v;type:unsigned int;NOT NULL"`
+	ActorVersion int          `gorm:"column:actor_v;type:int;NOT NULL"`
 	Code         mtypes.DBCid `gorm:"column:code;type:varchar(256);index:idx_code_method,unique;NOT NULL;"`
-	Method       uint64       `gorm:"column:method;type:unsigned bigint;index:idx_code_method,unique;NOT NULL"`
+	Method       uint64       `gorm:"column:method;type:bigint unsigned;index:idx_code_method,unique;NOT NULL"`
 
 	FeeSpec
 
