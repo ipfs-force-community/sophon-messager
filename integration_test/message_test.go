@@ -422,7 +422,7 @@ func testListMessageByAddress(ctx context.Context, t *testing.T, api, apiSign me
 
 func testListFailedMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
-	for _, msg := range msgs {
+	for i, msg := range msgs {
 		msg.Message.GasLimit = -1
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
 		assert.NoError(t, err)
@@ -431,6 +431,12 @@ func testListFailedMessage(ctx context.Context, t *testing.T, api, apiSign messa
 		res, err := api.GetMessageByUid(ctx, id)
 		assert.NoError(t, err)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
+
+		if i%3 == 0 {
+			failedMsg, err := api.ListFailedMessage(ctx)
+			assert.NoError(t, err)
+			assert.Len(t, failedMsg, 0)
+		}
 	}
 
 	time.Sleep(blockDelay * 2)
