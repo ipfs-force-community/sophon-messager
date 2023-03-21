@@ -390,12 +390,18 @@ func TestListFailedMessage(t *testing.T) {
 	msgCount := 100
 	failedMsgCount := 0
 	msgs := testhelper.NewMessages(msgCount)
-	for _, msg := range msgs {
-		msg.State = types.MessageState(rand.Intn(7))
+	addrs := make([]address.Address, 0)
+	for i, msg := range msgs {
+		msg.State = types.MessageState(rand.Intn(6))
 		if msg.State == types.UnFillMsg {
-			msg.ErrorMsg = "gas over limit"
-			failedMsgCount++
+			if i%2 == 0 {
+				msg.ErrorMsg = "gas over limit"
+				failedMsgCount++
+
+				addrs = append(addrs, msg.From)
+			}
 		}
+
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
 
@@ -408,6 +414,10 @@ func TestListFailedMessage(t *testing.T) {
 		return msgList[i].CreatedAt.Before(msgList[j].CreatedAt)
 	})
 	assert.True(t, sorted)
+
+	msgList, err = messageRepo.ListFailedMessage(&repo.MsgQueryParams{From: addrs})
+	assert.NoError(t, err)
+	assert.Equal(t, failedMsgCount, len(msgList))
 }
 
 func TestListBlockedMessage(t *testing.T) {

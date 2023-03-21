@@ -429,7 +429,7 @@ func (m *mysqlMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.M
 	var sqlMsgs []*mysqlMessage
 	p.State = []types.MessageState{types.UnFillMsg}
 	paramsMap := p.ToMap()
-	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg is not null").Error
+	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg != ?", "").Error
 	if err != nil {
 		return nil, err
 	}
