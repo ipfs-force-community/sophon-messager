@@ -759,10 +759,13 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 					Code:   actor.Code,
 					Method: msg.Method,
 				})
-				if err != nil && err != gorm.ErrRecordNotFound {
-					return cid.Undef, err
+				if err == nil {
+					maxFee = actorCfg.MaxFee
+				} else {
+					if err != gorm.ErrRecordNotFound {
+						return cid.Undef, err
+					}
 				}
-				maxFee = actorCfg.MaxFee
 			}
 
 			if maxFee.NilOrZero() {
