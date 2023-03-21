@@ -749,11 +749,27 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 				return cid.Undef, err
 			}
 			maxFee := addrInfo.MaxFee
-			sharedParams, err := ms.sps.GetSharedParams(ctx)
-			if err != nil {
-				return cid.Undef, err
-			}
+
 			if maxFee.NilOrZero() {
+				actor, err := ms.nodeClient.StateGetActor(ctx, msg.To, venusTypes.EmptyTSK)
+				if err != nil {
+					return cid.Undef, err
+				}
+				actorCfg, err := ms.repo.ActorCfgRepo().GetActorCfgByMethodType(ctx, &types.MethodType{
+					Code:   actor.Code,
+					Method: msg.Method,
+				})
+				if err != nil && err != gorm.ErrRecordNotFound {
+					return cid.Undef, err
+				}
+				maxFee = actorCfg.MaxFee
+			}
+
+			if maxFee.NilOrZero() {
+				sharedParams, err := ms.sps.GetSharedParams(ctx)
+				if err != nil {
+					return cid.Undef, err
+				}
 				maxFee = sharedParams.MaxFee
 			}
 			mss.MaxFee = maxFee
