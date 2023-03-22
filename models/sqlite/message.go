@@ -431,7 +431,7 @@ func (m *sqliteMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.
 	var sqlMsgs []*sqliteMessage
 	p.State = []types.MessageState{types.UnFillMsg}
 	paramsMap := p.ToMap()
-	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg is not null").Error
+	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg != ?", "").Error
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +445,7 @@ func (m *sqliteMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.
 func (m *sqliteMessageRepo) ListBlockedMessage(p *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	t := time.Now().Add(-d)
-	p.State = []types.MessageState{types.FillMsg}
+	p.State = []types.MessageState{types.FillMsg, types.UnFillMsg}
 	paramsMap := p.ToMap()
 	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "created_at < ?", t).Error
 	if err != nil {

@@ -399,8 +399,8 @@ func TestListFailedMessage(t *testing.T) {
 	ids := []string{"msg1", "msg2"}
 
 	t.Run("no param", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg is not null) ORDER BY created_at")).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg != ?) ORDER BY created_at")).
+			WithArgs(types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{})
 		assert.NoError(t, err)
@@ -408,8 +408,8 @@ func TestListFailedMessage(t *testing.T) {
 	})
 
 	t.Run("state cover", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg is not null) ORDER BY created_at")).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg != ?) ORDER BY created_at")).
+			WithArgs(types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{State: []types.MessageState{types.OnChainMsg}})
 		assert.NoError(t, err)
@@ -418,8 +418,8 @@ func TestListFailedMessage(t *testing.T) {
 
 	t.Run("indicate from", func(t *testing.T) {
 		addr := testutil.AddressProvider()(t)
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND (error_msg is not null) ORDER BY created_at")).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND (error_msg != ?) ORDER BY created_at")).
+			WithArgs(addr.String(), types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{From: []address.Address{addr}})
 		assert.NoError(t, err)
@@ -436,8 +436,8 @@ func TestListBlockedMessage(t *testing.T) {
 	blocked := time.Second * 3
 
 	t.Run("no param", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND created_at < ? ORDER BY created_at")).
-			WithArgs(types.FillMsg, anyTime{}).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+			WithArgs(types.FillMsg, types.UnFillMsg, anyTime{}).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{}, blocked)
@@ -445,12 +445,22 @@ func TestListBlockedMessage(t *testing.T) {
 		checkMsgWithIDs(t, res, ids)
 	})
 
-	t.Run("param with from", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND created_at < ? ORDER BY created_at")).
-			WithArgs(from.String(), types.FillMsg, anyTime{}).
+	t.Run("param with address", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+			WithArgs(from.String(), types.FillMsg, types.UnFillMsg, anyTime{}).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{from}}, blocked)
+		assert.NoError(t, err)
+		checkMsgWithIDs(t, res, ids)
+	})
+
+	t.Run("param with addresses", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` IN (?,?) AND `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+			WithArgs(from.String(), from.String(), types.FillMsg, types.UnFillMsg, anyTime{}).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+
+		res, err := r.MessageRepo().ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{from, from}}, blocked)
 		assert.NoError(t, err)
 		checkMsgWithIDs(t, res, ids)
 	})

@@ -414,8 +414,8 @@ func testListMessageByAddress(ctx context.Context, t *testing.T, api, apiSign me
 		msgs, err := api.ListMessageByAddress(ctx, addr)
 		assert.NoError(t, err)
 		assert.Len(t, msgs, idsLen)
-		for i, msg := range msgs {
-			assert.Equal(t, ids[i], msg.ID)
+		for _, msg := range msgs {
+			assert.Contains(t, ids, msg.ID)
 		}
 	}
 }

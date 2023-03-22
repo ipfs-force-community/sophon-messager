@@ -201,10 +201,16 @@ func (m MessageImp) ListFailedMessage(ctx context.Context) ([]*types.Message, er
 }
 
 func (m MessageImp) ListBlockedMessage(ctx context.Context, addr address.Address, d time.Duration) ([]*types.Message, error) {
-	if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
-		return nil, err
+	// todo: if the address is empty, all failed messages will be returned, bypassing the permission check
+	params := &types.MsgQueryParams{}
+	if !addr.Empty() {
+		if err := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, addr); err != nil {
+			return nil, err
+		}
+		params.From = []address.Address{addr}
 	}
-	return m.MessageSrv.ListBlockedMessage(ctx, &types.MsgQueryParams{From: []address.Address{addr}}, d)
+
+	return m.MessageSrv.ListBlockedMessage(ctx, params, d)
 }
 
 func (m MessageImp) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
