@@ -1,5 +1,11 @@
 # venus-message changelog
 
+## v1.10.2
+
+* 修复 list-fail 命令会输出正确的消息 [[#329](https://github.com/filecoin-project/venus-messager/pull/329)]
+* ListBlockedMessage 接口也返回 unfill 消息 [[#330](https://github.com/filecoin-project/venus-messager/pull/330)]
+* 补充更详细的错误信息 [[#331](https://github.com/filecoin-project/venus-messager/pull/331)]
+
 ## v1.10.1
 
 * 支持 delegated 地址的消息 [[#323](https://github.com/filecoin-project/venus-messager/pull/323)]
