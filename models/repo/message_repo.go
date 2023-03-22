@@ -36,6 +36,7 @@ type MessageRepo interface {
 	ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
 	ListMessageByAddress(addr address.Address) ([]*types.Message, error)
 	ListFailedMessage(*MsgQueryParams) ([]*types.Message, error)
+	// ListBlockedMessage returns filled messages and unfill messages
 	ListBlockedMessage(p *MsgQueryParams, d time.Duration) ([]*types.Message, error)
 	ListUnChainMessageByAddress(addr address.Address, topN int) ([]*types.Message, error)
 	ListFilledMessageByAddress(addr address.Address) ([]*types.Message, error)
