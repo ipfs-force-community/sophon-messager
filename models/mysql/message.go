@@ -443,7 +443,7 @@ func (m *mysqlMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.M
 func (m *mysqlMessageRepo) ListBlockedMessage(p *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*mysqlMessage
 	t := time.Now().Add(-d)
-	p.State = []types.MessageState{types.FillMsg}
+	p.State = []types.MessageState{types.FillMsg, types.UnFillMsg}
 	paramsMap := p.ToMap()
 	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "created_at < ?", t).Error
 	if err != nil {

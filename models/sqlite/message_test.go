@@ -423,21 +423,44 @@ func TestListFailedMessage(t *testing.T) {
 func TestListBlockedMessage(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
 
-	msgs := testhelper.NewMessages(3)
-	msgs[1].State = types.FillMsg
-	assert.NoError(t, messageRepo.CreateMessage(msgs[0]))
-	assert.NoError(t, messageRepo.CreateMessage(msgs[1]))
+	msgs := testhelper.NewMessages(30)
+	msgState := make(map[types.MessageState][]*types.Message, 3)
+	for i, msg := range msgs {
+		if i%2 == 0 {
+			msg.State = types.FillMsg
+		} else if i%3 == 0 {
+			msg.State = types.FailedMsg
+		}
+		msgState[msg.State] = append(msgState[msg.State], msg)
+
+		assert.NoError(t, messageRepo.CreateMessage(msg))
+	}
 
 	time.Sleep(5 * time.Second)
 
-	msgList, err := messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{msgs[0].From}}, time.Second*2)
+	// no message blocked
+	msgList, err := messageRepo.ListBlockedMessage(&repo.MsgQueryParams{}, time.Second*10)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(msgList))
 
-	msgList, err = messageRepo.ListBlockedMessage(&repo.MsgQueryParams{From: []address.Address{msgs[1].From}}, time.Second*2)
+	// filled and unfill messages
+	msgList, err = messageRepo.ListBlockedMessage(&repo.MsgQueryParams{}, time.Second*2)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(msgList))
-	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
+	assert.Equal(t, len(msgState[types.FillMsg])+len(msgState[types.UnFillMsg]), len(msgList))
+
+	// no expect address
+	msgList, err = messageRepo.ListBlockedMessage(
+		&repo.MsgQueryParams{From: []address.Address{msgState[types.FailedMsg][0].From}}, time.Second*2)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(msgList))
+
+	// two different addresses
+	msgList, err = messageRepo.ListBlockedMessage(
+		&repo.MsgQueryParams{From: []address.Address{msgState[types.FillMsg][0].From, msgState[types.UnFillMsg][0].From}}, time.Second*2)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(msgList))
+	testhelper.Equal(t, msgState[types.FillMsg][0], msgList[0])
+	testhelper.Equal(t, msgState[types.UnFillMsg][0], msgList[1])
 }
 
 func TestListUnChainMessageByAddress(t *testing.T) {
