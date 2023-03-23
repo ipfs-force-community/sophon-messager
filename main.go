@@ -215,7 +215,7 @@ func runAction(cctx *cli.Context) error {
 
 	// The 2k network block delay is 4s, which will be less than WaitingChainHeadStableDuration (8s)
 	// and will not push messages
-	if networkParams.BlockDelaySecs <= uint64(cfg.MessageService.WaitingChainHeadStableDuration) {
+	if networkParams.BlockDelaySecs <= uint64(cfg.MessageService.WaitingChainHeadStableDuration/time.Second) {
 		cfg.MessageService.WaitingChainHeadStableDuration = time.Duration(networkParams.BlockDelaySecs/2) * time.Second
 		if err := fsRepo.ReplaceConfig(cfg); err != nil {
 			return err
