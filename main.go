@@ -86,6 +86,10 @@ var runCmd = &cli.Command{
 		},
 
 		// node
+		&cli.BoolFlag{
+			Name:  "disable-push",
+			Usage: "disable push messager function, Warn only one instance can used to push message",
+		},
 		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "url for connection lotus/venus",
@@ -340,6 +344,11 @@ func runAction(cctx *cli.Context) error {
 func updateFlag(cfg *config.Config, ctx *cli.Context) error {
 	if ctx.IsSet("listen") {
 		cfg.API.Address = ctx.String("listen")
+	}
+
+	if ctx.IsSet("disable-push") {
+		cfg.MessageService.SkipPushMessage = true
+		cfg.MessageService.SkipProcessHead = true
 	}
 
 	if ctx.IsSet("auth-url") {
