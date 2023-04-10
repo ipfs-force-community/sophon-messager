@@ -42,6 +42,8 @@ var (
 
 	// MinPackedPremium If the gas premium is lower than this value, the message will not be packaged
 	MinPackedPremium = abi.NewTokenAmount(500)
+
+	DefReplaceByFeePercent types.Percent = 125
 )
 
 type MockFullNode struct {
@@ -587,6 +589,12 @@ func (f *MockFullNode) MpoolBatchPushUntrusted(ctx context.Context, smsgs []*typ
 		cids = append(cids, msg.Cid())
 	}
 	return cids, nil
+}
+
+func (f *MockFullNode) MpoolGetConfig(_ context.Context) (*types.MpoolConfig, error) {
+	return &types.MpoolConfig{
+		ReplaceByFeeRatio: DefReplaceByFeePercent,
+	}, nil
 }
 
 func (f *MockFullNode) StateSearchMsg(ctx context.Context, from types.TipSetKey, msgCid cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*types.MsgLookup, error) {

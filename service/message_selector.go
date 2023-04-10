@@ -634,6 +634,7 @@ func CapGasFee(msg *venusTypes.Message, maxFee abi.TokenAmount) {
 	totalFee := venusTypes.BigMul(msg.GasFeeCap, gl)
 
 	if totalFee.LessThanEqual(maxFee) {
+		msg.GasPremium = big.Min(msg.GasFeeCap, msg.GasPremium) // cap premium at FeeCap
 		return
 	}
 
