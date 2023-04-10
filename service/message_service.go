@@ -725,7 +725,12 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	}
 
 	if params.Auto {
-		minRBF := computeMinRBF(msg.GasPremium)
+		cfg, err := ms.nodeClient.MpoolGetConfig(ctx)
+		if err != nil {
+			return cid.Undef, fmt.Errorf("failed to lookup the message pool config: %w", err)
+		}
+
+		minRBF := computeRBF(msg.GasPremium, cfg.ReplaceByFeeRatio)
 
 		mss := &venusTypes.MessageSendSpec{
 			MaxFee:         params.MaxFee,
@@ -1020,17 +1025,15 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 	}
 }
 
-const (
-	ReplaceByFeeRatioDefault = 1.25
-	RbfDenom                 = 256
-)
+const replaceByFeePercentageMinimum = 110
 
-var (
-	rbfNumBig   = big.NewInt(int64((ReplaceByFeeRatioDefault - 1) * RbfDenom))
-	rbfDenomBig = big.NewInt(RbfDenom)
-)
+var rbfDenomBig = venusTypes.NewInt(100)
 
-func computeMinRBF(curPrem abi.TokenAmount) abi.TokenAmount {
-	minPrice := big.Add(curPrem, big.Div(big.Mul(curPrem, rbfNumBig), rbfDenomBig))
-	return big.Add(minPrice, big.NewInt(1))
+func computeRBF(curPrem abi.TokenAmount, replaceByFeeRatio venusTypes.Percent) abi.TokenAmount {
+	if replaceByFeeRatio < replaceByFeePercentageMinimum {
+		replaceByFeeRatio = replaceByFeePercentageMinimum
+	}
+	rbfNumBig := venusTypes.NewInt(uint64(replaceByFeeRatio))
+	minPrice := venusTypes.BigDiv(venusTypes.BigMul(curPrem, rbfNumBig), rbfDenomBig)
+	return venusTypes.BigAdd(minPrice, venusTypes.NewInt(1))
 }

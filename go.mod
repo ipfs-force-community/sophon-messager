@@ -13,7 +13,7 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.10.0
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.10.2-0.20230309014040-73746cec80e4
+	github.com/filecoin-project/venus v1.10.2-0.20230407075303-4beae95e57c1
 	github.com/filecoin-project/venus-auth v1.10.2-0.20230308100319-913815325d5e
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -73,7 +73,6 @@ require (
 	github.com/filecoin-project/specs-actors/v3 v3.1.2 // indirect
 	github.com/filecoin-project/specs-actors/v4 v4.0.2 // indirect
 	github.com/filecoin-project/specs-actors/v7 v7.0.1 // indirect
-	github.com/filecoin-project/specs-storage v0.4.1 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect

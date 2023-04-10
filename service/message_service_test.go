@@ -71,11 +71,12 @@ func TestReplaceMessage(t *testing.T) {
 	msh.start()
 	defer msh.stop()
 
+	smallerPremium := big.Sub(testhelper.MinPackedPremium, big.NewInt(20))
 	blockedMsgs := make(map[string]*types.Message, 0)
 	msgs := genMessages(addrs, len(addrs)*10)
 	for i, msg := range msgs {
 		if i%2 == 0 {
-			msg.GasPremium = big.Sub(testhelper.MinPackedPremium, big.NewInt(100))
+			msg.GasPremium = smallerPremium
 			blockedMsgs[msg.ID] = msg
 		}
 	}
@@ -112,6 +113,16 @@ func TestReplaceMessage(t *testing.T) {
 		res, err := ms.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		replacedMsgs = append(replacedMsgs, res)
+
+		// check gas premium
+		defPremium := testhelper.DefGasPremium
+		expectPremium := big.Div(big.Mul(smallerPremium, big.NewInt(int64(testhelper.DefReplaceByFeePercent))), big.NewInt(100))
+		if msg.Meta != nil && msg.Meta.GasOverPremium != 0 {
+			gasOverPremium := big.Mul(big.NewInt(int64(100*msg.Meta.GasOverPremium)), big.NewInt(100))
+			expectPremium = big.Mul(expectPremium, gasOverPremium)
+			defPremium = big.Mul(defPremium, gasOverPremium)
+		}
+		assert.Equal(t, big.Max(expectPremium, defPremium), res.GasPremium)
 	}
 
 	ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
