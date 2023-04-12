@@ -457,7 +457,7 @@ func TestSignMessageFailed(t *testing.T) {
 	for _, errInfo := range selectResult.ErrMsg {
 		res, err := ms.GetMessageByUid(ctx, errInfo.id)
 		assert.NoError(t, err)
-		assert.Contains(t, res.ErrorMsg, signMsg)
+		assert.Contains(t, res.ErrorMsg, errSingMessage.Error())
 
 		_, ok := removedAddrMap[res.From]
 		assert.True(t, ok)

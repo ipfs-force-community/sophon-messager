@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/network"
@@ -22,6 +23,7 @@ import (
 	"modernc.org/mathutil"
 
 	"github.com/filecoin-project/venus/pkg/crypto"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
@@ -37,7 +39,6 @@ import (
 
 const (
 	gasEstimate = "gas estimate: "
-	signMsg     = "sign msg: "
 )
 
 var msgSelectLog = logging.Logger("msg-select")
@@ -413,12 +414,12 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 		// 签名
 		sig, err := w.signMessage(ctx, msg, accounts)
 		if err != nil {
-			if errors.Is(err, errSingMessage) {
-				errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: fmt.Sprintf("%v%v", signMsg, errors.Unwrap(err))})
-				w.log.Errorf("sign message %s failed %v", msg.ID, err)
+			if strings.Contains(err.Error(), errSingMessage.Error()) {
+				errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: err.Error()})
+				w.log.Errorf("msg: %v, error: %v", msg.ID, err)
 				break
 			}
-			w.log.Error("signed message failed: %v", err)
+			w.log.Errorf("msg: %v, error: %v", msg.ID, err)
 			continue
 		}
 
@@ -554,7 +555,7 @@ func (w *work) signMessage(ctx context.Context, msg *types.Message, accounts []s
 	}})
 	signMsgCancel()
 	if err != nil {
-		return nil, fmt.Errorf("%v %w", err, errSingMessage)
+		return nil, fmt.Errorf("%s: %w", errSingMessage.Error(), err)
 	}
 
 	return sigI.(*crypto.Signature), nil
@@ -598,6 +599,11 @@ func (w *work) getActorCfg(ctx context.Context, msg *types.Message, nv network.V
 		var err error
 		actor, err = w.fullNode.StateGetActor(ctx, msg.To, venusTypes.EmptyTSK)
 		if err != nil {
+			// msg.To may be a new address that needs to be created
+			if msg.Message.Method == builtin.MethodSend &&
+				strings.Contains(err.Error(), venusTypes.ErrActorNotFound.Error()) {
+				return nil, nil
+			}
 			return nil, err
 		}
 		w.actorCache.Add(key, actor)
