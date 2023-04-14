@@ -385,8 +385,12 @@ func (f *MockFullNode) ChainGetParentMessages(ctx context.Context, bcid cid.Cid)
 	if !ok {
 		return nil, fmt.Errorf("not found block %v", bcid)
 	}
-	msgCid := make([]types.MessageCID, 0, len(blkInfo.msgs))
-	for _, c := range blkInfo.msgs {
+	parentBlkInfo, ok := f.blockInfos[blkInfo.bh.Parents[0]]
+	if !ok {
+		return nil, fmt.Errorf("not found block %v", blkInfo.bh.Parents[0])
+	}
+	msgCid := make([]types.MessageCID, 0, len(parentBlkInfo.msgs))
+	for _, c := range parentBlkInfo.msgs {
 		msgCid = append(msgCid, types.MessageCID{
 			Cid:     c,
 			Message: f.chainMsgs[c].VMMessage(),
@@ -403,8 +407,12 @@ func (f *MockFullNode) ChainGetParentReceipts(ctx context.Context, bcid cid.Cid)
 	if !ok {
 		return nil, fmt.Errorf("not found block %v", bcid)
 	}
-	receipts := make([]*types.MessageReceipt, 0, len(blkInfo.msgs))
-	for _, c := range blkInfo.msgs {
+	parentBlkInfo, ok := f.blockInfos[blkInfo.bh.Parents[0]]
+	if !ok {
+		return nil, fmt.Errorf("not found block %v", blkInfo.bh.Parents[0])
+	}
+	receipts := make([]*types.MessageReceipt, 0, len(parentBlkInfo.msgs))
+	for _, c := range parentBlkInfo.msgs {
 		receipts = append(receipts, f.msgReceipts[c])
 	}
 

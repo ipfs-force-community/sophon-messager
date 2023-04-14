@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -125,7 +126,6 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 					return fmt.Errorf("update message receipt failed, cid:%s failed:%v", msg.msg.Cid(), err)
 				}
 			}
-			delete(revertMsgs, msg.msg.Cid())
 		}
 		return nil
 	})
@@ -147,6 +147,8 @@ func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSe
 
 func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {
 	revertMsgs := make(map[cid.Cid]struct{})
+
+	var msgCIDs []string
 	for _, ts := range h.revert {
 		msgs, err := ms.repo.MessageRepo().ListChainMessageByHeight(ts.Height())
 		if err != nil {
@@ -157,7 +159,13 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 		for _, msg := range msgs {
 			if _, ok := addrs[msg.From]; ok && msg.UnsignedCid != nil {
 				revertMsgs[*msg.UnsignedCid] = struct{}{}
+				msgCIDs = append(msgCIDs, (*msg.UnsignedCid).String())
 			}
+		}
+
+		if len(msgCIDs) > 0 {
+			log.Infof("revert %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), ts.Height())
+			msgCIDs = msgCIDs[:0]
 		}
 	}
 
@@ -174,6 +182,7 @@ type applyMessage struct {
 
 func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply []*venustypes.TipSet) ([]applyMessage, error) {
 	var applyMsgs []applyMessage
+	var msgCIDs []string
 	addrs := ms.addressService.ActiveAddresses(ctx)
 	for _, ts := range apply {
 		bcid := ts.At(0).Cid()
@@ -191,17 +200,28 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 			return nil, fmt.Errorf("messages not match receipts, %d != %d", len(msgs), len(receipts))
 		}
 
+		pts, err := ms.nodeClient.ChainGetTipSet(ctx, ts.Parents())
+		if err != nil {
+			return nil, fmt.Errorf("got parent ts failed: %v", err)
+		}
+
 		for i := range receipts {
 			msg := msgs[i].Message
 			if _, ok := addrs[msg.From]; ok {
 				applyMsgs = append(applyMsgs, applyMessage{
-					height:    ts.Height(),
-					tsk:       ts.Key(),
+					height:    pts.Height(),
+					tsk:       pts.Key(),
 					receipt:   receipts[i],
 					msg:       msg,
 					signedCID: msgs[i].Cid,
 				})
+				msgCIDs = append(msgCIDs, msg.Cid().String())
 			}
+
+		}
+		if len(msgCIDs) > 0 {
+			log.Infof("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
+			msgCIDs = msgCIDs[:0]
 		}
 	}
 	return applyMsgs, nil

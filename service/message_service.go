@@ -494,11 +494,11 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 	sort.Slice(tsList, func(i, j int) bool {
 		return tsList[i].Height() > tsList[j].Height()
 	})
-	smallestTs := apply[len(apply)-1]
+	latestTs := apply[len(apply)-1]
 
 	defer log.Infof("%d head wait to process", len(ms.headChans))
 
-	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
+	if len(tsList) == 0 || latestTs.Parents().Equals(tsList[0].Key()) {
 		log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
 		done := make(chan error)
 		ms.headChans <- &headChan{
@@ -509,15 +509,12 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 		return <-done
 	}
 
-	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
+	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, latestTs)
 	if err != nil {
-		log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
+		log.Errorf("look ancestor error from %s and %s, error: %v", latestTs, tsList[0].Key(), err)
 		return nil
 	}
 
-	if len(apply) > 1 {
-		localApply = append(apply[:len(apply)-1], localApply...)
-	}
 	done := make(chan error)
 	ms.headChans <- &headChan{
 		apply:  localApply,

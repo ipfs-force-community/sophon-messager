@@ -426,13 +426,10 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 			for i := applyFrom; i < 6; i++ {
 				ts, err := testhelper.GenTipset(abi.ChainEpoch(i), 2, parent)
 				assert.NoError(t, err)
+				tipSets = append(tipSets, ts)
 				parent = ts.Cids()
 				apply = append(apply, ts)
 			}
-
-			sort.Slice(apply, func(i, j int) bool {
-				return apply[i].Height() > apply[j].Height()
-			})
 
 			full := v1Mock.NewMockFullNode(gomock.NewController(t))
 			ms.nodeClient = full
@@ -451,6 +448,9 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 
 			headChange := <-ms.headChans
 			headChange.done <- nil
+			sort.Slice(apply, func(i, j int) bool {
+				return apply[i].Height() > apply[j].Height()
+			})
 			assert.EqualValues(t, headChange.apply, apply)
 			sort.Slice(revert, func(i, j int) bool {
 				return revert[i].Height() > revert[j].Height()
