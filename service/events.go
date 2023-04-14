@@ -39,6 +39,7 @@ func (nd *NodeEvents) listenHeadChangesOnce(ctx context.Context) error {
 	}
 
 	for notif := range notifs {
+		// ascending order
 		var apply []*types.TipSet
 
 		for _, change := range notif {
