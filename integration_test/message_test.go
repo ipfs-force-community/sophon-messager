@@ -134,7 +134,7 @@ func testPushMessage(ctx context.Context, t *testing.T, api, apiSign messager.IM
 		assert.NoError(t, err)
 
 		_, err = apiSign.PushMessage(ctx, &msg.Message, meta)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		res, err := api.GetMessageByUid(ctx, id)
 		assert.NoError(t, err)
@@ -154,7 +154,7 @@ func testPushMessageWithID(ctx context.Context, t *testing.T, api, apiSign messa
 		assert.Equal(t, msg.ID, id)
 
 		_, err = apiSign.PushMessageWithId(ctx, msg.ID, &msg.Message, meta)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		res, err := api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
@@ -195,7 +195,7 @@ func testGetMessageByUid(ctx context.Context, t *testing.T, api, apiSign message
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
 
 		_, err = apiSign.GetMessageByUid(ctx, id)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	res, err := api.GetMessageByUid(ctx, shared.NewUUID().String())
@@ -216,7 +216,7 @@ func testWaitMessage(ctx context.Context, t *testing.T, api, apiSign messager.IM
 
 	for _, msg := range msgs {
 		_, err := apiSign.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	for _, msg := range msgs {
@@ -261,7 +261,7 @@ func testGetMessageByUnsignedCID(ctx context.Context, t *testing.T, api, apiSign
 		assert.Equal(t, msg, res)
 
 		_, err = apiSign.GetMessageByUnsignedCid(ctx, *msg.UnsignedCid)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
@@ -279,7 +279,7 @@ func testGetMessageBySignedCID(ctx context.Context, t *testing.T, api, apiSign m
 		assert.Equal(t, msg, res)
 
 		_, err = apiSign.GetMessageBySignedCid(ctx, *msg.SignedCid)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	res, err := api.GetMessageByUnsignedCid(ctx, testutil.CidProvider(32)(t))
@@ -297,7 +297,7 @@ func testGetMessageByFromAndNonce(ctx context.Context, t *testing.T, api, apiSig
 		assert.Equal(t, msg, res)
 
 		_, err = apiSign.GetMessageByFromAndNonce(ctx, msg.From, msg.Nonce)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	res, err := api.GetMessageByFromAndNonce(ctx, testutil.AddressProvider()(t), 1)
@@ -481,7 +481,7 @@ func testListBlockedMessage(ctx context.Context, t *testing.T, api, apiSign mess
 		assert.Equal(t, len(msgs), len(list))
 
 		_, err = apiSign.ListBlockedMessage(ctx, addr, blockDelay)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		for i, msg := range list {
 			idx := len(msgs) - 1 - i
@@ -543,7 +543,7 @@ func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api, apiSign 
 	for _, msg := range msgs {
 		assert.NoError(t, api.UpdateMessageStateByID(ctx, msg.ID, types.FailedMsg))
 		err := apiSign.UpdateMessageStateByID(ctx, msg.ID, types.FailedMsg)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		res, err := api.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
@@ -629,7 +629,7 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api, apiSign
 
 	for i := range msgs {
 		_, err := apiSign.UpdateFilledMessageByID(ctx, msgs[i].ID)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		wg.Add(1)
 		go update(msgs[i])
@@ -664,7 +664,7 @@ func testReplaceMessage(ctx context.Context, t *testing.T, api, apiSign messager
 		assert.True(t, c.Defined())
 
 		_, err = apiSign.ReplaceMessage(ctx, param)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 
 	check := func(idx int, msg *types.Message) {
@@ -732,7 +732,7 @@ func testMarkBadMessage(ctx context.Context, t *testing.T, api, apiSign messager
 		assert.Equal(t, types.FailedMsg, res.State)
 
 		err = apiSign.MarkBadMessage(ctx, msg.ID)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 	}
 
@@ -776,7 +776,7 @@ func testRecoverFailedMsg(ctx context.Context, t *testing.T, api, apiSign messag
 		}
 
 		_, err = apiSign.RecoverFailedMsg(ctx, addr)
-		assert.Equal(t, jwtclient.ErrorPermissionDeny.Error(), err.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 }
 

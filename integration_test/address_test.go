@@ -20,7 +20,6 @@ import (
 
 	"github.com/filecoin-project/venus-auth/auth"
 	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus-messager/testhelper"
 )
@@ -132,13 +131,13 @@ func testGetAddressAndHasAddress(ctx context.Context,
 		addrInfo, getAddrErr := api.GetAddress(ctx, addr)
 		assert.NoError(t, err)
 		_, err := apiNoPerm.GetAddress(ctx, addr)
-		assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		// test has address
 		has, err := api.HasAddress(ctx, addr)
 		assert.NoError(t, err)
 		_, err = apiNoPerm.HasAddress(ctx, addr)
-		assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		if ok {
 			assert.NoError(t, getAddrErr)
@@ -166,7 +165,7 @@ func testWalletHas(ctx context.Context, t *testing.T, api, apiNoPerm messager.IM
 		assert.True(t, has)
 
 		_, err = apiNoPerm.WalletHas(ctx, addr)
-		assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 	}
 }
 
@@ -215,7 +214,7 @@ func testForbiddenAndActiveAddress(ctx context.Context, t *testing.T, api, apiNo
 		if ok {
 			assert.NoError(t, api.ForbiddenAddress(ctx, addr))
 			err := apiNoPerm.ForbiddenAddress(ctx, addr)
-			assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+			assert.Contains(t, err.Error(), "permission deny")
 			addrInfo, err := api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, types.AddressStateForbbiden, addrInfo.State)
@@ -223,7 +222,7 @@ func testForbiddenAndActiveAddress(ctx context.Context, t *testing.T, api, apiNo
 			// active address
 			assert.NoError(t, api.ActiveAddress(ctx, addr))
 			err = apiNoPerm.ActiveAddress(ctx, addr)
-			assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+			assert.Contains(t, err.Error(), "permission deny")
 			addrInfo, err = api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, types.AddressStateAlive, addrInfo.State)
@@ -241,7 +240,7 @@ func testSetSelectMsgNum(ctx context.Context, t *testing.T, api, apiNoPerm messa
 		if ok {
 			assert.NoError(t, api.SetSelectMsgNum(ctx, addr, selectNum))
 			err := apiNoPerm.SetSelectMsgNum(ctx, addr, selectNum)
-			assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+			assert.Contains(t, err.Error(), "permission deny")
 			addrInfo, err := api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			assert.Equal(t, selectNum, addrInfo.SelMsgNum)
@@ -280,7 +279,8 @@ func testSetFeeParams(ctx context.Context, t *testing.T, api, apiNoPerm messager
 		if ok {
 			usedAddr = addr
 			assert.NoError(t, api.SetFeeParams(ctx, &params))
-			assert.Equal(t, apiNoPerm.SetFeeParams(ctx, &params).Error(), jwtclient.ErrorPermissionDeny.Error())
+			assert.Contains(t, apiNoPerm.SetFeeParams(ctx, &params).Error(), "permission deny")
+
 			addrInfo, err := api.GetAddress(ctx, addr)
 			assert.NoError(t, err)
 			checkParams(addrInfo)
@@ -318,7 +318,7 @@ func testClearUnFillMessage(ctx context.Context, t *testing.T, api, apiNoPerm me
 		clearNum, err := api.ClearUnFillMessage(ctx, addr)
 		assert.NoError(t, err)
 		_, err = apiNoPerm.ClearUnFillMessage(ctx, addr)
-		assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+		assert.Contains(t, err.Error(), "permission deny")
 
 		msgs := addrMsgs[addr]
 		assert.Equal(t, len(msgs), clearNum)
@@ -339,7 +339,8 @@ func testDeleteAddress(ctx context.Context, t *testing.T, api, apiNoPerm message
 		}
 		assert.NoError(t, api.DeleteAddress(ctx, addr))
 		err := apiNoPerm.DeleteAddress(ctx, addr)
-		assert.Equal(t, err.Error(), jwtclient.ErrorPermissionDeny.Error())
+		assert.Contains(t, err.Error(), "permission deny")
+
 		_, err = api.GetAddress(ctx, addr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
 	}
