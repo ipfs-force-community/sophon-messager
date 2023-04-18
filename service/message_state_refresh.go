@@ -220,7 +220,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		}
 		if len(msgCIDs) > 0 {
-			log.Infof("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
+			log.Debugf("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
 			msgCIDs = msgCIDs[:0]
 		}
 	}
