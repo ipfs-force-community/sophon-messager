@@ -436,7 +436,7 @@ func getSigners(ctx context.Context, client jwtclient.IAuthClient) ([]address.Ad
 
 	user, exit := jwtclient.CtxGetName(ctx)
 	if !exit {
-		return nil, jwtclient.ErrorUserNotFound
+		return nil, fmt.Errorf("user not found")
 	}
 	resp, err := client.ListSigners(ctx, user)
 	if err != nil {
