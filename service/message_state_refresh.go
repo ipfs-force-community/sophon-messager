@@ -8,12 +8,10 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
-	"go.opencensus.io/stats"
 
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus-messager/metrics"
 	"github.com/filecoin-project/venus-messager/models/repo"
 )
 
@@ -70,22 +68,12 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 		return err
 	}
 
-	ms.tsCache.CurrHeight = int64(h.apply[0].Height())
-	ms.tsCache.Add(h.apply...)
-	if err := ms.tsCache.Save(ms.fsRepo.TipsetFile()); err != nil {
-		msgStateLog.Errorf("store tipsetkey failed %v", err)
+	if err := ms.storeTipset(ctx, h.apply); err != nil {
+		msgStateLog.Errorf("store tipset to cache failed %v", err)
 	}
 
 	msgStateLog.Infof("process block %d, revert %d message, apply %d message, replaced %d message", ms.tsCache.CurrHeight, len(revertMsgs), len(applyMsgs)-len(invalidMsgs), len(replaceMsg))
 
-	if ms.preCancel != nil {
-		ms.preCancel()
-	}
-	if !h.isReconnect { // reconnect do not push messager avoid wrong gas estimate
-		var triggerCtx context.Context
-		triggerCtx, ms.preCancel = context.WithCancel(context.Background())
-		go ms.delayTrigger(triggerCtx, h.apply[0])
-	}
 	return nil
 }
 
@@ -131,18 +119,22 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 	})
 }
 
-// delayTrigger wait for stable ts
-func (ms *MessageService) delayTrigger(ctx context.Context, ts *venustypes.TipSet) {
-	select {
-	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
-		ds := time.Now().Unix() - int64(ts.MinTimestamp())
-		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
-		stats.Record(ctx, metrics.ChainHeadStableDuration.M(ds))
-		ms.triggerPush <- ts
-		return
-	case <-ctx.Done():
-		return
+func (ms *MessageService) storeTipset(ctx context.Context, apply []*venustypes.TipSet) error {
+	processed := make([]*venustypes.TipSet, 0, len(apply))
+	if len(apply) == 1 {
+		pts, err := ms.nodeClient.ChainGetTipSet(ctx, apply[0].Parents())
+		if err != nil {
+			return fmt.Errorf("got tipset by %s failed: %v", apply[0].Parents(), err)
+		}
+		processed = append(processed, pts)
+	} else {
+		processed = append(processed, apply[1:]...)
 	}
+
+	ms.tsCache.CurrHeight = int64(processed[0].Height())
+	ms.tsCache.Add(processed...)
+
+	return ms.tsCache.Save(ms.fsRepo.TipsetFile())
 }
 
 func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (map[cid.Cid]struct{}, error) {
