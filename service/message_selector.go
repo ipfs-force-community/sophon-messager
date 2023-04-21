@@ -299,7 +299,7 @@ func (w *work) startSelectMessage(
 	}
 
 	w.start = time.Now()
-	ctx, cancel := context.WithTimeout(w.ctx, (w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(w.ctx, w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)
 	defer w.finish()
 	defer cancel()
 

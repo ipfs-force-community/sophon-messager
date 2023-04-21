@@ -681,7 +681,7 @@ func (ms *MessageService) delaySelectMessage(ctx context.Context, ts *venusTypes
 
 	start := time.Now()
 	log.Infof("start select message height: %d, ts: %s, wait task %d", ts.Height(), ts.String(), len(ms.triggerPush))
-	err := ms.msgSelectMgr.SelectMessage(ctx, ts)
+	err := ms.msgSelectMgr.SelectMessage(context.Background(), ts)
 	if err != nil {
 		log.Errorf("select message at %s failed %v", ts.String(), err)
 	}
