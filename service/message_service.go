@@ -656,12 +656,12 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 
 			var triggerCtx context.Context
 			triggerCtx, ms.preCancel = context.WithCancel(ctx)
-			go ms.delayPushMessage(triggerCtx, newHead, skipPushMsg)
+			go ms.delaySelectMessage(triggerCtx, newHead, skipPushMsg)
 		}
 	}
 }
 
-func (ms *MessageService) delayPushMessage(ctx context.Context, ts *venusTypes.TipSet, skipPushMsg bool) {
+func (ms *MessageService) delaySelectMessage(ctx context.Context, ts *venusTypes.TipSet, skipPushMsg bool) {
 	select {
 	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
 		ds := time.Now().Unix() - int64(ts.MinTimestamp())
@@ -680,7 +680,7 @@ func (ms *MessageService) delayPushMessage(ctx context.Context, ts *venusTypes.T
 	}
 
 	start := time.Now()
-	log.Infof("start select message %s task wait task %d", ts.String(), len(ms.triggerPush))
+	log.Infof("start select message height: %d, ts: %s, wait task %d", ts.Height(), ts.String(), len(ms.triggerPush))
 	err := ms.msgSelectMgr.SelectMessage(ctx, ts)
 	if err != nil {
 		log.Errorf("select message at %s failed %v", ts.String(), err)

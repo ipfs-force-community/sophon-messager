@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/network"
@@ -54,6 +55,7 @@ type MsgSelectMgr struct {
 
 	works       map[address.Address]*work
 	msgReceiver publisher.MessageReceiver
+	lk          sync.Mutex
 }
 
 func newMsgSelectMgr(ctx context.Context,
@@ -99,6 +101,10 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 	}
 	addrSelMsgNum := addrSelectMsgNum(activeAddrs, sharedParams.SelMsgNum)
 	addrInfos := addressMap(activeAddrs)
+
+	msgSelectMgr.lk.Lock()
+	defer msgSelectMgr.lk.Unlock()
+
 	if err := msgSelectMgr.tryUpdateWorks(addrInfos); err != nil {
 		msgSelectLog.Warnf("failed to update work %v", err)
 	}

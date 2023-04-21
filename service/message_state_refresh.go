@@ -120,6 +120,10 @@ func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []ap
 }
 
 func (ms *MessageService) storeTipset(ctx context.Context, apply []*venustypes.TipSet) error {
+	if len(apply) == 0 {
+		return nil
+	}
+
 	processed := make([]*venustypes.TipSet, 0, len(apply))
 	if len(apply) == 1 {
 		pts, err := ms.nodeClient.ChainGetTipSet(ctx, apply[0].Parents())
@@ -128,7 +132,7 @@ func (ms *MessageService) storeTipset(ctx context.Context, apply []*venustypes.T
 		}
 		processed = append(processed, pts)
 	} else {
-		processed = append(processed, apply[1:]...)
+		processed = apply[1:]
 	}
 
 	ms.tsCache.CurrHeight = int64(processed[0].Height())
@@ -156,7 +160,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 		}
 
 		if len(msgCIDs) > 0 {
-			log.Infof("revert %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), ts.Height())
+			log.Debugf("revert %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), ts.Height())
 			msgCIDs = msgCIDs[:0]
 		}
 	}
@@ -212,7 +216,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		}
 		if len(msgCIDs) > 0 {
-			log.Infof("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
+			log.Debugf("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
 			msgCIDs = msgCIDs[:0]
 		}
 	}
