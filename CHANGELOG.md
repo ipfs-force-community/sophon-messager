@@ -1,7 +1,10 @@
 # venus-message changelog
 
-## v1.11.0-rc1
+## v1.11.0
 
+* bump up version to v1.11.0
+
+## v1.11.0-rc1
 
 ### Features
 * feat: support method type fee cfg / 支持消息类型级别的费用配置  [[#303](https://github.com/filecoin-project/venus-messager/pull/303)] 
