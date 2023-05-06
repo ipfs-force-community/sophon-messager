@@ -95,7 +95,6 @@ type MessageService struct {
 
 type headChan struct {
 	apply, revert []*venusTypes.TipSet
-	isReconnect   bool
 	done          chan error
 }
 
@@ -494,30 +493,38 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 	sort.Slice(tsList, func(i, j int) bool {
 		return tsList[i].Height() > tsList[j].Height()
 	})
-	smallestTs := apply[len(apply)-1]
+	latestTs := apply[len(apply)-1]
+
+	ms.triggerPush <- latestTs
 
 	defer log.Infof("%d head wait to process", len(ms.headChans))
 
-	if len(tsList) == 0 || smallestTs.Parents().Equals(tsList[0].Key()) {
-		log.Infof("apply a block height %d %s", apply[0].Height(), apply[0].String())
+	if len(tsList) == 0 {
 		done := make(chan error)
 		ms.headChans <- &headChan{
 			apply:  apply,
 			revert: nil,
 			done:   done,
 		}
+
 		return <-done
 	}
 
-	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, smallestTs)
-	if err != nil {
-		log.Errorf("look ancestor error from %s and %s, error: %v", smallestTs, tsList[0].Key(), err)
+	// already processed
+	if latestTs.Parents().Equals(tsList[0].Key()) {
 		return nil
 	}
 
-	if len(apply) > 1 {
-		localApply = append(apply[:len(apply)-1], localApply...)
+	localApply, revertTipset, err := ms.lookAncestors(ctx, tsList, latestTs)
+	if err != nil {
+		log.Errorf("look ancestor error from %s and %s, error: %v", latestTs, tsList[0].Key(), err)
+		return nil
 	}
+
+	if len(localApply) > 0 {
+		localApply = localApply[:len(localApply)-1]
+	}
+
 	done := make(chan error)
 	ms.headChans <- &headChan{
 		apply:  localApply,
@@ -554,7 +561,7 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		return nil
 	}
 
-	if tsList[0].Height() == head.Height() && tsList[0].Equals(head) {
+	if tsList[0].Key().Equals(head.Parents()) {
 		log.Infof("The head does not change and returns directly.")
 		return nil
 	}
@@ -564,12 +571,15 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 		return err
 	}
 
-	done := make(chan error)
+	if len(gapTipset) > 0 {
+		gapTipset = gapTipset[:len(gapTipset)-1]
+	}
+
+	done := make(chan error, 1)
 	ms.headChans <- &headChan{
-		apply:       gapTipset,
-		revert:      revertTipset,
-		done:        done,
-		isReconnect: true,
+		apply:  gapTipset,
+		revert: revertTipset,
+		done:   done,
 	}
 
 	return <-done
@@ -626,28 +636,56 @@ func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venu
 ///   Message push    ////
 
 func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool) {
+	var latest *venusTypes.TipSet
 	for {
 		select {
 		case <-ctx.Done():
 			log.Warnf("stop push message: %v", ctx.Err())
 			return
 		case newHead := <-ms.triggerPush:
-			// Clear all unfill messages by address
-			ms.tryClearUnFillMsg()
+			if latest != nil {
+				if latest.Equals(newHead) {
+					continue
+				}
+			}
+			latest = newHead
 
-			if skipPushMsg {
-				log.Info("skip push message")
-				continue
+			if ms.preCancel != nil {
+				ms.preCancel()
 			}
-			start := time.Now()
-			log.Infof("start select message %s task wait task %d", newHead.String(), len(ms.triggerPush))
-			err := ms.msgSelectMgr.SelectMessage(ctx, newHead)
-			if err != nil {
-				log.Errorf("select message at %s failed %v", newHead.String(), err)
-			}
-			log.Infof("end select message spent %d ms", time.Since(start).Milliseconds())
+
+			var triggerCtx context.Context
+			triggerCtx, ms.preCancel = context.WithCancel(ctx)
+			go ms.delaySelectMessage(triggerCtx, newHead, skipPushMsg)
 		}
 	}
+}
+
+func (ms *MessageService) delaySelectMessage(ctx context.Context, ts *venusTypes.TipSet, skipPushMsg bool) {
+	select {
+	case <-time.After(ms.fsRepo.Config().MessageService.WaitingChainHeadStableDuration):
+		ds := time.Now().Unix() - int64(ts.MinTimestamp())
+		stats.Record(ctx, metrics.ChainHeadStableDelay.M(ds))
+		stats.Record(ctx, metrics.ChainHeadStableDuration.M(ds))
+	case <-ctx.Done():
+		return
+	}
+
+	// Clear all unfill messages by address
+	ms.tryClearUnFillMsg()
+
+	if skipPushMsg {
+		log.Info("skip push message")
+		return
+	}
+
+	start := time.Now()
+	log.Infof("start select message height: %d, ts: %s, wait task %d", ts.Height(), ts.String(), len(ms.triggerPush))
+	err := ms.msgSelectMgr.SelectMessage(context.Background(), ts)
+	if err != nil {
+		log.Errorf("select message at %s failed %v", ts.String(), err)
+	}
+	log.Infof("end select message spent %d ms", time.Since(start).Milliseconds())
 }
 
 func (ms *MessageService) tryClearUnFillMsg() {

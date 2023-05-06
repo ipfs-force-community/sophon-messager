@@ -166,7 +166,14 @@ func TestReconnectCheck(t *testing.T) {
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
-		assert.NoError(t, ms.ReconnectCheck(ctx, ts))
+		go func() {
+			assert.NoError(t, ms.ReconnectCheck(ctx, ts))
+		}()
+		<-ms.headChans
+
+		next, err := testhelper.GenTipset(ts.Height()+1, 1, ts.Cids())
+		assert.NoError(t, err)
+		assert.NoError(t, ms.ReconnectCheck(ctx, next))
 	})
 
 	t.Run("normal", func(t *testing.T) {
@@ -199,8 +206,7 @@ func TestReconnectCheck(t *testing.T) {
 			assert.NoError(t, ms.ReconnectCheck(ctx, expectTS))
 		}()
 		headChange := <-ms.headChans
-		assert.True(t, headChange.isReconnect)
-		assert.Len(t, headChange.apply, int(expectTS.Height()-ts.Height()))
+		assert.Len(t, headChange.apply, int(expectTS.Height()-ts.Height())-1)
 		assert.Len(t, headChange.revert, 0)
 		for _, ts := range headChange.apply {
 			assert.Equal(t, tsMap[ts.Height()], *ts)
@@ -246,11 +252,12 @@ func TestReconnectCheck(t *testing.T) {
 		}()
 
 		headChange := <-ms.headChans
-		assert.True(t, headChange.isReconnect)
-		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height())+1)
+		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height()))
 		revert := headChange.revert
 		apply := headChange.apply
-		assert.Equal(t, revert[len(revert)-1].Parents(), apply[len(apply)-1].Parents())
+		pts, err := msh.nodeClient.ChainGetTipSet(ctx, apply[len(apply)-1].Parents())
+		assert.NoError(t, err)
+		assert.Equal(t, revert[len(revert)-1].Parents(), pts.Parents())
 		assert.Equal(t, revertedTS[len(revertedTS)-1], revert[len(revert)-1])
 		headChange.done <- nil
 	})
@@ -262,6 +269,11 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 	defer cancel()
 
 	msh := newMessageServiceHelper(ctx, t)
+
+	t.Run("apply is empty", func(t *testing.T) {
+		ms := newMessageService(msh)
+		assert.NoError(t, ms.ProcessNewHead(ctx, nil))
+	})
 
 	t.Run("tipset cache is empty", func(t *testing.T) {
 		ms := newMessageService(msh)
@@ -283,14 +295,11 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
-		apply := []*shared.TipSet{ts}
-		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
-		}()
-		headChange := <-ms.headChans
-		assert.Len(t, headChange.apply, 0)
-		assert.Len(t, headChange.revert, 0)
-		headChange.done <- nil
+
+		next, err := testhelper.GenTipset(ts.Height()+1, 1, ts.Cids())
+		assert.NoError(t, err)
+		apply := []*shared.TipSet{next}
+		assert.NoError(t, ms.ProcessNewHead(ctx, apply))
 	})
 
 	getExpectTS := func(currTS *shared.TipSet, expectHeight abi.ChainEpoch) (*shared.TipSet, map[abi.ChainEpoch]shared.TipSet, error) {
@@ -325,15 +334,9 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		expectHeight := ts.Height() + 1
 		expectTS, _, err := getExpectTS(ts, expectHeight)
 		assert.NoError(t, err)
+		assert.Equal(t, expectHeight, expectTS.Height())
 
-		apply := []*shared.TipSet{expectTS}
-		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
-		}()
-		headChange := <-ms.headChans
-		assert.Equal(t, apply, headChange.apply)
-		assert.Nil(t, headChange.revert)
-		headChange.done <- nil
+		assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}))
 	})
 
 	t.Run("normal", func(t *testing.T) {
@@ -345,16 +348,21 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		expectHeight := ts.Height() + 5
 		expectTS, tsMap, err := getExpectTS(ts, expectHeight)
 		assert.NoError(t, err)
-		apply := []*shared.TipSet{expectTS}
+		assert.Equal(t, expectHeight, expectTS.Height())
+
 		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
+			assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}))
 		}()
 		headChange := <-ms.headChans
-		assert.Len(t, headChange.apply, int(expectTS.Height()-ts.Height()))
-		assert.Len(t, headChange.revert, 0)
-		for _, ts := range headChange.apply {
-			assert.Equal(t, tsMap[ts.Height()], *ts)
+
+		var apply []*shared.TipSet
+		for i := expectHeight; i > ts.Height()+1; i-- {
+			val, ok := tsMap[i]
+			assert.True(t, ok)
+			apply = append(apply, &val)
 		}
+		assert.Equal(t, apply, headChange.apply)
+		assert.Len(t, headChange.revert, 0)
 		headChange.done <- nil
 	})
 
@@ -396,10 +404,12 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		}()
 
 		headChange := <-ms.headChans
-		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height())+1)
+		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height()))
 		revert := headChange.revert
 		apply := headChange.apply
-		assert.Equal(t, revert[len(revert)-1].Parents(), apply[len(apply)-1].Parents())
+		pts, err := msh.nodeClient.ChainGetTipSet(ctx, apply[len(apply)-1].Parents())
+		assert.NoError(t, err)
+		assert.Equal(t, revert[len(revert)-1].Parents(), pts.Parents())
 		assert.Equal(t, revertedTS[len(revertedTS)-1], revert[len(revert)-1])
 		headChange.done <- nil
 	})
@@ -426,13 +436,10 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 			for i := applyFrom; i < 6; i++ {
 				ts, err := testhelper.GenTipset(abi.ChainEpoch(i), 2, parent)
 				assert.NoError(t, err)
+				tipSets = append(tipSets, ts)
 				parent = ts.Cids()
 				apply = append(apply, ts)
 			}
-
-			sort.Slice(apply, func(i, j int) bool {
-				return apply[i].Height() > apply[j].Height()
-			})
 
 			full := v1Mock.NewMockFullNode(gomock.NewController(t))
 			ms.nodeClient = full
@@ -449,14 +456,19 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 				assert.NoError(t, ms.ProcessNewHead(context.Background(), apply))
 			}()
 
-			headChange := <-ms.headChans
-			headChange.done <- nil
-			assert.EqualValues(t, headChange.apply, apply)
 			sort.Slice(revert, func(i, j int) bool {
 				return revert[i].Height() > revert[j].Height()
 			})
+
+			headChange := <-ms.headChans
+			headChange.done <- nil
+			sort.Slice(apply, func(i, j int) bool {
+				return apply[i].Height() > apply[j].Height()
+			})
+			assert.EqualValues(t, headChange.apply, apply[:len(apply)-1])
 			assert.EqualValues(t, headChange.revert, revert)
 		}
+
 		// 1,2,3,4,5
 		// revert 3,4,5
 		testRevert(2, 3)
