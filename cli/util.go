@@ -169,18 +169,18 @@ func methodToStr(nodeAPI v1.FullNode, msg venusTypes.Message) string {
 	methodStr, err := func() (string, error) {
 		actor, err := nodeAPI.StateGetActor(context.Background(), msg.To, venusTypes.EmptyTSK)
 		if err != nil {
-			return "", fmt.Errorf("get actor(%s) failed:%w", msg.To, err)
+			return "", fmt.Errorf("get actor(%s) failed: %v", msg.To, err)
 		}
 
 		methodMeta, found := utils.MethodsMap[actor.Code][msg.Method]
 		if !found {
-			return "", fmt.Errorf("actor:%v method(%d) not exist", actor, msg.Method)
+			return "", fmt.Errorf("actor(%v) method(%d) not exist", actor.Code, msg.Method)
 		}
 
 		return methodMeta.Name, nil
 	}()
 	if err != nil {
-		fmt.Println("failed to parse msessge method to string", err)
+		fmt.Println("failed to parse message method to string: ", err)
 		return msg.Method.String()
 	}
 

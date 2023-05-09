@@ -483,6 +483,55 @@ func TestCapGasFee(t *testing.T) {
 	assert.Less(t, big.Cmp(newMaxFee, oldMaxFee), 0)
 }
 
+func TestErrorMsg(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	msh := newMessageServiceHelper(ctx, t, skipPushMessage())
+	addrs := msh.genAddresses()
+	ms := msh.MessageService
+	msh.start()
+	defer msh.stop()
+
+	msgs := genMessages(addrs, len(addrs)*10)
+	for _, msg := range msgs {
+		// will estimate gas failed
+		msg.GasLimit = -1
+	}
+	assert.NoError(t, pushMessage(ctx, ms, msgs))
+	msgsMap := testhelper.SliceToMap(msgs)
+
+	ts, err := msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	assert.Len(t, selectResult.SelectMsg, 0)
+	assert.Len(t, selectResult.ErrMsg, len(msgs))
+	assert.Len(t, selectResult.ToPushMsg, 0)
+
+	list, err := ms.ListFailedMessage(ctx, &repo.MsgQueryParams{})
+	assert.NoError(t, err)
+	for _, msg := range list {
+		_, ok := msgsMap[msg.ID]
+		assert.True(t, ok)
+		assert.Contains(t, msg.ErrorMsg, testhelper.ErrGasLimitNegative.Error())
+
+		// reset GasLimit
+		msg.GasLimit = testhelper.DefGasUsed
+		assert.NoError(t, ms.repo.MessageRepo().UpdateMessage(msg))
+	}
+
+	ts, err = msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult = selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	assert.Len(t, selectResult.SelectMsg, len(msgs))
+	assert.Len(t, selectResult.ErrMsg, 0)
+	assert.Len(t, selectResult.ToPushMsg, len(msgs))
+
+	for _, msg := range selectResult.SelectMsg {
+		assert.Len(t, msg.ErrorMsg, 0)
+	}
+}
+
 func pushMessage(ctx context.Context, ms *MessageService, msgs []*types.Message) error {
 	for _, msg := range msgs {
 		// avoid been modified

@@ -161,12 +161,17 @@ func (n *nodeThread) run(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case msgs := <-n.msgChan:
-				if _, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
-					//skip error
+				if msgCIDs, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
+					// skip error
 					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
-						log.Errorf("failed to push message node: %s, address: %v, error: %v", n.name, msgs[0].Message.From, err)
+						var failedMsg []cid.Cid
+						for i := len(msgCIDs); i < len(msgs); i++ {
+							failedMsg = append(failedMsg, msgs[i].Cid())
+						}
+						log.Errorf("failed to push message to node, address: %v, error: %v, msgs: %v",
+							msgs[0].Message.From, err, failedMsg)
 					} else {
-						log.Debugf("failed to push message %v", err)
+						log.Debugf("failed to push message: %v", err)
 					}
 				}
 			}
