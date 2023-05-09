@@ -440,6 +440,11 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 		signedCid := signedMsg.Cid()
 		msg.SignedCid = &signedCid
 
+		// remove errored info during the previous message selection
+		if len(msg.ErrorMsg) > 0 {
+			msg.ErrorMsg = ""
+		}
+
 		selectMsg = append(selectMsg, msg)
 		addrInfo.Nonce++
 		count++
