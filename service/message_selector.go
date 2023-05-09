@@ -620,16 +620,28 @@ func (w *work) getActorCfg(ctx context.Context, msg *types.Message, nv network.V
 		w.actorCache.Add(key, actor)
 	}
 
-	actorCfg, err := w.repo.ActorCfgRepo().GetActorCfgByMethodType(ctx, &types.MethodType{
+	mt := &types.MethodType{
 		Code:   actor.Code,
 		Method: msg.Method,
-	})
+	}
+
+	// https://github.com/filecoin-project/venus/issues/5939
+	has, err := w.repo.ActorCfgRepo().HasActorCfg(ctx, mt)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+
+	actorCfg, err := w.repo.ActorCfgRepo().GetActorCfgByMethodType(ctx, mt)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
+
 	return actorCfg, nil
 }
 

@@ -10,6 +10,7 @@ import (
 type ActorCfgRepo interface {
 	SaveActorCfg(ctx context.Context, address *types.ActorCfg) error
 	GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error)
+	HasActorCfg(ctx context.Context, methodType *types.MethodType) (bool, error)
 	GetActorCfgByID(ctx context.Context, id shared.UUID) (*types.ActorCfg, error)
 	ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error)
 	DelActorCfgByMethodType(ctx context.Context, addr *types.MethodType) error

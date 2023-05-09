@@ -22,6 +22,7 @@ func Test_mysqlActorCfgRepo_SaveActorCfg(t *testing.T) {
 	r, mock, sqlDB := setup(t)
 	t.Run("mysql test save actor config", wrapper(testSaveActorCfg, r, mock))
 	t.Run("mysql test get actor config by id", wrapper(testGetActorTypeById, r, mock))
+	t.Run("mysql test has actor config", wrapper(testHasActorCfg, r, mock))
 	t.Run("mysql test get actor config by method type", wrapper(testGetActorTypeByMethodType, r, mock))
 	t.Run("mysql test list actor config by id", wrapper(testListActorType, r, mock))
 	t.Run("mysql test delete actor config by method types", wrapper(testDeleteActorCfgByMethodType, r, mock))
@@ -79,6 +80,23 @@ func testGetActorTypeById(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	actorCfgR, err := r.ActorCfgRepo().GetActorCfgByID(ctx, actorCfg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, actorCfg, *actorCfgR)
+}
+
+func testHasActorCfg(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
+	ctx := context.Background()
+	var actorCfg types.ActorCfg
+	testutil.Provide(t, &actorCfg)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `actor_cfg` WHERE code = ? and method = ?")).
+		WithArgs(mtypes.NewDBCid(actorCfg.Code), actorCfg.Method).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	has, err := r.ActorCfgRepo().HasActorCfg(ctx, &types.MethodType{
+		Code:   actorCfg.Code,
+		Method: actorCfg.Method,
+	})
+	assert.NoError(t, err)
+	assert.True(t, has)
 }
 
 func testGetActorTypeByMethodType(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
