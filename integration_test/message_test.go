@@ -612,7 +612,7 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api, apiSign
 					res, err := api.GetMessageByUid(ctx, msg.ID)
 					assert.NoError(t, err)
 					if res.SignedCid != nil {
-						assert.Equal(t, types.OnChainMsg, res.State)
+						assert.Equal(t, types.OnChainMsg, res.State, "id", res.ID, "msg", res)
 						assert.True(t, res.Height > 0)
 						assert.False(t, res.TipSetKey.IsEmpty())
 						return

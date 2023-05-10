@@ -93,6 +93,16 @@ func (s *mysqlActorCfgRepo) SaveActorCfg(ctx context.Context, actorCfg *types.Ac
 	return s.DB.Save(fromActorCfg(actorCfg)).Error
 }
 
+func (s *mysqlActorCfgRepo) HasActorCfg(ctx context.Context, methodType *types.MethodType) (bool, error) {
+	var count int64
+	if err := s.DB.Table("actor_cfg").Where("code = ? and method = ?", mtypes.NewDBCid(methodType.Code),
+		methodType.Method).Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func (s *mysqlActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error) {
 	var a mysqlActorCfg
 	if err := s.DB.Take(&a, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error; err != nil {

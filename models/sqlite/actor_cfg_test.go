@@ -48,6 +48,19 @@ func Test_fromActorCfg(t *testing.T) {
 		assertActorCfgValue(t, actorCfg, actorActorCfg)
 	}
 
+	// HasActorCfg
+	for _, actorCfg := range expectActorCfgs {
+		has, err := actorCfgRepo.HasActorCfg(ctx, &types.MethodType{
+			Code:   actorCfg.Code,
+			Method: actorCfg.Method,
+		})
+		assert.NoError(t, err)
+		assert.True(t, has)
+	}
+	has, err := actorCfgRepo.HasActorCfg(ctx, &types.MethodType{})
+	assert.NoError(t, err)
+	assert.False(t, has)
+
 	//UpdateSelectSpec
 	for _, actorCfg := range expectActorCfgs {
 		updateAsset := func(cfg func() (*types.ActorCfg, *types.ChangeGasSpecParams)) {
