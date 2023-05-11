@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 
+	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/jwtclient"
 
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
@@ -92,7 +93,7 @@ func (addressService *AddressService) WalletHas(ctx context.Context, addr addres
 	}
 
 	bExist := false
-	name, _ := jwtclient.CtxGetName(ctx)
+	name, _ := core.CtxGetName(ctx)
 	for _, account := range accounts {
 		if name == account {
 			bExist = true

@@ -8,6 +8,7 @@ import (
 
 	"github.com/etherlabsio/healthcheck/v2"
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/venus-auth/core"
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	"github.com/filecoin-project/venus/venus-shared/api/permission"
@@ -28,7 +29,7 @@ func BindRateLimit(msgImp *MessageImp, remoteAuthCli jwtclient.IAuthClient, rate
 		limiter, err := ratelimit.NewRateLimitHandler(
 			rateLimitCfg.Redis,
 			nil,
-			&jwtclient.ValueFromCtx{},
+			&core.ValueFromCtx{},
 			jwtclient.WarpLimitFinder(remoteAuthCli),
 			logging.Logger("rate-limit"),
 		)

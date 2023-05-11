@@ -17,7 +17,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/filecoin-project/venus-auth/core"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -232,7 +232,7 @@ func (ms *MessageService) PushMessage(ctx context.Context, msg *venusTypes.Messa
 }
 
 func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg *venusTypes.Message, meta *types.SendSpec) (string, error) {
-	account, _ := jwtclient.CtxGetName(ctx)
+	account, _ := core.CtxGetName(ctx)
 	if err := ms.pushMessage(ctx, &types.Message{
 		ID:         id,
 		Message:    *msg,
