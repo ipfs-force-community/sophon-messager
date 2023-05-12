@@ -11,7 +11,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -428,13 +427,13 @@ func (m *MessageImp) LogList(ctx context.Context) ([]string, error) {
 
 // isAdmin check if the user is admin and return signers of the user
 func isAdmin(ctx context.Context) bool {
-	return auth.HasPerm(ctx, nil, core.PermAdmin)
+	return core.HasPerm(ctx, nil, core.PermAdmin)
 }
 
 func getSigners(ctx context.Context, client jwtclient.IAuthClient) ([]address.Address, error) {
 	signers := []address.Address{}
 
-	user, exit := jwtclient.CtxGetName(ctx)
+	user, exit := core.CtxGetName(ctx)
 	if !exit {
 		return nil, fmt.Errorf("user not found")
 	}

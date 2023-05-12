@@ -13,8 +13,8 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.11.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.11.0
-	github.com/filecoin-project/venus-auth v1.11.0
+	github.com/filecoin-project/venus v1.11.2-0.20230511060025-c6ed196f613c
+	github.com/filecoin-project/venus-auth v1.11.1-0.20230511013901-7829b3effbcd
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
