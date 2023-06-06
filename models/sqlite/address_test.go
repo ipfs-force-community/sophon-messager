@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 )
 
 func TestAddress(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	shared "github.com/filecoin-project/venus/venus-shared/types"

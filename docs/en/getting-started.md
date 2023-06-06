@@ -7,7 +7,7 @@ messager is a component used to manage local messages, with the purpose of savin
 ### Clone this git repository to your machine
 
 ```bash
-git clone https://github.com/filecoin-project/venus-messager.git
+git clone https://github.com/ipfs-force-community/sophon-messager.git
 ```
 
 ### Install Dependencies and Build
@@ -19,7 +19,7 @@ make
 ### Run messager
 
 ```bash
-./venus-messager run [options]
+./sophon-messager run [options]
 ```
 
 ```bash
@@ -42,65 +42,65 @@ options:
 1. search message
 
 ```bash
-./venus-messager msg search --id=<message id>
+./sophon-messager msg search --id=<message id>
 ```
 
 2. list message
 
 ```bash
-./venus-messager msg list
+./sophon-messager msg list
 # list messages with the same address
-./venus-messager msg list --from <address>
+./sophon-messager msg list --from <address>
 ```
 
 3. update one filled message state
 
 ```bash
-./venus-messager msg update_filled_msg --id=<message id>
+./sophon-messager msg update_filled_msg --id=<message id>
 ```
 
 4. update all filled message state
 
 ```bash
-./venus-messager msg update_all_filled_msg
+./sophon-messager msg update_all_filled_msg
 ```
 
 5. wait a message result by id
 
 ```bash
-./venus-messager msg wait <message id>
+./sophon-messager msg wait <message id>
 ```
 
 6. republish a message by id
 
 ```bash
-./venus-messager msg republish <message id>
+./sophon-messager msg republish <message id>
 ```
 
 7. replace a message
 
 ```bash
-./venus-messager msg replace --gas-feecap=[gas-feecap] --gas-premium=[gas-premium] --gas-limit=[gas-limit] --auto=[auto] --max-fee=[max-fee] <message-id>
+./sophon-messager msg replace --gas-feecap=[gas-feecap] --gas-premium=[gas-premium] --gas-limit=[gas-limit] --auto=[auto] --max-fee=[max-fee] <message-id>
 # or
-./venus-messager msg replace --gas-feecap=[gas-feecap] --gas-premium=[gas-premium] --gas-limit=[gas-limit] --auto=[auto] --max-fee=[max-fee] <from> <nonce>
+./sophon-messager msg replace --gas-feecap=[gas-feecap] --gas-premium=[gas-premium] --gas-limit=[gas-limit] --auto=[auto] --max-fee=[max-fee] <from> <nonce>
 ```
 
 8. list failed messages, maybe signed message failed or gas estimate failed
 
 ```bash
-./venus-messager msg list-fail
+./sophon-messager msg list-fail
 ```
 
 9. lists message that have not been chained for a period of time
 
 ```bash
-./venus-messager msg list-blocked
+./sophon-messager msg list-blocked
 ```
 
 10. manual mark error messages
 
 ```bash
-./venus-messager msg mark-bad <message id>
+./sophon-messager msg mark-bad <message id>
 ```
 
 ### Address commands
@@ -108,13 +108,13 @@ options:
 1. search address
 
 ```bash
-./venus-messager address search <address>
+./sophon-messager address search <address>
 ```
 
 2. list address
 
 ```bash
-./venus-messager address list
+./sophon-messager address list
 ```
 
 3. reset address
@@ -122,30 +122,30 @@ options:
 > The nonce of the address is set to nonce on the chain, and all unchain messages are marked as failed messages
 
 ```bash
-./venus-messager reset <address>
+./sophon-messager reset <address>
 ```
 
 4. forbidden address
 
 ```bash
-./venus-messager address forbidden <address>
+./sophon-messager address forbidden <address>
 ```
 
 5. activate a frozen address
 
 ```bash
-./venus-messager address active <address>
+./sophon-messager address active <address>
 ```
 
 6. set the number of address selection messages
 
 ```bash
-./venus-messager address set-sel-msg-num --num=5 <address>
+./sophon-messager address set-sel-msg-num --num=5 <address>
 ```
 
 7. set parameters related to address fee
 
-> venus-messager address set-fee-params [options] address
+> sophon-messager address set-fee-params [options] address
 
 ```bash
  # options
@@ -154,7 +154,7 @@ options:
  # --max-fee value             Spend up to X attoFIL for message
  # --gas-over-premium value    Coefficient of gas premium (default: 0)
 
-./venus-messager address set-fee-params <address>
+./sophon-messager address set-fee-params <address>
 ```
 
 ### shared params commands
@@ -162,19 +162,19 @@ options:
 1. get shared params
 
 ```bash
-./venus-messager share-params get
+./sophon-messager share-params get
 ```
 
 2. set shared params
 
 ```bash
-./venus-messager share-params set --gas-over-estimation=1.25 --gas-feecap="0" --max-fee="7000000000000000" --sel-msg-num=20 --gas-over-premium 1
+./sophon-messager share-params set --gas-over-estimation=1.25 --gas-feecap="0" --max-fee="7000000000000000" --sel-msg-num=20 --gas-over-premium 1
 ```
 
 3. manual refresh shared params from DB
 
 ```bash
-./venus-messager share-params refresh
+./sophon-messager share-params refresh
 ```
 
 ### node commands
@@ -182,25 +182,25 @@ options:
 1. search node info by name
 
 ```bash
-./venus-messager node search <name>
+./sophon-messager node search <name>
 ```
 
 2. add node info
 
 ```bash
-./venus-messager node add --name=<node-name> --url=<node-url> --token=<node-token>
+./sophon-messager node add --name=<node-name> --url=<node-url> --token=<node-token>
 ```
 
 3. list node info
 
 ```bash
-./venus-messager node list
+./sophon-messager node list
 ```
 
 4. del node info by name
 
 ```bash
-./venus-messager node del <name>
+./sophon-messager node del <name>
 ```
 
 ### log
@@ -209,13 +209,13 @@ options:
 
 ```bash
 # eg. trace,debug,info,warn|warning,error,fatal,panic
-./venus-messager log set-level
+./sophon-messager log set-level
 ```
 
 ### send 命令
 
 > send message
-> venus-messager send [command options] [targetAddress] [amount]
+> sophon-messager send [command options] [targetAddress] [amount]
 
 ```
    options:

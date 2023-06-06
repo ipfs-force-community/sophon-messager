@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/mocks"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/mocks"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	mockV1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
 	"github.com/filecoin-project/venus/venus-shared/types"

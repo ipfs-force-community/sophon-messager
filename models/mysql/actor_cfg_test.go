@@ -7,12 +7,12 @@ import (
 
 	"github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/venus-messager/models/mtypes"
+	"github.com/ipfs-force-community/sophon-messager/models/mtypes"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/filecoin-project/venus-messager/models/repo"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 	"gorm.io/gorm"
 
 	"github.com/stretchr/testify/assert"

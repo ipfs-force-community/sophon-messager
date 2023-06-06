@@ -20,9 +20,9 @@ import (
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/service"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"

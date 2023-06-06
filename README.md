@@ -1,10 +1,10 @@
 <h1 align="center">Venus Messager</h1>
 
 <p align="center">
- <a href="https://github.com/filecoin-project/venus-messager/actions"><img src="https://github.com/filecoin-project/venus-messager/actions/workflows/build_upload.yml/badge.svg"/></a>
- <a href="https://codecov.io/gh/filecoin-project/venus-messager"><img src="https://codecov.io/gh/filecoin-project/venus-messager/branch/master/graph/badge.svg?token=J5QWYWkgHT"/></a>
- <a href="https://goreportcard.com/report/github.com/filecoin-project/venus-messager"><img src="https://goreportcard.com/badge/github.com/filecoin-project/venus-messager"/></a>
- <a href="https://github.com/filecoin-project/venus-messager/tags"><img src="https://img.shields.io/github/v/tag/filecoin-project/venus-messager"/></a>
+ <a href="https://github.com/ipfs-force-community/sophon-messager/actions"><img src="https://github.com/ipfs-force-community/sophon-messager/actions/workflows/build_upload.yml/badge.svg"/></a>
+ <a href="https://codecov.io/gh/ipfs-force-community/sophon-messager"><img src="https://codecov.io/gh/ipfs-force-community/sophon-messager/branch/master/graph/badge.svg?token=J5QWYWkgHT"/></a>
+ <a href="https://goreportcard.com/report/github.com/ipfs-force-community/sophon-messager"><img src="https://goreportcard.com/badge/github.com/ipfs-force-community/sophon-messager"/></a>
+ <a href="https://github.com/ipfs-force-community/sophon-messager/tags"><img src="https://img.shields.io/github/v/tag/ipfs-force-community/sophon-messager"/></a>
   <br>
 </p>
 
@@ -32,21 +32,21 @@ Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporti
 
 build binary
 ```sh
-git clone https://github.com/filecoin-project/venus-messager.git
+git clone https://github.com/ipfs-force-community/sophon-messager.git
 make
 ```
 
 ### Set repo path
 
-> The default path is ~/.venus-messager.
+> The default path is ~/.sophon-messager.
 ```
-./venus-messager --repo=path_to_repo run 
+./sophon-messager --repo=path_to_repo run
 ```
 
 ### Run
 
 ```sh
-./venus-messager run \
+./sophon-messager run \
 --node-url=/ip4/127.0.0.1/tcp/3453 \
 --gateway-url=/ip4/127.0.0.1/tcp/45132 \
 --auth-url=http://127.0.0.1:8989 \
@@ -54,7 +54,7 @@ make
 --db-type=sqlite
 ```
 
-We will find three files in ~/.venus-messager
+We will find three files in ~/.sophon-messager
 
 * message.db
 * message.db-shm
@@ -63,7 +63,7 @@ We will find three files in ~/.venus-messager
 #### db use mysql
 
 ```sh
-./venus-messager run \
+./sophon-messager run \
 --node-url=/ip4/127.0.0.1/tcp/3453 \
 --gateway-url=/ip4/127.0.0.1/tcp/45132 \
 --auth-url=http://127.0.0.1:8989 \
@@ -74,7 +74,7 @@ We will find three files in ~/.venus-messager
 
 ### Config
 
-> The configuration file is saved in ~/.venus-messager/config.toml
+> The configuration file is saved in ~/.sophon-messager/config.toml
 
 ```
 [api]

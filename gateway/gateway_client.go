@@ -14,7 +14,7 @@ import (
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/filecoin-project/venus-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/config"
 )
 
 var log = logging.Logger("wallet-proxy")

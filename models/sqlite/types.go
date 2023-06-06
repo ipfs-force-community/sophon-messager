@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"errors"
 
-	"github.com/filecoin-project/venus-messager/models/mtypes"
+	"github.com/ipfs-force-community/sophon-messager/models/mtypes"
 )
 
 type FeeSpec struct {

@@ -13,7 +13,7 @@ import (
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 var msgStateLog = logging.Logger("msg-state")

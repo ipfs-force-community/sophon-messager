@@ -1,4 +1,4 @@
-module github.com/filecoin-project/venus-messager
+module github.com/ipfs-force-community/sophon-messager
 
 go 1.18
 

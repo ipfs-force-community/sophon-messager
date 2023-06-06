@@ -16,8 +16,8 @@ import (
 
 	"github.com/filecoin-project/venus-auth/jwtclient"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	"github.com/stretchr/testify/assert"
 )

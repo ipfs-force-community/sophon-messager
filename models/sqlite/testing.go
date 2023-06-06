@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 func setupRepo(t *testing.T) repo.Repo {

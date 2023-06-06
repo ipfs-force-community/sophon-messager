@@ -40,7 +40,7 @@
 
 `exporter` 端口为 `4568`，url为 `debug/metrics`, 因此对于默认的部署方式，`exporter` 的url为 `host:4568/debug/metrics`
 
-如果配置 `Prometheus exporter`，则在 `venus-messager` 服务启动时会附带启动 `Prometheus exporter` 的监听服务，可以通过以下方式快速查看指标：
+如果配置 `Prometheus exporter`，则在 `sophon-messager` 服务启动时会附带启动 `Prometheus exporter` 的监听服务，可以通过以下方式快速查看指标：
 
 
 ```bash
@@ -71,7 +71,7 @@
 $  curl http://<ip>:4568/debug/metrics
 ```
 
-如果配置 `Graphite exporter`，需要先启动 `Graphite exporter` 的收集器服务， `venus-messager` 服务启动时将指标上报给收集器。服务启动参考 [Graphite exporter](https://github.com/prometheus/graphite_exporter) 中的说明。
+如果配置 `Graphite exporter`，需要先启动 `Graphite exporter` 的收集器服务， `sophon-messager` 服务启动时将指标上报给收集器。服务启动参考 [Graphite exporter](https://github.com/prometheus/graphite_exporter) 中的说明。
 
 `Graphite exporter` 和 `Prometheus exporter` 自身都不带图形界面的，如果需要可视化监控及更高阶的图表分析，请到 `venus-docs` 项目中查找关于 `Prometheus+Grafana` 的说明文档。
 

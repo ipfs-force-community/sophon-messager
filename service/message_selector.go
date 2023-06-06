@@ -31,11 +31,11 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/publisher"
-	"github.com/filecoin-project/venus-messager/utils"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/metrics"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/publisher"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 )
 
 const (

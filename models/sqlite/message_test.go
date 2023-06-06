@@ -12,10 +12,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/testhelper"
-	"github.com/filecoin-project/venus-messager/utils"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 )
 
 func TestSaveAndGetMessage(t *testing.T) {

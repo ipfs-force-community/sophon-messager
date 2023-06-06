@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/publisher"
-	"github.com/filecoin-project/venus-messager/publisher/pubsub"
+	"github.com/ipfs-force-community/sophon-messager/publisher"
+	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
 
 	"github.com/filecoin-project/venus-auth/jwtclient"
-	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/sophon-messager/metrics"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
@@ -28,14 +28,14 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 
-	"github.com/filecoin-project/venus-messager/api"
-	ccli "github.com/filecoin-project/venus-messager/cli"
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/models"
-	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/version"
+	"github.com/ipfs-force-community/sophon-messager/api"
+	ccli "github.com/ipfs-force-community/sophon-messager/cli"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/gateway"
+	"github.com/ipfs-force-community/sophon-messager/models"
+	"github.com/ipfs-force-community/sophon-messager/service"
+	"github.com/ipfs-force-community/sophon-messager/version"
 )
 
 var log = logging.Logger("main")
@@ -47,7 +47,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "repo",
-				Value: "~/.venus-messager",
+				Value: "~/.sophon-messager",
 			},
 		},
 		Commands: []*cli.Command{

@@ -14,7 +14,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 func TestSharedParams(t *testing.T) {

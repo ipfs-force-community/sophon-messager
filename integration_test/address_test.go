@@ -20,8 +20,8 @@ import (
 
 	"github.com/filecoin-project/venus-auth/auth"
 	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 )
 
 const defaultLocalToken = "defaultLocalToken"

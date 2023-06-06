@@ -6,8 +6,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 type SqlLiteRepo struct {

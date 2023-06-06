@@ -1,17 +1,17 @@
 # venus messager tools
 
-一个基于 venus-messager 开发的常用工具集
+一个基于 sophon-messager 开发的常用工具集
 
 ### 帮助
 
 ```sh
-./venus-messager-tools -h
+./sophon-messager-tools -h
 
 NAME:
-   venus-messager-tools - A new cli application
+   sophon-messager-tools - A new cli application
 
 USAGE:
-   venus-messager-tools [global options] command [command options] [arguments...]
+   sophon-messager-tools [global options] command [command options] [arguments...]
 
 COMMANDS:
    batch-replace  batch replace messages
@@ -22,7 +22,7 @@ GLOBAL OPTIONS:
    --help, -h                show help (default: false)
 ```
 
-### [配置](https://github.com/filecoin-project/venus-messager/blob/main/tools_config.toml)
+### [配置](https://github.com/ipfs-force-community/sophon-messager/blob/main/tools_config.toml)
 
 默认配置是 `tools_config.toml`，使用时需提前把配置配好
 
@@ -43,9 +43,9 @@ $cat tools_config.toml
     Methods = [5]
 
 [Messager]
-  # venus-messager 的 token
+  # sophon-messager 的 token
   Token = ""
-  # venus-messager 的 URL
+  # sophon-messager 的 URL
   URL = "/ip4/127.0.0.1/tcp/39812"
 
 [Venus]
@@ -74,16 +74,16 @@ $cat tools_config.toml
 
 ### 批量replace message
 
-根据配置中的条件批量replace长时间阻塞在 venus-messager 中的消息
+根据配置中的条件批量replace长时间阻塞在 sophon-messager 中的消息
 
-> venus-messager-tools batch-replace [command options] [arguments...]
+> sophon-messager-tools batch-replace [command options] [arguments...]
 
 ```
 # --max-fee 和 --gas-over-premium 是可选项，gas-over-premium 是 gas premium的系数，该值为0是，则不会起作用
-./venus-messager-tools batch-replace --auto
+./sophon-messager-tools batch-replace --auto
 
 or
 
-./venus-messager-tools batch-replace --gas-feecap <value> --gas-premium <value> --gas-limit <value>
+./sophon-messager-tools batch-replace --gas-feecap <value> --gas-premium <value> --gas-limit <value>
 
 ```

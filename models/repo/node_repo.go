@@ -6,7 +6,7 @@ type INodeProvider interface {
 	ListNode() ([]*types.Node, error)
 }
 
-//go:generate  mockgen -destination=../../mocks/mock_node_repo.go -package=mocks github.com/filecoin-project/venus-messager/models/repo NodeRepo
+//go:generate  mockgen -destination=../../mocks/mock_node_repo.go -package=mocks github.com/ipfs-force-community/sophon-messager/models/repo NodeRepo
 
 type NodeRepo interface {
 	CreateNode(node *types.Node) error

@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/utils"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 )
 
 const (

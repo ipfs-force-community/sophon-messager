@@ -11,8 +11,8 @@ import (
 	"github.com/filecoin-project/venus-auth/jwtclient"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/service"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/service"
 )
 
 func TestSharedParamsAPI(t *testing.T) {

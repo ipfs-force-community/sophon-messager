@@ -1,6 +1,6 @@
 .idea
 .vscode
-./venus-messager
+./sophon-messager
 ./*.log
 *.db
 *-shm
@@ -10,10 +10,10 @@ tipset.json
 test_sqlite_db
 cmds/cfg_example/cfg_example
 cmds/client_example/client_example
-venus-messager
+sophon-messager
 *.log
-./venus-messager-tools
-venus-messager-tools
+./sophon-messager-tools
+sophon-messager-tools
 *.toml
 *.toml.*
 

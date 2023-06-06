@@ -19,8 +19,8 @@ import (
 	types2 "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/venus-messager/cli/tablewriter"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/cli/tablewriter"
 	"github.com/urfave/cli/v2"
 )
 

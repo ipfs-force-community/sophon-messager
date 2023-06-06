@@ -8,8 +8,8 @@ import (
 	"github.com/hunjixin/automapper"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 type mysqlNode struct {
