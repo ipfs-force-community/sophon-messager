@@ -14,7 +14,7 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"

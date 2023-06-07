@@ -1,4 +1,4 @@
-# Venus Messager 设计说明书
+# Sophon Messager 设计说明书
 
 sophon-messager是一个用于管理本地消息的组件，用于保存地址消息、管理消息状态和控制推送消息的频率。
 
@@ -25,9 +25,9 @@ sophon-messager是一个用于管理本地消息的组件，用于保存地址�
 
 ##### token 合法性验证
 
-token 分为两种，一种是由venus-auth服务生成，另外一种是sophon-messager本身生成，该token只用于本机的命令行命令。
-token 会被sophon-messager和venus-auth依次验证合法性，只要其中一个验证通过就算合法token。
-venus-auth 验证token合法后会返回该token的权限信息。
+token 分为两种，一种是由sophon-auth服务生成，另外一种是sophon-messager本身生成，该token只用于本机的命令行命令。
+token 会被sophon-messager和sophon-auth依次验证合法性，只要其中一个验证通过就算合法token。
+sophon-auth 验证token合法后会返回该token的权限信息。
 
 ##### API权限验证
 

@@ -11,11 +11,11 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-auth/auth"
-	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/golang/mock/gomock"
+	"github.com/ipfs-force-community/sophon-auth/auth"
+	authconfig "github.com/ipfs-force-community/sophon-auth/config"
+	"github.com/ipfs-force-community/sophon-auth/core"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/xerrors"
 	"gorm.io/gorm"
@@ -895,7 +895,7 @@ func prepare(t *testing.T) *testParams {
 }
 
 func genToken(pl interface{}) (string, error) {
-	secret, err := jwtclient.RandSecret()
+	secret, err := authconfig.RandSecret()
 	if err != nil {
 		return "", xerrors.Errorf("rand secret %v", err)
 	}

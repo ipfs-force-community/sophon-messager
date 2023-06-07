@@ -1,4 +1,4 @@
-<h1 align="center">Venus Messager</h1>
+<h1 align="center">Sophon Messager</h1>
 
 <p align="center">
  <a href="https://github.com/ipfs-force-community/sophon-messager/actions"><img src="https://github.com/ipfs-force-community/sophon-messager/actions/workflows/build_upload.yml/badge.svg"/></a>
@@ -148,5 +148,5 @@ We will find three files in ~/.sophon-messager
   # enable trace
   JaegerTracingEnabled = false
   ProbabilitySampler = 1.0
-  ServerName = "venus-messenger"
+  ServerName = "sophon-messenger"
 ```

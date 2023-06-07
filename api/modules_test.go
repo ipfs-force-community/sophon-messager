@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 	"github.com/ipfs-force-community/sophon-messager/api"
 	"github.com/ipfs-force-community/sophon-messager/config"
 	"github.com/stretchr/testify/assert"

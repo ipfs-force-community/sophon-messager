@@ -8,11 +8,11 @@ import (
 
 	"github.com/etherlabsio/healthcheck/v2"
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	"github.com/filecoin-project/venus/venus-shared/api/permission"
 	"github.com/ipfs-force-community/metrics/ratelimit"
+	"github.com/ipfs-force-community/sophon-auth/core"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 

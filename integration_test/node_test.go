@@ -14,7 +14,7 @@ import (
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 
 	"github.com/ipfs-force-community/sophon-messager/config"
 	"github.com/ipfs-force-community/sophon-messager/testhelper"

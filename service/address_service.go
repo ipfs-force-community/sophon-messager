@@ -8,8 +8,8 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/big"
 
-	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/ipfs-force-community/sophon-auth/core"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
@@ -26,8 +26,8 @@ type IAddressService interface {
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)
 
 	// WalletHas 1. 检查请求token绑定的 account是否在addr绑定的用户列表中,不在返回false; eg. from01的绑定关系: from01-acc01,from01-acc02, 判断: acc[token] IN (acc01,acc02)
-	// 2. 调用venus-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
-	// venus-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
+	// 2. 调用sophon-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
+	// sophon-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 	ListAddress(ctx context.Context) ([]*types.Address, error)
@@ -84,8 +84,8 @@ func (addressService *AddressService) GetAddress(ctx context.Context, addr addre
 }
 
 // WalletHas 1. 检查请求token绑定的 account是否在addr绑定的用户列表中,不在返回false; eg. from01的绑定关系: from01-acc01,from01-acc02, 判断: acc[token] IN (acc01,acc02)
-// 2. 调用venus-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
-// venus-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
+// 2. 调用sophon-gateway的 `WalletHas(context.Context, []string, address.Address) (bool, error)` 查找在线的venus-wallet，调用 `.WalletHas(ctx, []string{acc01,acc02}, addr)`
+// sophon-gateway: venus-wallet的私钥和所有支持账号都绑定，WalletHas从接口的绑定账号列表中查找是否存在在线的venus-wallet channel.
 func (addressService *AddressService) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
 	accounts, err := addressService.GetAccountsOfSigner(ctx, addr)
 	if err != nil {

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/venus-shared/api/chain/v0/mock"
 	"github.com/golang/mock/gomock"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 )

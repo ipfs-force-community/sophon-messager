@@ -1,4 +1,4 @@
-# How to use venus messager
+# How to use sophon messager
 
 messager is a component used to manage local messages, with the purpose of saving address messages, managing message status, and controlling the frequency of push messages.
 

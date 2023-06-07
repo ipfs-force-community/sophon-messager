@@ -1,4 +1,4 @@
-# venus-message changelog
+# sophon-message changelog
 
 ## v1.11.0
 

@@ -17,7 +17,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-auth/core"
+	"github.com/ipfs-force-community/sophon-auth/core"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"

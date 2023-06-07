@@ -14,11 +14,11 @@ import (
 	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
 	"github.com/mitchellh/go-homedir"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 	"github.com/ipfs-force-community/sophon-messager/metrics"
 	"github.com/ipfs-force-community/sophon-messager/utils"
 	logging "github.com/ipfs/go-log/v2"
@@ -40,14 +40,14 @@ import (
 
 const (
 	oldRepoPath = "~/.venus-messager"
-	defRepoPath = "~/.sophonmessager"
+	defRepoPath = "~/.sophon-messager"
 )
 
 var log = logging.Logger("main")
 
 func main() {
 	app := &cli.App{
-		Name:  "venus message",
+		Name:  "sophon message",
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
