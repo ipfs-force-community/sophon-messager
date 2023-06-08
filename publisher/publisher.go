@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
-	mpubsub "github.com/filecoin-project/venus-messager/publisher/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	mpubsub "github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
 	"github.com/ipfs/go-cid"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -19,7 +19,7 @@ import (
 var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
 var errMinimumNonce = errors.New("minimum expected nonce")
 
-//go:generate mockgen -destination=../mocks/mock_msg_publisher.go -package=mocks github.com/filecoin-project/venus-messager/publisher IMsgPublisher
+//go:generate mockgen -destination=../mocks/mock_msg_publisher.go -package=mocks github.com/ipfs-force-community/sophon-messager/publisher IMsgPublisher
 
 type IMsgPublisher interface {
 	// PublishMessages publish messages to chain

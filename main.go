@@ -10,44 +10,49 @@ import (
 	"strings"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/publisher"
-	"github.com/filecoin-project/venus-messager/publisher/pubsub"
+	"github.com/ipfs-force-community/sophon-messager/publisher"
+	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
+	"github.com/mitchellh/go-homedir"
 
-	"github.com/filecoin-project/venus-auth/jwtclient"
-	"github.com/filecoin-project/venus-messager/metrics"
-	"github.com/filecoin-project/venus-messager/utils"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
+	"github.com/ipfs-force-community/sophon-messager/metrics"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 
-	"github.com/filecoin-project/venus-messager/api"
-	ccli "github.com/filecoin-project/venus-messager/cli"
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/models"
-	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/version"
+	"github.com/ipfs-force-community/sophon-messager/api"
+	ccli "github.com/ipfs-force-community/sophon-messager/cli"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/gateway"
+	"github.com/ipfs-force-community/sophon-messager/models"
+	"github.com/ipfs-force-community/sophon-messager/service"
+	"github.com/ipfs-force-community/sophon-messager/version"
+)
+
+const (
+	oldRepoPath = "~/.venus-messager"
+	defRepoPath = "~/.sophon-messager"
 )
 
 var log = logging.Logger("main")
 
 func main() {
 	app := &cli.App{
-		Name:  "venus message",
+		Name:  "sophon message",
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "repo",
-				Value: "~/.venus-messager",
+				Value: defRepoPath,
 			},
 		},
 		Commands: []*cli.Command{
@@ -137,7 +142,7 @@ func runAction(cctx *cli.Context) error {
 	// Set the log level. The default log level is info
 	utils.SetupLogLevels()
 
-	repoPath, err := homedir.Expand(cctx.String("repo"))
+	repoPath, err := getRepoPath(cctx)
 	if err != nil {
 		return err
 	}
@@ -436,4 +441,30 @@ func setEip155ChainID(networkName string) error {
 	types.SetEip155ChainID(eip155ChainID)
 
 	return nil
+}
+
+func getRepoPath(cctx *cli.Context) (string, error) {
+	repoPath, err := homedir.Expand(cctx.String("repo"))
+	if err != nil {
+		return "", err
+	}
+	has, err := hasFSRepo(repoPath)
+	if err != nil {
+		return "", err
+	}
+	if !has {
+		// check old repo path
+		rPath, err := homedir.Expand(oldRepoPath)
+		if err != nil {
+			return "", err
+		}
+		has, err = hasFSRepo(rPath)
+		if err != nil {
+			return "", err
+		}
+		if has {
+			return rPath, nil
+		}
+	}
+	return repoPath, nil
 }

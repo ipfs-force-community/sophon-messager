@@ -23,13 +23,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/gateway"
-	"github.com/filecoin-project/venus-messager/models"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/publisher"
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/gateway"
+	"github.com/ipfs-force-community/sophon-messager/models"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/publisher"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/testutil"

@@ -11,9 +11,9 @@ import (
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 
-	"github.com/filecoin-project/venus-messager/config"
-	"github.com/filecoin-project/venus-messager/testhelper"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 	"github.com/stretchr/testify/assert"
 )
 

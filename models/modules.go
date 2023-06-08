@@ -3,10 +3,10 @@ package models
 import (
 	"fmt"
 
-	"github.com/filecoin-project/venus-messager/filestore"
-	"github.com/filecoin-project/venus-messager/models/mysql"
-	"github.com/filecoin-project/venus-messager/models/repo"
-	"github.com/filecoin-project/venus-messager/models/sqlite"
+	"github.com/ipfs-force-community/sophon-messager/filestore"
+	"github.com/ipfs-force-community/sophon-messager/models/mysql"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/models/sqlite"
 	"go.uber.org/fx"
 )
 

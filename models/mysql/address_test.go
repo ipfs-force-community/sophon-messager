@@ -16,7 +16,7 @@ import (
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 func TestAddress(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	"gorm.io/gorm"
 
-	"github.com/filecoin-project/venus-messager/models/repo"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/models/repo"
 )
 
 var DefaultMaxFee = venusTypes.MustParseFIL("0.07")

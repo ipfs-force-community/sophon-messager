@@ -6,10 +6,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/filecoin-project/venus-messager/config"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	"github.com/filecoin-project/venus/pkg/net"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/ipfs-force-community/sophon-messager/config"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
@@ -263,7 +263,7 @@ func makeDHT(ctx context.Context, h types.RawHost, networkName string, bootNodes
 
 func buildHost(ctx context.Context, address string) (types.RawHost, error) {
 	opts := []libp2p.Option{
-		libp2p.UserAgent("venus-messager"),
+		libp2p.UserAgent("sophon-messager"),
 		libp2p.ListenAddrStrings(address),
 		// libp2p.Identity(secret),
 		libp2p.Ping(true),

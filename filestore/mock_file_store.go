@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/filecoin-project/venus-messager/config"
+	"github.com/ipfs-force-community/sophon-messager/config"
 )
 
 type mockFileStore struct {

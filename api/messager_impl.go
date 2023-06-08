@@ -11,17 +11,17 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/venus-messager/publisher/pubsub"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
 	venusTypes "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
 
-	"github.com/filecoin-project/venus-messager/service"
-	"github.com/filecoin-project/venus-messager/version"
+	"github.com/ipfs-force-community/sophon-messager/service"
+	"github.com/ipfs-force-community/sophon-messager/version"
 
-	"github.com/filecoin-project/venus-auth/core"
-	"github.com/filecoin-project/venus-auth/jwtclient"
+	"github.com/ipfs-force-community/sophon-auth/core"
+	"github.com/ipfs-force-community/sophon-auth/jwtclient"
 )
 
 type ImplParams struct {

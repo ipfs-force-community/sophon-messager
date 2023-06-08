@@ -12,7 +12,7 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/types"
 	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 
-	"github.com/filecoin-project/venus-messager/testhelper"
+	"github.com/ipfs-force-community/sophon-messager/testhelper"
 )
 
 type MockWalletProxy struct {

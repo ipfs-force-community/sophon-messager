@@ -1,6 +1,6 @@
 package mysql
 
-import "github.com/filecoin-project/venus-messager/models/mtypes"
+import "github.com/ipfs-force-community/sophon-messager/models/mtypes"
 
 // FeeSpec just use in this package, do not use in others
 type FeeSpec struct {
