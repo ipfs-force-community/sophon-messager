@@ -13,12 +13,12 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.11.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.11.2-0.20230607051553-ccea7bc0ed9d
+	github.com/filecoin-project/venus v1.12.0-rc1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20220719063006-2c54bb379466
-	github.com/ipfs-force-community/sophon-auth v1.11.1-0.20230607031351-bc57c2b78f44
+	github.com/ipfs-force-community/sophon-auth v1.12.0-rc1
 	github.com/ipfs/go-cid v0.3.2
 	github.com/libp2p/go-libp2p v0.23.4
 	github.com/libp2p/go-libp2p-kad-dht v0.18.0
