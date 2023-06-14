@@ -1,5 +1,13 @@
 # sophon-message changelog
 
+## v1.12.0-rc1
+
+* fix: repeat process msg [[#340](https://github.com/ipfs-force-community/sophon-messager/pull/340)]
+* opt: clear invalid error msg [[#343](https://github.com/ipfs-force-community/sophon-messager/pull/343)]
+* feat: add HasActorCfg method [[#344](https://github.com/ipfs-force-community/sophon-messager/pull/344)]
+* chore: upgrade venus and venus-auth [[#345](https://github.com/ipfs-force-community/sophon-messager/pull/345)]
+* feat: rename project [[#346](https://github.com/ipfs-force-community/sophon-messager/pull/346)]
+
 ## v1.11.0
 
 * bump up version to v1.11.0
