@@ -13,7 +13,7 @@ sophon-messager是一个用于管理本地消息的组件，用于保存地址�
 
 ### 整体架构
 
-![](../images/sophon-messager-design.jpg)
+![](https://github.com/ipfs-force-community/sophon-docs/assets/1591330/c4de6a0b-2c33-4fee-8eff-0bc92614c42b)
 
 ### 功能模块
 
@@ -21,7 +21,7 @@ sophon-messager是一个用于管理本地消息的组件，用于保存地址�
 
 该验证分两部分，一是对访问sophon-messager 使用token是否合法的验证，二是验证是否具有访问API的权限，下图是权限验证流程图。
 
-![](../images/sophon-messager-token-verify.jpg)
+![](https://github.com/ipfs-force-community/sophon-docs/assets/1591330/150df3c1-eda5-49ae-8d05-4bfb68254281)
 
 ##### token 合法性验证
 
@@ -50,7 +50,7 @@ API权限分为4种：`read`, `write`, `sign`, `admin`，权限依次由低到�
 
 > 下图是消息选择流程图
 
-![](../images/sophon-messager-select-message.jpg)
+![](https://github.com/ipfs-force-community/sophon-docs/assets/1591330/aeed760e-6b54-4400-8aa8-7a5878469c7c)
 
 #### 数据库模块
 
@@ -84,7 +84,7 @@ NoWalletMsg：未找到钱包
 
 > 下图是消息状态转换图
 
-![](../images/sophon-messager-message-state.jpg)
+![](https://github.com/ipfs-force-community/sophon-docs/assets/1591330/883c12f1-fbd0-4d94-b123-6c5fb312dd0a)
 
 #### head 处理
 
