@@ -2,6 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
 	"github.com/filecoin-project/go-jsonrpc"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -13,6 +16,11 @@ import (
 	"github.com/ipfs-force-community/sophon-messager/config"
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
+)
+
+const (
+	OldRepoPath = "~/.venus-messager"
+	DefRepoPath = "~/.sophon-messager"
 )
 
 func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) {
@@ -61,7 +69,7 @@ func LoadBuiltinActors(ctx context.Context, nodeAPI v1.FullNode) error {
 }
 
 func getRepo(ctx *cli.Context) (filestore.FSRepo, error) {
-	repoPath, err := homedir.Expand(ctx.String("repo"))
+	repoPath, err := GetRepoPath(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -70,4 +78,45 @@ func getRepo(ctx *cli.Context) (filestore.FSRepo, error) {
 		return nil, err
 	}
 	return repo, nil
+}
+
+func GetRepoPath(cctx *cli.Context) (string, error) {
+	repoPath, err := homedir.Expand(cctx.String("repo"))
+	if err != nil {
+		return "", err
+	}
+	has, err := hasFSRepo(repoPath)
+	if err != nil {
+		return "", err
+	}
+	if !has {
+		// check old repo path
+		rPath, err := homedir.Expand(OldRepoPath)
+		if err != nil {
+			return "", err
+		}
+		has, err = hasFSRepo(rPath)
+		if err != nil {
+			return "", err
+		}
+		if has {
+			return rPath, nil
+		}
+	}
+	return repoPath, nil
+}
+
+func hasFSRepo(repoPath string) (bool, error) {
+	fi, err := os.Stat(repoPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	if !fi.IsDir() {
+		return false, fmt.Errorf("%s is not a folder", repoPath)
+	}
+
+	return true, nil
 }
