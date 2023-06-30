@@ -1,5 +1,9 @@
 # sophon-message changelog
 
+## v1.12.0
+
+* fix: add repo compatibility for cli [[#350](https://github.com/ipfs-force-community/sophon-messager/pull/350)]
+
 ## v1.12.0-rc1
 
 * fix: repeat process msg [[#340](https://github.com/ipfs-force-community/sophon-messager/pull/340)]
