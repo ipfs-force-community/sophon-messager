@@ -716,7 +716,7 @@ var clearUnFillMessageCmd = &cli.Command{
 }
 
 var updateMessageStateCmd = &cli.Command{
-	Name:  "update-filled-msg",
+	Name:  "update-state",
 	Usage: "manual update the state of specific id message",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
