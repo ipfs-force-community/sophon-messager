@@ -222,6 +222,7 @@ func (m *MessageImp) UpdateMessageStateByID(ctx context.Context, id string, stat
 	if checkErr := jwtclient.CheckPermissionBySigner(ctx, m.AuthClient, msg.From); checkErr != nil {
 		return checkErr
 	}
+	log.Infof("update message(%s) state, from %s to %s, ", msg.ID, msg.State.String(), state.String())
 	return m.MessageSrv.UpdateMessageStateByID(ctx, id, state)
 }
 

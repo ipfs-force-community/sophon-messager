@@ -34,6 +34,7 @@ var MsgCmds = &cli.Command{
 		markBadCmd,
 		clearUnFillMessageCmd,
 		recoverFailedMsgCmd,
+		updateMessageStateCmd,
 	},
 }
 
@@ -709,6 +710,61 @@ var clearUnFillMessageCmd = &cli.Command{
 			return err
 		}
 		fmt.Printf("clear %d unfill messages \n", count)
+
+		return nil
+	},
+}
+
+var updateMessageStateCmd = &cli.Command{
+	Name:  "update-state",
+	Usage: "manual update the state of specific id message",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "id",
+			Usage: "message id",
+		},
+		&cli.IntFlag{
+			Name:  "state",
+			Value: int(types.UnFillMsg),
+			Usage: `filter by message state,
+state:
+  1:  UnFillMsg
+  2:  FillMsg
+  3:  OnChainMsg
+  4:  FailedMsg
+  5:  NonceConflictMsg
+  6:  NoWalletMsg
+`,
+		},
+		reallyDoItFlag,
+	},
+	Action: func(cctx *cli.Context) error {
+		if !cctx.Bool("really-do-it") {
+			return errors.New("confirm to exec this command, specify --really-do-it")
+		}
+
+		client, closer, err := getAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		state := types.MessageState(cctx.Int("state"))
+		id := cctx.String("id")
+
+		msg, err := client.GetMessageByUid(cctx.Context, id)
+		if err != nil {
+			return err
+		}
+		if msg.State == state {
+			return fmt.Errorf("the state has not changed, no need to update")
+		}
+
+		err = client.UpdateMessageStateByID(cctx.Context, id, state)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("update message(id=%s) state to %s success\n", id, state.String())
 
 		return nil
 	},
