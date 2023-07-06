@@ -197,9 +197,9 @@ func (m *sqliteMessageRepo) ListMessageByParams(params *repo.MsgQueryParams) ([]
 	paramsMap := params.ToMap()
 	var err error
 	if params.IsPaged() {
-		err = m.DB.Where(paramsMap).Limit(params.Limit()).Offset(params.Offset()).Find(&sqlMsgs).Error
+		err = m.DB.Order("updated_at desc").Where(paramsMap).Limit(params.Limit()).Offset(params.Offset()).Find(&sqlMsgs).Error
 	} else {
-		err = m.DB.Where(paramsMap).Find(&sqlMsgs).Error
+		err = m.DB.Order("updated_at desc").Where(paramsMap).Find(&sqlMsgs).Error
 	}
 	if err != nil {
 		return nil, err
