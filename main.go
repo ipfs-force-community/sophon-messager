@@ -12,7 +12,6 @@ import (
 
 	"github.com/ipfs-force-community/sophon-messager/publisher"
 	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
-	"github.com/mitchellh/go-homedir"
 
 	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -38,11 +37,6 @@ import (
 	"github.com/ipfs-force-community/sophon-messager/version"
 )
 
-const (
-	oldRepoPath = "~/.venus-messager"
-	defRepoPath = "~/.sophon-messager"
-)
-
 var log = logging.Logger("main")
 
 func main() {
@@ -52,7 +46,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "repo",
-				Value: defRepoPath,
+				Value: ccli.DefRepoPath,
 			},
 		},
 		Commands: []*cli.Command{
@@ -142,7 +136,7 @@ func runAction(cctx *cli.Context) error {
 	// Set the log level. The default log level is info
 	utils.SetupLogLevels()
 
-	repoPath, err := getRepoPath(cctx)
+	repoPath, err := ccli.GetRepoPath(cctx)
 	if err != nil {
 		return err
 	}
@@ -441,30 +435,4 @@ func setEip155ChainID(networkName string) error {
 	types.SetEip155ChainID(eip155ChainID)
 
 	return nil
-}
-
-func getRepoPath(cctx *cli.Context) (string, error) {
-	repoPath, err := homedir.Expand(cctx.String("repo"))
-	if err != nil {
-		return "", err
-	}
-	has, err := hasFSRepo(repoPath)
-	if err != nil {
-		return "", err
-	}
-	if !has {
-		// check old repo path
-		rPath, err := homedir.Expand(oldRepoPath)
-		if err != nil {
-			return "", err
-		}
-		has, err = hasFSRepo(rPath)
-		if err != nil {
-			return "", err
-		}
-		if has {
-			return rPath, nil
-		}
-	}
-	return repoPath, nil
 }
