@@ -235,23 +235,21 @@ func TestListMessageByParams(t *testing.T) {
 		addrCases = append(addrCases, addr)
 	}
 
-	msgList, err := messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.UnFillMsg}, PageIndex: 1, PageSize: 100})
-	assert.NoError(t, err)
-	assert.Len(t, msgList, 0)
-
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{State: []types.MessageState{types.UnFillMsg}, PageIndex: 0, PageSize: 100})
-	assert.NoError(t, err)
-	assert.Len(t, msgList, 0)
-
 	msgCount := 100
 	onChainMsgCount := 0
 	unFillMsgCount := 0
 	addr0Count := 0
 	addr1Count := 0
 	addr0onChainMsgCount := 0
+	stamp := time.Now()
+	beforeStamp := 50
 
 	msgs := testhelper.NewMessages(msgCount)
-	for _, msg := range msgs {
+	for i, msg := range msgs {
+		if i == beforeStamp {
+			stamp = time.Now()
+		}
+
 		msg.State = types.MessageState(rand.Intn(7))
 		msg.From = addrCases[rand.Intn(len(addrCases))]
 		if msg.State == types.OnChainMsg {
@@ -272,16 +270,12 @@ func TestListMessageByParams(t *testing.T) {
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
 
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 1, PageSize: msgCount})
+	msgList, err := messageRepo.ListMessageByParams(&repo.MsgQueryParams{Limit: uint(msgCount)})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, msgCount)
 
-	// invalid page index (page size) will be ignored
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 0, PageSize: msgCount / 2})
-	assert.NoError(t, err)
-	assert.Len(t, msgList, msgCount)
-
-	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{PageIndex: 1, PageSize: msgCount / 2})
+	// limit
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{Limit: uint(msgCount / 2)})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, msgCount/2)
 
@@ -309,6 +303,11 @@ func TestListMessageByParams(t *testing.T) {
 	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{From: []address.Address{addrCases[0]}, State: []types.MessageState{types.OnChainMsg}})
 	assert.NoError(t, err)
 	assert.Len(t, msgList, addr0onChainMsgCount)
+
+	// by UpdateAt
+	msgList, err = messageRepo.ListMessageByParams(&repo.MsgQueryParams{ByUpdateAt: &stamp})
+	assert.NoError(t, err)
+	assert.Len(t, msgList, msgCount-beforeStamp)
 
 }
 
