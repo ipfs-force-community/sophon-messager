@@ -35,10 +35,6 @@
   listenAddresses = "/ip4/0.0.0.0/tcp/0"
   minPeerThreshold = 0
 
-[log]
-  level = "info"
-  path = ""
-
 [messageService]
   DefaultTimeout = "1s"  #请求链节点接口的超时时长 
   EstimateMessageTimeout = "5s" #调用链节点进行消息预估gas费等的超时时长
@@ -79,11 +75,12 @@
 
 #可选
 [rateLimit]
-  redis = ""
+  #redis地址，用于记录用户访问的次数。如果要开启对某个user的访问限速，还需要`auth` 服务同时设置`sophon-auth user rate-limit`命令。
+  redis = ""  # eg. 127.0.0.1:6379
 
 #可选
 [tracing]
-  JaegerEndpoint = "localhost:6831"
+  JaegerEndpoint = "" # 例如：localhost:6831
   JaegerTracingEnabled = false
   ProbabilitySampler = 1.0
   ServerName = ""
