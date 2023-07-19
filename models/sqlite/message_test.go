@@ -458,8 +458,8 @@ func TestListBlockedMessage(t *testing.T) {
 		&repo.MsgQueryParams{From: []address.Address{msgState[types.FillMsg][0].From, msgState[types.UnFillMsg][0].From}}, time.Second*2)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(msgList))
-	testhelper.Equal(t, msgState[types.FillMsg][0], msgList[0])
-	testhelper.Equal(t, msgState[types.UnFillMsg][0], msgList[1])
+	testhelper.Equal(t, msgState[types.UnFillMsg][0], msgList[0])
+	testhelper.Equal(t, msgState[types.FillMsg][0], msgList[1])
 }
 
 func TestListUnChainMessageByAddress(t *testing.T) {
