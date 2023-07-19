@@ -16,14 +16,13 @@ func SetupJaeger(lc fx.Lifecycle, tcfg *metrics.TraceConfig) error {
 		return nil
 	}
 
-	exporter, err := metrics.RegisterJaeger(tcfg.ServerName, tcfg)
+	exporter, err := metrics.SetupJaegerTracing(tcfg.ServerName, tcfg)
 	if err != nil {
 		return err
 	}
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			metrics.UnregisterJaeger(exporter)
-			return nil
+			return metrics.ShutdownJaeger(ctx, exporter)
 		},
 	})
 	return nil

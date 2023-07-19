@@ -194,13 +194,10 @@ func (m *sqliteMessageRepo) ExpireMessage(msgs []*types.Message) error {
 
 func (m *sqliteMessageRepo) ListMessageByParams(params *repo.MsgQueryParams) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	paramsMap := params.ToMap()
-	var err error
-	if params.IsPaged() {
-		err = m.DB.Where(paramsMap).Limit(params.Limit()).Offset(params.Offset()).Find(&sqlMsgs).Error
-	} else {
-		err = m.DB.Where(paramsMap).Find(&sqlMsgs).Error
-	}
+
+	query := parseQueryParams(m.DB, params)
+
+	err := query.Find(&sqlMsgs).Error
 	if err != nil {
 		return nil, err
 	}
@@ -427,11 +424,15 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 	return result, err
 }
 
-func (m *sqliteMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListFailedMessage(params *repo.MsgQueryParams) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
-	p.State = []types.MessageState{types.UnFillMsg}
-	paramsMap := p.ToMap()
-	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "error_msg != ?", "").Error
+	params.State = []types.MessageState{types.UnFillMsg}
+
+	query := m.DB.Order("created_at")
+	query.Where("error_msg != ?", "")
+	query = parseQueryParams(query, params)
+
+	err := query.Find(&sqlMsgs).Error
 	if err != nil {
 		return nil, err
 	}
@@ -442,12 +443,17 @@ func (m *sqliteMessageRepo) ListFailedMessage(p *repo.MsgQueryParams) ([]*types.
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) ListBlockedMessage(p *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListBlockedMessage(params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error) {
 	var sqlMsgs []*sqliteMessage
 	t := time.Now().Add(-d)
-	p.State = []types.MessageState{types.FillMsg, types.UnFillMsg}
-	paramsMap := p.ToMap()
-	err := m.DB.Order("created_at").Where(paramsMap).Find(&sqlMsgs, "created_at < ?", t).Error
+	params.State = []types.MessageState{types.FillMsg, types.UnFillMsg}
+
+	query := parseQueryParams(m.DB, params)
+
+	query.Order("created_at")
+	query.Where("created_at < ?", t)
+
+	err := query.Find(&sqlMsgs).Error
 	if err != nil {
 		return nil, err
 	}
@@ -542,4 +548,30 @@ func (m *sqliteMessageRepo) UpdateErrMsg(id string, errMsg string) error {
 		"updated_at": time.Now(),
 	}
 	return m.DB.Model(&sqliteMessage{}).Where("id = ?", id).UpdateColumns(updateColumns).Error
+}
+
+func parseQueryParams(query *gorm.DB, params *repo.MsgQueryParams) *gorm.DB {
+	if !params.Asc {
+		query = query.Order("updated_at desc")
+	}
+	if len(params.From) > 0 {
+		temp := make([]string, len(params.From))
+		for i, addr := range params.From {
+			temp[i] = addr.String()
+		}
+		query = query.Where("from_addr IN ?", temp)
+	}
+	if len(params.State) > 0 {
+		query = query.Where("state IN ?", params.State)
+	}
+	if params.Offset != 0 {
+		query = query.Offset(int(params.Offset))
+	}
+	if params.Limit != 0 {
+		query = query.Limit(int(params.Limit))
+	}
+	if params.ByUpdateAt != nil {
+		query = query.Where("updated_at >= ?", params.ByUpdateAt)
+	}
+	return query
 }
