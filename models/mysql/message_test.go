@@ -29,7 +29,7 @@ func TestListMessageByParams(t *testing.T) {
 	state := types.OnChainMsg
 
 	t.Run("by from", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ?")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr IN (?) ORDER BY updated_at desc")).
 			WithArgs(from1.String()).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -38,7 +38,7 @@ func TestListMessageByParams(t *testing.T) {
 	})
 
 	t.Run("by state", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ?")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state IN (?) ORDER BY updated_at desc")).
 			WithArgs(state).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -47,7 +47,7 @@ func TestListMessageByParams(t *testing.T) {
 	})
 
 	t.Run("by from and state", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ?")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr IN (?) AND state IN (?) ORDER BY updated_at desc")).
 			WithArgs(from1.String(), state).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -56,7 +56,7 @@ func TestListMessageByParams(t *testing.T) {
 	})
 
 	t.Run("by multi address", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` IN (?,?)")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr IN (?,?) ORDER BY updated_at desc")).
 			WithArgs(from1.String(), from2.String()).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -399,8 +399,8 @@ func TestListFailedMessage(t *testing.T) {
 	ids := []string{"msg1", "msg2"}
 
 	t.Run("no param", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg != ?) ORDER BY created_at")).
-			WithArgs(types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE (error_msg != ?) AND state IN (?) ORDER BY created_at,updated_at desc")).
+			WithArgs("", types.UnFillMsg).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{})
 		assert.NoError(t, err)
@@ -408,8 +408,8 @@ func TestListFailedMessage(t *testing.T) {
 	})
 
 	t.Run("state cover", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` = ? AND (error_msg != ?) ORDER BY created_at")).
-			WithArgs(types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE (error_msg != ?) AND state IN (?) ORDER BY created_at,updated_at desc")).
+			WithArgs("", types.UnFillMsg).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{State: []types.MessageState{types.OnChainMsg}})
 		assert.NoError(t, err)
@@ -418,8 +418,8 @@ func TestListFailedMessage(t *testing.T) {
 
 	t.Run("indicate from", func(t *testing.T) {
 		addr := testutil.AddressProvider()(t)
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` = ? AND (error_msg != ?) ORDER BY created_at")).
-			WithArgs(addr.String(), types.UnFillMsg, "").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE (error_msg != ?) AND from_addr IN (?) AND state IN (?) ORDER BY created_at,updated_at desc")).
+			WithArgs("", addr.String(), types.UnFillMsg).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
 		res, err := r.MessageRepo().ListFailedMessage(&repo.MsgQueryParams{From: []address.Address{addr}})
 		assert.NoError(t, err)
@@ -436,7 +436,7 @@ func TestListBlockedMessage(t *testing.T) {
 	blocked := time.Second * 3
 
 	t.Run("no param", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE state IN (?,?) AND created_at < ? ORDER BY updated_at desc,created_at")).
 			WithArgs(types.FillMsg, types.UnFillMsg, anyTime{}).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
@@ -446,7 +446,7 @@ func TestListBlockedMessage(t *testing.T) {
 	})
 
 	t.Run("param with address", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` = ? AND `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr IN (?) AND state IN (?,?) AND created_at < ? ORDER BY updated_at desc,created_at")).
 			WithArgs(from.String(), types.FillMsg, types.UnFillMsg, anyTime{}).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
@@ -456,7 +456,7 @@ func TestListBlockedMessage(t *testing.T) {
 	})
 
 	t.Run("param with addresses", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE `from_addr` IN (?,?) AND `state` IN (?,?) AND created_at < ? ORDER BY created_at")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE from_addr IN (?,?) AND state IN (?,?) AND created_at < ? ORDER BY updated_at desc,created_at")).
 			WithArgs(from.String(), from.String(), types.FillMsg, types.UnFillMsg, anyTime{}).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ids[0]).AddRow(ids[1]))
 
