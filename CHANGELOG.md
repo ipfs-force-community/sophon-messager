@@ -1,5 +1,9 @@
 # sophon-message changelog
 
+## v1.12.1-rc1
+
+* Feat/add asc and by update at to msg query params by @LinZexiao in https://github.com/ipfs-force-community/sophon-messager/pull/357
+
 ## v1.12.0
 
 * fix: add repo compatibility for cli [[#350](https://github.com/ipfs-force-community/sophon-messager/pull/350)]
