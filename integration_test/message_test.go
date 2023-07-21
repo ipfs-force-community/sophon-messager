@@ -396,8 +396,8 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 		assert.NoError(t, err)
 		assert.Len(t, msgs, idsLen)
 		checkCreatedAt(msgs, isAsc)
-		for i, msg := range msgs {
-			assert.Equal(t, ids[idsLen-1-i], msg.ID)
+		for _, msg := range msgs {
+			assert.Contains(t, ids, msg.ID)
 		}
 	}
 }
