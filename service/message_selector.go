@@ -115,7 +115,7 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 	}
 
 	for _, w := range msgSelectMgr.works {
-		go w.startSelectMessage(appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
+		go w.startSelectMessage(appliedNonce, ts, addrSelMsgNum[w.addr], sharedParams)
 	}
 
 	return nil
@@ -278,7 +278,6 @@ func newWork(ctx context.Context,
 
 func (w *work) startSelectMessage(
 	appliedNonce *utils.NonceMap,
-	addrInfo *types.Address,
 	ts *venusTypes.TipSet,
 	maxAllowPendingMessage uint64,
 	sharedParams *types.SharedSpec,
@@ -298,6 +297,12 @@ func (w *work) startSelectMessage(
 		return
 	}
 
+	addrInfo, err := w.addressService.GetAddress(w.ctx, w.addr)
+	if err != nil {
+		w.log.Errorf("got address %s failed: %v", addrInfo.Addr, err)
+		return
+	}
+
 	w.start = time.Now()
 	ctx, cancel := context.WithTimeout(w.ctx, w.cfg.SignMessageTimeout+w.cfg.EstimateMessageTimeout)
 	defer w.finish()
@@ -308,8 +313,8 @@ func (w *work) startSelectMessage(
 		w.log.Errorf("select message failed: %v", err)
 		return
 	}
-	w.log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | took: %v", len(selectResult.SelectMsg),
-		len(selectResult.ToPushMsg), len(selectResult.ErrMsg), time.Since(w.start))
+	w.log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | Nonce: %d | took: %v",
+		len(selectResult.SelectMsg), len(selectResult.ToPushMsg), len(selectResult.ErrMsg), selectResult.Address.Nonce, time.Since(w.start))
 
 	recordMetric(ctx, w.addr, selectResult)
 
@@ -573,10 +578,15 @@ func (w *work) signMessage(ctx context.Context, msg *types.Message, accounts []s
 }
 
 func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
+	selectedMsgLen := len(selectResult.SelectMsg)
+	errMsgLen := len(selectResult.ErrMsg)
+	if selectedMsgLen == 0 && errMsgLen == 0 {
+		// no data need to save
+		return nil
+	}
 	startSaveDB := time.Now()
-	w.log.Infof("start save messages to database")
 	err := w.repo.Transaction(func(txRepo repo.TxRepo) error {
-		if len(selectResult.SelectMsg) > 0 {
+		if selectedMsgLen > 0 {
 			if err := txRepo.MessageRepo().BatchSaveMessage(selectResult.SelectMsg); err != nil {
 				return err
 			}
@@ -586,7 +596,6 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 				return err
 			}
 		}
-
 		for _, m := range selectResult.ErrMsg {
 			w.log.Infof("update message %s error info with error %s", m.id, m.err)
 			if err := txRepo.MessageRepo().UpdateErrMsg(m.id, m.err); err != nil {
@@ -595,7 +604,7 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 		}
 		return nil
 	})
-	w.log.Infof("end save messages to database, took %v, err %v", time.Since(startSaveDB), err)
+	w.log.Infof("save messages to database, took %v, err %v", time.Since(startSaveDB), err)
 
 	return err
 }

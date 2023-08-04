@@ -758,9 +758,10 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	if err != nil {
 		return cid.Undef, fmt.Errorf("found message %v", err)
 	}
-	if msg.State == types.OnChainMsg {
-		return cid.Undef, fmt.Errorf("message already on chain")
+	if msg.State != types.FillMsg {
+		return cid.Undef, fmt.Errorf("expect FillMsg, actual %v", msg.State.String())
 	}
+	oldCid := msg.SignedCid
 
 	if params.Auto {
 		cfg, err := ms.nodeClient.MpoolGetConfig(ctx)
@@ -849,6 +850,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 		return cid.Undef, err
 	}
 
+	log.Infow("replace message, old cid: %v, new cid: %v", oldCid, signedMsg.Cid())
 	if err := ms.repo.MessageRepo().UpdateMessageByState(msg, types.FillMsg); err != nil {
 		return cid.Undef, err
 	}

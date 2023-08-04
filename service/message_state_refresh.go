@@ -160,7 +160,7 @@ func (ms *MessageService) processRevertHead(ctx context.Context, h *headChan) (m
 		}
 
 		if len(msgCIDs) > 0 {
-			log.Debugf("revert %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), ts.Height())
+			log.Infof("revert %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), ts.Height())
 			msgCIDs = msgCIDs[:0]
 		}
 	}
@@ -216,7 +216,7 @@ func (ms *MessageService) processBlockParentMessages(ctx context.Context, apply 
 
 		}
 		if len(msgCIDs) > 0 {
-			log.Debugf("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
+			log.Infof("apply %d messages %v at height %d", len(msgCIDs), strings.Join(msgCIDs, ","), pts.Height())
 			msgCIDs = msgCIDs[:0]
 		}
 	}
