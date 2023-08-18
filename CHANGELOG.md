@@ -1,5 +1,22 @@
 # sophon-message changelog
 
+## v1.13.0-rc1
+
+### New Feature
+* feat: add asc and by update at to msg query params in [[#357](https://github.com/ipfs-force-community/sophon-messager/pull/357)]
+* feat(cmds): add update message state cmd in [[#351](https://github.com/ipfs-force-community/sophon-messager/pull/351)]
+
+
+### Documentation And Chores
+* doc: Update design-specs.md in [[#349](https://github.com/ipfs-force-community/sophon-messager/pull/349)]
+* doc: Update README.md in [[#348](https://github.com/ipfs-force-community/sophon-messager/pull/348)]
+* doc: add config explanation /添加配置的解释 by @elvin-du in https://github.com/ipfs-force-community/sophon-messager/pull/354
+* doc: annotate a configuration file using comments in toml format / toml注释的格式进行参数说明 by @elvin-du in https://github.com/ipfs-force-community/sophon-messager/pull/355
+* chore: merge Release/v1.12 into master in [[#353](https://github.com/ipfs-force-community/sophon-messager/pull/353)]
+
+
+
+
 ## v1.12.0
 
 * fix: add repo compatibility for cli [[#350](https://github.com/ipfs-force-community/sophon-messager/pull/350)]
