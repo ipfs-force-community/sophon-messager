@@ -13,14 +13,14 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.11.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.12.0-rc1.0.20230707081828-69ccd27a590e
+	github.com/filecoin-project/venus v1.13.0-rc1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20230626064437-eed34cb166f5
-	github.com/ipfs-force-community/sophon-auth v1.12.0
+	github.com/ipfs-force-community/sophon-auth v1.13.0-rc1
 	github.com/ipfs/go-cid v0.4.1
-	github.com/libp2p/go-libp2p v0.27.5
+	github.com/libp2p/go-libp2p v0.27.8
 	github.com/libp2p/go-libp2p-kad-dht v0.21.1
 	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/mitchellh/go-homedir v1.1.0
@@ -230,8 +230,8 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
-	github.com/quic-go/qtls-go1-19 v0.3.2 // indirect
-	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
+	github.com/quic-go/qtls-go1-19 v0.3.3 // indirect
+	github.com/quic-go/qtls-go1-20 v0.2.3 // indirect
 	github.com/quic-go/quic-go v0.33.0 // indirect
 	github.com/quic-go/webtransport-go v0.5.2 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
