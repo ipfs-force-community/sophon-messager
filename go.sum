@@ -462,8 +462,8 @@ github.com/filecoin-project/specs-storage v0.4.1/go.mod h1:Z2eK6uMwAOSLjek6+sy0j
 github.com/filecoin-project/storetheindex v0.4.30-0.20221114113647-683091f8e893/go.mod h1:S7590oDimBvXMUtzWsBXoshu9HtYKwtXl47zAK9rcP8=
 github.com/filecoin-project/test-vectors/schema v0.0.5/go.mod h1:iQ9QXLpYWL3m7warwvK1JC/pTri8mnfEmKygNDqqY6E=
 github.com/filecoin-project/venus v1.11.1/go.mod h1:H8A3djsrHKRWuKnJI/8Y6xZRudbV9V2x5NIP8/PVPfQ=
-github.com/filecoin-project/venus v1.12.0-rc1.0.20230707081828-69ccd27a590e h1:J9DZvjDcGBZJE1Fxg8hr7saKBAlD0cxd+Yr/4orwb20=
-github.com/filecoin-project/venus v1.12.0-rc1.0.20230707081828-69ccd27a590e/go.mod h1:+dxagHh4k8MvkMbRPbZNttRm7XSz8n/k1ObNms00ZzA=
+github.com/filecoin-project/venus v1.13.0 h1:c1t2GCPMh1DPD3SgF3PQgyONhCjUrGAqcppEybTClTM=
+github.com/filecoin-project/venus v1.13.0/go.mod h1:RtrF8fCy1xrCytfaVMvPU2J3JrcMqapzvJpvK5CKdTA=
 github.com/filecoin-project/venus-auth v1.11.0/go.mod h1:aBfIfNxQkdcY8Rk5wrQn9qRtJpH4RTDdc10Ac+ferzs=
 github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4/go.mod h1:T9YF2M40nIgbVgp3rreNmTged+9HrbNTIQf1PsaIiTA=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
@@ -841,8 +841,8 @@ github.com/ipfs-force-community/go-jsonrpc v0.1.7/go.mod h1:jBSvPTl8V1N7gSTuCR4b
 github.com/ipfs-force-community/metrics v1.0.1-0.20211022060227-11142a08b729/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
 github.com/ipfs-force-community/metrics v1.0.1-0.20230626064437-eed34cb166f5 h1:fn4G/yeHNX4rVdHH/KELwxjcnbx5327hQBw4eXs5TEI=
 github.com/ipfs-force-community/metrics v1.0.1-0.20230626064437-eed34cb166f5/go.mod h1:yi9gw+y+UjzWjaYZG2xgnH0T6PcmwHRKhDkbylp9qxc=
-github.com/ipfs-force-community/sophon-auth v1.12.0 h1:nqjsA6bIv9Rd9+7lHxGDvNJ7gvt/M2yGSxymA6AoxXI=
-github.com/ipfs-force-community/sophon-auth v1.12.0/go.mod h1:cGYCfjA/BDB/Km9P7Za6t1hmwpFlPKf8ho/CHmLG81Y=
+github.com/ipfs-force-community/sophon-auth v1.13.0 h1:dCH5J3jbkyidNzHpJK3lIfzzJoPLqN30AM960cU6nVM=
+github.com/ipfs-force-community/sophon-auth v1.13.0/go.mod h1:+S04oHCcJS6hylIv1kb74mA/m7qe41m6Py1hTFLM6rE=
 github.com/ipfs/bbloom v0.0.1/go.mod h1:oqo8CVWsJFMOZqTglBG4wydCE4IQA/G2/SEofB0rjUI=
 github.com/ipfs/bbloom v0.0.4 h1:Gi+8EGJ2y5qiD5FbsbpX/TMNcJw8gSqr7eyjHa4Fhvs=
 github.com/ipfs/bbloom v0.0.4/go.mod h1:cS9YprKXpoZ9lT0n/Mw/a6/aFV6DTjTLYHeA+gyqMG0=
@@ -1274,8 +1274,8 @@ github.com/libp2p/go-libp2p v0.20.0/go.mod h1:g0C5Fu+aXXbCXkusCzLycuBowEih3ElmDq
 github.com/libp2p/go-libp2p v0.22.0/go.mod h1:UDolmweypBSjQb2f7xutPnwZ/fxioLbMBxSjRksxxU4=
 github.com/libp2p/go-libp2p v0.23.2/go.mod h1:s9DEa5NLR4g+LZS+md5uGU4emjMWFiqkZr6hBTY8UxI=
 github.com/libp2p/go-libp2p v0.23.4/go.mod h1:s9DEa5NLR4g+LZS+md5uGU4emjMWFiqkZr6hBTY8UxI=
-github.com/libp2p/go-libp2p v0.27.5 h1:KwA7pXKXpz8hG6Cr1fMA7UkgleogcwQj0sxl5qquWRg=
-github.com/libp2p/go-libp2p v0.27.5/go.mod h1:oMfQGTb9CHnrOuSM6yMmyK2lXz3qIhnkn2+oK3B1Y2g=
+github.com/libp2p/go-libp2p v0.27.8 h1:IX5x/4yKwyPQeVS2AXHZ3J4YATM9oHBGH1gBc23jBAI=
+github.com/libp2p/go-libp2p v0.27.8/go.mod h1:eCFFtd0s5i/EVKR7+5Ki8bM7qwkNW3TPTTSSW9sz8NE=
 github.com/libp2p/go-libp2p-asn-util v0.0.0-20200825225859-85005c6cf052/go.mod h1:nRMRTab+kZuk0LnKZpxhOVH/ndsdr2Nr//Zltc/vwgo=
 github.com/libp2p/go-libp2p-asn-util v0.1.0/go.mod h1:wu+AnM9Ii2KgO5jMmS1rz9dvzTdj8BXqsPR9HR0XB7I=
 github.com/libp2p/go-libp2p-asn-util v0.2.0/go.mod h1:WoaWxbHKBymSN41hWSq/lGKJEca7TNm58+gGJi2WsLI=
@@ -2050,10 +2050,10 @@ github.com/prometheus/statsd_exporter v0.23.0 h1:GEkriUCmARYh1gSA0gzpvmTg/oHMc5M
 github.com/prometheus/statsd_exporter v0.23.0/go.mod h1:1itCY9XMa2p5pjO5HseGjs5cnaIA5qxLCYmn3OUna58=
 github.com/quic-go/qpack v0.4.0 h1:Cr9BXA1sQS2SmDUWjSofMPNKmvF6IiIfDRmgU0w1ZCo=
 github.com/quic-go/qpack v0.4.0/go.mod h1:UZVnYIfi5GRk+zI9UMaCPsmZ2xKJP7XBUvVyT1Knj9A=
-github.com/quic-go/qtls-go1-19 v0.3.2 h1:tFxjCFcTQzK+oMxG6Zcvp4Dq8dx4yD3dDiIiyc86Z5U=
-github.com/quic-go/qtls-go1-19 v0.3.2/go.mod h1:ySOI96ew8lnoKPtSqx2BlI5wCpUVPT05RMAlajtnyOI=
-github.com/quic-go/qtls-go1-20 v0.2.2 h1:WLOPx6OY/hxtTxKV1Zrq20FtXtDEkeY00CGQm8GEa3E=
-github.com/quic-go/qtls-go1-20 v0.2.2/go.mod h1:JKtK6mjbAVcUTN/9jZpvLbGxvdWIKS8uT7EiStoU1SM=
+github.com/quic-go/qtls-go1-19 v0.3.3 h1:wznEHvJwd+2X3PqftRha0SUKmGsnb6dfArMhy9PeJVE=
+github.com/quic-go/qtls-go1-19 v0.3.3/go.mod h1:ySOI96ew8lnoKPtSqx2BlI5wCpUVPT05RMAlajtnyOI=
+github.com/quic-go/qtls-go1-20 v0.2.3 h1:m575dovXn1y2ATOb1XrRFcrv0F+EQmlowTkoraNkDPI=
+github.com/quic-go/qtls-go1-20 v0.2.3/go.mod h1:JKtK6mjbAVcUTN/9jZpvLbGxvdWIKS8uT7EiStoU1SM=
 github.com/quic-go/quic-go v0.33.0 h1:ItNoTDN/Fm/zBlq769lLJc8ECe9gYaW40veHCCco7y0=
 github.com/quic-go/quic-go v0.33.0/go.mod h1:YMuhaAV9/jIu0XclDXwZPAsP/2Kgr5yMYhe9oxhhOFA=
 github.com/quic-go/webtransport-go v0.5.2 h1:GA6Bl6oZY+g/flt00Pnu0XtivSD8vukOu3lYhJjnGEk=

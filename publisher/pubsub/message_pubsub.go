@@ -66,7 +66,6 @@ func NewPubsub(ctx context.Context,
 	}
 	if netconfig != nil {
 		bootstrap = append(bootstrap, netconfig.Bootstrap.Addresses...)
-		finalThreshold = netconfig.Bootstrap.MinPeerThreshold
 		_ = toml.Unmarshal([]byte(netconfig.Bootstrap.Period), &finalPeriod)
 	}
 	if period != 0 {
