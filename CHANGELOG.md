@@ -1,5 +1,17 @@
 # sophon-message changelog
 
+## v1.14.0-rc1
+
+* Update design-specs.md [[#349](https://github.com/ipfs-force-community/sophon-messager/pull/349)]
+* Update README.md [[#348](https://github.com/ipfs-force-community/sophon-messager/pull/348)]
+* feat(cmds): add update message state cmd [[#351](https://github.com/ipfs-force-community/sophon-messager/pull/351)]
+* merge Release/v1.12 into master [[#353](https://github.com/ipfs-force-community/sophon-messager/pull/353)]
+* add config explanation /添加配置的解释 [[#354](https://github.com/ipfs-force-community/sophon-messager/pull/354)]
+* annotate a configuration file using comments in toml format / toml注释的格式进行参数说明 [[#355](https://github.com/ipfs-force-community/sophon-messager/pull/355)]
+* Feat/add asc and by update at to msg query params [[#357](https://github.com/ipfs-force-community/sophon-messager/pull/357)]
+* chore: bump up version to v1.13.0-rc1 [[#359](https://github.com/ipfs-force-community/sophon-messager/pull/359)]
+* chore: bump up version to v1.13.0 [[#360](https://github.com/ipfs-force-community/sophon-messager/pull/360)]
+
 ## v1.13.0
 
 ## v1.13.0-rc1
@@ -12,8 +24,8 @@
 ### Documentation And Chores
 * doc: Update design-specs.md in [[#349](https://github.com/ipfs-force-community/sophon-messager/pull/349)]
 * doc: Update README.md in [[#348](https://github.com/ipfs-force-community/sophon-messager/pull/348)]
-* doc: add config explanation /添加配置的解释 by @elvin-du in https://github.com/ipfs-force-community/sophon-messager/pull/354
-* doc: annotate a configuration file using comments in toml format / toml注释的格式进行参数说明 by @elvin-du in https://github.com/ipfs-force-community/sophon-messager/pull/355
+* doc: add config explanation /添加配置的解释 [[#354](https://github.com/ipfs-force-community/sophon-messager/pull/354)]
+* doc: annotate a configuration file using comments in toml format / toml注释的格式进行参数说明 [[#355](https://github.com/ipfs-force-community/sophon-messager/pull/355)]
 * chore: merge Release/v1.12 into master in [[#353](https://github.com/ipfs-force-community/sophon-messager/pull/353)]
 
 
