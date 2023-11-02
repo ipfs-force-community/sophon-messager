@@ -1,5 +1,9 @@
 # sophon-message changelog
 
+## v1.14.0-rc2
+
+* chore: update venus & go-jsonrpc [[#365](https://github.com/ipfs-force-community/sophon-messager/pull/365)]
+
 ## v1.14.0-rc1
 
 * Update design-specs.md [[#349](https://github.com/ipfs-force-community/sophon-messager/pull/349)]
