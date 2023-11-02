@@ -11,9 +11,9 @@ require (
 	github.com/filecoin-project/go-address v1.1.0
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-jsonrpc v0.1.5
-	github.com/filecoin-project/go-state-types v0.12.4
+	github.com/filecoin-project/go-state-types v0.12.5
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.14.0-rc2
+	github.com/filecoin-project/venus v1.14.0-rc4
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
@@ -253,4 +253,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.8-0.20230905031755-d9d242594c9b
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.9-0.20231019092801-cb5ae7d36fbe
