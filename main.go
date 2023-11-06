@@ -167,7 +167,7 @@ func runAction(cctx *cli.Context) error {
 	log.Infof("auth info url: %s\n", cfg.JWT.AuthURL)
 	log.Infof("gateway info url: %s, token: %s\n", cfg.Gateway.Url, cfg.Gateway.Token)
 	log.Infof("rate limit info: redis: %s \n", cfg.RateLimit.Redis)
-	log.Infof("defalut timeout: %v, sign message timeout: %v, estimate message timeout: %v", cfg.MessageService.DefaultTimeout,
+	log.Infof("default timeout: %v, sign message timeout: %v, estimate message timeout: %v", cfg.MessageService.DefaultTimeout,
 		cfg.MessageService.SignMessageTimeout, cfg.MessageService.EstimateMessageTimeout)
 
 	remoteAuthCli, err := jwtclient.NewAuthClient(cfg.JWT.AuthURL, cfg.JWT.Token)
@@ -178,11 +178,6 @@ func runAction(cctx *cli.Context) error {
 	localAuthCli, token, err := jwtclient.NewLocalAuthClient()
 	if err != nil {
 		return fmt.Errorf("failed to generate local auth client %v", err)
-	}
-
-	err = fsRepo.SaveToken(token)
-	if err != nil {
-		return fmt.Errorf("failed to save token %v", err)
 	}
 
 	client, closer, err := v1.DialFullNodeRPC(ctx, cfg.Node.Url, cfg.Node.Token, nil)
@@ -250,6 +245,11 @@ func runAction(cctx *cli.Context) error {
 		return err
 	}
 	lst := manet.NetListener(apiListener)
+
+	err = fsRepo.SaveToken(token)
+	if err != nil {
+		return fmt.Errorf("failed to save token %v", err)
+	}
 
 	provider := fx.Options(
 		fx.Logger(fxLogger{}),
