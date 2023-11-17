@@ -1,5 +1,11 @@
 # sophon-message changelog
 
+## v1.14.0-rc3
+
+* update venus & go-jsonrpc
+* fix: not update token when http port already bind [[#367](https://github.com/ipfs-force-community/sophon-messager/pull/367)]
+
+
 ## v1.14.0-rc2
 
 * chore: update venus & go-jsonrpc [[#365](https://github.com/ipfs-force-community/sophon-messager/pull/365)]
