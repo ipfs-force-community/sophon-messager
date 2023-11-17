@@ -761,6 +761,8 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	if msg.State == types.OnChainMsg {
 		return cid.Undef, fmt.Errorf("message already on chain")
 	}
+	log := log.With("replace message", msg.ID)
+	log.Infof("old message, gas fee cap: %v, gas premium: %v, gas limit: %d", msg.GasFeeCap, msg.GasPremium, msg.GasLimit)
 
 	if params.Auto {
 		cfg, err := ms.nodeClient.MpoolGetConfig(ctx)
@@ -852,6 +854,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	if err := ms.repo.MessageRepo().UpdateMessageByState(msg, types.FillMsg); err != nil {
 		return cid.Undef, err
 	}
+	log.Infof("new message, gas fee cap: %v, gas premium: %v, gas limit: %d", msg.GasFeeCap, msg.GasPremium, msg.GasLimit)
 
 	return signedMsg.Cid(), ms.RepublishMessage(ctx, params.ID)
 }
