@@ -1,6 +1,7 @@
 package testhelper
 
 import (
+	rand2 "crypto/rand"
 	"math/rand"
 	"time"
 
@@ -159,7 +160,10 @@ func MockReplaceMessageParams() []*types.ReplacMessageParams {
 
 func GenBlockHead(miner address.Address, height abi.ChainEpoch, parents []cid.Cid) (*shared.BlockHeader, error) {
 	data := make([]byte, 32)
-	rand.Read(data[:])
+	_, err := rand2.Read(data[:])
+	if err != nil {
+		return nil, err
+	}
 	c, err := abi.CidBuilder.Sum(data)
 	if err != nil {
 		return nil, err
