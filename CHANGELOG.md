@@ -1,5 +1,9 @@
 # sophon-message changelog
 
+## v1.14.0
+
+* update venus & sophon-auth
+
 ## v1.14.0-rc3
 
 * update venus & go-jsonrpc
