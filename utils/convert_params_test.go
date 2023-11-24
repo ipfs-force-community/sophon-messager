@@ -307,7 +307,7 @@ func TestHasBitfield(t *testing.T) {
 		{&eam.CreateReturn{}, true},
 	}
 	for _, c := range cases {
-		testutil.Provide(t, c.typ)
+		testutil.Provide(t, c.typ, testutil.BytesFixedProvider(20))
 		if actual := isNeedConvert(reflect.ValueOf(c.typ)); actual != c.expect {
 			t.Errorf("call %T failed, actual %v, expect %v", c.typ, actual, c.expect)
 		}

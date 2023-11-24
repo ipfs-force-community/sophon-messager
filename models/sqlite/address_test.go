@@ -22,10 +22,10 @@ func TestAddress(t *testing.T) {
 	ctx := context.Background()
 	addressRepo := setupRepo(t).AddressRepo()
 
-	rand.Seed(time.Now().Unix())
-	addr, err := address.NewIDAddress(rand.Uint64() / 2)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	addr, err := address.NewIDAddress(r.Uint64() / 2)
 	assert.NoError(t, err)
-	addr2, err := address.NewIDAddress(rand.Uint64() / 2)
+	addr2, err := address.NewIDAddress(r.Uint64() / 2)
 	assert.NoError(t, err)
 
 	addrInfo := &types.Address{
