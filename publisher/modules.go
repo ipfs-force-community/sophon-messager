@@ -19,14 +19,14 @@ type MessageReceiver chan []*types.SignedMessage
 
 func Options() fx.Option {
 	return fx.Options(
-		fx.Provide(NewMessageReciver),
+		fx.Provide(NewMessageReceiver),
 		fx.Provide(NewIMsgPublisher),
 		fx.Provide(NewP2pPublisher),
 		fx.Provide(newRpcPublisher),
 	)
 }
 
-func NewMessageReciver(ctx context.Context, p IMsgPublisher) (MessageReceiver, error) {
+func NewMessageReceiver(ctx context.Context, p IMsgPublisher) (MessageReceiver, error) {
 	msgReceiver := make(MessageReceiver, 100)
 	go func() {
 		for {
@@ -87,6 +87,10 @@ func NewIMsgPublisher(ctx context.Context, netParams *types.NetworkParams, cfg *
 	return ret, nil
 }
 
-func newRpcPublisher(ctx context.Context, nodeClient v1.FullNode, nodeProvider repo.INodeProvider, cfg *config.PublisherConfig) *RpcPublisher {
-	return NewRpcPublisher(ctx, nodeClient, nodeProvider, cfg.EnableMultiNode)
+func newRpcPublisher(ctx context.Context,
+	nodeClient v1.FullNode,
+	r repo.Repo,
+	cfg *config.PublisherConfig,
+) *RpcPublisher {
+	return NewRpcPublisher(ctx, nodeClient, r.NodeRepo(), cfg.EnableMultiNode, r.MessageRepo())
 }
