@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -595,6 +596,10 @@ func testUpdateFilledMessageByID(ctx context.Context, t *testing.T, api, apiSign
 		assert.NoError(t, err)
 		checkUnsignedMsg(t, &msg.Message, &res.Message)
 	}
+
+	// wait message onchain
+	time.Sleep(blockDelay * 2)
+
 	ctx, cancel := context.WithTimeout(ctx, blockDelay*4)
 	defer cancel()
 	wg := sync.WaitGroup{}
@@ -844,7 +849,7 @@ func prepare(t *testing.T) *testParams {
 	cfg.MessageService.WaitingChainHeadStableDuration = 1 * time.Second
 	blockDelay := cfg.MessageService.WaitingChainHeadStableDuration * 2
 	authClient := testhelper.NewMockAuthClient(t)
-	ms, err := mockMessagerServer(ctx, t.TempDir(), cfg, authClient)
+	ms, err := mockMessagerServer(ctx, filepath.Join(t.TempDir(), time.Now().String()), cfg, authClient)
 	assert.NoError(t, err)
 
 	go ms.start(ctx)
