@@ -15,3 +15,4 @@ jobs:
     with:
       has_ffi: false
       test_timeout: 20
+      log_level: error
