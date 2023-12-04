@@ -1,7 +1,9 @@
 package metrics
 
 import (
-	"github.com/filecoin-project/go-jsonrpc/metrics"
+	rpcMetrics "github.com/filecoin-project/go-jsonrpc/metrics"
+	"github.com/ipfs-force-community/metrics"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -26,13 +28,17 @@ var (
 
 	NumOfMsgBlockedThreeMinutes = stats.Int64("blocked_three_minutes_msgs", "Number of messages blocked for more than 3 minutes", stats.UnitDimensionless)
 	NumOfMsgBlockedFiveMinutes  = stats.Int64("blocked_five_minutes_msgs", "Number of messages blocked for more than 5 minutes", stats.UnitDimensionless)
+	ChainHeadStableDelay        = stats.Int64("chain_head_stable_s", "Delay of chain head stabilization", stats.UnitSeconds)
+	ChainHeadStableDuration     = stats.Int64("chain_head_stable_dur_s", "Duration of chain head stabilization", stats.UnitSeconds)
+)
 
-	SelectedMsgNumOfLastRound = stats.Int64("selected_msg_num", "Number of selected messages in the last round", stats.UnitDimensionless)
-	ToPushMsgNumOfLastRound   = stats.Int64("topush_msg_num", "Number of to-push messages in the last round", stats.UnitDimensionless)
-	ErrMsgNumOfLastRound      = stats.Int64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless)
+var (
+	SelectedMsgNumOfLastRound = metrics.NewInt64WithSummarizer("selected_msg_num", "Number of selected messages in the last round", stats.UnitDimensionless, WalletAddress)
+	ToPushMsgNumOfLastRound   = metrics.NewInt64WithSummarizer("topush_msg_num", "Number of to-push messages in the last round", stats.UnitDimensionless, WalletAddress)
+	ErrMsgNumOfLastRound      = metrics.NewInt64WithSummarizer("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless, WalletAddress)
 
-	ChainHeadStableDelay    = stats.Int64("chain_head_stable_s", "Delay of chain head stabilization", stats.UnitSeconds)
-	ChainHeadStableDuration = stats.Int64("chain_head_stable_dur_s", "Duration of chain head stabilization", stats.UnitSeconds)
+	ApiState          = metrics.NewInt64("api/state", "api service state. 0: down, 1: up", "")
+	AddressNumInState = metrics.NewInt64WithCategory("address/num", "Number of addresses in the vary state", "")
 )
 
 var (
@@ -78,22 +84,6 @@ var (
 		TagKeys:     []tag.Key{WalletAddress},
 	}
 
-	SelectedMsgNumOfLastRoundView = &view.View{
-		Measure:     SelectedMsgNumOfLastRound,
-		Aggregation: view.LastValue(),
-		TagKeys:     []tag.Key{WalletAddress},
-	}
-	ToPushMsgNumOfLastRoundView = &view.View{
-		Measure:     ToPushMsgNumOfLastRound,
-		Aggregation: view.LastValue(),
-		TagKeys:     []tag.Key{WalletAddress},
-	}
-	ErrMsgNumOfLastRoundView = &view.View{
-		Measure:     ErrMsgNumOfLastRound,
-		Aggregation: view.LastValue(),
-		TagKeys:     []tag.Key{WalletAddress},
-	}
-
 	ChainHeadStableDelayView = &view.View{
 		Measure:     ChainHeadStableDelay,
 		Aggregation: view.LastValue(),
@@ -116,10 +106,6 @@ var MessagerNodeViews = append([]*view.View{
 	NumOfMsgBlockedThreeMinutesView,
 	NumOfMsgBlockedFiveMinutesView,
 
-	SelectedMsgNumOfLastRoundView,
-	ToPushMsgNumOfLastRoundView,
-	ErrMsgNumOfLastRoundView,
-
 	ChainHeadStableDelayView,
 	ChainHeadStableDurationView,
-}, metrics.DefaultViews...)
+}, rpcMetrics.DefaultViews...)

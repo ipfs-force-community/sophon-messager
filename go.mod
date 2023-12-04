@@ -17,7 +17,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
-	github.com/ipfs-force-community/metrics v1.0.1-0.20231011024528-8c881d456601
+	github.com/ipfs-force-community/metrics v1.0.1-0.20231122034306-983501e1959d
 	github.com/ipfs-force-community/sophon-auth v1.14.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/libp2p/go-libp2p v0.27.8
