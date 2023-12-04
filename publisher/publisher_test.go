@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ipfs-force-community/sophon-messager/filestore"
 	"github.com/ipfs-force-community/sophon-messager/mocks"
+	"github.com/ipfs-force-community/sophon-messager/models/sqlite"
 	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
 	mockV1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1/mock"
@@ -25,12 +27,17 @@ func TestMainNodePublishMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mainNode := mockV1.NewMockFullNode(ctrl)
 
-	rpcPublisher := NewRpcPublisher(ctx, mainNode, nil, false)
+	fs := filestore.NewMockFileStore(t.TempDir())
+	sqliteRepo, err := sqlite.OpenSqlite(fs)
+	assert.NoError(t, err)
+	assert.NoError(t, sqliteRepo.AutoMigrate())
+
+	rpcPublisher := NewRpcPublisher(ctx, mainNode, nil, false, sqliteRepo.MessageRepo())
 	publisher := NewMergePublisher(ctx, rpcPublisher)
 	msgs := testhelper.NewShareSignedMessages(10)
 
 	mainNode.EXPECT().MpoolBatchPushUntrusted(ctx, msgs).Return(nil, nil).Times(1)
-	err := publisher.PublishMessages(ctx, msgs)
+	err = publisher.PublishMessages(ctx, msgs)
 	assert.NoError(t, err)
 	runtime.Gosched()
 	time.Sleep(1 * time.Second)
@@ -62,8 +69,12 @@ func TestMultiNodePublishMessage(t *testing.T) {
 		}
 	}
 
+	fs := filestore.NewMockFileStore(t.TempDir())
+	sqliteRepo, err := sqlite.OpenSqlite(fs)
+	assert.NoError(t, err)
+	assert.NoError(t, sqliteRepo.AutoMigrate())
 	nodeProvider := mocks.NewMockNodeRepo(ctrl)
-	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider, true)
+	rpcPublisher := NewRpcPublisher(ctx, mainNode, nodeProvider, true, sqliteRepo.MessageRepo())
 
 	t.Run("publish message to multi node", func(t *testing.T) {
 		nodeProvider.EXPECT().ListNode().Return(nodes[:3], nil).Times(1)
@@ -191,4 +202,52 @@ func TestIntergrate(t *testing.T) {
 	assert.NoError(t, err)
 	runtime.Gosched()
 	time.Sleep(1 * time.Second)
+}
+
+func TestPublishMessageFailed(t *testing.T) {
+	ctx := context.Background()
+	// mock api
+	ctrl := gomock.NewController(t)
+	mainNode := mockV1.NewMockFullNode(ctrl)
+
+	fs := filestore.NewMockFileStore(t.TempDir())
+	sqliteRepo, err := sqlite.OpenSqlite(fs)
+	assert.NoError(t, err)
+	assert.NoError(t, sqliteRepo.AutoMigrate())
+
+	rpcPublisher := NewRpcPublisher(ctx, mainNode, nil, false, sqliteRepo.MessageRepo())
+	publisher := NewMergePublisher(ctx, rpcPublisher)
+
+	msgs := testhelper.NewShareSignedMessages(10)
+	form := msgs[0].Message.From
+	for _, msg := range msgs {
+		msgCid := msg.Cid()
+		msg.Message.From = form
+		m := &mtypes.Message{
+			ID:          types.NewUUID().String(),
+			UnsignedCid: &msgCid,
+			SignedCid:   &msgCid,
+			Message:     msg.Message,
+		}
+		assert.NoError(t, sqliteRepo.MessageRepo().CreateMessage(m))
+	}
+
+	balanceToLowErr := fmt.Errorf("not enough funds (required: 0.08343657656301909 FIL, balance: 0.003413734154635385 FIL): not enough funds to execute transaction")
+	mainNode.EXPECT().MpoolBatchPushUntrusted(ctx, msgs).Return(nil, balanceToLowErr).Times(1)
+	err = publisher.PublishMessages(ctx, msgs)
+	assert.NoError(t, err)
+
+	for i := 0; i < 10; i++ {
+		msg, err := sqliteRepo.MessageRepo().GetMessageByCid(msgs[0].Cid())
+		if err == nil && len(msg.ErrorMsg) != 0 {
+			assert.Equal(t, balanceToLowErr.Error(), msg.ErrorMsg)
+			break
+		}
+
+		if i == 9 {
+			assert.Fail(t, "failed to get message error")
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }

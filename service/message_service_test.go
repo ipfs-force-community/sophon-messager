@@ -619,12 +619,12 @@ func newMessageServiceHelper(ctx context.Context, t *testing.T, opts ...opt) *me
 	sharedParamsService, err := NewSharedParamsService(ctx, repo)
 	assert.NoError(t, err)
 
-	rpcPublisher := publisher.NewRpcPublisher(ctx, fullNode, repo.NodeRepo(), false)
+	rpcPublisher := publisher.NewRpcPublisher(ctx, fullNode, repo.NodeRepo(), false, repo.MessageRepo())
 	networkParams := &shared.NetworkParams{BlockDelaySecs: 30}
 	msgPublisher, err := publisher.NewIMsgPublisher(ctx, networkParams, cfg.Publisher, nil, rpcPublisher)
 	assert.NoError(t, err)
 
-	msgReceiver, err := publisher.NewMessageReciver(ctx, msgPublisher)
+	msgReceiver, err := publisher.NewMessageReceiver(ctx, msgPublisher)
 	assert.NoError(t, err)
 	ms, err := NewMessageService(ctx, repo, fullNode, fsRepo, addressService, sharedParamsService,
 		walletProxy, msgReceiver)

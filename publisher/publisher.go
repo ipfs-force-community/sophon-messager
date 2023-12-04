@@ -59,6 +59,7 @@ type RpcPublisher struct {
 	ctx             context.Context
 	mainNodeThread  *nodeThread
 	nodeProvider    repo.INodeProvider
+	msgRepo         repo.MessageRepo
 	enableMultiNode bool
 
 	nodeThreads map[types.UUID]struct {
@@ -68,12 +69,18 @@ type RpcPublisher struct {
 	lk sync.Mutex
 }
 
-func NewRpcPublisher(ctx context.Context, nodeClient v1.FullNode, nodeProvider repo.INodeProvider, enableMultiNode bool) *RpcPublisher {
-	nThread := newNodeThread(ctx, "mainNode", nodeClient)
+func NewRpcPublisher(ctx context.Context,
+	nodeClient v1.FullNode,
+	nodeProvider repo.INodeProvider,
+	enableMultiNode bool,
+	msgRepo repo.MessageRepo,
+) *RpcPublisher {
+	nThread := newNodeThread(ctx, "mainNode", nodeClient, msgRepo)
 	return &RpcPublisher{
 		ctx:             ctx,
 		mainNodeThread:  nThread,
 		nodeProvider:    nodeProvider,
+		msgRepo:         msgRepo,
 		enableMultiNode: enableMultiNode,
 		nodeThreads: make(map[types.UUID]struct {
 			nodeThread *nodeThread
@@ -104,10 +111,11 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 		threadStruct, ok := p.nodeThreads[node.ID]
 		nodesRemain[node.ID] = struct{}{}
 		if !ok {
-			thrCtx, cancel := context.WithCancel(p.ctx) // nolint ignore lostcancel
+			thrCtx, cancel := context.WithCancel(p.ctx)
 			cli, closer, err := v1.DialFullNodeRPC(thrCtx, node.URL, node.Token, nil)
 			if err != nil {
 				log.Warnf("connect node(%s) fail %v", node.Name, err)
+				cancel()
 				continue
 			}
 
@@ -116,7 +124,7 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 				nodeThread *nodeThread
 				close      func()
 			}{
-				nodeThread: newNodeThread(thrCtx, nodeName, cli),
+				nodeThread: newNodeThread(thrCtx, nodeName, cli, p.msgRepo),
 				close: func() {
 					cancel()
 					closer()
@@ -135,19 +143,21 @@ func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.Signed
 		}
 	}
 
-	return nil // nolint ignore lostcancel
+	return nil
 }
 
 type nodeThread struct {
 	name       string
 	nodeClient v1.FullNode
+	msgRepo    repo.MessageRepo
 	msgChan    chan []*types.SignedMessage
 }
 
-func newNodeThread(ctx context.Context, name string, nodeClient v1.FullNode) *nodeThread {
+func newNodeThread(ctx context.Context, name string, nodeClient v1.FullNode, msgRepo repo.MessageRepo) *nodeThread {
 	t := &nodeThread{
 		name:       name,
 		nodeClient: nodeClient,
+		msgRepo:    msgRepo,
 		msgChan:    make(chan []*types.SignedMessage, 30),
 	}
 	go t.run(ctx)
@@ -170,6 +180,10 @@ func (n *nodeThread) run(ctx context.Context) {
 						}
 						log.Errorf("failed to push message to node, address: %v, error: %v, msgs: %v",
 							msgs[0].Message.From, err, failedMsg)
+
+						for _, msg := range msgs {
+							n.recordPushMessageError(msg.Cid(), err)
+						}
 					} else {
 						log.Debugf("failed to push message: %v", err)
 					}
@@ -181,6 +195,27 @@ func (n *nodeThread) run(ctx context.Context) {
 
 func (n *nodeThread) HandleMsg(msgs []*types.SignedMessage) {
 	n.msgChan <- msgs
+}
+
+func (n *nodeThread) recordPushMessageError(msgCid cid.Cid, err error) {
+	msg, dbErr := n.msgRepo.GetMessageByCid(msgCid)
+	if dbErr != nil {
+		log.Warnf("failed to get message from db, cid: %v, error: %v", msgCid, dbErr)
+		return
+	}
+
+	if len(msg.ErrorMsg) != 0 {
+		// already recorded
+		if msg.ErrorMsg == err.Error() {
+			return
+		}
+		log.Infof("update message error info, msg id: %v, old error: %s, new error: %v", msg.ID, msg.ErrorMsg, err)
+	}
+
+	dbErr = n.msgRepo.UpdateErrMsg(msg.ID, err.Error())
+	if dbErr != nil {
+		log.Warnf("failed to update message error info, msg id: %v, error: %v", msg.ID, dbErr)
+	}
 }
 
 type MergePublisher struct {
