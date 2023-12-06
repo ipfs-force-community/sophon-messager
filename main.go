@@ -45,8 +45,9 @@ func main() {
 		Usage: "used for manage message",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "repo",
-				Value: ccli.DefRepoPath,
+				Name:    "repo",
+				Value:   ccli.DefRepoPath,
+				EnvVars: []string{"SOPHON_MESSAGER_PATH"},
 			},
 		},
 		Commands: []*cli.Command{

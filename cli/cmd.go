@@ -10,6 +10,7 @@ import (
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	"github.com/filecoin-project/venus/venus-shared/utils"
 	"github.com/ipfs-force-community/sophon-messager/filestore"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 
@@ -22,6 +23,8 @@ const (
 	OldRepoPath = "~/.venus-messager"
 	DefRepoPath = "~/.sophon-messager"
 )
+
+var log = logging.Logger("cli")
 
 func getAPI(ctx *cli.Context) (messager.IMessager, jsonrpc.ClientCloser, error) {
 	repo, err := getRepo(ctx)
@@ -85,6 +88,7 @@ func GetRepoPath(cctx *cli.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Info("repo path: ", repoPath)
 	has, err := hasFSRepo(repoPath)
 	if err != nil {
 		return "", err
