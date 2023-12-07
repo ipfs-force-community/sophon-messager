@@ -1062,6 +1062,22 @@ func (ms *MessageService) recordMetricsProc(ctx context.Context) {
 			} else {
 				stats.Record(ctx, metrics.NumOfFailedMsg.M(int64(len(msgs))))
 			}
+
+			allAddrs, err := ms.repo.AddressRepo().ListAddress(ctx)
+			if err != nil {
+				log.Errorf("get all address err: %s", err)
+			} else {
+				addrInSate := map[types.AddressState]int64{}
+				for _, addr := range allAddrs {
+					if _, ok := addrInSate[addr.State]; !ok {
+						addrInSate[addr.State] = 0
+					}
+					addrInSate[addr.State]++
+				}
+				for state, count := range addrInSate {
+					metrics.AddressNumInState.Set(ctx, state.String(), count)
+				}
+			}
 		}
 	}
 }

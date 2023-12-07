@@ -18,7 +18,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	"modernc.org/mathutil"
@@ -210,9 +209,9 @@ func addrSelectMsgNum(addrList []*types.Address, defSelMsgNum uint64) map[addres
 func recordMetric(ctx context.Context, addr address.Address, selectResult *MsgSelectResult) {
 	ctx, _ = tag.New(ctx, tag.Upsert(metrics.WalletAddress, addr.String()))
 
-	stats.Record(ctx, metrics.SelectedMsgNumOfLastRound.M(int64(len(selectResult.SelectMsg))))
-	stats.Record(ctx, metrics.ToPushMsgNumOfLastRound.M(int64(len(selectResult.ToPushMsg))))
-	stats.Record(ctx, metrics.ErrMsgNumOfLastRound.M(int64(len(selectResult.ErrMsg))))
+	metrics.SelectedMsgNumOfLastRound.Set(ctx, int64(len(selectResult.SelectMsg)))
+	metrics.ToPushMsgNumOfLastRound.Set(ctx, int64(len(selectResult.ToPushMsg)))
+	metrics.ErrMsgNumOfLastRound.Set(ctx, int64(len(selectResult.ErrMsg)))
 }
 
 var errSingMessage = errors.New("sign message failed")
