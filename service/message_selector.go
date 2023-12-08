@@ -371,7 +371,7 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 	w.log.Infof("state actor nonce %d, latest nonce in ts %d, assigned nonce %d, nonce gap %d, want %d", actorNonce, nonceInLatestTs, addrInfo.Nonce, nonceGap, wantCount)
 
 	// get unfill message
-	selectCount := mathutil.MinUint64(wantCount*2, 100)
+	selectCount := mathutil.MinUint64(wantCount, 100)
 	messages, err := w.repo.MessageRepo().ListUnChainMessageByAddress(addrInfo.Addr, int(selectCount))
 	if err != nil {
 		return nil, fmt.Errorf("list unfill message error: %v", err)
