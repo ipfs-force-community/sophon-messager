@@ -67,7 +67,7 @@ const (
 const (
 	DefaultTimeout         = time.Second
 	SignMessageTimeout     = time.Second * 3
-	EstimateMessageTimeout = time.Second * 5
+	EstimateMessageTimeout = time.Second * 30
 )
 
 type MessageServiceConfig struct {
