@@ -47,7 +47,7 @@ type IMessageService interface {
 	GetMessageBySignedCid(ctx context.Context, signedCid cid.Cid) (*types.Message, error)
 	GetMessageByUnsignedCid(ctx context.Context, unsignedCid cid.Cid) (*types.Message, error)
 	ListMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
-	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error)
+	ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int, t time.Duration) ([]*types.Message, error)
 	ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error)
 	ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error)
 	ListBlockedMessage(ctx context.Context, params *repo.MsgQueryParams, d time.Duration) ([]*types.Message, error)
@@ -385,12 +385,12 @@ func (ms *MessageService) GetMessageByFromAndNonce(ctx context.Context, from add
 	return msg, nil
 }
 
-func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
+func (ms *MessageService) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int, d time.Duration) ([]*types.Message, error) {
 	ts, err := ms.nodeClient.ChainHead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	msgs, err := ms.repo.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
+	msgs, err := ms.repo.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize, d)
 	if err != nil {
 		return nil, err
 	}

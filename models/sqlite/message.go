@@ -398,7 +398,7 @@ func (m *sqliteMessageRepo) ListMessageByAddress(addr address.Address) ([]*types
 	return result, nil
 }
 
-func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
+func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int, d time.Duration) ([]*types.Message, error) {
 	query := m.DB.Debug().Table("messages").Offset((pageIndex - 1) * pageSize).Limit(pageSize)
 
 	if from != address.Undef {
@@ -409,6 +409,12 @@ func (m *sqliteMessageRepo) ListMessageByFromState(from address.Address, state t
 	} else {
 		query = query.Order("created_at DESC")
 	}
+
+	if d != 0 {
+		t := time.Now().Add(-d)
+		query = query.Where("created_at < ?", t)
+	}
+
 	query = query.Where("state=?", state)
 
 	var sqlMsgs []*sqliteMessage
