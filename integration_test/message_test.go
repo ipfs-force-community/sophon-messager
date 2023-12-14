@@ -352,14 +352,14 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 	}
 
 	tmpMsgs := make([]*types.Message, pageSize*2)
-	msgs, err := api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize)
+	msgs, err := api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, pageSize)
 	checkCreatedAt(msgs, isAsc)
 	copy(tmpMsgs, msgs)
 
 	pageIndex = 2
-	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize)
+	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, pageSize)
 	checkCreatedAt(msgs, isAsc)
@@ -368,7 +368,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 
 	pageSize = 40
 	pageIndex = 1
-	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize)
+	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, pageSize)
 	checkCreatedAt(msgs, isAsc)
@@ -380,7 +380,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 	}
 
 	isAsc = false
-	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize)
+	msgs, err = api.ListMessageByFromState(ctx, address.Undef, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, pageSize)
 	checkCreatedAt(msgs, isAsc)
@@ -393,7 +393,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 	}
 	for addr, ids := range msgIDs {
 		idsLen := len(ids)
-		msgs, err = api.ListMessageByFromState(ctx, addr, state, isAsc, pageIndex, idsLen)
+		msgs, err = api.ListMessageByFromState(ctx, addr, state, isAsc, pageIndex, idsLen, 0)
 		assert.NoError(t, err)
 		assert.Len(t, msgs, idsLen)
 		checkCreatedAt(msgs, isAsc)

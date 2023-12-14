@@ -367,16 +367,16 @@ func testListMessageByFromState(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock)
 		WithArgs(from.String(), state).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("msg1"))
 
-	_, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize)
+	_, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 
-	_, err = r.MessageRepo().ListMessageByFromState(address.Undef, state, isAsc, pageIndex, pageSize)
+	_, err = r.MessageRepo().ListMessageByFromState(address.Undef, state, isAsc, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 
-	_, err = r.MessageRepo().ListMessageByFromState(from, state, true, pageIndex, pageSize)
+	_, err = r.MessageRepo().ListMessageByFromState(from, state, true, pageIndex, pageSize, 0)
 	assert.NoError(t, err)
 
-	res, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, 2, 2)
+	res, err := r.MessageRepo().ListMessageByFromState(from, state, isAsc, 2, 2, 0)
 	assert.NoError(t, err)
 	checkMsgWithIDs(t, res, []string{"msg1"})
 }

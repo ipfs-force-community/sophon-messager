@@ -177,6 +177,11 @@ var listCmd = &cli.Command{
 			Usage: "pagination size, default tob 100",
 			Value: 100,
 		},
+		&cli.StringFlag{
+			Name:    "time",
+			Usage:   "exceeding residence time, eg. 3s,3m,3h",
+			Aliases: []string{"t"},
+		},
 		FromFlag,
 		outputTypeFlag,
 		verboseFlag,
@@ -220,11 +225,18 @@ state:
 		}
 
 		state := types.MessageState(ctx.Int("state"))
+		var d time.Duration
+		if timeStr := ctx.String("time"); len(timeStr) > 0 {
+			d, err = time.ParseDuration(timeStr)
+			if err != nil {
+				return err
+			}
+		}
 
 		pageIndex := ctx.Int("page-index")
 		pageSize := ctx.Int("page-size")
 
-		msgs, err := client.ListMessageByFromState(ctx.Context, from, state, false, pageIndex, pageSize)
+		msgs, err := client.ListMessageByFromState(ctx.Context, from, state, false, pageIndex, pageSize, d)
 		if err != nil {
 			return err
 		}

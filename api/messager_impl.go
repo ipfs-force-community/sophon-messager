@@ -179,8 +179,8 @@ func (m *MessageImp) ListMessage(ctx context.Context, p *types.MsgQueryParams) (
 	return m.MessageSrv.ListMessage(ctx, p)
 }
 
-func (m *MessageImp) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int) ([]*types.Message, error) {
-	return m.MessageSrv.ListMessageByFromState(ctx, from, state, isAsc, pageIndex, pageSize)
+func (m *MessageImp) ListMessageByFromState(ctx context.Context, from address.Address, state types.MessageState, isAsc bool, pageIndex, pageSize int, d time.Duration) ([]*types.Message, error) {
+	return m.MessageSrv.ListMessageByFromState(ctx, from, state, isAsc, pageIndex, pageSize, d)
 }
 
 func (m *MessageImp) ListMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {

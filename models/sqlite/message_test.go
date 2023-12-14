@@ -317,11 +317,11 @@ func TestListMessageByFromState(t *testing.T) {
 	addr, err := address.NewActorAddress(uuid.New().NodeID())
 	assert.NoError(t, err)
 
-	msgList, err := messageRepo.ListMessageByFromState(addr, types.UnFillMsg, false, 1, 100)
+	msgList, err := messageRepo.ListMessageByFromState(addr, types.UnFillMsg, false, 1, 100, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgList, 0)
 
-	msgList, err = messageRepo.ListMessageByFromState(addr, types.UnFillMsg, false, 0, 100)
+	msgList, err = messageRepo.ListMessageByFromState(addr, types.UnFillMsg, false, 0, 100, 0)
 	assert.NoError(t, err)
 	assert.Len(t, msgList, 0)
 
@@ -338,7 +338,7 @@ func TestListMessageByFromState(t *testing.T) {
 		assert.NoError(t, messageRepo.CreateMessage(msg))
 	}
 
-	msgList, err = messageRepo.ListMessageByFromState(addr, types.OnChainMsg, isAsc, 1, onChainMsgCount)
+	msgList, err = messageRepo.ListMessageByFromState(addr, types.OnChainMsg, isAsc, 1, onChainMsgCount, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, onChainMsgCount, len(msgList))
 	sorted := sort.SliceIsSorted(msgList, func(i, j int) bool {
@@ -347,7 +347,7 @@ func TestListMessageByFromState(t *testing.T) {
 	assert.True(t, sorted)
 	checkMsgList(t, msgList, testhelper.SliceToMap(msgs))
 
-	msgList, err = messageRepo.ListMessageByFromState(addr, types.OnChainMsg, isAsc, 1, onChainMsgCount/2)
+	msgList, err = messageRepo.ListMessageByFromState(addr, types.OnChainMsg, isAsc, 1, onChainMsgCount/2, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, onChainMsgCount/2, len(msgList))
 }
