@@ -18,6 +18,7 @@ import (
 	"github.com/ipfs-force-community/sophon-messager/models/repo"
 	"github.com/ipfs-force-community/sophon-messager/testhelper"
 
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/testutil"
 	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -529,6 +530,40 @@ func TestErrorMsg(t *testing.T) {
 
 	for _, msg := range selectResult.SelectMsg {
 		assert.Len(t, msg.ErrorMsg, 0)
+	}
+}
+
+func TestGasLimitOverLimit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	msh := newMessageServiceHelper(ctx, t, skipPushMessage())
+	addrs := msh.genAddresses()
+	ms := msh.MessageService
+	msh.start()
+	defer msh.stop()
+
+	msgs := genMessages(addrs, len(addrs)*10)
+	for _, msg := range msgs {
+		// will estimate gas failed
+		msg.GasLimit = constants.BlockGasLimit + 10
+	}
+	assert.NoError(t, pushMessage(ctx, ms, msgs))
+	msgsMap := testhelper.SliceToMap(msgs)
+
+	ts, err := msh.fullNode.ChainHead(ctx)
+	assert.NoError(t, err)
+	selectResult := selectMsgWithAddress(ctx, t, msh, addrs, ts)
+	assert.Len(t, selectResult.SelectMsg, 0)
+	assert.Len(t, selectResult.ErrMsg, len(msgs))
+	assert.Len(t, selectResult.ToPushMsg, 0)
+
+	list, err := ms.ListFailedMessage(ctx, &repo.MsgQueryParams{})
+	assert.NoError(t, err)
+	for _, msg := range list {
+		_, ok := msgsMap[msg.ID]
+		assert.True(t, ok)
+		assert.Contains(t, msg.ErrorMsg, fmt.Sprintf("gas limit %d over limit %d", msg.GasLimit, constants.BlockGasLimit))
 	}
 }
 

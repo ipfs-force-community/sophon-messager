@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 	"modernc.org/mathutil"
 
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/crypto"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
@@ -405,6 +406,14 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 		estimateMsg := estimateResult[index].Msg
 		if count >= wantCount {
 			break
+		}
+
+		// 检查 gaslimit 是否超出上限
+		if estimateMsg.GasLimit > constants.BlockGasLimit {
+			err := fmt.Sprintf("%s gas limit %d over limit %d", gasEstimate, estimateMsg.GasLimit, constants.BlockGasLimit)
+			errMsg = append(errMsg, msgErrInfo{id: msg.ID, err: err})
+			w.log.Errorf(err)
+			continue
 		}
 
 		// 分配nonce
