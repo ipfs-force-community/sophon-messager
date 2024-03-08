@@ -1,5 +1,15 @@
 # sophon-message changelog
 
+## v1.15.0-rc1
+
+* feat: record push message error info to db [[#370](https://github.com/ipfs-force-community/sophon-messager/pull/370)]
+* chore: add repo evn var [[#371](https://github.com/ipfs-force-community/sophon-messager/pull/371)]
+* Feat/add more metrics [[#372](https://github.com/ipfs-force-community/sophon-messager/pull/372)]
+* opt: reduce estimated messages [[#373](https://github.com/ipfs-force-community/sophon-messager/pull/373)]
+* feat: reset msg estimating timeout to 30s [[#374](https://github.com/ipfs-force-community/sophon-messager/pull/374)]
+* opt: add time flag for msg list command [[#375](https://github.com/ipfs-force-community/sophon-messager/pull/375)]
+* fix: check gas limit [[#376](https://github.com/ipfs-force-community/sophon-messager/pull/376)]
+
 ## v1.14.0
 
 * update venus & sophon-auth

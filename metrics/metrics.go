@@ -37,7 +37,6 @@ var (
 	ToPushMsgNumOfLastRound   = metrics.NewInt64("topush_msg_num", "Number of to-push messages in the last round", stats.UnitDimensionless, WalletAddress)
 	ErrMsgNumOfLastRound      = metrics.NewInt64("err_msg_num", "Number of err messages in the last round", stats.UnitDimensionless, WalletAddress)
 
-	ApiState          = metrics.NewInt64("api/state", "api service state. 0: down, 1: up", "")
 	AddressNumInState = metrics.NewInt64WithCategory("address/num", "Number of addresses in the vary state", "")
 )
 
