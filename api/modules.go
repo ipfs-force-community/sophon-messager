@@ -17,7 +17,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/ipfs-force-community/sophon-messager/config"
-	"github.com/ipfs-force-community/sophon-messager/metrics"
 )
 
 var log = logging.Logger("api")
@@ -63,16 +62,16 @@ func RunAPI(lc fx.Lifecycle, localAuthCli *jwtclient.LocalAuthClient, remoteAuth
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				log.Info("start rpcserver ", lst.Addr())
-				metrics.ApiState.Set(ctx, 1)
+				core.ApiState.Set(ctx, 1)
 				if err := apiserv.Serve(lst); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					metrics.ApiState.Set(ctx, 0)
+					core.ApiState.Set(ctx, 0)
 					log.Errorf("start rpcserver failed: %v", err)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			defer metrics.ApiState.Set(ctx, 0)
+			defer core.ApiState.Set(ctx, 0)
 			return apiserv.Shutdown(ctx)
 		},
 	})
