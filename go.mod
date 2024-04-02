@@ -11,14 +11,14 @@ require (
 	github.com/filecoin-project/go-address v1.1.0
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-jsonrpc v0.1.5
-	github.com/filecoin-project/go-state-types v0.13.0-rc.2
+	github.com/filecoin-project/go-state-types v0.13.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.15.0-rc1
+	github.com/filecoin-project/venus v1.15.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
 	github.com/ipfs-force-community/metrics v1.0.1-0.20231207081445-30178e706d09
-	github.com/ipfs-force-community/sophon-auth v1.15.0-rc1
+	github.com/ipfs-force-community/sophon-auth v1.15.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/libp2p/go-libp2p v0.31.1
 	github.com/libp2p/go-libp2p-kad-dht v0.24.0
@@ -201,7 +201,7 @@ require (
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.12.1-0.20230815132531-74c255bcf846 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect

@@ -1,6 +1,6 @@
 # sophon-message changelog
 
-## v1.15.0-rc1
+## v1.15.0
 
 * feat: record push message error info to db [[#370](https://github.com/ipfs-force-community/sophon-messager/pull/370)]
 * chore: add repo evn var [[#371](https://github.com/ipfs-force-community/sophon-messager/pull/371)]
