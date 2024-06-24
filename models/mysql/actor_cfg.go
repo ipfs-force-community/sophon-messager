@@ -90,12 +90,12 @@ func (s *mysqlActorCfgRepo) SaveActorCfg(ctx context.Context, actorCfg *types.Ac
 		return errors.New("code cid is undefined")
 	}
 
-	return s.DB.Save(fromActorCfg(actorCfg)).Error
+	return s.DB.WithContext(ctx).Save(fromActorCfg(actorCfg)).Error
 }
 
 func (s *mysqlActorCfgRepo) HasActorCfg(ctx context.Context, methodType *types.MethodType) (bool, error) {
 	var count int64
-	if err := s.DB.Table("actor_cfg").Where("code = ? and method = ?", mtypes.NewDBCid(methodType.Code),
+	if err := s.DB.WithContext(ctx).Table("actor_cfg").Where("code = ? and method = ?", mtypes.NewDBCid(methodType.Code),
 		methodType.Method).Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -105,7 +105,7 @@ func (s *mysqlActorCfgRepo) HasActorCfg(ctx context.Context, methodType *types.M
 
 func (s *mysqlActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error) {
 	var a mysqlActorCfg
-	if err := s.DB.Take(&a, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error; err != nil {
 		return nil, err
 	}
 
@@ -114,7 +114,7 @@ func (s *mysqlActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodT
 
 func (s *mysqlActorCfgRepo) GetActorCfgByID(ctx context.Context, id shared.UUID) (*types.ActorCfg, error) {
 	var a mysqlActorCfg
-	if err := s.DB.Take(&a, "id = ?", id).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (s *mysqlActorCfgRepo) GetActorCfgByID(ctx context.Context, id shared.UUID)
 
 func (s *mysqlActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error) {
 	var list []*mysqlActorCfg
-	if err := s.DB.Find(&list).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Find(&list).Error; err != nil {
 		return nil, err
 	}
 
@@ -136,11 +136,11 @@ func (s *mysqlActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCfg
 }
 
 func (s *mysqlActorCfgRepo) DelActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) error {
-	return s.DB.Delete(mysqlActorCfg{}, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error
+	return s.DB.WithContext(ctx).Delete(mysqlActorCfg{}, "code = ? and method = ?", mtypes.NewDBCid(methodType.Code), methodType.Method).Error
 }
 
 func (s *mysqlActorCfgRepo) DelActorCfgById(ctx context.Context, id shared.UUID) error {
-	return s.DB.Delete(mysqlActorCfg{}, "id = ?", id).Error
+	return s.DB.WithContext(ctx).Delete(mysqlActorCfg{}, "id = ?", id).Error
 }
 
 func (s *mysqlActorCfgRepo) UpdateSelectSpecById(ctx context.Context, id shared.UUID, spec *types.ChangeGasSpecParams) error {
@@ -168,5 +168,5 @@ func (s *mysqlActorCfgRepo) UpdateSelectSpecById(ctx context.Context, id shared.
 
 	updateColumns["updated_at"] = time.Now()
 
-	return s.DB.Model((*mysqlActorCfg)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
+	return s.DB.WithContext(ctx).Model((*mysqlActorCfg)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }

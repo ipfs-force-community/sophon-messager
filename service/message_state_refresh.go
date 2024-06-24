@@ -64,7 +64,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	}
 
 	// update db
-	replaceMsg, invalidMsgs, err := ms.updateMessageState(ctx, applyMsgs, revertMsgs)
+	replaceMsg, invalidMsgs, err := ms.updateMessageState(applyMsgs, revertMsgs)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (ms *MessageService) doRefreshMessageState(ctx context.Context, h *headChan
 	return nil
 }
 
-func (ms *MessageService) updateMessageState(ctx context.Context, applyMsgs []applyMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, map[cid.Cid]struct{}, error) {
+func (ms *MessageService) updateMessageState(applyMsgs []applyMessage, revertMsgs map[cid.Cid]struct{}) (map[string]*types.Message, map[cid.Cid]struct{}, error) {
 	replaceMsg := make(map[string]*types.Message)
 	invalidMsgs := make(map[cid.Cid]struct{})
 	return replaceMsg, invalidMsgs, ms.repo.Transaction(func(txRepo repo.TxRepo) error {

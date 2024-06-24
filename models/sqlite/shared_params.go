@@ -62,7 +62,7 @@ func newSqliteSharedParamsRepo(db *gorm.DB) sqliteSharedParamsRepo {
 
 func (s sqliteSharedParamsRepo) GetSharedParams(ctx context.Context) (*types.SharedSpec, error) {
 	var ssp sqliteSharedParams
-	if err := s.DB.Take(&ssp).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&ssp).Error; err != nil {
 		return nil, err
 	}
 	return ssp.SharedParams(), nil
@@ -72,9 +72,9 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 	var ssp sqliteSharedParams
 	// make sure ID is 1
 	params.ID = 1
-	if err := s.DB.Where("id = ?", 1).Take(&ssp).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Where("id = ?", 1).Take(&ssp).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
+			if err := s.DB.WithContext(ctx).Save(fromSharedParams(*params)).Error; err != nil {
 				return 0, err
 			}
 			return params.ID, nil
@@ -82,7 +82,7 @@ func (s sqliteSharedParamsRepo) SetSharedParams(ctx context.Context, params *typ
 		return 0, err
 	}
 
-	if err := s.DB.Save(fromSharedParams(*params)).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Save(fromSharedParams(*params)).Error; err != nil {
 		return 0, err
 	}
 

@@ -357,28 +357,28 @@ func (f *MockFullNode) blockProvider() (*types.BlockHeader, error) {
 
 //// full api ////
 
-func (f *MockFullNode) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
+func (f *MockFullNode) StateAccountKey(_ context.Context, addr address.Address, _ types.TipSetKey) (address.Address, error) {
 	if addr.Protocol() != address.ID {
 		return addr, nil
 	}
 	return ResolveIDAddr(addr)
 }
 
-func (f *MockFullNode) StateNetworkName(ctx context.Context) (types.NetworkName, error) {
+func (f *MockFullNode) StateNetworkName(_ context.Context) (types.NetworkName, error) {
 	return types.NetworkNameMain, nil
 }
 
-func (f *MockFullNode) StateNetworkVersion(arg0 context.Context, arg1 types.TipSetKey) (network.Version, error) {
+func (f *MockFullNode) StateNetworkVersion(_ context.Context, _ types.TipSetKey) (network.Version, error) {
 	return network.Version17, nil
 }
-func (f *MockFullNode) StateGetNetworkParams(ctx context.Context) (*types.NetworkParams, error) {
+func (f *MockFullNode) StateGetNetworkParams(_ context.Context) (*types.NetworkParams, error) {
 	return &types.NetworkParams{
 		NetworkName:    types.NetworkNameMain,
 		BlockDelaySecs: uint64(f.blockDelay / time.Second),
 	}, nil
 }
 
-func (f *MockFullNode) ChainGetParentMessages(ctx context.Context, bcid cid.Cid) ([]types.MessageCID, error) {
+func (f *MockFullNode) ChainGetParentMessages(_ context.Context, bcid cid.Cid) ([]types.MessageCID, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	blkInfo, ok := f.blockInfos[bcid]
@@ -400,7 +400,7 @@ func (f *MockFullNode) ChainGetParentMessages(ctx context.Context, bcid cid.Cid)
 	return msgCid, nil
 }
 
-func (f *MockFullNode) ChainGetParentReceipts(ctx context.Context, bcid cid.Cid) ([]*types.MessageReceipt, error) {
+func (f *MockFullNode) ChainGetParentReceipts(_ context.Context, bcid cid.Cid) ([]*types.MessageReceipt, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	blkInfo, ok := f.blockInfos[bcid]
@@ -419,7 +419,7 @@ func (f *MockFullNode) ChainGetParentReceipts(ctx context.Context, bcid cid.Cid)
 	return receipts, nil
 }
 
-func (f *MockFullNode) ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error) {
+func (f *MockFullNode) ChainGetTipSet(_ context.Context, key types.TipSetKey) (*types.TipSet, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 
@@ -456,7 +456,7 @@ func (f *MockFullNode) ChainList(ctx context.Context, tsKey types.TipSetKey, cou
 	return keys, nil
 }
 
-func (f *MockFullNode) ChainGetMessagesInTipset(ctx context.Context, key types.TipSetKey) ([]types.MessageCID, error) {
+func (f *MockFullNode) ChainGetMessagesInTipset(_ context.Context, key types.TipSetKey) ([]types.MessageCID, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	_, ok := f.ts[key]
@@ -479,14 +479,14 @@ func (f *MockFullNode) ChainGetMessagesInTipset(ctx context.Context, key types.T
 	return msgs, nil
 }
 
-func (f *MockFullNode) ChainHead(ctx context.Context) (*types.TipSet, error) {
+func (f *MockFullNode) ChainHead(_ context.Context) (*types.TipSet, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 
 	return f.currTS, nil
 }
 
-func (f *MockFullNode) StateGetActor(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*types.Actor, error) {
+func (f *MockFullNode) StateGetActor(_ context.Context, addr address.Address, _ types.TipSetKey) (*types.Actor, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 
@@ -528,7 +528,7 @@ func (f *MockFullNode) GasBatchEstimateMessageGas(ctx context.Context, estimateM
 	return res, nil
 }
 
-func (f *MockFullNode) GasEstimateMessageGas(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec, tsk types.TipSetKey) (*types.Message, error) {
+func (f *MockFullNode) GasEstimateMessageGas(_ context.Context, msg *types.Message, spec *types.MessageSendSpec, _ types.TipSetKey) (*types.Message, error) {
 	err := estimateGasLimit(msg, spec)
 	if err != nil {
 		return nil, err
@@ -577,7 +577,7 @@ func estimateGasLimit(msg *types.Message, spec *types.MessageSendSpec) error {
 	return nil
 }
 
-func (f *MockFullNode) MpoolBatchPushUntrusted(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error) {
+func (f *MockFullNode) MpoolBatchPushUntrusted(_ context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	cids := make([]cid.Cid, 0, len(smsgs))
@@ -605,7 +605,7 @@ func (f *MockFullNode) MpoolGetConfig(_ context.Context) (*types.MpoolConfig, er
 	}, nil
 }
 
-func (f *MockFullNode) StateSearchMsg(ctx context.Context, from types.TipSetKey, msgCid cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*types.MsgLookup, error) {
+func (f *MockFullNode) StateSearchMsg(_ context.Context, _ types.TipSetKey, msgCid cid.Cid, _ abi.ChainEpoch, _ bool) (*types.MsgLookup, error) {
 	f.l.Lock()
 	defer f.l.Unlock()
 	_, ok := f.chainMsgs[msgCid]

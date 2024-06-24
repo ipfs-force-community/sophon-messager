@@ -28,11 +28,11 @@ func NewNodeService(repo repo.NodeRepo) *NodeService {
 
 func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	// try connect node
-	_, close, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
+	_, closer, err := v1.DialFullNodeRPC(ctx, node.URL, node.Token, nil)
 	if err != nil {
 		return err
 	}
-	close()
+	closer()
 	if err := ns.repo.SaveNode(node); err != nil {
 		return err
 	}
@@ -41,19 +41,19 @@ func (ns *NodeService) SaveNode(ctx context.Context, node *types.Node) error {
 	return nil
 }
 
-func (ns *NodeService) GetNode(ctx context.Context, name string) (*types.Node, error) {
+func (ns *NodeService) GetNode(_ context.Context, name string) (*types.Node, error) {
 	return ns.repo.GetNode(name)
 }
 
-func (ns *NodeService) HasNode(ctx context.Context, name string) (bool, error) {
+func (ns *NodeService) HasNode(_ context.Context, name string) (bool, error) {
 	return ns.repo.HasNode(name)
 }
 
-func (ns *NodeService) ListNode(ctx context.Context) ([]*types.Node, error) {
+func (ns *NodeService) ListNode(_ context.Context) ([]*types.Node, error) {
 	return ns.repo.ListNode()
 }
 
-func (ns *NodeService) DeleteNode(ctx context.Context, name string) error {
+func (ns *NodeService) DeleteNode(_ context.Context, name string) error {
 	if err := ns.repo.DelNode(name); err != nil {
 		return err
 	}

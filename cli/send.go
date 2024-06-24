@@ -61,11 +61,11 @@ var SendCmd = &cli.Command{
 			return fmt.Errorf("'send' expects two arguments, target and amount")
 		}
 
-		client, close, err := getAPI(ctx)
+		client, closer, err := getAPI(ctx)
 		if err != nil {
 			return err
 		}
-		defer close()
+		defer closer()
 
 		var params types.QuickSendParams
 

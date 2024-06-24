@@ -89,12 +89,12 @@ func (s *sqliteActorCfgRepo) SaveActorCfg(ctx context.Context, actorCfg *types.A
 	if actorCfg.Code == cid.Undef {
 		return errors.New("code cid is undefined")
 	}
-	return s.DB.Save(fromActorCfg(actorCfg)).Error
+	return s.DB.WithContext(ctx).Save(fromActorCfg(actorCfg)).Error
 }
 
 func (s *sqliteActorCfgRepo) HasActorCfg(ctx context.Context, methodType *types.MethodType) (bool, error) {
 	var count int64
-	if err := s.DB.Table("actor_cfg").Where("code = ? and method = ?", mtypes.NewDBCid(methodType.Code),
+	if err := s.DB.WithContext(ctx).Table("actor_cfg").Where("code = ? and method = ?", mtypes.NewDBCid(methodType.Code),
 		methodType.Method).Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -104,7 +104,7 @@ func (s *sqliteActorCfgRepo) HasActorCfg(ctx context.Context, methodType *types.
 
 func (s *sqliteActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) (*types.ActorCfg, error) {
 	var a sqliteActorCfg
-	if err := s.DB.Take(&a, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error; err != nil {
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func (s *sqliteActorCfgRepo) GetActorCfgByMethodType(ctx context.Context, method
 
 func (s *sqliteActorCfgRepo) GetActorCfgByID(ctx context.Context, id shared.UUID) (*types.ActorCfg, error) {
 	var a sqliteActorCfg
-	if err := s.DB.Take(&a, "id = ?", id).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func (s *sqliteActorCfgRepo) GetActorCfgByID(ctx context.Context, id shared.UUID
 
 func (s *sqliteActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCfg, error) {
 	var list []*sqliteActorCfg
-	if err := s.DB.Find(&list).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Find(&list).Error; err != nil {
 		return nil, err
 	}
 
@@ -135,11 +135,11 @@ func (s *sqliteActorCfgRepo) ListActorCfg(ctx context.Context) ([]*types.ActorCf
 }
 
 func (s *sqliteActorCfgRepo) DelActorCfgByMethodType(ctx context.Context, methodType *types.MethodType) error {
-	return s.DB.Delete(sqliteActorCfg{}, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error
+	return s.DB.WithContext(ctx).Delete(sqliteActorCfg{}, "code = ? and method = ?", mtypes.DBCid(methodType.Code), sqliteUint64(methodType.Method)).Error
 }
 
 func (s *sqliteActorCfgRepo) DelActorCfgById(ctx context.Context, id shared.UUID) error {
-	return s.DB.Delete(sqliteActorCfg{}, "id = ?", id).Error
+	return s.DB.WithContext(ctx).Delete(sqliteActorCfg{}, "id = ?", id).Error
 }
 
 func (s *sqliteActorCfgRepo) UpdateSelectSpecById(ctx context.Context, id shared.UUID, spec *types.ChangeGasSpecParams) error {
@@ -167,5 +167,5 @@ func (s *sqliteActorCfgRepo) UpdateSelectSpecById(ctx context.Context, id shared
 
 	updateColumns["updated_at"] = time.Now()
 
-	return s.DB.Model((*sqliteActorCfg)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
+	return s.DB.WithContext(ctx).Model((*sqliteActorCfg)(nil)).Where("id = ?", id).UpdateColumns(updateColumns).Error
 }
