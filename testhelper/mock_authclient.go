@@ -36,7 +36,7 @@ func (m *AuthClient) Init(account string, addrs []address.Address) {
 		}
 	}
 
-	m.EXPECT().GetUserBySigner(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, signer address.Address) (auth.ListUsersResponse, error) {
+	m.EXPECT().GetUserBySigner(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, signer address.Address) (auth.ListUsersResponse, error) {
 		accounts, ok := signers[signer]
 		if !ok {
 			return nil, errors.New("not exist")
@@ -48,7 +48,7 @@ func (m *AuthClient) Init(account string, addrs []address.Address) {
 		return users, nil
 	}).AnyTimes()
 
-	m.EXPECT().SignerExistInUser(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, user string, signer address.Address) (bool, error) {
+	m.EXPECT().SignerExistInUser(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, user string, signer address.Address) (bool, error) {
 		accounts, ok := signers[signer]
 		if !ok {
 			return false, nil
@@ -59,7 +59,7 @@ func (m *AuthClient) Init(account string, addrs []address.Address) {
 		return false, nil
 	}).AnyTimes()
 
-	m.EXPECT().ListSigners(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, user string) (auth.ListSignerResp, error) {
+	m.EXPECT().ListSigners(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, user string) (auth.ListSignerResp, error) {
 		addrs := make([]*auth.OutputSigner, 0)
 		for signer := range signers {
 			if _, ok := signers[signer][user]; ok {
@@ -70,7 +70,7 @@ func (m *AuthClient) Init(account string, addrs []address.Address) {
 	}).AnyTimes()
 }
 
-func (m *AuthClient) UpsertMiner(ctx context.Context, user string, miner string, openMining bool) (bool, error) {
+func (m *AuthClient) UpsertMiner(_ context.Context, _ string, _ string, _ bool) (bool, error) {
 	panic("implement me")
 }
 

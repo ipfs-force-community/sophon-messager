@@ -166,7 +166,7 @@ func (m *PubSub) Connect(ctx context.Context, p peer.AddrInfo) error {
 	return m.host.Connect(ctx, p)
 }
 
-func (m *PubSub) Peers(ctx context.Context) ([]peer.AddrInfo, error) {
+func (m *PubSub) Peers(_ context.Context) ([]peer.AddrInfo, error) {
 	conns := m.host.Network().Conns()
 	peers := make([]peer.AddrInfo, 0, len(conns))
 	for _, conn := range conns {
@@ -184,7 +184,7 @@ func (m *PubSub) FindPeer(ctx context.Context, peerID peer.ID) (peer.AddrInfo, e
 	return m.dht.FindPeer(ctx, peerID)
 }
 
-func (m *PubSub) AddrListen(ctx context.Context) (peer.AddrInfo, error) {
+func (m *PubSub) AddrListen(_ context.Context) (peer.AddrInfo, error) {
 	return peer.AddrInfo{
 		ID:    m.host.ID(),
 		Addrs: m.host.Addrs(),
@@ -260,7 +260,7 @@ func makeDHT(ctx context.Context, h types.RawHost, networkName string, bootNodes
 	return r, nil
 }
 
-func buildHost(ctx context.Context, address string) (types.RawHost, error) {
+func buildHost(_ context.Context, address string) (types.RawHost, error) {
 	opts := []libp2p.Option{
 		libp2p.UserAgent("sophon-messager"),
 		libp2p.ListenAddrStrings(address),

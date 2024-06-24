@@ -443,7 +443,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 
 			full := v1Mock.NewMockFullNode(gomock.NewController(t))
 			ms.nodeClient = full
-			full.EXPECT().ChainGetTipSet(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(arg0 context.Context, arg1 shared.TipSetKey) (*shared.TipSet, error) {
+			full.EXPECT().ChainGetTipSet(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(_ context.Context, arg1 shared.TipSetKey) (*shared.TipSet, error) {
 				for _, ts := range tipSets {
 					if ts.Key().Equals(arg1) {
 						return ts, nil

@@ -58,7 +58,7 @@ func TestAddressAPI(t *testing.T) {
 	}
 	tokenSign, err := genToken(playLoad)
 	assert.NoError(t, err)
-	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, token string) (*auth.VerifyResponse, error) {
+	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, token string) (*auth.VerifyResponse, error) {
 		if token == tokenSign {
 			return playLoad, nil
 		}

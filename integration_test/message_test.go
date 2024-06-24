@@ -37,7 +37,7 @@ func TestHasMessageByUid(t *testing.T) {
 	defer p.closer()
 
 	t.Run("test has message by uid", func(t *testing.T) {
-		testHasMessageByUid(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
+		testHasMessageByUid(p.ctx, t, p.apiAdmin, p.addrs)
 	})
 	assert.NoError(t, p.ms.stop(p.ctx))
 }
@@ -98,10 +98,10 @@ func TestMessageAPI(t *testing.T) {
 		testGetMessageByFromAndNonce(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
 	})
 	t.Run("test list message by from state", func(t *testing.T) {
-		testListMessageByFromState(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs)
+		testListMessageByFromState(p.ctx, t, p.apiAdmin, p.addrs)
 	})
 	t.Run("test list message by address", func(t *testing.T) {
-		testListMessageByAddress(p.ctx, t, p.apiAdmin, p.apiSign)
+		testListMessageByAddress(p.ctx, t, p.apiAdmin)
 	})
 	t.Run("test list failed message", func(t *testing.T) {
 		testListFailedMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
@@ -113,7 +113,7 @@ func TestMessageAPI(t *testing.T) {
 		testUpdateMessageStateByID(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
 	})
 	t.Run("test update all filled message", func(t *testing.T) {
-		testUpdateAllFilledMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
+		testUpdateAllFilledMessage(p.ctx, t, p.apiAdmin, p.addrs, p.blockDelay)
 	})
 	t.Run("test replace message", func(t *testing.T) {
 		testReplaceMessage(p.ctx, t, p.apiAdmin, p.apiSign, p.addrs, p.blockDelay)
@@ -164,7 +164,7 @@ func testPushMessageWithID(ctx context.Context, t *testing.T, api, apiSign messa
 	}
 }
 
-func testHasMessageByUid(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
+func testHasMessageByUid(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
@@ -330,7 +330,7 @@ func testListMessage(ctx context.Context, t *testing.T, api, apiSign messager.IM
 	}
 }
 
-func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address) {
+func testListMessageByFromState(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address) {
 	// insert message
 	genMessagesAndWait(ctx, t, api, addrs)
 	genMessagesAndWait(ctx, t, api, addrs)
@@ -403,7 +403,7 @@ func testListMessageByFromState(ctx context.Context, t *testing.T, api, apiSign 
 	}
 }
 
-func testListMessageByAddress(ctx context.Context, t *testing.T, api, apiSign messager.IMessager) {
+func testListMessageByAddress(ctx context.Context, t *testing.T, api messager.IMessager) {
 	allMsgs, err := api.ListMessage(ctx, &types.MsgQueryParams{})
 	assert.NoError(t, err)
 	msgIDs := make(map[address.Address][]string)
@@ -552,7 +552,7 @@ func testUpdateMessageStateByID(ctx context.Context, t *testing.T, api, apiSign 
 	}
 }
 
-func testUpdateAllFilledMessage(ctx context.Context, t *testing.T, api, apiSign messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
+func testUpdateAllFilledMessage(ctx context.Context, t *testing.T, api messager.IMessager, addrs []address.Address, blockDelay time.Duration) {
 	msgs := genMessageWithAddress(addrs)
 	for _, msg := range msgs {
 		id, err := api.PushMessageWithId(ctx, msg.ID, &msg.Message, nil)
@@ -805,8 +805,7 @@ func checkUnsignedMsg(t *testing.T, expect, actual *shared.Message) {
 	assert.Equal(t, expect.Params, actual.Params)
 	assert.Equal(t, testhelper.ResolveAddr(t, expect.From), actual.From)
 	// todo: finish estimate gas
-	if actual.Nonce > 0 {
-	} else {
+	if actual.Nonce == 0 {
 		assert.Equal(t, expect.GasLimit, actual.GasLimit)
 		assert.Equal(t, expect.GasFeeCap, actual.GasFeeCap)
 		assert.Equal(t, expect.GasPremium, actual.GasPremium)
@@ -874,7 +873,7 @@ func prepare(t *testing.T) *testParams {
 	}
 	tokenSign, err := genToken(playLoad)
 	assert.NoError(t, err)
-	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, token string) (*auth.VerifyResponse, error) {
+	authClient.EXPECT().Verify(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, token string) (*auth.VerifyResponse, error) {
 		if token == tokenSign {
 			return playLoad, nil
 		}

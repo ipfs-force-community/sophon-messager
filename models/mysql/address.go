@@ -90,12 +90,12 @@ func newMysqlAddressRepo(db *gorm.DB) *mysqlAddressRepo {
 }
 
 func (s mysqlAddressRepo) SaveAddress(ctx context.Context, a *types.Address) error {
-	return s.DB.Save(fromAddress(a)).Error
+	return s.DB.WithContext(ctx).Save(fromAddress(a)).Error
 }
 
 func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.Take(&a, "addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 
@@ -104,7 +104,7 @@ func (s mysqlAddressRepo) GetAddress(ctx context.Context, addr address.Address) 
 
 func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.Where("id = ? and is_deleted = ?", id, repo.NotDeleted).First(&a).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Where("id = ? and is_deleted = ?", id, repo.NotDeleted).First(&a).Error; err != nil {
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (*
 
 func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr.String()).Error; err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address
 
 func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
 	var count int64
-	if err := s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+	if err := s.DB.WithContext(ctx).Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -131,7 +131,7 @@ func (s mysqlAddressRepo) HasAddress(ctx context.Context, addr address.Address) 
 
 func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, error) {
 	var list []*mysqlAddress
-	if err := s.DB.Find(&list, "is_deleted = ?", repo.NotDeleted).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Find(&list, "is_deleted = ?", repo.NotDeleted).Error; err != nil {
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func (s mysqlAddressRepo) ListAddress(ctx context.Context) ([]*types.Address, er
 
 func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Address, error) {
 	var list []*mysqlAddress
-	if err := s.DB.Find(&list, "is_deleted = ? and state = ?", repo.NotDeleted, types.AddressStateAlive).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Find(&list, "is_deleted = ? and state = ?", repo.NotDeleted, types.AddressStateAlive).Error; err != nil {
 		return nil, err
 	}
 
@@ -166,22 +166,22 @@ func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addre
 }
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
 }
 
 func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+	return s.DB.WithContext(ctx).Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
 }
 
 func (s mysqlAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error {
-	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+	return s.DB.WithContext(ctx).Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"state": state, "updated_at": time.Now()}).Error
 }
 
 func (s mysqlAddressRepo) UpdateSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error {
-	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"sel_msg_num": num, "updated_at": time.Now()}).Error
 }
 
@@ -208,5 +208,5 @@ func (s mysqlAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Addr
 
 	updateColumns["updated_at"] = time.Now()
 
-	return s.DB.Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).UpdateColumns(updateColumns).Error
+	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).UpdateColumns(updateColumns).Error
 }

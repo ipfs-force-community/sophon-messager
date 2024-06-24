@@ -317,7 +317,7 @@ func isChainMsg(msgState types.MessageState) bool {
 	return msgState == types.OnChainMsg || msgState == types.NonceConflictMsg
 }
 
-func (ms *MessageService) HasMessageByUid(ctx context.Context, id string) (bool, error) {
+func (ms *MessageService) HasMessageByUid(_ context.Context, id string) (bool, error) {
 	return ms.repo.MessageRepo().HasMessageByUid(id)
 }
 
@@ -336,7 +336,7 @@ func (ms *MessageService) GetMessageByCid(ctx context.Context, cid cid.Cid) (*ty
 	return msg, nil
 }
 
-func (ms *MessageService) GetMessageState(ctx context.Context, id string) (types.MessageState, error) {
+func (ms *MessageService) GetMessageState(_ context.Context, id string) (types.MessageState, error) {
 	return ms.repo.MessageRepo().GetMessageState(id)
 }
 
@@ -439,11 +439,11 @@ func (ms *MessageService) ListMessageByAddress(ctx context.Context, addr address
 	return msgs, nil
 }
 
-func (ms *MessageService) ListFailedMessage(ctx context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
+func (ms *MessageService) ListFailedMessage(_ context.Context, params *repo.MsgQueryParams) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFailedMessage(params)
 }
 
-func (ms *MessageService) ListFilledMessageByAddress(ctx context.Context, addr address.Address) ([]*types.Message, error) {
+func (ms *MessageService) ListFilledMessageByAddress(_ context.Context, addr address.Address) ([]*types.Message, error) {
 	return ms.repo.MessageRepo().ListFilledMessageByAddress(addr)
 }
 
@@ -463,11 +463,11 @@ func (ms *MessageService) ListBlockedMessage(ctx context.Context, params *repo.M
 	return ms.repo.MessageRepo().ListBlockedMessage(params, d)
 }
 
-func (ms *MessageService) UpdateMessageStateByCid(ctx context.Context, cid string, state types.MessageState) (string, error) {
+func (ms *MessageService) UpdateMessageStateByCid(_ context.Context, cid string, state types.MessageState) (string, error) {
 	return cid, ms.repo.MessageRepo().UpdateMessageStateByCid(cid, state)
 }
 
-func (ms *MessageService) UpdateMessageStateByID(ctx context.Context, id string, state types.MessageState) error {
+func (ms *MessageService) UpdateMessageStateByID(_ context.Context, id string, state types.MessageState) error {
 	return ms.repo.MessageRepo().UpdateMessageStateByID(id, state)
 }
 
@@ -859,7 +859,7 @@ func (ms *MessageService) ReplaceMessage(ctx context.Context, params *types.Repl
 	return signedMsg.Cid(), ms.RepublishMessage(ctx, params.ID)
 }
 
-func (ms *MessageService) MarkBadMessage(ctx context.Context, id string) error {
+func (ms *MessageService) MarkBadMessage(_ context.Context, id string) error {
 	return ms.repo.MessageRepo().MarkBadMessage(id)
 }
 
@@ -942,7 +942,7 @@ func ToSignedMsg(ctx context.Context, walletCli gatewayAPI.IWalletClient, msg *t
 	return signedMsg, nil
 }
 
-func (ms *MessageService) clearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
+func (ms *MessageService) clearUnFillMessage(addr address.Address) (int, error) {
 	var count int
 	if err := ms.repo.Transaction(func(txRepo repo.TxRepo) error {
 		unFillMsgs, err := txRepo.MessageRepo().ListUnFilledMessage(addr)
@@ -965,7 +965,7 @@ func (ms *MessageService) clearUnFillMessage(ctx context.Context, addr address.A
 
 func (ms *MessageService) ClearUnFillMessage(ctx context.Context, addr address.Address) (int, error) {
 	ms.cleanUnFillMsgFunc <- func() (int, error) {
-		return ms.clearUnFillMessage(ctx, addr)
+		return ms.clearUnFillMessage(addr)
 	}
 
 	select {

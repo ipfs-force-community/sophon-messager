@@ -418,11 +418,11 @@ func (m *MessageImp) Version(_ context.Context) (venusTypes.Version, error) {
 	}, nil
 }
 
-func (m *MessageImp) SetLogLevel(ctx context.Context, subSystem, level string) error {
+func (m *MessageImp) SetLogLevel(_ context.Context, subSystem, level string) error {
 	return logging.SetLogLevel(subSystem, level)
 }
 
-func (m *MessageImp) LogList(ctx context.Context) ([]string, error) {
+func (m *MessageImp) LogList(_ context.Context) ([]string, error) {
 	return logging.GetSubsystems(), nil
 }
 

@@ -91,7 +91,7 @@ func NewRpcPublisher(ctx context.Context,
 	}
 }
 
-func (p *RpcPublisher) PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error {
+func (p *RpcPublisher) PublishMessages(_ context.Context, msgs []*types.SignedMessage) error {
 	p.mainNodeThread.HandleMsg(msgs)
 
 	if !p.enableMultiNode {
@@ -270,7 +270,7 @@ func NewCachePublisher(ctx context.Context, cacheReleasePeriod uint64, subPublis
 	return p, nil
 }
 
-func (p *CachePublisher) PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error {
+func (p *CachePublisher) PublishMessages(_ context.Context, msgs []*types.SignedMessage) error {
 	p.msgCh <- msgs
 	return nil
 }
@@ -334,7 +334,7 @@ func NewConcurrentPublisher(ctx context.Context, concurrency uint, subPublisher 
 	return c, nil
 }
 
-func (p *ConcurrentPublisher) PublishMessages(ctx context.Context, msgs []*types.SignedMessage) error {
+func (p *ConcurrentPublisher) PublishMessages(_ context.Context, msgs []*types.SignedMessage) error {
 	p.msgCh <- msgs
 	return nil
 }

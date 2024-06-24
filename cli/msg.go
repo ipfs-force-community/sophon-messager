@@ -430,30 +430,31 @@ var updateFilledMessageCmd = &cli.Command{
 		}
 		defer closer()
 
-		var id string
-		if id = ctx.String("id"); len(id) > 0 {
-		} else if signedCidStr := ctx.String("signed_cid"); len(signedCidStr) > 0 {
-			signedCid, err := cid.Decode(signedCidStr)
-			if err != nil {
-				return err
+		id := ctx.String("id")
+		if len(id) == 0 {
+			if signedCidStr := ctx.String("signed_cid"); len(signedCidStr) > 0 {
+				signedCid, err := cid.Decode(signedCidStr)
+				if err != nil {
+					return err
+				}
+				msg, err := client.GetMessageBySignedCid(ctx.Context, signedCid)
+				if err != nil {
+					return err
+				}
+				id = msg.ID
+			} else if unsignedCidStr := ctx.String("unsigned_cid"); len(unsignedCidStr) > 0 {
+				unsignedCid, err := cid.Decode(unsignedCidStr)
+				if err != nil {
+					return err
+				}
+				msg, err := client.GetMessageByUnsignedCid(ctx.Context, unsignedCid)
+				if err != nil {
+					return err
+				}
+				id = msg.ID
+			} else {
+				return fmt.Errorf("value of query must be entered")
 			}
-			msg, err := client.GetMessageBySignedCid(ctx.Context, signedCid)
-			if err != nil {
-				return err
-			}
-			id = msg.ID
-		} else if unsignedCidStr := ctx.String("unsigned_cid"); len(unsignedCidStr) > 0 {
-			unsignedCid, err := cid.Decode(unsignedCidStr)
-			if err != nil {
-				return err
-			}
-			msg, err := client.GetMessageByUnsignedCid(ctx.Context, unsignedCid)
-			if err != nil {
-				return err
-			}
-			id = msg.ID
-		} else {
-			return fmt.Errorf("value of query must be entered")
 		}
 
 		_, err = client.UpdateFilledMessageByID(ctx.Context, id)

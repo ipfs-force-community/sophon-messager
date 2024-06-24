@@ -73,7 +73,7 @@ func (m *MockWalletProxy) RemoveAddress(account string, addrs []address.Address)
 	return nil
 }
 
-func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address, accounts []string) (bool, error) {
+func (m *MockWalletProxy) WalletHas(_ context.Context, addr address.Address, accounts []string) (bool, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 
@@ -90,7 +90,7 @@ func (m *MockWalletProxy) WalletHas(ctx context.Context, addr address.Address, a
 	return false, nil
 }
 
-func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, accounts []string, toSign []byte, meta types.MsgMeta) (*crypto.Signature, error) {
+func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, accounts []string, toSign []byte, _ types.MsgMeta) (*crypto.Signature, error) {
 	has, err := m.WalletHas(ctx, addr, accounts)
 	if err != nil {
 		return nil, err
@@ -104,11 +104,11 @@ func (m *MockWalletProxy) WalletSign(ctx context.Context, addr address.Address, 
 	}, nil
 }
 
-func (m *MockWalletProxy) ListWalletInfo(ctx context.Context) ([]*gtypes.WalletDetail, error) {
+func (m *MockWalletProxy) ListWalletInfo(_ context.Context) ([]*gtypes.WalletDetail, error) {
 	panic("implement me")
 }
 
-func (m *MockWalletProxy) ListWalletInfoByWallet(ctx context.Context, wallet string) (*gtypes.WalletDetail, error) {
+func (m *MockWalletProxy) ListWalletInfoByWallet(_ context.Context, _ string) (*gtypes.WalletDetail, error) {
 	panic("implement me")
 }
 
