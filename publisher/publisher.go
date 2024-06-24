@@ -16,8 +16,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
-var errAlreadyInMpool = fmt.Errorf("already in mpool: validation failure")
 var errMinimumNonce = errors.New("minimum expected nonce")
+var errExistingNonce = errors.New("message with nonce already exists")
 
 //go:generate mockgen -destination=../mocks/mock_msg_publisher.go -package=mocks github.com/ipfs-force-community/sophon-messager/publisher IMsgPublisher
 
@@ -173,7 +173,7 @@ func (n *nodeThread) run(ctx context.Context) {
 			case msgs := <-n.msgChan:
 				if msgCIDs, err := n.nodeClient.MpoolBatchPushUntrusted(ctx, msgs); err != nil {
 					// skip error
-					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errAlreadyInMpool.Error()) {
+					if !strings.Contains(err.Error(), errMinimumNonce.Error()) && !strings.Contains(err.Error(), errExistingNonce.Error()) {
 						var failedMsg []cid.Cid
 						for i := len(msgCIDs); i < len(msgs); i++ {
 							failedMsg = append(failedMsg, msgs[i].Cid())
