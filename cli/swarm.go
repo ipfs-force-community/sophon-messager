@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/filecoin-project/venus/pkg/net"
+	"github.com/ipfs-force-community/sophon-messager/utils"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/urfave/cli/v2"
 )
@@ -70,7 +70,7 @@ var connectByMutiAddrCmd = &cli.Command{
 
 		peers := ctx.Args().Slice()
 
-		pis, err := net.ParseAddresses(ctx.Context, peers)
+		pis, err := utils.ParseAddresses(ctx.Context, peers)
 		if err != nil {
 			return err
 		}

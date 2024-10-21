@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/filecoin-project/venus/fixtures/networks"
-	"github.com/filecoin-project/venus/pkg/net"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/ipfs-force-community/sophon-messager/config"
 	logging "github.com/ipfs/go-log/v2"
@@ -15,6 +14,7 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
@@ -239,11 +239,16 @@ func (m *PubSub) doExpand(ctx context.Context) {
 	}
 }
 
+// FilecoinDHT is creates a protocol for the filecoin DHT.
+func FilecoinDHT(network string) protocol.ID {
+	return protocol.ID(fmt.Sprintf("/fil/kad/%s", network))
+}
+
 func makeDHT(ctx context.Context, h types.RawHost, networkName string, bootNodes []peer.AddrInfo) (*dht.IpfsDHT, error) {
 	mode := dht.ModeAuto
 	opts := []dht.Option{
 		dht.Mode(mode),
-		dht.ProtocolPrefix(net.FilecoinDHT(networkName)),
+		dht.ProtocolPrefix(FilecoinDHT(networkName)),
 		dht.QueryFilter(dht.PublicQueryFilter),
 		dht.RoutingTableFilter(dht.PublicRoutingTableFilter),
 		dht.DisableProviders(),
