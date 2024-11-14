@@ -3,7 +3,7 @@ package version
 var (
 	CurrentCommit string
 
-	BuildVersion = "1.17.0-rc1"
+	BuildVersion = "1.17.0"
 
 	Version = BuildVersion + CurrentCommit
 )
