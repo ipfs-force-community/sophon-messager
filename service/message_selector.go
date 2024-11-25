@@ -351,7 +351,7 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 		w.log.Warnf("nonce in db %d is smaller than nonce on chain %d, update to latest", addrInfo.Nonce, nonceInLatestTs)
 		addrInfo.Nonce = nonceInLatestTs
 		addrInfo.UpdatedAt = time.Now()
-		err := w.repo.AddressRepo().UpdateNonce(ctx, addrInfo.Addr, addrInfo.Nonce)
+		err := w.repo.AddressRepo().UpdateNonce(addrInfo.Addr, addrInfo.Nonce)
 		if err != nil {
 			return nil, fmt.Errorf("update nonce failed: %v", err)
 		}
@@ -590,7 +590,7 @@ func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelect
 			}
 
 			addrInfo := selectResult.Address
-			if err := txRepo.AddressRepo().UpdateNonce(ctx, addrInfo.Addr, addrInfo.Nonce); err != nil {
+			if err := txRepo.AddressRepo().UpdateNonce(addrInfo.Addr, addrInfo.Nonce); err != nil {
 				return err
 			}
 		}

@@ -163,7 +163,6 @@ func testDelAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 }
 
 func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
-	ctx := context.Background()
 	addr := testutil.AddressProvider()(t)
 	nonce := uint64(10)
 
@@ -174,7 +173,7 @@ func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err := r.AddressRepo().UpdateNonce(ctx, addr, nonce)
+	err := r.AddressRepo().UpdateNonce(addr, nonce)
 	assert.NoError(t, err)
 }
 

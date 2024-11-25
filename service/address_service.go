@@ -75,8 +75,8 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 	return address.ID, err
 }
 
-func (addressService *AddressService) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
+func (addressService *AddressService) UpdateNonce(_ context.Context, addr address.Address, nonce uint64) error {
+	return addressService.repo.AddressRepo().UpdateNonce(addr, nonce)
 }
 
 func (addressService *AddressService) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {

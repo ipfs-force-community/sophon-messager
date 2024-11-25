@@ -170,8 +170,8 @@ func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) 
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
 }
 
-func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.WithContext(ctx).Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+func (s mysqlAddressRepo) UpdateNonce(addr address.Address, nonce uint64) error {
+	return s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
 }
 
