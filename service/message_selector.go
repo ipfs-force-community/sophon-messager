@@ -580,7 +580,7 @@ func (w *work) signMessage(ctx context.Context, msg *types.Message, accounts []s
 	return sigI.(*crypto.Signature), nil
 }
 
-func (w *work) saveSelectedMessages(ctx context.Context, selectResult *MsgSelectResult) error {
+func (w *work) saveSelectedMessages(_ context.Context, selectResult *MsgSelectResult) error {
 	startSaveDB := time.Now()
 	w.log.Infof("start save messages to database")
 	err := w.repo.Transaction(func(txRepo repo.TxRepo) error {
