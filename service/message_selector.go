@@ -308,14 +308,19 @@ func (w *work) startSelectMessage(
 		w.log.Errorf("select message failed: %v", err)
 		return
 	}
-	w.log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | took: %v", len(selectResult.SelectMsg),
-		len(selectResult.ToPushMsg), len(selectResult.ErrMsg), time.Since(w.start))
 
-	recordMetric(ctx, w.addr, selectResult)
+	if len(selectResult.SelectMsg) != 0 || len(selectResult.ToPushMsg) != 0 || len(selectResult.ErrMsg) != 0 {
+		w.log.Infof("select message result | SelectMsg: %d | ToPushMsg: %d | ErrMsg: %d | took: %v", len(selectResult.SelectMsg),
+			len(selectResult.ToPushMsg), len(selectResult.ErrMsg), time.Since(w.start))
 
-	if err := w.saveSelectedMessages(ctx, selectResult); err != nil {
-		w.log.Errorf("failed to save selected messages to db %v", err)
-		return
+		recordMetric(ctx, w.addr, selectResult)
+
+		if len(selectResult.SelectMsg) > 0 || len(selectResult.ErrMsg) > 0 {
+			if err := w.saveSelectedMessages(ctx, selectResult); err != nil {
+				w.log.Errorf("failed to save selected messages to db %v", err)
+				return
+			}
+		}
 	}
 
 	for _, msg := range selectResult.SelectMsg {
@@ -362,14 +367,13 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 	// calc the message needed
 	nonceGap := addrInfo.Nonce - nonceInLatestTs
 	if nonceGap >= maxAllowPendingMessage {
-		w.log.Errorf("there are %d message not to be package, nonce gap: %d", len(toPushMessage), nonceGap)
+		w.log.Warnf("there are %d message not to be package, nonce gap: %d", len(toPushMessage), nonceGap)
 		return &MsgSelectResult{
 			ToPushMsg: toPushMessage,
 			Address:   addrInfo,
 		}, nil
 	}
 	wantCount := maxAllowPendingMessage - nonceGap
-	w.log.Infof("state actor nonce %d, latest nonce in ts %d, assigned nonce %d, nonce gap %d, want %d", actorNonce, nonceInLatestTs, addrInfo.Nonce, nonceGap, wantCount)
 
 	// get unfill message
 	selectCount := mathutil.MinUint64(wantCount, 100)
@@ -379,12 +383,14 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 	}
 
 	if len(messages) == 0 {
-		w.log.Infof("have no unfill message")
+		w.log.Debugf("have no unfill message")
 		return &MsgSelectResult{
 			ToPushMsg: toPushMessage,
 			Address:   addrInfo,
 		}, nil
 	}
+	w.log.Infof("state actor nonce %d, latest nonce in ts %d, assigned nonce %d, nonce gap %d, want %d", actorNonce,
+		nonceInLatestTs, addrInfo.Nonce, nonceGap, wantCount)
 
 	var errMsg []msgErrInfo
 	count := uint64(0)
@@ -477,7 +483,7 @@ func (w *work) getNonce(ctx context.Context, ts *venusTypes.TipSet, appliedNonce
 	nonceInLatestTs := actor.Nonce
 	// todo actor nonce maybe the latest ts. not need appliedNonce
 	if nonceInTs, ok := appliedNonce.Get(w.addr); ok {
-		w.log.Infof("nonce in ts %d, nonce in actor %d", nonceInTs, nonceInLatestTs)
+		w.log.Debugf("nonce in ts %d, nonce in actor %d", nonceInTs, nonceInLatestTs)
 		nonceInLatestTs = nonceInTs
 	}
 
