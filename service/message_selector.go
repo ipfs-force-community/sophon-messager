@@ -363,7 +363,7 @@ func (w *work) selectMessage(ctx context.Context, appliedNonce *utils.NonceMap, 
 				w.log.Warnf("max message nonce in db %d", maxMsgNonce)
 			}
 		}
-		err = w.repo.AddressRepo().UpdateNonce(addrInfo.Addr, addrInfo.Nonce)
+		err = w.repo.AddressRepo().SaveAddress(ctx, addrInfo)
 		if err != nil {
 			return nil, fmt.Errorf("update nonce failed: %v", err)
 		}
@@ -499,39 +499,35 @@ func (w *work) getNonce(ctx context.Context, ts *venusTypes.TipSet, appliedNonce
 
 func (w *work) getMaxMessageNonceFromDB(addr address.Address) (uint64, error) {
 	var maxNonce uint64
-	msgs, err := w.repo.MessageRepo().ListMessageByParams(&types.MsgQueryParams{
-		State: []types.MessageState{
-			types.FillMsg,
+	queryParams := []*types.MsgQueryParams{
+		{
+			State: []types.MessageState{
+				types.FillMsg,
+			},
+			From: []address.Address{
+				addr,
+			},
 		},
-		From: []address.Address{
-			addr,
+		{
+			State: []types.MessageState{
+				types.OnChainMsg,
+			},
+			From: []address.Address{
+				addr,
+			},
+			Limit: 50,
 		},
-		Limit: 100,
-	})
-	if err == nil {
-		for _, msg := range msgs {
-			if maxNonce < msg.Nonce {
-				maxNonce = msg.Nonce
-			}
-		}
-		return maxNonce, nil
 	}
 
-	msgs, err = w.repo.MessageRepo().ListMessageByParams(&types.MsgQueryParams{
-		State: []types.MessageState{
-			types.OnChainMsg,
-		},
-		From: []address.Address{
-			addr,
-		},
-		Limit: 10,
-	})
-	if err != nil {
-		return 0, err
-	}
-	for _, msg := range msgs {
-		if maxNonce < msg.Nonce {
-			maxNonce = msg.Nonce
+	for _, param := range queryParams {
+		msgs, err := w.repo.MessageRepo().ListMessageByParams(param)
+		if err == nil && len(msgs) > 0 {
+			for _, msg := range msgs {
+				if maxNonce < msg.Nonce {
+					maxNonce = msg.Nonce
+				}
+			}
+			return maxNonce, nil
 		}
 	}
 
@@ -644,7 +640,7 @@ func (w *work) saveSelectedMessages(selectResult *MsgSelectResult) error {
 			}
 
 			addrInfo := selectResult.Address
-			if err := txRepo.AddressRepo().UpdateNonce(addrInfo.Addr, addrInfo.Nonce); err != nil {
+			if err := txRepo.AddressRepo().SaveAddress(w.ctx, addrInfo); err != nil {
 				return err
 			}
 			w.log.Infof("update nonce to %v", addrInfo.Nonce)
