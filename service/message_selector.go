@@ -640,10 +640,11 @@ func (w *work) saveSelectedMessages(selectResult *MsgSelectResult) error {
 			}
 
 			addrInfo := selectResult.Address
-			if err := txRepo.AddressRepo().SaveAddress(w.ctx, addrInfo); err != nil {
+			row, err := txRepo.AddressRepo().UpdateNonce(addrInfo.Addr, addrInfo.Nonce)
+			if err != nil {
 				return err
 			}
-			w.log.Infof("update nonce to %v", addrInfo.Nonce)
+			w.log.Infof("update nonce to %v, row affected %v", addrInfo.Nonce, row)
 		}
 
 		for _, m := range selectResult.ErrMsg {

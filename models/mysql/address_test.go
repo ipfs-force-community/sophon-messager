@@ -173,7 +173,7 @@ func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err := r.AddressRepo().UpdateNonce(addr, nonce)
+	_, err := r.AddressRepo().UpdateNonce(addr, nonce)
 	assert.NoError(t, err)
 }
 

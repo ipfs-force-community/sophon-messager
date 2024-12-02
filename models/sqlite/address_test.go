@@ -116,13 +116,14 @@ func TestAddress(t *testing.T) {
 
 	t.Run("UpdateNonce", func(t *testing.T) {
 		nonce := uint64(5)
-		assert.NoError(t, addressRepo.UpdateNonce(addrInfo.Addr, nonce))
+		_, err := addressRepo.UpdateNonce(addrInfo.Addr, nonce)
+		assert.NoError(t, err)
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, nonce, r.Nonce)
 
 		// set nonce for a not exist address
-		err = addressRepo.UpdateNonce(randAddr, nonce)
+		_, err = addressRepo.UpdateNonce(randAddr, nonce)
 		assert.NoError(t, err)
 		_, err = addressRepo.GetAddress(ctx, randAddr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
