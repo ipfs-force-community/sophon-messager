@@ -48,22 +48,30 @@ func Options() fx.Option {
 }
 
 func MigrateAddress(r repo.Repo) error {
-	list, err := r.AddressRepo().ListAddress(context.Background())
+	ctx := context.Background()
+	list, err := r.AddressRepo().ListAddress(ctx)
 	if err != nil {
 		return err
 	}
 
 	return r.Transaction(func(txRepo repo.TxRepo) error {
+
 		for _, addrInfo := range list {
 			fAddr := addrInfo.Addr.String()
-			_, err := txRepo.AddressRepo().GetOneRecord(context.Background(), fAddr)
+			tAddr := "t" + fAddr[1:]
+			_, err := txRepo.AddressRepo().GetOneRecord(ctx, fAddr)
 			if err == nil {
+				if _, err := txRepo.AddressRepo().GetOneRecord(ctx, tAddr); err == nil {
+					if err := txRepo.AddressRepo().DelAddress(ctx, tAddr); err != nil {
+						return err
+					}
+					log.Infof("delete address %s success", tAddr)
+				}
 				continue
 			}
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
 			}
-			tAddr := "t" + fAddr[1:]
 
 			log.Infof("migrate address %s to %s", tAddr, fAddr)
 			now := time.Now()
