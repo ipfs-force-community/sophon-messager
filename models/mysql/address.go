@@ -166,8 +166,7 @@ func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addre
 }
 
 func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
-	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr, repo.NotDeleted).
-		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
+	return s.DB.WithContext(ctx).Where("addr = ?", addr).Delete(&mysqlAddress{}).Error
 }
 
 func (s mysqlAddressRepo) UpdateNonce(addr address.Address, nonce uint64) (int64, error) {

@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
-	"github.com/ipfs-force-community/sophon-messager/models/repo"
 	"github.com/ipfs-force-community/sophon-messager/testhelper"
 )
 
@@ -199,9 +198,8 @@ func TestAddress(t *testing.T) {
 		assert.Nil(t, r)
 
 		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr.String())
-		assert.NoError(t, err)
-		assert.Equal(t, types.AddressStateRemoved, r.State)
-		assert.Equal(t, repo.Deleted, r.IsDeleted)
+		assert.Error(t, err)
+		assert.Nil(t, r)
 
 		// delete a not exist address
 		err = addressRepo.DelAddress(ctx, randAddr.String())

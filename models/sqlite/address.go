@@ -207,8 +207,7 @@ func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Add
 }
 
 func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
-	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr).
-		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
+	return s.DB.WithContext(ctx).Where("addr = ?", addr).Delete(&sqliteAddress{}).Error
 }
 
 var _ repo.AddressRepo = &sqliteAddressRepo{}

@@ -153,8 +153,8 @@ func testDelAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `is_deleted`=?,`state`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(repo.Deleted, types.AddressStateRemoved, anyTime{}, addr.String(), repo.NotDeleted).
+		"DELETE FROM `addresses` WHERE addr = ?")).
+		WithArgs(addr.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
