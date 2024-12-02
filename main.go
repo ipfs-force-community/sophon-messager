@@ -13,6 +13,7 @@ import (
 	"github.com/ipfs-force-community/sophon-messager/publisher"
 	"github.com/ipfs-force-community/sophon-messager/publisher/pubsub"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus/fixtures/networks"
 	v1 "github.com/filecoin-project/venus/venus-shared/api/chain/v1"
 	gatewayAPI "github.com/filecoin-project/venus/venus-shared/api/gateway/v2"
@@ -123,6 +124,18 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name: "rate-limit-redis",
 		},
+		&cli.StringFlag{
+			Name:   "network",
+			Usage:  "network name, eg. mainnet, calibnet",
+			Value:  "calibnet",
+			Hidden: true,
+		},
+	},
+	Before: func(cctx *cli.Context) error {
+		if cctx.String("network") != "mainnet" {
+			address.CurrentNetwork = address.Testnet
+		}
+		return nil
 	},
 	Action: runAction,
 }
