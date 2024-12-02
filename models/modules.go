@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	shared "github.com/filecoin-project/venus/venus-shared/types"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs-force-community/sophon-messager/filestore"
 	"github.com/ipfs-force-community/sophon-messager/models/mysql"
@@ -30,10 +31,10 @@ func SetDataBase(fsRepo filestore.FSRepo) (repo.Repo, error) {
 }
 
 func AutoMigrate(repo repo.Repo) error {
-	if err := MigrateAddress(repo); err != nil {
-		return fmt.Errorf("migrate address: %w", err)
+	if err := repo.AutoMigrate(); err != nil {
+		return fmt.Errorf("migrate: %w", err)
 	}
-	return repo.AutoMigrate()
+	return MigrateAddress(repo)
 }
 
 func Options() fx.Option {
@@ -67,6 +68,7 @@ func MigrateAddress(r repo.Repo) error {
 			log.Infof("migrate address %s to %s", tAddr, fAddr)
 			now := time.Now()
 			newAddrInfo := &types.Address{
+				ID:        shared.NewUUID(),
 				Addr:      addrInfo.Addr,
 				Nonce:     addrInfo.Nonce,
 				SelMsgNum: addrInfo.SelMsgNum,
