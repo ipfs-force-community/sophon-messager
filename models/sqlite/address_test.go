@@ -192,19 +192,19 @@ func TestAddress(t *testing.T) {
 	})
 
 	t.Run("DelAddress", func(t *testing.T) {
-		assert.NoError(t, addressRepo.DelAddress(ctx, addrInfo2.Addr))
+		assert.NoError(t, addressRepo.DelAddress(ctx, addrInfo2.Addr.String()))
 
 		r, err := addressRepo.GetAddress(ctx, addrInfo2.Addr)
 		assert.Error(t, err)
 		assert.Nil(t, r)
 
-		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr)
+		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr.String())
 		assert.NoError(t, err)
 		assert.Equal(t, types.AddressStateRemoved, r.State)
 		assert.Equal(t, repo.Deleted, r.IsDeleted)
 
 		// delete a not exist address
-		err = addressRepo.DelAddress(ctx, randAddr)
+		err = addressRepo.DelAddress(ctx, randAddr.String())
 		assert.NoError(t, err)
 		_, err = addressRepo.GetAddress(ctx, randAddr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())

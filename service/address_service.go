@@ -121,7 +121,7 @@ func (addressService *AddressService) ListActiveAddress(ctx context.Context) ([]
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) error {
-	return addressService.repo.AddressRepo().DelAddress(ctx, addr)
+	return addressService.repo.AddressRepo().DelAddress(ctx, addr.String())
 }
 
 func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) error {

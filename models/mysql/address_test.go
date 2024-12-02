@@ -102,7 +102,7 @@ func testGetOneRecord(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WithArgs(addr.String()).
 		WillReturnRows(sqlmock.NewRows([]string{"addr"}).AddRow(addr.String()))
 
-	res, err := r.AddressRepo().GetOneRecord(ctx, addr)
+	res, err := r.AddressRepo().GetOneRecord(ctx, addr.String())
 	assert.NoError(t, err)
 	assert.Equal(t, addr, res.Addr)
 }
@@ -158,7 +158,7 @@ func testDelAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err := r.AddressRepo().DelAddress(ctx, addr)
+	err := r.AddressRepo().DelAddress(ctx, addr.String())
 	assert.NoError(t, err)
 }
 

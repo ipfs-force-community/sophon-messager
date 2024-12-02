@@ -111,9 +111,9 @@ func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (*
 	return a.Address()
 }
 
-func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr string) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr).Error; err != nil {
 		return nil, err
 	}
 
@@ -165,8 +165,8 @@ func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addre
 	return result, nil
 }
 
-func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
+	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr, repo.NotDeleted).
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
 }
 

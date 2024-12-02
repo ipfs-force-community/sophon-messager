@@ -110,9 +110,9 @@ func (s sqliteAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (
 	return a.Address()
 }
 
-func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr).Error; err != nil {
 		return nil, err
 	}
 
@@ -206,8 +206,8 @@ func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Add
 	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).UpdateColumns(updateColumns).Error
 }
 
-func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
+	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr).
 		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
 }
 
