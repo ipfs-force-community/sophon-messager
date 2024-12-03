@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
-	"github.com/ipfs-force-community/sophon-messager/models/repo"
 	"github.com/ipfs-force-community/sophon-messager/testhelper"
 )
 
@@ -116,13 +115,14 @@ func TestAddress(t *testing.T) {
 
 	t.Run("UpdateNonce", func(t *testing.T) {
 		nonce := uint64(5)
-		assert.NoError(t, addressRepo.UpdateNonce(ctx, addrInfo.Addr, nonce))
+		_, err := addressRepo.UpdateNonce(addrInfo.Addr, nonce)
+		assert.NoError(t, err)
 		r, err := addressRepo.GetAddress(ctx, addrInfo.Addr)
 		assert.NoError(t, err)
 		assert.Equal(t, nonce, r.Nonce)
 
 		// set nonce for a not exist address
-		err = addressRepo.UpdateNonce(ctx, randAddr, nonce)
+		_, err = addressRepo.UpdateNonce(randAddr, nonce)
 		assert.NoError(t, err)
 		_, err = addressRepo.GetAddress(ctx, randAddr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())
@@ -191,19 +191,18 @@ func TestAddress(t *testing.T) {
 	})
 
 	t.Run("DelAddress", func(t *testing.T) {
-		assert.NoError(t, addressRepo.DelAddress(ctx, addrInfo2.Addr))
+		assert.NoError(t, addressRepo.DelAddress(ctx, addrInfo2.Addr.String()))
 
 		r, err := addressRepo.GetAddress(ctx, addrInfo2.Addr)
 		assert.Error(t, err)
 		assert.Nil(t, r)
 
-		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr)
-		assert.NoError(t, err)
-		assert.Equal(t, types.AddressStateRemoved, r.State)
-		assert.Equal(t, repo.Deleted, r.IsDeleted)
+		r, err = addressRepo.GetOneRecord(ctx, addrInfo2.Addr.String())
+		assert.Error(t, err)
+		assert.Nil(t, r)
 
 		// delete a not exist address
-		err = addressRepo.DelAddress(ctx, randAddr)
+		err = addressRepo.DelAddress(ctx, randAddr.String())
 		assert.NoError(t, err)
 		_, err = addressRepo.GetAddress(ctx, randAddr)
 		assert.Contains(t, err.Error(), gorm.ErrRecordNotFound.Error())

@@ -102,7 +102,7 @@ func testGetOneRecord(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WithArgs(addr.String()).
 		WillReturnRows(sqlmock.NewRows([]string{"addr"}).AddRow(addr.String()))
 
-	res, err := r.AddressRepo().GetOneRecord(ctx, addr)
+	res, err := r.AddressRepo().GetOneRecord(ctx, addr.String())
 	assert.NoError(t, err)
 	assert.Equal(t, addr, res.Addr)
 }
@@ -153,17 +153,16 @@ func testDelAddress(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `addresses` SET `is_deleted`=?,`state`=?,`updated_at`=? WHERE addr = ? and is_deleted = ?")).
-		WithArgs(repo.Deleted, types.AddressStateRemoved, anyTime{}, addr.String(), repo.NotDeleted).
+		"DELETE FROM `addresses` WHERE addr = ?")).
+		WithArgs(addr.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err := r.AddressRepo().DelAddress(ctx, addr)
+	err := r.AddressRepo().DelAddress(ctx, addr.String())
 	assert.NoError(t, err)
 }
 
 func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
-	ctx := context.Background()
 	addr := testutil.AddressProvider()(t)
 	nonce := uint64(10)
 
@@ -174,7 +173,7 @@ func testUpdateNonce(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err := r.AddressRepo().UpdateNonce(ctx, addr, nonce)
+	_, err := r.AddressRepo().UpdateNonce(addr, nonce)
 	assert.NoError(t, err)
 }
 

@@ -75,8 +75,9 @@ func (addressService *AddressService) SaveAddress(ctx context.Context, address *
 	return address.ID, err
 }
 
-func (addressService *AddressService) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return addressService.repo.AddressRepo().UpdateNonce(ctx, addr, nonce)
+func (addressService *AddressService) UpdateNonce(_ context.Context, addr address.Address, nonce uint64) error {
+	_, err := addressService.repo.AddressRepo().UpdateNonce(addr, nonce)
+	return err
 }
 
 func (addressService *AddressService) GetAddress(ctx context.Context, addr address.Address) (*types.Address, error) {
@@ -120,7 +121,7 @@ func (addressService *AddressService) ListActiveAddress(ctx context.Context) ([]
 }
 
 func (addressService *AddressService) DeleteAddress(ctx context.Context, addr address.Address) error {
-	return addressService.repo.AddressRepo().DelAddress(ctx, addr)
+	return addressService.repo.AddressRepo().DelAddress(ctx, addr.String())
 }
 
 func (addressService *AddressService) ForbiddenAddress(ctx context.Context, addr address.Address) error {

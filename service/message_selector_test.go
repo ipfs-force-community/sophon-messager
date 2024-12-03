@@ -718,7 +718,7 @@ func selectMsgWithAddress(ctx context.Context,
 		}
 		allSelectRes.ErrMsg = append(allSelectRes.ErrMsg, selectResult.ErrMsg...)
 
-		assert.NoError(t, work.saveSelectedMessages(ctx, selectResult))
+		assert.NoError(t, work.saveSelectedMessages(selectResult))
 	}
 
 	return allSelectRes

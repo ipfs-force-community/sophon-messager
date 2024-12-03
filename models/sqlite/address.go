@@ -110,9 +110,9 @@ func (s sqliteAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (
 	return a.Address()
 }
 
-func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s sqliteAddressRepo) GetOneRecord(ctx context.Context, addr string) (*types.Address, error) {
 	var a sqliteAddress
-	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr).Error; err != nil {
 		return nil, err
 	}
 
@@ -164,9 +164,10 @@ func (s sqliteAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addr
 	return result, nil
 }
 
-func (s sqliteAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
+func (s sqliteAddressRepo) UpdateNonce(addr address.Address, nonce uint64) (int64, error) {
+	query := s.DB.Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
+		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()})
+	return query.RowsAffected, query.Error
 }
 
 func (s sqliteAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error {
@@ -205,9 +206,8 @@ func (s sqliteAddressRepo) UpdateFeeParams(ctx context.Context, addr address.Add
 	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).UpdateColumns(updateColumns).Error
 }
 
-func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.WithContext(ctx).Model((*sqliteAddress)(nil)).Where("addr = ? and is_deleted = -1", addr.String()).
-		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
+func (s sqliteAddressRepo) DelAddress(ctx context.Context, addr string) error {
+	return s.DB.WithContext(ctx).Where("addr = ?", addr).Delete(&sqliteAddress{}).Error
 }
 
 var _ repo.AddressRepo = &sqliteAddressRepo{}

@@ -111,9 +111,9 @@ func (s mysqlAddressRepo) GetAddressByID(ctx context.Context, id shared.UUID) (*
 	return a.Address()
 }
 
-func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error) {
+func (s mysqlAddressRepo) GetOneRecord(ctx context.Context, addr string) (*types.Address, error) {
 	var a mysqlAddress
-	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr.String()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Take(&a, "addr = ?", addr).Error; err != nil {
 		return nil, err
 	}
 
@@ -165,14 +165,14 @@ func (s mysqlAddressRepo) ListActiveAddress(ctx context.Context) ([]*types.Addre
 	return result, nil
 }
 
-func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr address.Address) error {
-	return s.DB.WithContext(ctx).Model((*mysqlAddress)(nil)).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
-		UpdateColumns(map[string]interface{}{"is_deleted": repo.Deleted, "state": types.AddressStateRemoved, "updated_at": time.Now()}).Error
+func (s mysqlAddressRepo) DelAddress(ctx context.Context, addr string) error {
+	return s.DB.WithContext(ctx).Where("addr = ?", addr).Delete(&mysqlAddress{}).Error
 }
 
-func (s mysqlAddressRepo) UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error {
-	return s.DB.WithContext(ctx).Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
-		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()}).Error
+func (s mysqlAddressRepo) UpdateNonce(addr address.Address, nonce uint64) (int64, error) {
+	query := s.DB.Model(&mysqlAddress{}).Where("addr = ? and is_deleted = ?", addr.String(), repo.NotDeleted).
+		UpdateColumns(map[string]interface{}{"nonce": nonce, "updated_at": time.Now()})
+	return query.RowsAffected, query.Error
 }
 
 func (s mysqlAddressRepo) UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error {

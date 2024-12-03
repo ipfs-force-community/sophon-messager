@@ -14,12 +14,12 @@ type AddressRepo interface {
 	SaveAddress(ctx context.Context, address *types.Address) error
 	GetAddress(ctx context.Context, addr address.Address) (*types.Address, error)
 	GetAddressByID(ctx context.Context, id shared.UUID) (*types.Address, error)
-	GetOneRecord(ctx context.Context, addr address.Address) (*types.Address, error)
+	GetOneRecord(ctx context.Context, addr string) (*types.Address, error)
 	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 	ListAddress(ctx context.Context) ([]*types.Address, error)
 	ListActiveAddress(ctx context.Context) ([]*types.Address, error)
-	DelAddress(ctx context.Context, addr address.Address) error
-	UpdateNonce(ctx context.Context, addr address.Address, nonce uint64) error
+	DelAddress(ctx context.Context, addr string) error
+	UpdateNonce(addr address.Address, nonce uint64) (int64, error)
 	UpdateState(ctx context.Context, addr address.Address, state types.AddressState) error
 	UpdateSelectMsgNum(ctx context.Context, addr address.Address, num uint64) error
 	UpdateFeeParams(ctx context.Context, addr address.Address, gasOverEstimation, gasOverPremium float64, maxFee, gasFeeCap, baseFee big.Int) error
