@@ -10,6 +10,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus/pkg/constants"
 	venustypes "github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus/venus-shared/api/messager"
@@ -97,6 +98,14 @@ func main() {
 			}
 
 			fmt.Println("send message " + uid)
+
+			go func() {
+				msg, err := client.WaitMessage(context.Background(), uid, constants.MessageConfidence)
+				if err != nil {
+					return
+				}
+				fmt.Printf("wait message success: %s, cid: %s\n", uid, msg.SignedCid)
+			}()
 		}
 	}
 }
