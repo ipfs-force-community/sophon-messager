@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -23,7 +24,7 @@ type MessageRepo interface {
 
 	GetMessageByFromAndNonce(from address.Address, nonce uint64) (*types.Message, error)
 	GetMessageByFromNonceAndState(from address.Address, nonce uint64, state types.MessageState) (*types.Message, error)
-	GetMessageByUid(id string) (*types.Message, error)
+	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
 	HasMessageByUid(id string) (bool, error)
 	GetMessageState(id string) (types.MessageState, error)
 	GetMessageByCid(unsignedCid cid.Cid) (*types.Message, error)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -91,6 +93,8 @@ type MessageService struct {
 	blockDelay time.Duration
 
 	msgReceiver publisher.MessageReceiver
+
+	msgWaitCh chan msgWaitTask
 }
 
 type headChan struct {
@@ -130,6 +134,7 @@ func NewMessageService(ctx context.Context,
 		cleanUnFillMsgFunc: make(chan func() (int, error)),
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 		msgReceiver:        msgReceiver,
+		msgWaitCh:          make(chan msgWaitTask, 50),
 	}
 	ms.refreshMessageState(ctx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
@@ -145,6 +150,8 @@ func NewMessageService(ctx context.Context,
 		return nil, fmt.Errorf("get network params failed %v", err)
 	}
 	ms.blockDelay = time.Duration(networkParams.BlockDelaySecs) * time.Second
+
+	go ms.handleWaitMessage(ctx)
 
 	return ms, ms.verifyNetworkName()
 }
@@ -247,53 +254,138 @@ func (ms *MessageService) PushMessageWithId(ctx context.Context, id string, msg 
 	return id, nil
 }
 
-func (ms *MessageService) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
-	d := time.Second * 30
-	if ms.blockDelay > 0 {
-		d = ms.blockDelay
+func (ms *MessageService) WaitMessage(ctx context.Context, id string, _ uint64) (*types.Message, error) {
+	resp := make(chan msgWaitResp, 1)
+	ms.msgWaitCh <- msgWaitTask{
+		msgID: id,
+		ctx:   ctx,
+		resp:  resp,
 	}
-	tm := time.NewTicker(d)
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context done: %v", ctx.Err())
+	case respMsg := <-resp:
+		return respMsg.msg, respMsg.err
+	}
+}
+
+type msgWaitTask struct {
+	ctx   context.Context
+	msgID string
+	resp  chan msgWaitResp
+}
+
+type msgWaitResp struct {
+	msg *types.Message
+	err error
+}
+
+func (ms *MessageService) handleWaitMessage(ctx context.Context) {
+	tm := time.NewTicker(time.Second * 30 * 3)
 	defer tm.Stop()
 
-	doneCh := make(chan struct{}, 1)
-	doneCh <- struct{}{}
+	pending := make(map[string][]msgWaitTask)
+	confidence := 5
+	ch := make(chan struct{}, 10)
+	lk := sync.Mutex{}
+
+	doResp := func(msgID string, tasks []msgWaitTask, msg *types.Message, err error) {
+		for _, task := range tasks {
+			task.resp <- msgWaitResp{
+				msg: msg,
+				err: err,
+			}
+		}
+		lk.Lock()
+		delete(pending, msgID)
+		lk.Unlock()
+	}
+
+	checkContext := func(msgID string, tasks []msgWaitTask) []msgWaitTask {
+		var tmp []msgWaitTask
+		for _, task := range tasks {
+			if task.ctx.Err() != nil {
+				task.resp <- msgWaitResp{
+					msg: nil,
+					err: task.ctx.Err(),
+				}
+				continue
+			}
+			tmp = append(tmp, task)
+		}
+
+		lk.Lock()
+		pending[msgID] = tmp
+		lk.Unlock()
+
+		return tmp
+	}
 
 	for {
 		select {
-		case <-doneCh:
-			msg, err := ms.GetMessageByUid(ctx, id)
-			if err != nil {
-				return nil, err
-			}
-
-			switch msg.State {
-			// OffChain
-			case types.FillMsg:
-				fallthrough
-			case types.UnFillMsg:
-				fallthrough
-			case types.UnKnown:
-				continue
-			// OnChain
-			case types.NonceConflictMsg:
-				if msg.Confidence > int64(confidence) {
-					return msg, nil
-				}
-				continue
-			case types.OnChainMsg:
-				if msg.Confidence > int64(confidence) {
-					return msg, nil
-				}
-				continue
-			// Error
-			case types.FailedMsg:
-				return msg, nil
-			}
-
-		case <-tm.C:
-			doneCh <- struct{}{}
 		case <-ctx.Done():
-			return nil, errors.New("exit by client ")
+			return
+		case task := <-ms.msgWaitCh:
+			lk.Lock()
+			pending[task.msgID] = append(pending[task.msgID], task)
+			lk.Unlock()
+		case <-tm.C:
+			if len(pending) == 0 {
+				continue
+			}
+
+			var wg sync.WaitGroup
+			for id, tasks := range pending {
+				wg.Add(1)
+				ch <- struct{}{}
+				go func(id string, tasks []msgWaitTask) {
+					defer func() {
+						<-ch
+						wg.Done()
+					}()
+
+					tasks = checkContext(id, tasks)
+
+					ctxTimeout, cancel := context.WithTimeout(ctx, time.Minute)
+					defer cancel()
+					msg, err := ms.GetMessageByUid(ctxTimeout, id)
+					if err != nil {
+						log.Errorf("get message %s failed %v", id, err)
+						if strings.Contains(err.Error(), context.DeadlineExceeded.Error()) ||
+							strings.Contains(err.Error(), context.Canceled.Error()) {
+							return
+						}
+						doResp(id, tasks, nil, err)
+						return
+					}
+
+					switch msg.State {
+					// OffChain
+					case types.FillMsg:
+						fallthrough
+					case types.UnFillMsg:
+						fallthrough
+					case types.UnKnown:
+						return
+					// OnChain
+					case types.NonceConflictMsg:
+						if msg.Confidence > int64(confidence) {
+							doResp(id, tasks, msg, nil)
+							return
+						}
+					case types.OnChainMsg:
+						if msg.Confidence > int64(confidence) {
+							doResp(id, tasks, msg, nil)
+							return
+						}
+					// Error
+					case types.FailedMsg:
+						doResp(id, tasks, msg, nil)
+					}
+				}(id, tasks)
+			}
+			wg.Wait()
 		}
 	}
 }
@@ -303,7 +395,7 @@ func (ms *MessageService) GetMessageByUid(ctx context.Context, id string) (*type
 	if err != nil {
 		return nil, err
 	}
-	msg, err := ms.repo.MessageRepo().GetMessageByUid(id)
+	msg, err := ms.repo.MessageRepo().GetMessageByUid(ctx, id)
 	if err != nil {
 		return nil, err
 	}

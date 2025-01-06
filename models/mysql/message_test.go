@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"regexp"
@@ -239,7 +240,7 @@ func testGetMessageByUid(t *testing.T, r repo.Repo, mock sqlmock.Sqlmock) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `messages` WHERE id = ? LIMIT 1")).
 		WithArgs(uid).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uid))
 
-	res, err := r.MessageRepo().GetMessageByUid(uid)
+	res, err := r.MessageRepo().GetMessageByUid(context.Background(), uid)
 	assert.NoError(t, err)
 	assert.Equal(t, uid, res.ID)
 }

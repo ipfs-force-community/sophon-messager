@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"math/rand"
 	"sort"
 	"testing"
@@ -29,13 +30,13 @@ func TestSaveAndGetMessage(t *testing.T) {
 	msgsMap := testhelper.SliceToMap(msgs)
 
 	msg := msgs[0]
-
+	ctx := context.Background()
 	// tes get message by uid
-	result, err := messageRepo.GetMessageByUid(msg.ID)
+	result, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	testhelper.Equal(t, msg, result)
 
-	_, err = messageRepo.GetMessageByUid(uuid.NewString())
+	_, err = messageRepo.GetMessageByUid(ctx, uuid.NewString())
 	assert.Error(t, err)
 
 	// test has message by uid
@@ -55,12 +56,12 @@ func TestSaveAndGetMessage(t *testing.T) {
 	// test save message
 	oneMsg := testhelper.NewMessage()
 	assert.NoError(t, messageRepo.UpdateMessage(oneMsg))
-	res, err := messageRepo.GetMessageByUid(oneMsg.ID)
+	res, err := messageRepo.GetMessageByUid(ctx, oneMsg.ID)
 	assert.NoError(t, err)
 	testhelper.Equal(t, oneMsg, res)
 	// save again, we expect CreateAt not change and UpdateAt changed
 	assert.NoError(t, messageRepo.UpdateMessage(oneMsg))
-	res2, err := messageRepo.GetMessageByUid(oneMsg.ID)
+	res2, err := messageRepo.GetMessageByUid(ctx, oneMsg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, res.CreatedAt, res2.CreatedAt)
 	assert.True(t, res.UpdatedAt.Before(res2.UpdatedAt))
@@ -81,7 +82,7 @@ func TestSaveAndGetMessage(t *testing.T) {
 	msg.SignedCid = &msgCid
 	msg.UnsignedCid = &msgCid
 	assert.NoError(t, messageRepo.UpdateMessage(msg))
-	res, err = messageRepo.GetMessageByUid(msg.ID)
+	res, err = messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	testhelper.Equal(t, msg, res)
 
@@ -89,7 +90,7 @@ func TestSaveAndGetMessage(t *testing.T) {
 	msgs2 := testhelper.NewMessages(msgCount)
 	assert.NoError(t, messageRepo.BatchSaveMessage(msgs2))
 	for _, msg := range msgs2 {
-		res, err := messageRepo.GetMessageByUid(msg.ID)
+		res, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 		assert.NoError(t, err)
 		testhelper.Equal(t, msg, res)
 	}
@@ -122,8 +123,8 @@ func TestExpireMessage(t *testing.T) {
 
 	err = messageRepo.ExpireMessage([]*types.Message{msg})
 	assert.NoError(t, err)
-
-	msg2, err := messageRepo.GetMessageByUid(msg.ID)
+	ctx := context.Background()
+	msg2, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, types.FailedMsg, msg2.State)
 }
@@ -652,8 +653,8 @@ func TestUpdateMessageStateByCid(t *testing.T) {
 
 	err = messageRepo.UpdateMessageStateByCid(cid.String(), types.OnChainMsg)
 	assert.NoError(t, err)
-
-	msg2, err := messageRepo.GetMessageByUid(msg.ID)
+	ctx := context.Background()
+	msg2, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, types.OnChainMsg, msg2.State)
 }
@@ -667,8 +668,8 @@ func TestUpdateMessageStateByID(t *testing.T) {
 
 	err := messageRepo.UpdateMessageStateByID(msg.ID, types.OnChainMsg)
 	assert.NoError(t, err)
-
-	res, err := messageRepo.GetMessageByUid(msg.ID)
+	ctx := context.Background()
+	res, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, types.OnChainMsg, res.State)
 }
@@ -686,8 +687,8 @@ func TestUpdateMessageByID(t *testing.T) {
 	msg.State = types.OnChainMsg
 	err := messageRepo.UpdateMessageByState(msg, types.FillMsg)
 	assert.NoError(t, err)
-
-	res, err := messageRepo.GetMessageByUid(msg.ID)
+	ctx := context.Background()
+	res, err := messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(10), res.GasFeeCap.Uint64())
 	assert.Equal(t, uint64(5), res.GasPremium.Uint64())
@@ -701,7 +702,7 @@ func TestUpdateMessageByID(t *testing.T) {
 	err = messageRepo.UpdateMessageByState(msg, types.FillMsg)
 	assert.NoError(t, err)
 
-	res, err = messageRepo.GetMessageByUid(msg.ID)
+	res, err = messageRepo.GetMessageByUid(ctx, msg.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(10), res.GasFeeCap.Uint64())
 	assert.Equal(t, uint64(5), res.GasPremium.Uint64())
@@ -720,15 +721,15 @@ func TestMarkBadMessage(t *testing.T) {
 
 	err := messageRepo.MarkBadMessage(msgs[0].ID)
 	assert.NoError(t, err)
-
-	msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
+	ctx := context.Background()
+	msg, err := messageRepo.GetMessageByUid(ctx, msgs[0].ID)
 	assert.NoError(t, err)
 	assert.Equal(t, types.FailedMsg, msg.State)
 }
 
 func TestUpdateErrMsg(t *testing.T) {
 	messageRepo := setupRepo(t).MessageRepo()
-
+	ctx := context.Background()
 	msgs := testhelper.NewMessages(2)
 	for _, msg := range msgs {
 		err := messageRepo.CreateMessage(msg)
@@ -737,7 +738,7 @@ func TestUpdateErrMsg(t *testing.T) {
 	failedInfo := "gas estimate failed"
 	err := messageRepo.UpdateErrMsg(msgs[0].ID, failedInfo)
 	assert.NoError(t, err)
-	msg, err := messageRepo.GetMessageByUid(msgs[0].ID)
+	msg, err := messageRepo.GetMessageByUid(ctx, msgs[0].ID)
 	assert.NoError(t, err)
 	assert.Equal(t, failedInfo, msg.ErrorMsg)
 

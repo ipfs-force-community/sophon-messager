@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -292,9 +293,9 @@ func (m *sqliteMessageRepo) UpdateMessageByState(msg *types.Message, state types
 	return m.DB.Where("state = ?", state).Updates(sqlMsg).Error
 }
 
-func (m *sqliteMessageRepo) GetMessageByUid(id string) (*types.Message, error) {
+func (m *sqliteMessageRepo) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
 	var msg sqliteMessage
-	if err := m.DB.Where("id = ?", id).Take(&msg).Error; err != nil {
+	if err := m.DB.WithContext(ctx).Where("id = ?", id).Take(&msg).Error; err != nil {
 		return nil, err
 	}
 	return msg.Message(), nil

@@ -215,14 +215,37 @@ func testWaitMessage(ctx context.Context, t *testing.T, api, apiSign messager.IM
 		assert.Equal(t, msg.ID, id)
 	}
 
+	var wg sync.WaitGroup
 	for _, msg := range msgs {
-		_, err := apiSign.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
-		assert.Contains(t, err.Error(), "permission deny")
+		wg.Add(1)
+		go func(msg *types.Message) {
+			defer wg.Done()
+
+			_, err := apiSign.WaitMessage(ctx, msg.ID, constants.MessageConfidence)
+			assert.Contains(t, err.Error(), "permission deny")
+		}(msg)
 	}
 
 	for _, msg := range msgs {
-		waitMessage(ctx, t, api, msg)
+		wg.Add(1)
+		go func(msg *types.Message) {
+			defer wg.Done()
+
+			waitMessage(ctx, t, api, msg)
+		}(msg)
 	}
+
+	for i := 0; i < len(msgs); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			res, err := api.WaitMessage(ctx, "msg_id_no_exist", constants.MessageConfidence)
+			assert.Error(t, err)
+			assert.Nil(t, res)
+		}()
+	}
+	wg.Wait()
 }
 
 func waitMessage(ctx context.Context, t *testing.T, api messager.IMessager, msg *types.Message) *types.Message {
