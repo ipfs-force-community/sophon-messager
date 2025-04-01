@@ -11,9 +11,9 @@ require (
 	github.com/filecoin-project/go-address v1.2.0
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-jsonrpc v0.1.5
-	github.com/filecoin-project/go-state-types v0.16.0-rc7
+	github.com/filecoin-project/go-state-types v0.16.0
 	github.com/filecoin-project/specs-actors/v5 v5.0.6
-	github.com/filecoin-project/venus v1.18.0-rc2
+	github.com/filecoin-project/venus v1.18.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/hunjixin/automapper v0.0.0-20191127090318-9b979ce72ce2
