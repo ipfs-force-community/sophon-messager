@@ -166,9 +166,7 @@ func TestReconnectCheck(t *testing.T) {
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		ms.tsCache.Add(ts)
-		go func() {
-			assert.NoError(t, ms.ReconnectCheck(ctx, ts))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ReconnectCheck(callCtx, ts) })
 		<-ms.headChans
 
 		next, err := testhelper.GenTipset(ts.Height()+1, 1, ts.Cids())
@@ -202,9 +200,7 @@ func TestReconnectCheck(t *testing.T) {
 				t.Errorf("not found tipset")
 			}
 		}
-		go func() {
-			assert.NoError(t, ms.ReconnectCheck(ctx, expectTS))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ReconnectCheck(callCtx, expectTS) })
 		headChange := <-ms.headChans
 		assert.Len(t, headChange.apply, int(expectTS.Height()-ts.Height())-1)
 		assert.Len(t, headChange.revert, 0)
@@ -247,9 +243,7 @@ func TestReconnectCheck(t *testing.T) {
 			}
 		}
 		revertedTS := <-revertSignal.RevertedTS
-		go func() {
-			assert.NoError(t, ms.ReconnectCheck(ctx, expectTS))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ReconnectCheck(callCtx, expectTS) })
 
 		headChange := <-ms.headChans
 		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height()))
@@ -280,9 +274,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		ts, err := msh.fullNode.ChainHead(ctx)
 		assert.NoError(t, err)
 		apply := []*shared.TipSet{ts}
-		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, apply))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ProcessNewHead(callCtx, apply) })
 
 		headChange := <-ms.headChans
 		assert.Equal(t, apply, headChange.apply)
@@ -350,9 +342,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectHeight, expectTS.Height())
 
-		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ProcessNewHead(callCtx, []*shared.TipSet{expectTS}) })
 		headChange := <-ms.headChans
 
 		var apply []*shared.TipSet
@@ -399,9 +389,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 			}
 		}
 		revertedTS := <-revertSignal.RevertedTS
-		go func() {
-			assert.NoError(t, ms.ProcessNewHead(ctx, []*shared.TipSet{expectTS}))
-		}()
+		joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ProcessNewHead(callCtx, []*shared.TipSet{expectTS}) })
 
 		headChange := <-ms.headChans
 		assert.Len(t, headChange.apply, int(expectTS.Height()-revertedTS[len(revertedTS)-1].Height()))
@@ -452,9 +440,7 @@ func TestMessageService_ProcessNewHead(t *testing.T) {
 				return nil, errors.New("not found tipset")
 			})
 
-			go func() {
-				assert.NoError(t, ms.ProcessNewHead(context.Background(), apply))
-			}()
+			joinBackgroundCall(ctx, t, func(callCtx context.Context) error { return ms.ProcessNewHead(callCtx, apply) })
 
 			sort.Slice(revert, func(i, j int) bool {
 				return revert[i].Height() > revert[j].Height()
@@ -577,6 +563,8 @@ type messageServiceHelper struct {
 	addrs      []address.Address
 	token      string
 	blockDelay time.Duration
+
+	cancel context.CancelFunc
 }
 
 type options struct {
@@ -591,6 +579,9 @@ func skipPushMessage() opt {
 }
 
 func newMessageServiceHelper(ctx context.Context, t *testing.T, opts ...opt) *messageServiceHelper {
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
 	opt := &options{}
 	for _, o := range opts {
 		o(opt)
@@ -640,6 +631,7 @@ func newMessageServiceHelper(ctx context.Context, t *testing.T, opts ...opt) *me
 		MessageService: ms,
 		token:          defaultLocalToken,
 		blockDelay:     blockDelay,
+		cancel:         cancel,
 	}
 }
 
@@ -649,7 +641,9 @@ func (msh *messageServiceHelper) start() {
 }
 
 func (msh *messageServiceHelper) stop() {
+	msh.cancel()
 	msh.lc.RequireStop()
+	msh.fullNode.Stop()
 }
 
 func (msh *messageServiceHelper) genAddresses() []address.Address {
@@ -686,4 +680,26 @@ func newMessageService(msh *messageServiceHelper) *MessageService {
 		headChans:      make(chan *headChan, 10),
 		tsCache:        newTipsetCache(),
 	}
+}
+
+// joinBackgroundCall starts a call that must overlap with the test body and joins
+// it during cleanup. The call is parked on a head-change notification that the
+// test never delivers, so its context is cancelled at teardown and
+// context.Canceled is the expected outcome; anything else is a real failure.
+// Asserting from inside the goroutine instead would panic with "Fail in goroutine
+// after test has completed" whenever the call returns an error at teardown.
+func joinBackgroundCall(ctx context.Context, t *testing.T, fn func(context.Context) error) {
+	t.Helper()
+
+	callCtx, cancel := context.WithCancel(ctx)
+	done := make(chan error, 1)
+	go func() { done <- fn(callCtx) }()
+
+	t.Cleanup(func() {
+		cancel()
+		err := <-done
+		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("background call failed: %v", err)
+		}
+	})
 }

@@ -26,7 +26,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 	addrs := msh.genAddresses()
 	ms := msh.MessageService
 	msh.start()
-	defer msh.lc.RequireStop()
+	defer msh.stop()
 
 	t.Run("normal", func(t *testing.T) {
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
@@ -107,7 +107,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		defer cancel()
 
 		msh := newMessageServiceHelper(ctx, t)
-		defer msh.lc.RequireStop()
+		defer msh.stop()
 
 		msh.genAddresses()
 		addrs := msh.addrs
@@ -164,9 +164,13 @@ func TestDoRefreshMessageState(t *testing.T) {
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
 		defer calcel()
 
+		var sendWg sync.WaitGroup
+		sendWg.Add(1)
 		go func() {
+			defer sendWg.Done()
 			ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 		}()
+		defer sendWg.Wait()
 		for i, msg := range cm.srcMsgs {
 			res, err := waitMsgWithTimeout(ctx, ms, msg.ID)
 			assert.NoError(t, err)
@@ -194,7 +198,7 @@ func TestDoRefreshMessageState(t *testing.T) {
 		msh.addAddresses(addrs)
 		ms := msh.MessageService
 		msh.start()
-		defer msh.lc.RequireStop()
+		defer msh.stop()
 
 		// first message will estimate gas failed
 		// second message will on chain
@@ -214,9 +218,13 @@ func TestDoRefreshMessageState(t *testing.T) {
 
 		ctx, calcel := context.WithTimeout(ctx, time.Minute*3)
 		defer calcel()
+		var sendWg sync.WaitGroup
+		sendWg.Add(1)
 		go func() {
+			defer sendWg.Done()
 			ms.msgSelectMgr.msgReceiver <- selectResult.ToPushMsg
 		}()
+		defer sendWg.Wait()
 
 		fillMsg := selectResult.SelectMsg[0]
 		res, err := waitMsgWithTimeout(ctx, ms, fillMsg.ID)
@@ -236,7 +244,7 @@ func TestUpdateMessageState(t *testing.T) {
 	addrs := msh.genAddresses()
 	ms := msh.MessageService
 	msh.start()
-	defer msh.lc.RequireStop()
+	defer msh.stop()
 
 	msgs := genMessages(addrs, len(addrs)*10*5)
 	assert.NoError(t, pushMessage(ctx, ms, msgs))
