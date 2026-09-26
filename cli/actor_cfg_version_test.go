@@ -92,3 +92,23 @@ func TestAnalyzeActorCfgVersionRejectsUnknownActorVersion(t *testing.T) {
 	_, err := analyzeActorCfgVersion(nil, "mainnet", actors.Version(7))
 	require.Error(t, err)
 }
+
+// Fifteen of the sixteen mainnet builtin actors change code CID between actor
+// version 18 and 19, so a config set written under version 18 is superseded
+// almost entirely by the upgrade.
+func TestAnalyzeActorCfgVersionFlagsChangedActorsOfMainnet(t *testing.T) {
+	var cfgs []*messager.ActorCfg
+	for name, code := range builtinActorCodesByVersion("mainnet")[actors.Version18] {
+		require.NotEmpty(t, name)
+		cfgs = append(cfgs, actorCfgFixture(code, 0))
+	}
+
+	status, err := analyzeActorCfgVersion(cfgs, "mainnet", actors.Version19)
+	require.NoError(t, err)
+
+	require.Len(t, status.Superseded, 15)
+	require.Equal(t, 1, status.Current)
+	require.Len(t, status.pending(), 15)
+	require.Empty(t, status.Foreign)
+	require.Empty(t, status.NoTarget)
+}
