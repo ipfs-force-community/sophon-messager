@@ -33,6 +33,8 @@ var ActorCfgCmds = &cli.Command{
 		updateActorCfgCmd,
 		addActorCfgCmd,
 		listBuiltinActorCmd,
+		verifyActorCfgVersionCmd,
+		migrateActorCfgVersionCmd,
 	},
 }
 
