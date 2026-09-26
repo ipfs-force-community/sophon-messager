@@ -70,6 +70,8 @@ type MockFullNode struct {
 
 	l sync.Mutex
 
+	wg sync.WaitGroup
+
 	mockV1.MockFullNode
 }
 
@@ -113,7 +115,11 @@ func NewMockFullNode(ctx context.Context, blockDelay time.Duration) (*MockFullNo
 		},
 	})
 
-	go node.tipsetProvider()
+	node.wg.Add(1)
+	go func() {
+		defer node.wg.Done()
+		node.tipsetProvider()
+	}()
 
 	return node, nil
 }
@@ -156,6 +162,12 @@ func (f *MockFullNode) SendRevertSignal(rs *RevertSignal) {
 		fmt.Println("receive too many revert channel")
 		close(rs.RevertedTS)
 	}
+}
+
+// Stop waits for the head provider loop to return. The context passed to
+// NewMockFullNode must be cancelled first, otherwise the loop never returns.
+func (f *MockFullNode) Stop() {
+	f.wg.Wait()
 }
 
 func (f *MockFullNode) tipsetProvider() {

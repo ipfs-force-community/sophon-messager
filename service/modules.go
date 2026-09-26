@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	logging "github.com/ipfs/go-log/v2"
@@ -30,10 +31,21 @@ func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageSer
 		msgService: msgService,
 	}
 
+	// These loops outlive the start hook, so they must not run on the hook's
+	// context: fx cancels that one only after every stop hook has returned, and a
+	// caller may pass a context that is never cancelled at all.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var nodeEventsWg sync.WaitGroup
 	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			go msgService.StartPushMessage(ctx, msgService.fsRepo.Config().MessageService.SkipPushMessage)
+		OnStart: func(context.Context) error {
+			nodeEventsWg.Add(2)
 			go func() {
+				defer nodeEventsWg.Done()
+				msgService.StartPushMessage(ctx, msgService.fsRepo.Config().MessageService.SkipPushMessage)
+			}()
+			go func() {
+				defer nodeEventsWg.Done()
 				for {
 					if err := nd.listenHeadChangesOnce(ctx); err != nil {
 						log.Errorf("listen head changes errored: %s", err)
@@ -52,8 +64,38 @@ func StartNodeEvents(lc fx.Lifecycle, client v1.FullNode, msgService *MessageSer
 			}()
 			return nil
 		},
+		OnStop: func(stopCtx context.Context) error {
+			cancel()
+			joinGroup(stopCtx, "node events", &nodeEventsWg)
+			return msgService.Close(stopCtx)
+		},
 	})
 	return nd
+}
+
+// shutdownTimeout bounds every wait for a background loop, so that a loop
+// ignoring cancellation cannot block app.Stop.
+var shutdownTimeout = 10 * time.Second
+
+// joinGroup waits for wg to drain, giving up after shutdownTimeout. Repo writers
+// must be joined before their data directory is removed: a write landing inside
+// the removal leaves the directory non-empty. A loop that ignores cancellation
+// must not fail shutdown, so giving up is logged and shutdown continues.
+func joinGroup(ctx context.Context, name string, wg *sync.WaitGroup) {
+	ctx, cancel := context.WithTimeout(ctx, shutdownTimeout)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		log.Warnf("%s: background loops still running after %s", name, shutdownTimeout)
+	}
 }
 
 // In order to resolve the timeout does not work

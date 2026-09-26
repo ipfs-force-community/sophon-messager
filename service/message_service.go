@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -91,6 +92,12 @@ type MessageService struct {
 	blockDelay time.Duration
 
 	msgReceiver publisher.MessageReceiver
+
+	// Background writers are owned by this context: the injected context may be
+	// one that the caller never cancels.
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 type headChan struct {
@@ -112,8 +119,10 @@ func NewMessageService(ctx context.Context,
 	walletClient gatewayAPI.IWalletClient,
 	msgReceiver publisher.MessageReceiver,
 ) (*MessageService, error) {
-	msgSelectMgr, err := newMsgSelectMgr(ctx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
+	svcCtx, cancel := context.WithCancel(ctx)
+	msgSelectMgr, err := newMsgSelectMgr(svcCtx, repo, &fsRepo.Config().MessageService, nc, addressService, sps, walletClient, msgReceiver)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	ms := &MessageService{
@@ -131,13 +140,18 @@ func NewMessageService(ctx context.Context,
 		cleanUnFillMsgRes:  make(chan cleanUnFillMsgResult),
 		msgReceiver:        msgReceiver,
 	}
-	ms.refreshMessageState(ctx)
+	ms.ctx, ms.cancel = svcCtx, cancel
+	ms.refreshMessageState(svcCtx)
 	if err := ms.tsCache.Load(ms.fsRepo.TipsetFile()); err != nil {
 		log.Infof("load tipset file failed: %v", err)
 	}
 
 	if fsRepo.Config().Metrics.Enabled {
-		go ms.recordMetricsProc(ctx)
+		ms.wg.Add(1)
+		go func() {
+			defer ms.wg.Done()
+			ms.recordMetricsProc(svcCtx)
+		}()
 	}
 
 	networkParams, err := ms.nodeClient.StateGetNetworkParams(ctx)
@@ -495,19 +509,32 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 	})
 	latestTs := apply[len(apply)-1]
 
-	ms.triggerPush <- latestTs
+	select {
+	case ms.triggerPush <- latestTs:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
 	defer log.Infof("%d head wait to process", len(ms.headChans))
 
 	if len(tsList) == 0 {
-		done := make(chan error)
-		ms.headChans <- &headChan{
+		done := make(chan error, 1)
+		select {
+		case ms.headChans <- &headChan{
 			apply:  apply,
 			revert: nil,
 			done:   done,
+		}:
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 
-		return <-done
+		select {
+		case err := <-done:
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
 	// already processed
@@ -525,13 +552,23 @@ func (ms *MessageService) ProcessNewHead(ctx context.Context, apply []*venusType
 		localApply = localApply[:len(localApply)-1]
 	}
 
-	done := make(chan error)
-	ms.headChans <- &headChan{
+	done := make(chan error, 1)
+	select {
+	case ms.headChans <- &headChan{
 		apply:  localApply,
 		revert: revertTipset,
 		done:   done,
+	}:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	return <-done
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.TipSet) error {
@@ -576,13 +613,22 @@ func (ms *MessageService) ReconnectCheck(ctx context.Context, head *venusTypes.T
 	}
 
 	done := make(chan error, 1)
-	ms.headChans <- &headChan{
+	select {
+	case ms.headChans <- &headChan{
 		apply:  gapTipset,
 		revert: revertTipset,
 		done:   done,
+	}:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
-	return <-done
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (ms *MessageService) lookAncestors(ctx context.Context, localTipset []*venusTypes.TipSet, head *venusTypes.TipSet) ([]*venusTypes.TipSet, []*venusTypes.TipSet, error) {
@@ -655,10 +701,21 @@ func (ms *MessageService) StartPushMessage(ctx context.Context, skipPushMsg bool
 			}
 
 			var triggerCtx context.Context
-			triggerCtx, ms.preCancel = context.WithCancel(ctx)
-			go ms.delaySelectMessage(triggerCtx, newHead, skipPushMsg)
+			triggerCtx, ms.preCancel = context.WithCancel(ms.ctx)
+			ms.wg.Add(1)
+			go func() {
+				defer ms.wg.Done()
+				ms.delaySelectMessage(triggerCtx, newHead, skipPushMsg)
+			}()
 		}
 	}
+}
+
+// Close stops the background loops owned by MessageService and waits for them.
+func (ms *MessageService) Close(ctx context.Context) error {
+	ms.cancel()
+	joinGroup(ctx, "message service", &ms.wg)
+	return ms.msgSelectMgr.Close(ctx)
 }
 
 func (ms *MessageService) delaySelectMessage(ctx context.Context, ts *venusTypes.TipSet, skipPushMsg bool) {

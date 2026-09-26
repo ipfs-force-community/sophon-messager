@@ -56,6 +56,8 @@ type MsgSelectMgr struct {
 	works       map[address.Address]*work
 	msgReceiver publisher.MessageReceiver
 	lk          sync.Mutex
+
+	wg sync.WaitGroup
 }
 
 func newMsgSelectMgr(ctx context.Context,
@@ -115,9 +117,19 @@ func (msgSelectMgr *MsgSelectMgr) SelectMessage(ctx context.Context, ts *venusTy
 	}
 
 	for _, w := range msgSelectMgr.works {
-		go w.startSelectMessage(appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
+		msgSelectMgr.wg.Add(1)
+		go func(w *work) {
+			defer msgSelectMgr.wg.Done()
+			w.startSelectMessage(appliedNonce, addrInfos[w.addr], ts, addrSelMsgNum[w.addr], sharedParams)
+		}(w)
 	}
 
+	return nil
+}
+
+// Close waits for the message selection workers owned by MsgSelectMgr.
+func (msgSelectMgr *MsgSelectMgr) Close(ctx context.Context) error {
+	joinGroup(ctx, "message selector", &msgSelectMgr.wg)
 	return nil
 }
 

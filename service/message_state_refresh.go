@@ -19,7 +19,9 @@ import (
 var msgStateLog = logging.Logger("msg-state")
 
 func (ms *MessageService) refreshMessageState(ctx context.Context) {
+	ms.wg.Add(1)
 	go func() {
+		defer ms.wg.Done()
 		for {
 			select {
 			case h := <-ms.headChans:
